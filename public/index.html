@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Tournoi eFootball Mobile</title>
+<style>
+body{margin:0;font-family:Arial;background:#08111f;color:white}
+header{background:linear-gradient(135deg,#1455ff,#7c2cff);padding:25px;text-align:center}
+section{padding:20px}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:15px}
+.box{background:#152238;padding:20px;border-radius:15px}
+input,select,button{width:100%;padding:12px;margin:7px 0;border:none;border-radius:10px}
+input,select{background:#263852;color:white}
+button{background:#22c55e;font-weight:bold;cursor:pointer}
+.card{background:#0f172a;padding:12px;border-radius:12px;margin-top:10px}
+.badge{display:inline-block;background:#1d4ed8;padding:5px 10px;border-radius:20px;margin:3px}
+.private{background:#3b1d1d;border:1px dashed #f87171;padding:10px;border-radius:10px;margin-top:10px}
+</style>
+</head>
+<body>
+
+<header>
+<h1>Tournoi eFootball Mobile</h1>
+<p>Créer tournoi 10 à 100 équipes avec abonnement 5000 FCFA</p>
+</header>
+
+<section class="grid">
+<div class="box">
+<h2>Compte</h2>
+<input id="userName" placeholder="Nom">
+<input id="email" placeholder="Adresse email">
+<input id="password" type="password" placeholder="Mot de passe">
+<button onclick="register()">Créer compte</button>
+<button onclick="login()">Connexion</button>
+<button onclick="abonnement()">Payer abonnement</button>
+<button onclick="monCompte()">Mon compte</button>
+<button onclick="logout()">Déconnexion</button>
+
+<h3>Mot de passe oublié</h3>
+
+<input id="resetEmail" placeholder="Email du compte">
+
+<button onclick="forgotPassword()">
+Envoyer code
+</button>
+
+<input id="resetCode" placeholder="Code 6 chiffres">
+
+<input id="newPassword" type="password" placeholder="Nouveau mot de passe">
+
+<button onclick="resetPassword()">
+Changer mot de passe
+</button>
+</div>
+
+<div class="box">
+<h2>Créer tournoi</h2>
+<input id="tournoiNom" placeholder="Nom tournoi">
+<input id="tournoiMax" type="number" min="10" max="100" placeholder="Nombre équipes 10 à 100">
+<button onclick="creerTournoi()">Créer tournoi</button>
+<button onclick="chargerTournois()">Afficher tournois</button>
+<button onclick="resetTournoi()">
+Réinitialiser tournoi
+</button>
+</div>
+
+<div class="box">
+<h2>Assistant admin</h2>
+<input id="assistantEmail" placeholder="Email assistant">
+<button onclick="ajouterAssistant()">Ajouter assistant</button>
+</div>
+</section>
+
+<section class="grid">
+<div class="box">
+<h2>Ajouter participant</h2>
+<select id="participantDeleteSelect"></select>
+<div id="participantsCheckbox"></div>
+
+<button onclick="supprimerParticipantsCoches()">
+Supprimer les participants cochés
+</button>
+<button onclick="supprimerParticipantSelection()">
+Supprimer participant sélectionné
+</button>
+
+<button onclick="supprimerTousParticipants()">
+Supprimer tous les participants
+</button>
+<input
+id="supprimerParticipantId"
+placeholder="ID participant à supprimer"
+>
+
+<button onclick="supprimerParticipant()">
+Supprimer participant
+</button>
+<select id="tournoiSelect"></select>
+<input id="prenom" placeholder="Prénom personnalisé">
+<input id="participantEmail" placeholder="Email participant">
+<input id="username" placeholder="Nom utilisateur eFootball">
+<input id="telephone" placeholder="Téléphone">
+<input id="numeroSerie" placeholder="Numéro série téléphone">
+<select id="clubLogo">
+<option>FC Barcelona</option>
+<option>Real Madrid</option>
+<option>PSG</option>
+<option>Manchester United</option>
+<option>Bayern Munich</option>
+<option>Arsenal</option>
+<option>Chelsea</option>
+<option>AC Milan</option>
+<option>Inter Milan</option>
+<option>Juventus</option>
+</select>
+<input id="preuve" placeholder="Lien photo preuve du match">
+<button onclick="ajouterParticipant()">Ajouter participant</button>
+</div>
+
+<div class="box">
+<h2>Modifier statistiques</h2>
+<input id="participantId" placeholder="ID participant">
+<input id="buts" type="number" placeholder="Buts marqués">
+<input id="butsEncaisses" type="number" placeholder="Buts encaissés">
+<input id="victoires" type="number" placeholder="Victoires">
+<input id="matchs" type="number" placeholder="Matchs joués">
+<input id="palmares" placeholder="Palmarès">
+<input id="meilleurButeur" placeholder="Meilleur buteur utilisé">
+<button onclick="modifierStats()">Modifier statistiques</button>
+<input
+id="photoResultat"
+placeholder="Lien photo résultat"
+>
+
+<button onclick="envoyerResultatMatch()">
+Envoyer résultat + photo
+</button>
+</div>
+</section>
+
+<section class="grid">
+<div class="box">
+<h2>Mes tournois</h2>
+<div id="tournois"></div>
+</div>
+
+<div class="box">
+<h2>Participants</h2>
+<button onclick="chargerParticipants()">Afficher participants</button>
+<div id="participants"></div>
+</div>
+</section>
+
+<section class="grid">
+<div class="box">
+<h2>Tirage automatique</h2>
+<button onclick="genererPoules()">
+Générer 12 groupes
+</button>
+<button onclick="tirage()">Faire tirage</button>
+<div id="tirageResult"></div>
+</div>
+
+<div class="box">
+<h2>Classements</h2>
+<button onclick="classement()">Voir classement</button>
+<div id="classementResult"></div>
+</div>
+</section>
+
+<section>
+<div class="box">
+<h2>Message</h2>
+<pre id="message"></pre>
+</div>
+</section>
+
+<script>
+    async function genererPoules(){
+
+  if(!tournoiSelect.value){
+    message.textContent =
+      "Choisis un tournoi";
+    return;
+  }
+
+  await post("/generer-poules",{
+
+    tournament_id:
+      tournoiSelect.value
+
+  });
+
+}
+async function post(url,data){
+  try{
+    const res = await fetch(url,{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify(data)
+    });
+    const text = await res.text();
+    message.textContent = text;
+    return text;
+  }catch(err){
+    message.textContent = "Erreur serveur";
+    return "";
+  }
+}
+async function logout(){
+  await post("/logout",{});
+}
+
+async function forgotPassword(){
+  await post("/forgot-password",{
+    email:resetEmail.value
+  });
+}
+
+async function resetPassword(){
+  await post("/reset-password",{
+    email:resetEmail.value,
+    code:resetCode.value,
+    newPassword:newPassword.value
+  });
+}
+
+async function get(url){
+  try{
+    const res = await fetch(url);
+    const text = await res.text();
+    try{
+      const data = JSON.parse(text);
+      message.textContent = JSON.stringify(data,null,2);
+      return data;
+    }catch(e){
+      message.textContent = text;
+      return [];
+    }
+  }catch(err){
+    message.textContent = "Erreur serveur";
+    return [];
+  }
+}
+async function resetTournoi(){
+
+  if(!tournoiSelect.value){
+    message.textContent =
+      "Choisis un tournoi";
+    return;
+  }
+
+  await post("/reset-tournoi",{
+
+    tournament_id:
+      tournoiSelect.value
+
+  });
+
+}
+
+async function register(){
+  await post("/register",{
+    name:userName.value,
+    email:email.value,
+    password:password.value
+  });
+}
+
+async function login(){
+  await post("/login",{
+    email:email.value,
+    password:password.value
+  });
+}
+async function envoyerResultatMatch(){
+
+  if(!matchId.value){
+
+    message.textContent =
+      "ID match obligatoire";
+
+    return;
+  }
+
+  await post("/update-match-proof",{
+
+    match_id:matchId.value,
+
+    score1:score1.value,
+
+    score2:score2.value,
+
+    photo_url:photoResultat.value
+
+  });
+
+}
+
+async function abonnement(){
+  await post("/abonnement",{});
+}
+
+async function monCompte(){
+  await get("/me");
+}
+async function supprimerParticipantSelection(){
+  await post("/supprimer-participant",{
+    participant_id: participantDeleteSelect.value
+  });
+
+  await chargerParticipants();
+}
+
+async function supprimerTousParticipants(){
+  if(!confirm("Supprimer tous les participants de ce tournoi ?")){
+    return;
+  }
+
+  await post("/supprimer-tous-participants",{
+    tournament_id: tournoiSelect.value
+  });
+
+  await chargerParticipants();
+}
+
+async function creerTournoi(){
+  const result = await post("/tournoi",{
+    name:tournoiNom.value,
+    max_teams:Number(tournoiMax.value)
+  });
+
+  if(result === "Tournoi créé"){
+    await chargerTournois();
+  }
+}
+
+async function chargerTournois(){
+  const data = await get("/tournois");
+
+  if(!Array.isArray(data)) return;
+
+  if(data.length === 0){
+    tournois.innerHTML = "<p>Aucun tournoi</p>";
+    tournoiSelect.innerHTML = "<option value=''>Aucun tournoi</option>";
+    return;
+  }
+
+  tournoiSelect.innerHTML = data.map(t => `
+    <option value="${t.id}">${t.name}</option>
+  `).join("");
+
+  tournois.innerHTML = data.map(t => `
+    <div class="card">
+      <h3>${t.name}</h3>
+      <p>Equipes : ${t.max_teams}</p>
+      <p><span class="badge">ID ${t.id}</span></p>
+      <input value="http://localhost:3000/public/${t.public_code}" readonly>
+    </div>
+  `).join("");
+}
+
+async function ajouterParticipant(){
+  if(!tournoiSelect.value){
+    message.textContent = "Crée d'abord un tournoi";
+    return;
+  }
+
+  await post("/participant",{
+    tournament_id:tournoiSelect.value,
+    prenom:prenom.value,
+    email:participantEmail.value,
+    username:username.value,
+    telephone:telephone.value,
+    numero_serie:numeroSerie.value,
+    club_logo:clubLogo.value,
+    preuve:preuve.value
+  });
+
+  await chargerParticipants();
+}
+async function supprimerParticipant(){
+
+  if(!supprimerParticipantId.value){
+
+    message.textContent =
+      "ID participant obligatoire";
+
+    return;
+  }
+
+  await post("/supprimer-participant",{
+
+    participant_id:
+      supprimerParticipantId.value
+
+  });
+
+  await chargerParticipants();
+
+}
+
+async function chargerParticipants(){
+  if(!tournoiSelect.value){
+    message.textContent = "Choisis un tournoi";
+    return;
+  }
+
+  const data = await get("/participants/" + tournoiSelect.value);
+  participantsCheckbox.innerHTML =
+  data.map(p => `
+    <label style="display:block;margin:8px 0;">
+      <input type="checkbox" class="participantCheck" value="${p.id}">
+      ${p.prenom || p.name}
+    </label>
+  `).join("");
+  participantDeleteSelect.innerHTML =
+  data.map(p => `<option value="${p.id}">${p.prenom || p.name}</option>`).join("");
+  if(!Array.isArray(data)) return;
+
+  participants.innerHTML = data.map(p => `
+    <div class="card">
+      <h3>${p.club_logo} - ${p.prenom}</h3>
+      <p><span class="badge">ID ${p.id}</span></p>
+      <p>Buts : ${p.buts}</p>
+      <p>Buts encaissés : ${p.buts_encaisses}</p>
+      <p>Victoires : ${p.victoires}</p>
+      <p>Matchs : ${p.matchs}</p>
+      <p>Palmarès : ${p.palmares}</p>
+      <p>Meilleur buteur : ${p.meilleur_buteur}</p>
+      <div class="private">
+        <p>Username : ${p.username}</p>
+        <p>Téléphone : ${p.telephone}</p>
+        <p>Numéro série : ${p.numero_serie}</p>
+        <p>Preuve : ${p.preuve}</p>
+      </div>
+    </div>
+  `).join("");
+}
+
+async function modifierStats(){
+  await post("/stats",{
+    participant_id:participantId.value,
+    buts:buts.value,
+    buts_encaisses:butsEncaisses.value,
+    victoires:victoires.value,
+    matchs:matchs.value,
+    palmares:palmares.value,
+    meilleur_buteur:meilleurButeur.value
+  });
+}
+async function supprimerParticipantsCoches(){
+
+  const ids = Array.from(
+    document.querySelectorAll(".participantCheck:checked")
+  ).map(input => input.value);
+
+  if(ids.length === 0){
+    message.textContent = "Coche au moins un participant";
+    return;
+  }
+
+  if(!confirm("Supprimer les participants cochés ?")){
+    return;
+  }
+
+  await post("/supprimer-participants-selection",{
+    ids: ids
+  });
+
+  await chargerParticipants();
+}
+
+async function tirage(){
+
+  if(!tournoiSelect.value){
+    message.textContent = "Choisis un tournoi";
+    return;
+  }
+
+  const data = await get("/tirage/" + tournoiSelect.value);
+
+  if(!Array.isArray(data)){
+    message.textContent = "Aucun tirage disponible";
+    return;
+  }
+
+  tirageResult.innerHTML = data.map(t => `
+
+    <div class="card">
+
+      <h3>Tour ${t.tour}</h3>
+
+      ${t.matchs.map(m => `
+
+        <p>
+          ${m.joueur1 ? m.joueur1.prenom : m.player1_name}
+
+          ${m.played
+            ? m.score1 + " : " + m.score2
+            : "VS"}
+
+          ${m.joueur2
+            ? m.joueur2.prenom
+            : m.player2_name || "Qualifié"}
+        </p>
+
+        ${m.proof_photo
+          ? `
+            <img
+            src="${m.proof_photo}"
+            style="
+              max-width:100%;
+              border-radius:10px;
+              margin-top:10px;
+            ">
+          `
+          : ""}
+
+      `).join("")}
+
+    </div>
+
+  `).join("");
+
+}
+
+async function classement(){
+  if(!tournoiSelect.value){
+    message.textContent = "Choisis un tournoi";
+    return;
+  }
+
+  const data = await get("/classement/" + tournoiSelect.value);
+
+  if(!data || !data.meilleursButeurs){
+    message.textContent = "Classement indisponible";
+    return;
+  }
+
+  classementResult.innerHTML = `
+    <h3>Meilleurs buteurs</h3>
+    ${data.meilleursButeurs.map(p => `
+      <p>${p.prenom || p.name} - ${p.buts} buts</p>
+    `).join("")}
+
+    <h3>Moins de buts encaissés</h3>
+    ${data.meilleureDefense.map(p => `
+      <p>${p.prenom || p.name} - ${p.buts_encaisses}</p>
+    `).join("")}
+  `;
+}
+
+async function ajouterAssistant(){
+  await post("/assistant",{
+    email:assistantEmail.value
+  });
+}
+
+chargerTournois();
+</script>
+
+</body>
+</html>
