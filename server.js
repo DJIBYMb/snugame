@@ -40,6 +40,13 @@ db.serialize(() => {
     created_at TEXT DEFAULT CURRENT_TIMESTAMP
   )
 `);
+  db.run(`
+  CREATE TABLE IF NOT EXISTS assistants (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER,
+    email TEXT
+  )
+`);
 
 db.run(`
   CREATE TABLE IF NOT EXISTS password_resets (
@@ -839,6 +846,141 @@ app.post("/update-match-proof", (req, res) => {
           res.send("Résultat et photo enregistrés");
         }
       );
+    }
+  );
+});
+app.get("/resultats-public/:tournoiId", (req, res) => {
+  db.all(
+    `
+    SELECT 
+      m.*,
+      p1.prenom AS joueur1,
+      p2.prenom AS joueur2
+    FROM matches m
+    LEFT JOIN participants p1 ON p1.id = m.player1_id
+    LEFT JOIN participants p2 ON p2.id = m.player2_id
+    WHERE m.tournament_id=?
+    ORDER BY m.round, m.group_name, m.match_order
+    `,
+    [req.params.tournoiId],
+    (err, rows) => {
+      if (err) return res.send("Erreur résultats");
+
+      let html = `
+      <html>
+      <head>
+        <title>Résultats tournoi</title>
+        <style>
+          body{font-family:Arial;background:#08111f;color:white;padding:20px}
+          .match{background:#152238;padding:15px;border-radius:12px;margin:10px 0}
+          img{max-width:100%;border-radius:10px;margin-top:10px}
+        </style>
+      </head>
+      <body>
+        <h1>Résultats du tournoi</h1>
+      `;
+
+      rows.forEach(m => {
+        html += `
+          <div class="match">
+            <h3>${m.round || "Match"} ${m.group_name ? "Groupe " + m.group_name : ""}</h3>
+            <p>
+              ${m.joueur1 || "Joueur 1"}
+              ${m.played ? m.score1 + " : " + m.score2 : "VS"}
+              ${m.joueur2 || "Joueur 2"}
+            </p>
+            ${m.proof_photo ? `<img src="${m.proof_photo}">` : "<p>Aucune photo</p>"}
+          </div>
+        `;
+      });
+
+      html += "</body></html>";
+
+      res.send(html);
+    }
+  );
+});
+
+app.get("/preuve-match/:matchId", (req, res) => {
+  res.send(`
+    <html>
+    <head>
+      <title>Envoyer preuve résultat</title>
+      <style>
+        body{font-family:Arial;background:#08111f;color:white;padding:20px}
+        .box{background:#152238;padding:20px;border-radius:15px;max-width:420px;margin:auto}
+        input,button{width:100%;padding:12px;margin:8px 0;border:0;border-radius:10px}
+        input{background:#263852;color:white}
+        button{background:#22c55e;font-weight:bold}
+      </style>
+    </head>
+    <body>
+      <div class="box">
+        <h2>Envoyer résultat du match</h2>
+        <p>Match ID : ${req.params.matchId}</p>
+
+        <input id="score1" type="number" placeholder="Score équipe 1">
+        <input id="score2" type="number" placeholder="Score équipe 2">
+        <input id="photo" placeholder="Lien photo résultat">
+
+        <button onclick="envoyer()">Envoyer preuve</button>
+
+        <p id="msg"></p>
+      </div>
+
+      <script>
+        async function envoyer(){
+          const res = await fetch("/update-match-proof",{
+            method:"POST",
+            headers:{"Content-Type":"application/json"},
+            body:JSON.stringify({
+              match_id:"${req.params.matchId}",
+              score1:score1.value,
+              score2:score2.value,
+              photo_url:photo.value
+            })
+          });
+
+          msg.innerText = await res.text();
+        }
+      </script>
+    </body>
+    </html>
+  `);
+});
+
+app.post("/delete-match-proof", (req, res) => {
+  const { match_id } = req.body;
+
+  if (!match_id) {
+    return res.send("ID match obligatoire");
+  }
+
+  db.run(
+    "UPDATE matches SET proof_photo=NULL WHERE id=?",
+    [match_id],
+    () => {
+      res.send("Photo résultat supprimée");
+    }
+  );
+});
+
+app.post("/assistant", (req, res) => {
+  const { email } = req.body;
+
+  if (!req.session.userId) {
+    return res.send("Connecte-toi d'abord");
+  }
+
+  if (!email) {
+    return res.send("Email assistant obligatoire");
+  }
+
+  db.run(
+    "INSERT INTO assistants(user_id,email) VALUES(?,?)",
+    [req.session.userId, email],
+    () => {
+      res.send("Assistant ajouté");
     }
   );
 });

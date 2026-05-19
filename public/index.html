@@ -1,8 +1,14 @@
 <!DOCTYPE html>
 <html lang="fr">
+
 <head>
+
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<meta
+name="viewport"
+content="width=device-width, initial-scale=1.0">
+
 <title>SNUGAME</title>
 
 <style>
@@ -53,7 +59,8 @@ header p{
 
 .grid{
   display:grid;
-  grid-template-columns:repeat(auto-fit,minmax(280px,1fr));
+  grid-template-columns:
+  repeat(auto-fit,minmax(280px,1fr));
   gap:14px;
 }
 
@@ -299,7 +306,8 @@ class="hidden">
 <h1>5000 FCFA / mois</h1>
 
 <p>
-Après paiement, tu peux créer et gérer les tournois.
+Après paiement,
+tu peux créer et gérer les tournois.
 </p>
 
 <button onclick="abonnement()">
@@ -347,7 +355,7 @@ Poules
 </button>
 
 <button onclick="showPanel('panelScores')">
-Scores
+Scores & Photos
 </button>
 
 <button onclick="showPanel('panelClassement')">
@@ -522,7 +530,7 @@ class="panel hidden">
 
 <div class="card">
 
-<h2>Poules</h2>
+<h2>Poules 48 équipes</h2>
 
 <button onclick="genererPoules()">
 
@@ -570,13 +578,59 @@ placeholder="Score équipe 2">
 
 <input
 id="photoResultat"
-placeholder="Lien photo">
+placeholder="Lien photo résultat">
 
 <button onclick="envoyerResultatMatch()">
 
 Envoyer résultat
 
 </button>
+
+<hr>
+
+<h3>Liens résultats</h3>
+
+<input
+id="deletePhotoMatchId"
+placeholder="ID match supprimer photo">
+
+<button
+class="danger"
+onclick="deleteMatchProof()">
+
+Supprimer photo résultat
+
+</button>
+
+<input
+id="linkMatchId"
+placeholder="ID match créer lien preuve">
+
+<button
+class="secondary"
+onclick="creerLienPreuve()">
+
+Créer lien preuve match
+
+</button>
+
+<input
+id="lienPreuve"
+readonly
+placeholder="Lien preuve personnalisé">
+
+<button
+class="secondary"
+onclick="creerLienResultatsPublics()">
+
+Créer lien public résultats
+
+</button>
+
+<input
+id="lienResultatsPublics"
+readonly
+placeholder="Lien public résultats">
 
 </div>
 
@@ -1100,6 +1154,54 @@ score1:score1.value,
 score2:score2.value,
 photo_url:photoResultat.value
 });
+
+await tirage();
+
+}
+
+async function deleteMatchProof(){
+
+await post("/delete-match-proof",{
+match_id:deletePhotoMatchId.value
+});
+
+await tirage();
+
+}
+
+function creerLienPreuve(){
+
+if(!linkMatchId.value){
+
+message.textContent =
+"ID match obligatoire";
+
+return;
+
+}
+
+lienPreuve.value =
+location.origin +
+"/preuve-match/" +
+linkMatchId.value;
+
+}
+
+function creerLienResultatsPublics(){
+
+if(!tournoiSelect.value){
+
+message.textContent =
+"Choisis un tournoi";
+
+return;
+
+}
+
+lienResultatsPublics.value =
+location.origin +
+"/resultats-public/" +
+tournoiSelect.value;
 
 }
 
