@@ -1,8 +1,8 @@
 const express = require("express");
 const session = require("express-session");
+const SQLiteStore = require("connect-sqlite3")(session);
 const bcrypt = require("bcryptjs");
 const sqlite3 = require("sqlite3").verbose();
-const SQLiteStore = require("connect-sqlite3")(session);
 
 const app = express();
 const PORT = process.env.PORT || 3000;
