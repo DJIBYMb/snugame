@@ -4,7 +4,7 @@ const bcrypt = require("bcryptjs");
 const sqlite3 = require("sqlite3").verbose();
 
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -838,10 +838,6 @@ app.post("/update-match-proof", (req, res) => {
   );
 });
 
-app.listen(PORT,()=>{
-
-  console.log(
-    "Serveur lancé sur http://localhost:3000"
-  );
-
+app.listen(PORT, () => {
+  console.log("Serveur lancé sur le port " + PORT);
 });
