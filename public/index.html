@@ -33,16 +33,6 @@ header{
   z-index:10;
 }
 
-header h1{
-  margin:0;
-  font-size:26px;
-}
-
-header p{
-  margin:5px 0 0;
-  color:#dbeafe;
-}
-
 .container{
   max-width:1200px;
   margin:auto;
@@ -57,17 +47,8 @@ header p{
   margin:14px 0;
 }
 
-.grid{
-  display:grid;
-  grid-template-columns:
-  repeat(auto-fit,minmax(280px,1fr));
-  gap:14px;
-}
-
 input,
-select,
-button,
-textarea{
+button{
   width:100%;
   padding:12px;
   margin:7px 0;
@@ -75,9 +56,7 @@ textarea{
   border-radius:10px;
 }
 
-input,
-select,
-textarea{
+input{
   background:#263852;
   color:white;
 }
@@ -87,10 +66,6 @@ button{
   color:#052e16;
   font-weight:bold;
   cursor:pointer;
-}
-
-button:hover{
-  opacity:.9;
 }
 
 .secondary{
@@ -103,63 +78,8 @@ button:hover{
   color:#111827;
 }
 
-.danger{
-  background:#ef4444;
-  color:white;
-}
-
 .hidden{
   display:none!important;
-}
-
-.nav{
-  display:flex;
-  gap:8px;
-  overflow-x:auto;
-  padding:10px 0;
-}
-
-.nav button{
-  white-space:nowrap;
-  background:#1e293b;
-  color:white;
-}
-
-.badge{
-  display:inline-block;
-  background:#1d4ed8;
-  color:white;
-  padding:5px 10px;
-  border-radius:20px;
-  margin:3px;
-  font-size:13px;
-}
-
-.private{
-  background:#3b1d1d;
-  border:1px dashed #f87171;
-  padding:10px;
-  border-radius:10px;
-  margin-top:8px;
-}
-
-.match{
-  background:#0f172a;
-  border-radius:12px;
-  padding:12px;
-  margin:8px 0;
-}
-
-.proof{
-  max-width:100%;
-  border-radius:12px;
-  margin-top:10px;
-  border:2px solid #334155;
-}
-
-.step{
-  color:#93c5fd;
-  font-size:14px;
 }
 
 #message{
@@ -191,10 +111,6 @@ Tournoi eFootball Mobile
 <section id="pageAuth">
 
 <div class="card">
-
-<div class="step">
-Étape 1
-</div>
 
 <h2>Connexion</h2>
 
@@ -291,487 +207,6 @@ Changer mot de passe
 
 </section>
 
-<section
-id="pageAbonnement"
-class="hidden">
-
-<div class="card">
-
-<div class="step">
-Étape 2
-</div>
-
-<h2>Abonnement organisateur</h2>
-
-<h1>5000 FCFA / mois</h1>
-
-<p>
-Après paiement,
-tu peux créer et gérer les tournois.
-</p>
-
-<button onclick="abonnement()">
-
-Payer abonnement
-
-</button>
-
-<button
-class="secondary"
-onclick="checkStatus()">
-
-Actualiser
-
-</button>
-
-<button
-class="danger"
-onclick="logout()">
-
-Déconnexion
-
-</button>
-
-</div>
-
-</section>
-
-<section
-id="pageDashboard"
-class="hidden">
-
-<div class="nav">
-
-<button onclick="showPanel('panelTournoi')">
-Tournoi
-</button>
-
-<button onclick="showPanel('panelParticipants')">
-Participants
-</button>
-
-<button onclick="showPanel('panelPoules')">
-Poules
-</button>
-
-<button onclick="showPanel('panelScores')">
-Scores & Photos
-</button>
-
-<button onclick="showPanel('panelClassement')">
-Classement
-</button>
-
-<button onclick="showPanel('panelAdmin')">
-Admin
-</button>
-
-<button
-class="danger"
-onclick="logout()">
-
-Déconnexion
-
-</button>
-
-</div>
-
-<div
-id="panelTournoi"
-class="panel">
-
-<div class="grid">
-
-<div class="card">
-
-<div class="step">
-Étape 3
-</div>
-
-<h2>Créer tournoi</h2>
-
-<input
-id="tournoiNom"
-placeholder="Nom du tournoi">
-
-<input
-id="tournoiMax"
-type="number"
-placeholder="Nombre équipes">
-
-<button onclick="creerTournoi()">
-
-Créer tournoi
-
-</button>
-
-<button
-class="secondary"
-onclick="chargerTournois()">
-
-Afficher mes tournois
-
-</button>
-
-<select
-id="tournoiSelect"
-onchange="loadAll()">
-
-</select>
-
-</div>
-
-<div class="card">
-
-<h2>Mes tournois</h2>
-
-<div id="tournois"></div>
-
-</div>
-
-</div>
-
-</div>
-
-<div
-id="panelParticipants"
-class="panel hidden">
-
-<div class="grid">
-
-<div class="card">
-
-<h2>Ajouter participant</h2>
-
-<input
-id="prenom"
-placeholder="Prénom joueur">
-
-<input
-id="participantEmail"
-placeholder="Email participant">
-
-<input
-id="username"
-placeholder="Nom utilisateur eFootball">
-
-<input
-id="telephone"
-placeholder="Téléphone">
-
-<input
-id="numeroSerie"
-placeholder="Numéro série">
-
-<select id="clubLogo">
-
-<option>FC Barcelona</option>
-<option>Real Madrid</option>
-<option>PSG</option>
-<option>Manchester United</option>
-<option>Bayern Munich</option>
-<option>Arsenal</option>
-<option>Chelsea</option>
-<option>AC Milan</option>
-
-</select>
-
-<input
-id="preuve"
-placeholder="Lien preuve">
-
-<button onclick="ajouterParticipant()">
-
-Ajouter participant
-
-</button>
-
-</div>
-
-<div class="card">
-
-<h2>Supprimer participants</h2>
-
-<div id="participantsCheckbox"></div>
-
-<button
-class="danger"
-onclick="supprimerParticipantsCoches()">
-
-Supprimer cochés
-
-</button>
-
-<button
-class="danger"
-onclick="supprimerTousParticipants()">
-
-Supprimer tous
-
-</button>
-
-</div>
-
-</div>
-
-<div class="card">
-
-<h2>Liste participants</h2>
-
-<div id="participants"></div>
-
-</div>
-
-</div>
-
-<div
-id="panelPoules"
-class="panel hidden">
-
-<div class="card">
-
-<h2>Poules 48 équipes</h2>
-
-<button onclick="genererPoules()">
-
-Générer groupes
-
-</button>
-
-<button
-class="secondary"
-onclick="tirage()">
-
-Voir tirage
-
-</button>
-
-<div id="tirageResult"></div>
-
-</div>
-
-</div>
-
-<div
-id="panelScores"
-class="panel hidden">
-
-<div class="grid">
-
-<div class="card">
-
-<h2>Résultat match</h2>
-
-<input
-id="matchId"
-placeholder="ID match">
-
-<input
-id="score1"
-type="number"
-placeholder="Score équipe 1">
-
-<input
-id="score2"
-type="number"
-placeholder="Score équipe 2">
-
-<input
-id="photoResultat"
-placeholder="Lien photo résultat">
-
-<button onclick="envoyerResultatMatch()">
-
-Envoyer résultat
-
-</button>
-
-<hr>
-
-<h3>Liens résultats</h3>
-
-<input
-id="deletePhotoMatchId"
-placeholder="ID match supprimer photo">
-
-<button
-class="danger"
-onclick="deleteMatchProof()">
-
-Supprimer photo résultat
-
-</button>
-
-<input
-id="linkMatchId"
-placeholder="ID match créer lien preuve">
-
-<button
-class="secondary"
-onclick="creerLienPreuve()">
-
-Créer lien preuve match
-
-</button>
-
-<input
-id="lienPreuve"
-readonly
-placeholder="Lien preuve personnalisé">
-
-<button
-class="secondary"
-onclick="creerLienResultatsPublics()">
-
-Créer lien public résultats
-
-</button>
-
-<input
-id="lienResultatsPublics"
-readonly
-placeholder="Lien public résultats">
-
-</div>
-
-<div class="card">
-
-<h2>Statistiques</h2>
-
-<input
-id="participantId"
-placeholder="ID participant">
-
-<input
-id="buts"
-type="number"
-placeholder="Buts">
-
-<input
-id="butsEncaisses"
-type="number"
-placeholder="Buts encaissés">
-
-<input
-id="victoires"
-type="number"
-placeholder="Victoires">
-
-<input
-id="matchs"
-type="number"
-placeholder="Matchs">
-
-<input
-id="palmares"
-placeholder="Palmarès">
-
-<input
-id="meilleurButeur"
-placeholder="Meilleur buteur">
-
-<button onclick="modifierStats()">
-
-Modifier statistiques
-
-</button>
-
-</div>
-
-</div>
-
-</div>
-
-<div
-id="panelClassement"
-class="panel hidden">
-
-<div class="card">
-
-<h2>Classement</h2>
-
-<button onclick="classement()">
-
-Voir classement
-
-</button>
-
-<div id="classementResult"></div>
-
-</div>
-
-</div>
-
-<div
-id="panelAdmin"
-class="panel hidden">
-
-<div class="grid">
-
-<div class="card">
-
-<h2>Assistant</h2>
-
-<input
-id="assistantEmail"
-placeholder="Email assistant">
-
-<button onclick="ajouterAssistant()">
-
-Ajouter assistant
-
-</button>
-
-</div>
-
-<div class="card">
-
-<h2>Commentaires</h2>
-
-<textarea
-id="commentText"
-placeholder="Commentaire...">
-
-</textarea>
-
-<button onclick="ajouterCommentaire()">
-
-Ajouter commentaire
-
-</button>
-
-<button
-class="secondary"
-onclick="voirCommentaires()">
-
-Voir commentaires
-
-</button>
-
-<div id="comments"></div>
-
-</div>
-
-<div class="card">
-
-<h2>Réinitialisation</h2>
-
-<button
-class="danger"
-onclick="resetTournoi()">
-
-Réinitialiser tournoi
-
-</button>
-
-</div>
-
-</div>
-
-</div>
-
-</section>
-
 <div class="card">
 
 <h2>Message</h2>
@@ -786,516 +221,116 @@ Réinitialiser tournoi
 
 async function post(url,data){
 
-const res = await fetch(url,{
-method:"POST",
-headers:{
-"Content-Type":"application/json"
-},
-body:JSON.stringify(data)
-});
+  const res = await fetch(url,{
+    method:"POST",
+    headers:{
+      "Content-Type":"application/json"
+    },
+    body:JSON.stringify(data)
+  });
 
-const text = await res.text();
+  const text = await res.text();
 
-message.textContent = text;
+  document.getElementById("message").textContent = text;
 
-return text;
-
-}
-
-async function get(url){
-
-const res = await fetch(url);
-
-const text = await res.text();
-
-try{
-
-return JSON.parse(text);
-
-}catch{
-
-return null;
-
-}
+  return text;
 
 }
 
 function showRegister(){
 
-registerBox.classList.toggle("hidden");
+  document
+  .getElementById("registerBox")
+  .classList.toggle("hidden");
 
 }
 
 function showForgot(){
 
-forgotBox.classList.toggle("hidden");
-
-}
-
-function setPage(page){
-
-pageAuth.classList.add("hidden");
-pageAbonnement.classList.add("hidden");
-pageDashboard.classList.add("hidden");
-
-document.getElementById(page)
-.classList.remove("hidden");
-
-}
-
-function showPanel(id){
-
-document.querySelectorAll(".panel")
-.forEach(p => p.classList.add("hidden"));
-
-document.getElementById(id)
-.classList.remove("hidden");
-
-}
-
-async function checkStatus(){
-
-const data = await get("/me");
-
-if(!data){
-
-setPage("pageAuth");
-return;
-
-}
-
-if(data.abonnement !== 1){
-
-setPage("pageAbonnement");
-return;
-
-}
-
-setPage("pageDashboard");
-
-await chargerTournois();
+  document
+  .getElementById("forgotBox")
+  .classList.toggle("hidden");
 
 }
 
 async function register(){
 
-const result = await post("/register",{
-name:registerName.value,
-email:registerEmail.value,
-password:registerPassword.value
-});
+  const result = await post("/register",{
 
-if(result.includes("Compte")){
+    name:
+    document.getElementById("registerName").value,
 
-setPage("pageAbonnement");
+    email:
+    document.getElementById("registerEmail").value,
 
-}
+    password:
+    document.getElementById("registerPassword").value
+
+  });
+
+  if(
+    result.includes("Compte")
+    ||
+    result.includes("créé")
+  ){
+
+    alert("Compte créé avec succès");
+
+  }
 
 }
 
 async function login(){
 
-const result = await post("/login",{
-email:loginEmail.value,
-password:loginPassword.value
-});
+  const result = await post("/login",{
 
-if(result.includes("Connexion")){
+    email:
+    document.getElementById("loginEmail").value,
 
-await checkStatus();
+    password:
+    document.getElementById("loginPassword").value
 
-}
+  });
 
-}
+  if(
+    result.includes("Connexion")
+    ||
+    result.includes("succès")
+  ){
 
-async function logout(){
+    location.reload();
 
-await post("/logout",{});
-
-setPage("pageAuth");
+  }
 
 }
 
 async function forgotPassword(){
 
-await post("/forgot-password",{
-email:forgotEmail.value
-});
+  await post("/forgot-password",{
+
+    email:
+    document.getElementById("forgotEmail").value
+
+  });
 
 }
 
 async function resetPassword(){
 
-await post("/reset-password",{
-email:forgotEmail.value,
-code:resetCode.value,
-newPassword:newPassword.value
-});
+  await post("/reset-password",{
+
+    email:
+    document.getElementById("forgotEmail").value,
+
+    code:
+    document.getElementById("resetCode").value,
+
+    newPassword:
+    document.getElementById("newPassword").value
+
+  });
 
 }
-
-async function abonnement(){
-
-const result =
-await post("/abonnement",{});
-
-if(result.includes("Abonnement")){
-
-setPage("pageDashboard");
-
-await chargerTournois();
-
-}
-
-}
-
-async function creerTournoi(){
-
-await post("/tournoi",{
-name:tournoiNom.value,
-max_teams:Number(tournoiMax.value)
-});
-
-await chargerTournois();
-
-}
-
-async function chargerTournois(){
-
-const data = await get("/tournois");
-
-if(!Array.isArray(data)) return;
-
-tournoiSelect.innerHTML =
-data.map(t => `
-<option value="${t.id}">
-${t.name}
-</option>
-`).join("");
-
-tournois.innerHTML =
-data.map(t => `
-<div class="card">
-
-<h3>${t.name}</h3>
-
-<p>
-Équipes : ${t.max_teams}
-</p>
-
-<input
-value="${location.origin}/public/${t.public_code}"
-readonly>
-
-</div>
-`).join("");
-
-}
-
-async function loadAll(){
-
-await chargerParticipants();
-await tirage();
-await classement();
-await voirCommentaires();
-
-}
-
-async function ajouterParticipant(){
-
-await post("/participant",{
-tournament_id:tournoiSelect.value,
-prenom:prenom.value,
-email:participantEmail.value,
-username:username.value,
-telephone:telephone.value,
-numero_serie:numeroSerie.value,
-club_logo:clubLogo.value,
-preuve:preuve.value
-});
-
-await chargerParticipants();
-
-}
-
-async function chargerParticipants(){
-
-const data =
-await get("/participants/" + tournoiSelect.value);
-
-if(!Array.isArray(data)) return;
-
-participantsCheckbox.innerHTML =
-data.map(p => `
-<label>
-
-<input
-type="checkbox"
-class="participantCheck"
-value="${p.id}">
-
-${p.prenom || p.name}
-
-</label>
-`).join("");
-
-participants.innerHTML =
-data.map(p => `
-<div class="card">
-
-<h3>
-${p.club_logo || ""}
-${p.prenom || p.name}
-</h3>
-
-<p>ID : ${p.id}</p>
-
-<p>Buts : ${p.buts}</p>
-
-<p>Matchs : ${p.matchs}</p>
-
-</div>
-`).join("");
-
-}
-
-async function supprimerParticipantsCoches(){
-
-const ids =
-Array.from(
-document.querySelectorAll(".participantCheck:checked")
-).map(i => i.value);
-
-await post(
-"/supprimer-participants-selection",
-{ids}
-);
-
-await chargerParticipants();
-
-}
-
-async function supprimerTousParticipants(){
-
-await post(
-"/supprimer-tous-participants",
-{
-tournament_id:tournoiSelect.value
-}
-);
-
-await chargerParticipants();
-
-}
-
-async function genererPoules(){
-
-await post("/generer-poules",{
-tournament_id:tournoiSelect.value
-});
-
-await tirage();
-
-}
-
-async function tirage(){
-
-const data =
-await get("/tirage/" + tournoiSelect.value);
-
-if(!Array.isArray(data)) return;
-
-tirageResult.innerHTML =
-data.map(t => `
-
-<div class="card">
-
-<h3>Tour ${t.tour}</h3>
-
-${t.matchs.map(m => `
-
-<div class="match">
-
-<p>
-
-${m.player1_name}
-
-${m.played
-? m.score1 + " : " + m.score2
-: "VS"}
-
-${m.player2_name}
-
-</p>
-
-${m.proof_photo
-? `
-<img
-class="proof"
-src="${m.proof_photo}">
-`
-: ""}
-
-</div>
-
-`).join("")}
-
-</div>
-
-`).join("");
-
-}
-
-async function envoyerResultatMatch(){
-
-await post("/update-match-proof",{
-match_id:matchId.value,
-score1:score1.value,
-score2:score2.value,
-photo_url:photoResultat.value
-});
-
-await tirage();
-
-}
-
-async function deleteMatchProof(){
-
-await post("/delete-match-proof",{
-match_id:deletePhotoMatchId.value
-});
-
-await tirage();
-
-}
-
-function creerLienPreuve(){
-
-if(!linkMatchId.value){
-
-message.textContent =
-"ID match obligatoire";
-
-return;
-
-}
-
-lienPreuve.value =
-location.origin +
-"/preuve-match/" +
-linkMatchId.value;
-
-}
-
-function creerLienResultatsPublics(){
-
-if(!tournoiSelect.value){
-
-message.textContent =
-"Choisis un tournoi";
-
-return;
-
-}
-
-lienResultatsPublics.value =
-location.origin +
-"/resultats-public/" +
-tournoiSelect.value;
-
-}
-
-async function modifierStats(){
-
-await post("/stats",{
-participant_id:participantId.value,
-buts:buts.value,
-buts_encaisses:butsEncaisses.value,
-victoires:victoires.value,
-matchs:matchs.value,
-palmares:palmares.value,
-meilleur_buteur:meilleurButeur.value
-});
-
-}
-
-async function classement(){
-
-const data =
-await get("/classement/" + tournoiSelect.value);
-
-if(!data) return;
-
-classementResult.innerHTML = `
-
-<h3>Meilleurs buteurs</h3>
-
-${data.meilleursButeurs.map(p => `
-<p>
-${p.prenom || p.name}
-- ${p.buts} buts
-</p>
-`).join("")}
-
-<h3>Moins buts encaissés</h3>
-
-${data.meilleureDefense.map(p => `
-<p>
-${p.prenom || p.name}
-- ${p.buts_encaisses}
-</p>
-`).join("")}
-
-`;
-
-}
-
-async function ajouterAssistant(){
-
-await post("/assistant",{
-email:assistantEmail.value
-});
-
-}
-
-async function ajouterCommentaire(){
-
-await post("/commentaire",{
-tournament_id:tournoiSelect.value,
-comment:commentText.value
-});
-
-await voirCommentaires();
-
-}
-
-async function voirCommentaires(){
-
-const data =
-await get("/commentaires/" + tournoiSelect.value);
-
-if(!Array.isArray(data)) return;
-
-comments.innerHTML =
-data.map(c => `
-<div class="match">
-
-${c.comment}
-
-</div>
-`).join("");
-
-}
-
-async function resetTournoi(){
-
-await post("/reset-tournoi",{
-tournament_id:tournoiSelect.value
-});
-
-}
-
-checkStatus();
 
 </script>
 
