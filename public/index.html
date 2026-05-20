@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html lang="fr">
-
 <head>
 
 <meta charset="UTF-8">
@@ -47,8 +46,15 @@ header{
   margin:14px 0;
 }
 
+.grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(280px,1fr));
+  gap:14px;
+}
+
 input,
-button{
+button,
+select{
   width:100%;
   padding:12px;
   margin:7px 0;
@@ -56,7 +62,8 @@ button{
   border-radius:10px;
 }
 
-input{
+input,
+select{
   background:#263852;
   color:white;
 }
@@ -78,8 +85,26 @@ button{
   color:#111827;
 }
 
+.danger{
+  background:#ef4444;
+  color:white;
+}
+
 .hidden{
   display:none!important;
+}
+
+.nav{
+  display:flex;
+  gap:8px;
+  overflow-x:auto;
+  padding:10px 0;
+}
+
+.nav button{
+  white-space:nowrap;
+  background:#1e293b;
+  color:white;
 }
 
 #message{
@@ -88,6 +113,19 @@ button{
   padding:12px;
   border-radius:12px;
   min-height:55px;
+}
+
+.match{
+  background:#0f172a;
+  padding:12px;
+  border-radius:12px;
+  margin:8px 0;
+}
+
+.proof{
+  max-width:100%;
+  border-radius:12px;
+  margin-top:10px;
 }
 
 </style>
@@ -207,6 +245,271 @@ Changer mot de passe
 
 </section>
 
+<section
+id="pageAbonnement"
+class="hidden">
+
+<div class="card">
+
+<h2>Abonnement</h2>
+
+<p>
+5000 FCFA / mois
+</p>
+
+<button onclick="abonnement()">
+
+Payer abonnement
+
+</button>
+
+<button
+class="danger"
+onclick="logout()">
+
+Déconnexion
+
+</button>
+
+</div>
+
+</section>
+
+<section
+id="pageDashboard"
+class="hidden">
+
+<div class="nav">
+
+<button onclick="showPanel('panelTournoi')">
+Tournoi
+</button>
+
+<button onclick="showPanel('panelParticipants')">
+Participants
+</button>
+
+<button onclick="showPanel('panelPoules')">
+Poules
+</button>
+
+<button onclick="showPanel('panelScores')">
+Scores
+</button>
+
+<button onclick="showPanel('panelClassement')">
+Classement
+</button>
+
+<button
+class="danger"
+onclick="logout()">
+
+Déconnexion
+
+</button>
+
+</div>
+
+<div id="panelTournoi" class="panel">
+
+<div class="grid">
+
+<div class="card">
+
+<h2>Créer tournoi</h2>
+
+<input
+id="tournoiNom"
+placeholder="Nom du tournoi">
+
+<input
+id="tournoiMax"
+type="number"
+placeholder="Nombre équipes">
+
+<button onclick="creerTournoi()">
+
+Créer tournoi
+
+</button>
+
+<button
+class="secondary"
+onclick="chargerTournois()">
+
+Afficher mes tournois
+
+</button>
+
+<select
+id="tournoiSelect"
+onchange="loadAll()">
+
+</select>
+
+</div>
+
+<div class="card">
+
+<h2>Mes tournois</h2>
+
+<div id="tournois"></div>
+
+</div>
+
+</div>
+
+</div>
+
+<div
+id="panelParticipants"
+class="panel hidden">
+
+<div class="grid">
+
+<div class="card">
+
+<h2>Ajouter participant</h2>
+
+<input id="prenom" placeholder="Prénom joueur">
+
+<input
+id="participantEmail"
+placeholder="Email participant">
+
+<input
+id="username"
+placeholder="Nom utilisateur eFootball">
+
+<input
+id="telephone"
+placeholder="Téléphone">
+
+<input
+id="numeroSerie"
+placeholder="Numéro série">
+
+<input
+id="clubLogo"
+placeholder="Club / logo">
+
+<input
+id="preuve"
+placeholder="Lien preuve">
+
+<button onclick="ajouterParticipant()">
+
+Ajouter participant
+
+</button>
+
+</div>
+
+<div class="card">
+
+<h2>Participants</h2>
+
+<button
+class="secondary"
+onclick="chargerParticipants()">
+
+Afficher participants
+
+</button>
+
+<div id="participants"></div>
+
+</div>
+
+</div>
+
+</div>
+
+<div
+id="panelPoules"
+class="panel hidden">
+
+<div class="card">
+
+<h2>Poules 48 équipes</h2>
+
+<button onclick="genererPoules()">
+
+Générer groupes
+
+</button>
+
+<button
+class="secondary"
+onclick="tirage()">
+
+Voir tirage
+
+</button>
+
+<div id="tirageResult"></div>
+
+</div>
+
+</div>
+
+<div
+id="panelScores"
+class="panel hidden">
+
+<div class="card">
+
+<h2>Résultat match</h2>
+
+<input
+id="matchId"
+placeholder="ID match">
+
+<input
+id="score1"
+type="number"
+placeholder="Score équipe 1">
+
+<input
+id="score2"
+type="number"
+placeholder="Score équipe 2">
+
+<input
+id="photoResultat"
+placeholder="Lien photo résultat">
+
+<button onclick="envoyerResultatMatch()">
+
+Envoyer résultat
+
+</button>
+
+</div>
+
+</div>
+
+<div
+id="panelClassement"
+class="panel hidden">
+
+<div class="card">
+
+<h2>Classement</h2>
+
+<button onclick="classement()">
+
+Voir classement
+
+</button>
+
+<div id="classementResult"></div>
+
+</div>
+
+</div>
+
 <div class="card">
 
 <h2>Message</h2>
@@ -214,6 +517,8 @@ Changer mot de passe
 <div id="message"></div>
 
 </div>
+
+</section>
 
 </div>
 
@@ -231,9 +536,31 @@ async function post(url,data){
 
   const text = await res.text();
 
-  document.getElementById("message").textContent = text;
+  document.getElementById("message")
+  .textContent = text;
 
   return text;
+
+}
+
+async function get(url){
+
+  const res = await fetch(url);
+
+  const text = await res.text();
+
+  try{
+    return JSON.parse(text);
+  }
+
+  catch{
+
+    document.getElementById("message")
+    .textContent = text;
+
+    return null;
+
+  }
 
 }
 
@@ -250,6 +577,64 @@ function showForgot(){
   document
   .getElementById("forgotBox")
   .classList.toggle("hidden");
+
+}
+
+function setPage(page){
+
+  document
+  .getElementById("pageAuth")
+  .classList.add("hidden");
+
+  document
+  .getElementById("pageAbonnement")
+  .classList.add("hidden");
+
+  document
+  .getElementById("pageDashboard")
+  .classList.add("hidden");
+
+  document
+  .getElementById(page)
+  .classList.remove("hidden");
+
+}
+
+function showPanel(id){
+
+  document
+  .querySelectorAll(".panel")
+  .forEach(p => p.classList.add("hidden"));
+
+  document
+  .getElementById(id)
+  .classList.remove("hidden");
+
+}
+
+async function checkStatus(){
+
+  const data = await get("/me");
+
+  if(!data || data.connected === false){
+
+    setPage("pageAuth");
+
+    return;
+
+  }
+
+  if(data.abonnement !== 1){
+
+    setPage("pageAbonnement");
+
+    return;
+
+  }
+
+  setPage("pageDashboard");
+
+  await chargerTournois();
 
 }
 
@@ -274,7 +659,7 @@ async function register(){
     result.includes("créé")
   ){
 
-    alert("Compte créé avec succès");
+    await checkStatus();
 
   }
 
@@ -283,17 +668,36 @@ async function register(){
 async function login(){
 
   const result = await post("/login",{
-    email:loginEmail.value,
-    password:loginPassword.value
+
+    email:
+    document.getElementById("loginEmail").value,
+
+    password:
+    document.getElementById("loginPassword").value
+
   });
 
-  if(result.includes("Connexion")){
+  if(
+    result.includes("Connexion")
+    ||
+    result.includes("réussie")
+  ){
+
     setPage("pageDashboard");
+
     await chargerTournois();
+
   }
+
 }
 
-  
+async function logout(){
+
+  await post("/logout",{});
+
+  setPage("pageAuth");
+
+}
 
 async function forgotPassword(){
 
@@ -322,6 +726,271 @@ async function resetPassword(){
   });
 
 }
+
+async function abonnement(){
+
+  const result =
+    await post("/abonnement",{});
+
+  if(
+    result.includes("Abonnement")
+    ||
+    result.includes("activé")
+  ){
+
+    setPage("pageDashboard");
+
+    await chargerTournois();
+
+  }
+
+}
+
+async function creerTournoi(){
+
+  await post("/tournoi",{
+
+    name:
+    document.getElementById("tournoiNom").value,
+
+    max_teams:Number(
+      document.getElementById("tournoiMax").value
+    )
+
+  });
+
+  await chargerTournois();
+
+}
+
+async function chargerTournois(){
+
+  const data =
+    await get("/tournois");
+
+  if(!Array.isArray(data)) return;
+
+  document
+  .getElementById("tournoiSelect")
+  .innerHTML =
+
+    data.map(t => `
+      <option value="${t.id}">
+        ${t.name}
+      </option>
+    `).join("");
+
+  document
+  .getElementById("tournois")
+  .innerHTML =
+
+    data.map(t => `
+      <div class="match">
+        <h3>${t.name}</h3>
+        <p>ID : ${t.id}</p>
+      </div>
+    `).join("");
+
+}
+
+async function loadAll(){
+
+  await chargerParticipants();
+
+  await tirage();
+
+  await classement();
+
+}
+
+async function ajouterParticipant(){
+
+  await post("/participant",{
+
+    tournament_id:
+    document.getElementById("tournoiSelect").value,
+
+    prenom:
+    document.getElementById("prenom").value,
+
+    email:
+    document.getElementById("participantEmail").value,
+
+    username:
+    document.getElementById("username").value,
+
+    telephone:
+    document.getElementById("telephone").value,
+
+    numero_serie:
+    document.getElementById("numeroSerie").value,
+
+    club_logo:
+    document.getElementById("clubLogo").value,
+
+    preuve:
+    document.getElementById("preuve").value
+
+  });
+
+  await chargerParticipants();
+
+}
+
+async function chargerParticipants(){
+
+  const tournoiId =
+    document.getElementById("tournoiSelect").value;
+
+  if(!tournoiId) return;
+
+  const data =
+    await get("/participants/" + tournoiId);
+
+  if(!Array.isArray(data)) return;
+
+  document
+  .getElementById("participants")
+  .innerHTML =
+
+    data.map(p => `
+      <div class="match">
+        <b>
+          ${p.prenom || ""}
+        </b>
+        <br>
+        ID : ${p.id}
+      </div>
+    `).join("");
+
+}
+
+async function genererPoules(){
+
+  await post("/generer-poules",{
+
+    tournament_id:
+    document.getElementById("tournoiSelect").value
+
+  });
+
+  await tirage();
+
+}
+
+async function tirage(){
+
+  const tournoiId =
+    document.getElementById("tournoiSelect").value;
+
+  if(!tournoiId) return;
+
+  const data =
+    await get("/tirage/" + tournoiId);
+
+  if(!Array.isArray(data)) return;
+
+  document
+  .getElementById("tirageResult")
+  .innerHTML =
+
+    data.map(t => `
+
+      <div class="card">
+
+        <h3>${t.tour}</h3>
+
+        ${t.matchs.map(m => `
+
+          <div class="match">
+
+            <p>
+
+              ${m.player1_name || ""}
+
+              ${m.played
+                ? m.score1 + " : " + m.score2
+                : "VS"}
+
+              ${m.player2_name || ""}
+
+            </p>
+
+            ${m.proof_photo
+              ? `<img class="proof" src="${m.proof_photo}">`
+              : ""}
+
+          </div>
+
+        `).join("")}
+
+      </div>
+
+    `).join("");
+
+}
+
+async function envoyerResultatMatch(){
+
+  await post("/update-match-proof",{
+
+    match_id:
+    document.getElementById("matchId").value,
+
+    score1:
+    document.getElementById("score1").value,
+
+    score2:
+    document.getElementById("score2").value,
+
+    photo_url:
+    document.getElementById("photoResultat").value
+
+  });
+
+  await tirage();
+
+}
+
+async function classement(){
+
+  const tournoiId =
+    document.getElementById("tournoiSelect").value;
+
+  if(!tournoiId) return;
+
+  const data =
+    await get("/classement/" + tournoiId);
+
+  if(!data) return;
+
+  document
+  .getElementById("classementResult")
+  .innerHTML = `
+
+    <h3>Meilleurs buteurs</h3>
+
+    ${(data.meilleursButeurs || []).map(p => `
+      <p>
+        ${p.prenom || ""}
+        - ${p.buts} buts
+      </p>
+    `).join("")}
+
+    <h3>Moins de buts encaissés</h3>
+
+    ${(data.meilleureDefense || []).map(p => `
+      <p>
+        ${p.prenom || ""}
+        - ${p.buts_encaisses}
+      </p>
+    `).join("")}
+
+  `;
+
+}
+
+checkStatus();
 
 </script>
 
