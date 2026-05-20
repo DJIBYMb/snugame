@@ -1104,6 +1104,8 @@ app.post("/register", async (req,res)=>{
 
       req.session.userId = this.lastID;
 
+      console.log("Nouveau compte créé ID :", this.lastID, email);
+
       res.send("Compte créé");
 
     }
@@ -1114,6 +1116,8 @@ app.post("/register", async (req,res)=>{
 app.post("/login", (req,res)=>{
 
   const { email, password } = req.body;
+
+  console.log("Tentative login :", email);
 
   db.get(
     "SELECT * FROM users WHERE email=?",
