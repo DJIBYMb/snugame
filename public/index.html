@@ -127,6 +127,61 @@ button{
   border-radius:12px;
   margin-top:10px;
 }
+.poule-table{
+  width:100%;
+  border-collapse:collapse;
+  margin-top:15px;
+  background:#020617;
+  border:2px solid #caa64b;
+}
+
+.poule-table th{
+  background:#0b4ecb;
+  padding:12px;
+  color:white;
+  border:1px solid #94a3b8;
+}
+
+.poule-table td{
+  padding:12px;
+  text-align:center;
+  border:1px solid #334155;
+}
+
+.poule-rank{
+  background:#16a34a;
+  font-size:24px;
+  font-weight:bold;
+}
+
+.poule-team{
+  text-align:left !important;
+  font-weight:bold;
+}
+
+.score-row{
+  display:grid;
+  grid-template-columns:
+    1fr
+    80px
+    40px
+    80px
+    1fr;
+
+  gap:8px;
+  align-items:center;
+
+  background:#0f172a;
+
+  padding:12px;
+  border-radius:12px;
+  margin:10px 0;
+}
+
+.score-row input{
+  text-align:center;
+  font-size:18px;
+}
 
 </style>
 
@@ -291,6 +346,9 @@ Participants
 
 <button onclick="showPanel('panelPoules')">
 Poules
+</button>
+<button onclick="showPanel('panelPoulesPro')">
+  Poules Pro
 </button>
 <div id="panelPoules" class="panel hidden">
   <div class="card">
@@ -552,6 +610,52 @@ Voir classement
 <h2>Message</h2>
 
 <div id="message"></div>
+
+</div>
+<div id="panelPoulesPro" class="panel hidden">
+
+  <div class="card">
+
+    <h2>Table des poules</h2>
+
+    <button
+      id="btnTirageAutoComplet"
+      onclick="tirageAutomatiqueComplet()"
+    >
+      Tirage automatique complet
+    </button>
+
+    <button
+      class="secondary"
+      onclick="afficherPoulesPro()"
+    >
+      Afficher tableau poules
+    </button>
+
+    <div class="grid">
+
+      <button onclick="ouvrirGroupe('A')">Groupe A</button>
+      <button onclick="ouvrirGroupe('B')">Groupe B</button>
+      <button onclick="ouvrirGroupe('C')">Groupe C</button>
+      <button onclick="ouvrirGroupe('D')">Groupe D</button>
+
+      <button onclick="ouvrirGroupe('E')">Groupe E</button>
+      <button onclick="ouvrirGroupe('F')">Groupe F</button>
+      <button onclick="ouvrirGroupe('G')">Groupe G</button>
+      <button onclick="ouvrirGroupe('H')">Groupe H</button>
+
+      <button onclick="ouvrirGroupe('I')">Groupe I</button>
+      <button onclick="ouvrirGroupe('J')">Groupe J</button>
+      <button onclick="ouvrirGroupe('K')">Groupe K</button>
+      <button onclick="ouvrirGroupe('L')">Groupe L</button>
+
+    </div>
+
+    <div id="pouleTableResult"></div>
+
+    <div id="pouleMatchsResult"></div>
+
+  </div>
 
 </div>
 
@@ -1072,6 +1176,139 @@ async function genererTour(current,next){
   });
 
   await tirage();
+}
+let groupeActuel = "A";
+
+async function afficherPoulesPro(){
+  await ouvrirGroupe(groupeActuel);
+}
+
+async function ouvrirGroupe(groupe){
+
+  groupeActuel = groupe;
+
+  const classementData =
+    await get("/classement-poules/" + tournoiSelect.value);
+
+  const tirageData =
+    await get("/tirage/" + tournoiSelect.value);
+
+  if(!classementData || !classementData[groupe]){
+    pouleTableResult.innerHTML =
+      "<p>Aucun classement pour ce groupe</p>";
+    return;
+  }
+
+  const equipes = classementData[groupe];
+
+  pouleTableResult.innerHTML = `
+    <h2>GROUPE ${groupe}</h2>
+
+    <table class="poule-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Équipe</th>
+          <th>MJ</th>
+          <th>V</th>
+          <th>N</th>
+          <th>D</th>
+          <th>BP</th>
+          <th>BC</th>
+          <th>DIFF</th>
+          <th>PTS</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        ${equipes.map((e,i)=>`
+          <tr>
+            <td class="poule-rank">${i+1}</td>
+            <td class="poule-team">🛡️ ${e.prenom}</td>
+            <td>${e.j}</td>
+            <td>${e.v}</td>
+            <td>${e.n}</td>
+            <td>${e.d}</td>
+            <td>${e.bp}</td>
+            <td>${e.bc}</td>
+            <td>${e.diff}</td>
+            <td>${e.pts}</td>
+          </tr>
+        `).join("")}
+      </tbody>
+    </table>
+  `;
+
+  const blocGroupe =
+    Array.isArray(tirageData)
+      ? tirageData.find(t => t.tour === "Groupe " + groupe)
+      : null;
+
+  if(!blocGroupe){
+    pouleMatchsResult.innerHTML = "";
+    return;
+  }
+
+  pouleMatchsResult.innerHTML = `
+    <h2>Matchs Groupe ${groupe}</h2>
+
+    ${blocGroupe.matchs.map(m=>`
+      <div class="score-row">
+
+        <b>${m.player1_name || "Équipe 1"}</b>
+
+        <input
+        id="score1_${m.id}"
+        type="number"
+        min="0"
+        max="100"
+        value="${m.score1 ?? 0}">
+
+        <b>VS</b>
+
+        <input
+        id="score2_${m.id}"
+        type="number"
+        min="0"
+        max="100"
+        value="${m.score2 ?? 0}">
+
+        <b>${m.player2_name || "Équipe 2"}</b>
+
+      </div>
+
+      <input
+      id="photo_${m.id}"
+      placeholder="Lien photo résultat"
+      value="${m.proof_photo || ""}">
+
+      <button onclick="validerScorePoule(${m.id})">
+        Valider le score
+      </button>
+    `).join("")}
+  `;
+}
+
+async function validerScorePoule(matchId){
+
+  await post("/update-match-proof",{
+    match_id:matchId,
+    score1:document.getElementById("score1_" + matchId).value,
+    score2:document.getElementById("score2_" + matchId).value,
+    photo_url:document.getElementById("photo_" + matchId).value
+  });
+
+  await ouvrirGroupe(groupeActuel);
+}
+
+async function tirageAutomatiqueComplet(){
+
+  await post("/generer-poules",{
+    tournament_id:tournoiSelect.value
+  });
+
+  await tirage();
+  await afficherPoulesPro();
 }
 
 checkStatus();
