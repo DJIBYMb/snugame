@@ -347,10 +347,12 @@ app.post("/supprimer-tous-participants", async (req,res)=>{
     return res.send("Tournoi obligatoire");
   }
 
+  try{
   await run(
-    "DELETE FROM participants WHERE tournament_id=?",
+    "DELETE FROM comments WHERE tournament_id=?",
     [tournament_id]
   );
+ }catch(e){}
 
   await run(
     "DELETE FROM matches WHERE tournament_id=?",
