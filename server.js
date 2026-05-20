@@ -327,11 +327,15 @@ app.post("/supprimer-participants-selection", async (req,res)=>{
   );
 
   await run(
-    `DELETE FROM matches WHERE player1_id IN (${placeholders}) OR player2_id IN (${placeholders})`,
-    [...ids,...ids]
+    `DELETE FROM matches
+     WHERE player1_id IN (${placeholders})
+     OR player2_id IN (${placeholders})
+     OR winner_id IN (${placeholders})
+     OR loser_id IN (${placeholders})`,
+    [...ids, ...ids, ...ids, ...ids]
   );
 
-  res.send("Participants sélectionnés supprimés");
+  res.send("Participants supprimés complètement");
 
 });
 
