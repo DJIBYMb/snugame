@@ -498,6 +498,12 @@ onchange="loadAll()">
 
 <h2>Mes tournois</h2>
 
+<button
+class="danger"
+onclick="supprimerTournoiComplet()">
+Supprimer tournoi complètement
+</button>
+
 <div id="tournois"></div>
 
 </div>
@@ -1050,7 +1056,7 @@ async function chargerParticipants(){
 
   participantsCheckbox.innerHTML =
 
-  data.map(p => `
+  data.map((p, index) => `
 
     <label
     style="display:block;
@@ -1062,7 +1068,8 @@ async function chargerParticipants(){
       value="${p.id}">
 
       ${p.prenom}
-      (#${p.id})
+
+      (N° ${index + 1})
 
     </label>
 
@@ -1469,6 +1476,25 @@ async function supprimerParticipantsCoches(){
   );
 
   await chargerParticipants();
+
+}
+
+async function supprimerTournoiComplet(){
+
+  if(!tournoiSelect.value){
+    message.textContent = "Choisis un tournoi";
+    return;
+  }
+
+  if(!confirm("Supprimer complètement ce tournoi ?")){
+    return;
+  }
+
+  await post("/supprimer-tournoi-complet",{
+    tournament_id:tournoiSelect.value
+  });
+
+  await chargerTournois();
 
 }
 

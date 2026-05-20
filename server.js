@@ -1425,6 +1425,38 @@ app.post("/update-match-proof",(req,res)=>{
 
 });
 
+app.post("/supprimer-tournoi-complet", async (req,res)=>{
+
+  const { tournament_id } = req.body;
+
+  if(!tournament_id){
+    return res.send("Tournoi obligatoire");
+  }
+
+  await run(
+    "DELETE FROM matches WHERE tournament_id=?",
+    [tournament_id]
+  );
+
+  await run(
+    "DELETE FROM participants WHERE tournament_id=?",
+    [tournament_id]
+  );
+
+  await run(
+    "DELETE FROM comments WHERE tournament_id=?",
+    [tournament_id]
+  );
+
+  await run(
+    "DELETE FROM tournaments WHERE id=?",
+    [tournament_id]
+  );
+
+  res.send("Tournoi supprimé complètement");
+
+});
+
 app.listen(PORT, () => {
   console.log(
     "Serveur lancé sur le port " + PORT
