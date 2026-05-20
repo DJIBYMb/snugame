@@ -292,7 +292,25 @@ Participants
 <button onclick="showPanel('panelPoules')">
 Poules
 </button>
+<div id="panelPoules" class="panel hidden">
+  <div class="card">
+    <h2>Poules 48 équipes</h2>
 
+    <button id="btnGenererPoules" onclick="genererPoules()">
+      Tirage automatique 48 équipes
+    </button>
+
+    <button class="secondary" onclick="tirage()">
+      Voir groupes / matchs
+    </button>
+
+    <button class="secondary" onclick="classementPoules()">
+      Classement poules
+    </button>
+
+    <div id="tirageResult"></div>
+  </div>
+</div>
 <button onclick="showPanel('panelScores')">
 Scores
 </button>
@@ -846,7 +864,8 @@ async function chargerParticipants(){
 
   const data =
     await get("/participants/" + tournoiId);
-
+  document.getElementById("btnGenererPoules").disabled =
+  data.length !== 48;
   if(!Array.isArray(data)) return;
 
   document
