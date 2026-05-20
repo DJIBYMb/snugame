@@ -307,6 +307,25 @@ Poules
     <button class="secondary" onclick="classementPoules()">
       Classement poules
     </button>
+    <button class="warning" onclick="generer16es()">
+  Générer 16es automatiquement
+</button>
+
+<button class="warning" onclick="genererTour('16ES','8ES')">
+  Générer 8es automatiquement
+</button>
+
+<button class="warning" onclick="genererTour('8ES','QUART')">
+  Générer quarts automatiquement
+</button>
+
+<button class="warning" onclick="genererTour('QUART','DEMI')">
+  Générer demis automatiquement
+</button>
+
+<button class="warning" onclick="genererTour('DEMI','FINALE')">
+  Générer finale automatiquement
+</button>
 
     <div id="tirageResult"></div>
   </div>
@@ -924,15 +943,45 @@ async function tirage(){
           <div class="match">
 
             <p>
+              <b>${m.player1_name || "Équipe 1"}</b>
+              VS
+              <b>${m.player2_name || "Équipe 2"}</b>
+            </p>
 
-              ${m.player1_name || ""}
+            <div class="grid">
 
+              <input
+              id="score1_${m.id}"
+              type="number"
+              min="0"
+              max="100"
+              value="${m.score1 ?? 0}"
+              placeholder="Score équipe 1">
+
+              <input
+              id="score2_${m.id}"
+              type="number"
+              min="0"
+              max="100"
+              value="${m.score2 ?? 0}"
+              placeholder="Score équipe 2">
+
+            </div>
+
+            <input
+            id="photo_${m.id}"
+            value="${m.proof_photo || ""}"
+            placeholder="Lien photo résultat">
+
+            <button onclick="validerScore(${m.id})">
+              Valider le score
+            </button>
+
+            <p>
+              Résultat :
               ${m.played
-                ? m.score1 + " : " + m.score2
-                : "VS"}
-
-              ${m.player2_name || ""}
-
+                ? m.score1 + " VS " + m.score2
+                : "0 VS 0"}
             </p>
 
             ${m.proof_photo
@@ -948,23 +997,22 @@ async function tirage(){
     `).join("");
 
 }
+async function validerScore(matchId){
 
-async function envoyerResultatMatch(){
+  const score1 =
+    document.getElementById("score1_" + matchId).value;
+
+  const score2 =
+    document.getElementById("score2_" + matchId).value;
+
+  const photo =
+    document.getElementById("photo_" + matchId).value;
 
   await post("/update-match-proof",{
-
-    match_id:
-    document.getElementById("matchId").value,
-
-    score1:
-    document.getElementById("score1").value,
-
-    score2:
-    document.getElementById("score2").value,
-
-    photo_url:
-    document.getElementById("photoResultat").value
-
+    match_id:matchId,
+    score1:score1,
+    score2:score2,
+    photo_url:photo
   });
 
   await tirage();
@@ -1007,6 +1055,23 @@ async function classement(){
 
   `;
 
+}
+async function generer16es(){
+  await post("/generer-16es",{
+    tournament_id:document.getElementById("tournoiSelect").value
+  });
+
+  await tirage();
+}
+
+async function genererTour(current,next){
+  await post("/generer-tour",{
+    tournament_id:document.getElementById("tournoiSelect").value,
+    current_round:current,
+    next_round:next
+  });
+
+  await tirage();
 }
 
 checkStatus();
