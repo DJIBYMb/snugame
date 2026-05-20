@@ -430,6 +430,10 @@ Déconnexion
       Classement poules
     </button>
 
+    <button class="warning" onclick="tirageDesPoules()">
+  Tirage des poules
+</button>
+
     <button
     class="warning"
     onclick="generer16es()">
@@ -1657,6 +1661,26 @@ async function verifierTournoi(){
     participantsData.length +
 
     "/48 participants";
+
+}
+
+async function tirageDesPoules(){
+
+  const tournoiId =
+    document.getElementById("tournoiSelect").value;
+
+  if(!tournoiId){
+    message.textContent = "Choisis un tournoi";
+    return;
+  }
+
+  const result = await post("/generer-16es",{
+    tournament_id:tournoiId
+  });
+
+  message.textContent = result;
+
+  await tirage();
 
 }
 
