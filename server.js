@@ -6,7 +6,11 @@ const sqlite3 = require("sqlite3").verbose();
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const db = new sqlite3.Database("./database.sqlite");
+const path = require("path");
+
+const db = new sqlite3.Database(
+  path.join(__dirname, "database.sqlite")
+);
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static("public"));
@@ -1536,6 +1540,14 @@ app.post("/supprimer-tournoi-complet", async (req,res)=>{
 
   res.send("Tournoi supprimé complètement");
 
+});
+
+process.on("uncaughtException", err => {
+  console.log("Erreur capturée :", err);
+});
+
+process.on("unhandledRejection", err => {
+  console.log("Promesse rejetée :", err);
 });
 
 app.listen(PORT, () => {
