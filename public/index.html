@@ -562,6 +562,14 @@ Afficher participants
 
 </button>
 
+<button
+class="danger"
+onclick="supprimerParticipantsCoches()">
+Supprimer sélectionnés
+</button>
+
+<div id="participantsCheckbox"></div>
+
 <div id="participants"></div>
 
 </div>
@@ -1040,6 +1048,26 @@ async function chargerParticipants(){
   data.length !== 48;
   if(!Array.isArray(data)) return;
 
+  participantsCheckbox.innerHTML =
+
+  data.map(p => `
+
+    <label
+    style="display:block;
+    margin:8px 0">
+
+      <input
+      type="checkbox"
+      class="participantCheck"
+      value="${p.id}">
+
+      ${p.prenom}
+      (#${p.id})
+
+    </label>
+
+  `).join("");
+
   document
   .getElementById("participants")
   .innerHTML =
@@ -1412,6 +1440,35 @@ async function tirageAutomatiqueSuivant(){
 
   message.textContent =
     "Tous les matchs doivent être terminés";
+
+}
+
+async function supprimerParticipantsCoches(){
+
+  const ids =
+
+    Array.from(
+      document.querySelectorAll(
+        ".participantCheck:checked"
+      )
+    )
+
+    .map(i => i.value);
+
+  if(!ids.length){
+
+    message.textContent =
+      "Coche au moins un participant";
+
+    return;
+  }
+
+  await post(
+    "/supprimer-participants-selection",
+    { ids }
+  );
+
+  await chargerParticipants();
 
 }
 
