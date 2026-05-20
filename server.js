@@ -323,29 +323,37 @@ app.get("/participants/:id",(req,res)=>{
 
 app.post("/supprimer-participants-selection", async (req,res)=>{
 
-  const { ids } = req.body;
+  try{
 
-  if(!ids || !Array.isArray(ids) || ids.length === 0){
-    return res.send("Aucun participant sélectionné");
+    const { ids } = req.body;
+
+    if(!ids || !Array.isArray(ids) || ids.length === 0){
+      return res.send("Aucun participant sélectionné");
+    }
+
+    const placeholders = ids.map(()=>"?").join(",");
+
+    await run(
+      `DELETE FROM matches
+       WHERE player1_id IN (${placeholders})
+       OR player2_id IN (${placeholders})`,
+      [...ids, ...ids]
+    );
+
+    await run(
+      `DELETE FROM participants
+       WHERE id IN (${placeholders})`,
+      ids
+    );
+
+    res.send("Participant supprimé complètement");
+
+  }catch(e){
+
+    console.log(e);
+    res.send("Erreur suppression participant");
+
   }
-
-  const placeholders = ids.map(()=>"?").join(",");
-
-  await run(
-    `DELETE FROM participants WHERE id IN (${placeholders})`,
-    ids
-  );
-
-  await run(
-    `DELETE FROM matches
-     WHERE player1_id IN (${placeholders})
-     OR player2_id IN (${placeholders})
-     OR winner_id IN (${placeholders})
-     OR loser_id IN (${placeholders})`,
-    [...ids, ...ids, ...ids, ...ids]
-  );
-
-  res.send("Participants supprimés complètement");
 
 });
 
