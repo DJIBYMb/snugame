@@ -1289,100 +1289,117 @@ app.get("/participants/:id",(req,res)=>{
 app.post("/generer-poules", async (req,res)=>{
 
   const {
-    tournament_id
+    tournament_id,
+    group_size
   } = req.body;
 
-  db.all(
-    "SELECT * FROM participants WHERE tournament_id=?",
-    [tournament_id],
-    async (err,participants)=>{
+  const taillePoule =
+    Number(group_size || 4);
 
-      if(participants.length !== 48){
-        return res.send("Il faut 48 équipes");
-      }
+  const participants =
+    await all(
+      "SELECT * FROM participants WHERE tournament_id=?",
+      [tournament_id]
+    );
 
-      await new Promise(resolve=>{
-        db.run(
-          "DELETE FROM matches WHERE tournament_id=?",
-          [tournament_id],
-          resolve
-        );
-      });
+  const total =
+    participants.length;
 
-      const groupes =
-        "ABCDEFGHIJKL".split("");
+  if(total > 100){
+    return res.send("Maximum 100 participants");
+  }
 
-      const melange =
-        [...participants]
-        .sort(()=>Math.random()-0.5);
+  if(total < taillePoule * 2){
+    return res.send("Il faut minimum 2 poules complètes");
+  }
 
-      for(let g=0; g<12; g++){
+  if(total % taillePoule !== 0){
 
-        const groupe =
-          groupes[g];
+    const manque =
+      taillePoule - (total % taillePoule);
 
-        const equipes =
-          melange.slice(g*4,g*4+4);
+    return res.send(
+      "Poules impossibles : il manque " +
+      manque +
+      " participant(s)"
+    );
 
-        for(const equipe of equipes){
+  }
 
-          await new Promise(resolve=>{
-            db.run(
-              "UPDATE participants SET group_name=? WHERE id=?",
-              [groupe,equipe.id],
-              resolve
-            );
-          });
+  await run(
+    "DELETE FROM matches WHERE tournament_id=?",
+    [tournament_id]
+  );
 
-        }
+  await run(
+    "UPDATE tournaments SET status='active' WHERE id=?",
+    [tournament_id]
+  );
 
-        const matchs = [
-          [0,1],
-          [2,3],
-          [0,2],
-          [1,3],
-          [0,3],
-          [1,2]
-        ];
+  const lettres =
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
 
-        for(let i=0;i<matchs.length;i++){
+  const melange =
+    [...participants].sort(()=>Math.random() - 0.5);
 
-          const m = matchs[i];
+  const nombreGroupes =
+    total / taillePoule;
 
-          await new Promise(resolve=>{
+  for(let g=0; g<nombreGroupes; g++){
 
-            db.run(
-              `
-              INSERT INTO matches(
-                tournament_id,
-                round,
-                group_name,
-                match_order,
-                player1_id,
-                player2_id
-              )
-              VALUES(?,?,?,?,?,?)
-              `,
-              [
-                tournament_id,
-                "POULE",
-                groupe,
-                i+1,
-                equipes[m[0]].id,
-                equipes[m[1]].id
-              ],
-              resolve
-            );
+    const groupe =
+      lettres[g] || ("G" + (g + 1));
 
-          });
+    const equipes =
+      melange.slice(
+        g * taillePoule,
+        g * taillePoule + taillePoule
+      );
 
-        }
+    for(const equipe of equipes){
 
-      }
-
-      res.send("Poules générées");
+      await run(
+        "UPDATE participants SET group_name=? WHERE id=?",
+        [groupe,equipe.id]
+      );
 
     }
+
+    for(let i=0; i<equipes.length; i++){
+
+      for(let j=i+1; j<equipes.length; j++){
+
+        await run(
+          `
+          INSERT INTO matches(
+            tournament_id,
+            round,
+            group_name,
+            player1_id,
+            player2_id
+          )
+          VALUES(?,?,?,?,?)
+          `,
+          [
+            tournament_id,
+            "POULE",
+            groupe,
+            equipes[i].id,
+            equipes[j].id
+          ]
+        );
+
+      }
+
+    }
+
+  }
+
+  res.send(
+    "Tirage terminé : " +
+    nombreGroupes +
+    " poules de " +
+    taillePoule
   );
 
 });
