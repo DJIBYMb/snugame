@@ -383,85 +383,144 @@ app.post("/supprimer-tous-participants", async (req,res)=>{
 
 app.post("/generer-poules", async (req,res)=>{
 
-  const { tournament_id } = req.body;
+  try{
 
-  const participants = await all(
-    "SELECT * FROM participants WHERE tournament_id=?",
-    [tournament_id]
-  );
+    const {
+      tournament_id,
+      group_size
+    } = req.body;
 
-  if(participants.length !== 48){
-    return res.send("Il faut exactement 48 équipes pour générer les poules");
-  }
+    const taillePoule =
+      Number(group_size || 4);
 
-  await run(
-    "DELETE FROM matches WHERE tournament_id=?",
-    [tournament_id]
-  );
+    const taillesAutorisees =
+      [3,4,5,8,10];
 
-  await run(
-    "UPDATE tournaments SET status='active' WHERE id=?",
-    [tournament_id]
-  );
+    if(!taillesAutorisees.includes(taillePoule)){
+      return res.send(
+        "Taille de poule autorisée : 3, 4, 5, 8 ou 10"
+      );
+    }
 
-  const groupes = groupLetters();
+    const participants =
+      await all(
+        "SELECT * FROM participants WHERE tournament_id=?",
+        [tournament_id]
+      );
 
-  const melange =
-    [...participants].sort(()=>Math.random() - 0.5);
+    const total =
+      participants.length;
 
-  const ordreMatchs = [
-    [0,1],
-    [2,3],
-    [0,2],
-    [1,3],
-    [0,3],
-    [1,2]
-  ];
+    if(total < 9 || total > 100){
+      return res.send(
+        "Le tournoi doit avoir entre 9 et 100 participants"
+      );
+    }
 
-  for(let g=0; g<12; g++){
+    if(total % taillePoule !== 0){
 
-    const groupe = groupes[g];
+      const manque =
+        taillePoule - (total % taillePoule);
 
-    const equipes =
-      melange.slice(g * 4, g * 4 + 4);
-
-    for(let i=0; i<equipes.length; i++){
-
-      await run(
-        "UPDATE participants SET group_name=? WHERE id=?",
-        [groupe, equipes[i].id]
+      return res.send(
+        "Poules impossibles : il manque " +
+        manque +
+        " participant(s) pour faire des poules égales de " +
+        taillePoule
       );
 
     }
 
-    for(let i=0; i<ordreMatchs.length; i++){
+    await run(
+      "DELETE FROM matches WHERE tournament_id=?",
+      [tournament_id]
+    );
 
-      const [a,b] = ordreMatchs[i];
+    await run(
+      "UPDATE tournaments SET status='active' WHERE id=?",
+      [tournament_id]
+    );
 
-      await run(
-        `INSERT INTO matches(
-          tournament_id,
-          round,
-          group_name,
-          player1_id,
-          player2_id
-        ) VALUES(?,?,?,?,?)`,
-        [
-          tournament_id,
-          "POULE",
-          groupe,
-          equipes[a].id,
-          equipes[b].id
-        ]
-      );
+    const melange =
+      [...participants].sort(()=>Math.random() - 0.5);
+
+    const lettres =
+      "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+
+    const nombreGroupes =
+      total / taillePoule;
+
+    for(let g=0; g<nombreGroupes; g++){
+
+      const groupe =
+        lettres[g] || ("G" + (g + 1));
+
+      const equipes =
+        melange.slice(
+          g * taillePoule,
+          g * taillePoule + taillePoule
+        );
+
+      for(let i=0; i<equipes.length; i++){
+
+        await run(
+          "UPDATE participants SET group_name=? WHERE id=?",
+          [groupe,equipes[i].id]
+        );
+
+      }
+
+      let ordre = 1;
+
+      for(let i=0; i<equipes.length; i++){
+
+        for(let j=i+1; j<equipes.length; j++){
+
+          await run(
+            `
+            INSERT INTO matches(
+              tournament_id,
+              round,
+              group_name,
+              player1_id,
+              player2_id
+            ) VALUES(?,?,?,?,?)
+            `,
+            [
+              tournament_id,
+              "POULE",
+              groupe,
+              equipes[i].id,
+              equipes[j].id
+            ]
+          );
+
+          ordre++;
+
+        }
+
+      }
 
     }
 
-  }
+    res.send(
+      "Tirage automatique terminé : " +
+      nombreGroupes +
+      " groupes de " +
+      taillePoule +
+      " participants"
+    );
 
-  res.send("Tirage automatique terminé : 12 groupes de 4 équipes");
+  }catch(e){
+
+    console.log(e);
+
+    res.send("Erreur génération poules");
+
+  }
 
 });
+
 app.get("/tirage/:id", (req,res)=>{
 
   db.all(

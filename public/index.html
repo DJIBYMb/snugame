@@ -378,6 +378,30 @@ Déconnexion
 
     <h2>Poules 48 équipes</h2>
 
+    <select id="groupSize">
+
+  <option value="3">
+    Poules de 3
+  </option>
+
+  <option value="4" selected>
+    Poules de 4
+  </option>
+
+  <option value="5">
+    Poules de 5
+  </option>
+
+  <option value="8">
+    Poules de 8
+  </option>
+
+  <option value="10">
+    Poules de 10
+  </option>
+
+</select>
+
     <button
     id="btnGenererPoules"
     onclick="genererPoules()">
@@ -1131,13 +1155,29 @@ async function chargerParticipants(){
 
 async function genererPoules(){
 
-  await post("/generer-poules",{
+  const tournoiId =
+    document.getElementById("tournoiSelect").value;
 
-    tournament_id:
-    document.getElementById("tournoiSelect").value
+  const taille =
+    document.getElementById("groupSize").value;
 
-  });
+  if(!tournoiId){
+    message.textContent =
+      "Choisis un tournoi";
+    return;
+  }
 
+  const result = await post(
+    "/generer-poules",
+    {
+      tournament_id:tournoiId,
+      group_size:taille
+    }
+  );
+
+  message.textContent = result;
+
+  await chargerParticipants();
   await tirage();
 
 }
