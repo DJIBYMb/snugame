@@ -347,46 +347,95 @@ Participants
 <button onclick="showPanel('panelPoules')">
 Poules
 </button>
+
 <button onclick="showPanel('panelPoulesPro')">
-  Poules Pro
+Poules Pro
 </button>
+
+<button onclick="showPanel('panelScores')">
+Scores
+</button>
+
+<button onclick="showPanel('panelClassement')">
+Classement
+</button>
+
+<button
+class="danger"
+onclick="logout()">
+Déconnexion
+</button>
+
+</div>
+
 <div id="panelPoules" class="panel hidden">
+
   <div class="card">
+
     <h2>Poules 48 équipes</h2>
 
-    <button id="btnGenererPoules" onclick="genererPoules()">
+    <button
+    id="btnGenererPoules"
+    onclick="genererPoules()">
       Tirage automatique 48 équipes
     </button>
 
-    <button class="secondary" onclick="tirage()">
+<button class="warning" onclick="tirageAutomatiqueSuivant()">
+  Tirage automatique suivant
+</button>
+
+    <button
+    class="warning"
+    onclick="tirageAutomatiqueSuivant()">
+      Tirage automatique suivant
+    </button>
+
+    <button
+    class="secondary"
+    onclick="tirage()">
       Voir groupes / matchs
     </button>
 
-    <button class="secondary" onclick="classementPoules()">
+    <button
+    class="secondary"
+    onclick="classementPoules()">
       Classement poules
     </button>
-    <button class="warning" onclick="generer16es()">
-  Générer 16es automatiquement
-</button>
 
-<button class="warning" onclick="genererTour('16ES','8ES')">
-  Générer 8es automatiquement
-</button>
+    <button
+    class="warning"
+    onclick="generer16es()">
+      Générer 16es automatiquement
+    </button>
 
-<button class="warning" onclick="genererTour('8ES','QUART')">
-  Générer quarts automatiquement
-</button>
+    <button
+    class="warning"
+    onclick="genererTour('16ES','8ES')">
+      Générer 8es automatiquement
+    </button>
 
-<button class="warning" onclick="genererTour('QUART','DEMI')">
-  Générer demis automatiquement
-</button>
+    <button
+    class="warning"
+    onclick="genererTour('8ES','QUART')">
+      Générer quarts automatiquement
+    </button>
 
-<button class="warning" onclick="genererTour('DEMI','FINALE')">
-  Générer finale automatiquement
-</button>
+    <button
+    class="warning"
+    onclick="genererTour('QUART','DEMI')">
+      Générer demis automatiquement
+    </button>
+
+    <button
+    class="warning"
+    onclick="genererTour('DEMI','FINALE')">
+      Générer finale automatiquement
+    </button>
 
     <div id="tirageResult"></div>
+
   </div>
+
 </div>
 <button onclick="showPanel('panelScores')">
 Scores
@@ -1309,6 +1358,61 @@ async function tirageAutomatiqueComplet(){
 
   await tirage();
   await afficherPoulesPro();
+}
+async function tirageAutomatiqueSuivant(){
+
+  const tournoiId =
+    document.getElementById("tournoiSelect").value;
+
+  const data =
+    await get("/phase-finale/" + tournoiId);
+
+  if(!Array.isArray(data)) return;
+
+  const rounds = {
+    "16ES":"8ES",
+    "8ES":"QUART",
+    "QUART":"DEMI",
+    "DEMI":"FINALE"
+  };
+
+  const ordre = [
+    "16ES",
+    "8ES",
+    "QUART",
+    "DEMI"
+  ];
+
+  for(const round of ordre){
+
+    const matchs =
+      data.filter(m => m.round === round);
+
+    if(matchs.length === 0){
+      continue;
+    }
+
+    const tousJoues =
+      matchs.every(m => m.played === 1);
+
+    if(tousJoues){
+
+      await post("/generer-tour",{
+        tournament_id:tournoiId,
+        current_round:round,
+        next_round:rounds[round]
+      });
+
+      await tirage();
+
+      return;
+    }
+
+  }
+
+  message.textContent =
+    "Tous les matchs doivent être terminés";
+
 }
 
 checkStatus();
