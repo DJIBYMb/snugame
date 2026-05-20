@@ -283,26 +283,17 @@ async function register(){
 async function login(){
 
   const result = await post("/login",{
-
-    email:
-    document.getElementById("loginEmail").value,
-
-    password:
-    document.getElementById("loginPassword").value
-
+    email:loginEmail.value,
+    password:loginPassword.value
   });
 
-  if(
-    result.includes("Connexion")
-    ||
-    result.includes("succès")
-  ){
-
-    location.reload();
-
+  if(result.includes("Connexion")){
+    setPage("pageDashboard");
+    await chargerTournois();
   }
-
 }
+
+  
 
 async function forgotPassword(){
 
