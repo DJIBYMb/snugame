@@ -1490,9 +1490,29 @@ async function supprimerTournoiComplet(){
     return;
   }
 
-  await post("/supprimer-tournoi-complet",{
+  const result = await post("/supprimer-tournoi-complet",{
     tournament_id:tournoiSelect.value
   });
+
+  message.textContent = result;
+
+  tournoiSelect.innerHTML = "";
+  tournois.innerHTML = "";
+  participants.innerHTML = "";
+  participantsCheckbox.innerHTML = "";
+  tirageResult.innerHTML = "";
+
+  if(document.getElementById("pouleTableResult")){
+    pouleTableResult.innerHTML = "";
+  }
+
+  if(document.getElementById("pouleMatchsResult")){
+    pouleMatchsResult.innerHTML = "";
+  }
+
+  if(document.getElementById("phaseFinale")){
+    phaseFinale.innerHTML = "";
+  }
 
   await chargerTournois();
 
