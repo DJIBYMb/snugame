@@ -34,6 +34,16 @@ function connected(req){
 db.serialize(()=>{
 
   db.run(`
+  CREATE TABLE IF NOT EXISTS comments (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    tournament_id INTEGER,
+    user_id INTEGER,
+    comment TEXT,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+  )
+`);
+
+  db.run(`
     CREATE TABLE IF NOT EXISTS users (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT,
@@ -1435,10 +1445,12 @@ app.post("/supprimer-tournoi-complet", async (req,res)=>{
     return res.send("Tournoi obligatoire");
   }
 
+  try{
   await run(
-    "DELETE FROM matches WHERE tournament_id=?",
+    "DELETE FROM comments WHERE tournament_id=?",
     [tournament_id]
   );
+}catch(e){}
 
   await run(
     "DELETE FROM participants WHERE tournament_id=?",
