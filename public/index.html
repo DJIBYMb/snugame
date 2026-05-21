@@ -653,436 +653,123 @@ Recharger page
 
 <script>
 
-async function post(url,data){
+function matchCard(match){
 
-  const res = await fetch(url,{
-    method:"POST",
-    headers:{
-      "Content-Type":"application/json"
-    },
-    body:JSON.stringify(data)
+  return `
+    <div class="match">
+
+      <b>${match.player1_name || "Équipe 1"}</b>
+      VS
+      <b>${match.player2_name || "Équipe 2"}</b>
+
+      <input
+      type="number"
+      id="score1_${match.id}"
+      value="${match.score1 ?? ""}"
+      placeholder="Score 1">
+
+      <input
+      type="number"
+      id="score2_${match.id}"
+      value="${match.score2 ?? ""}"
+      placeholder="Score 2">
+
+      <input
+      type="hidden"
+      id="photo_${match.id}"
+      value="${match.proof_photo || ""}">
+
+      <input
+      type="file"
+      accept="image/*"
+      id="file_${match.id}">
+
+      <button
+      class="secondary"
+      onclick="validerScore(${match.id})">
+
+      Valider score
+
+      </button>
+
+      <button
+      class="danger"
+      onclick="annulerScore(${match.id})">
+
+      Annuler score
+
+      </button>
+
+      <p>
+      ${
+        match.played
+        ? match.score1 + " - " + match.score2
+        : "Non joué"
+      }
+      </p>
+
+      ${
+        match.locked === 1
+        ? "<p>🔒 Score verrouillé</p>"
+        : ""
+      }
+
+      <div id="preview_${match.id}">
+
+        ${
+          match.proof_photo
+          ? `<img class="proof" src="${match.proof_photo}">`
+          : ""
+        }
+
+      </div>
+
+    </div>
+  `;
+}
+
+async function validerScore(matchId){
+
+  let photo = document.getElementById("photo_" + matchId).value;
+  const fileInput = document.getElementById("file_" + matchId);
+
+  if(fileInput && fileInput.files.length){
+
+    const formData = new FormData();
+    formData.append("image", fileInput.files[0]);
+
+    const uploadRes = await fetch("/upload-image",{
+      method:"POST",
+      body:formData
+    });
+
+    const uploadData = await uploadRes.json();
+
+    if(!uploadData.ok){
+      message.textContent = uploadData.message || "Erreur upload image";
+      return;
+    }
+
+    photo = uploadData.url;
+    document.getElementById("photo_" + matchId).value = photo;
+    document.getElementById("preview_" + matchId).innerHTML =
+      `<img class="proof" src="${photo}">`;
+  }
+
+  const result = await post("/update-match-proof",{
+    match_id:matchId,
+    score1:document.getElementById("score1_" + matchId).value,
+    score2:document.getElementById("score2_" + matchId).value,
+    photo_url:photo
   });
 
-  const text = await res.text();
-
-  message.textContent = text;
-
-  return text;
-
-}
-
-async function get(url){
-
-  const res = await fetch(url);
-
-  const text = await res.text();
-
-  try{
-    return JSON.parse(text);
-  }
-
-  catch{
-
-    message.textContent = text;
-
-    return null;
-
-  }
-
-}
-
-function showRegister(){
-
-  registerBox
-  .classList
-  .toggle("hidden");
-
-}
-
-function setPage(page){
-
-  pageAuth.classList.add("hidden");
-  pageAbonnement.classList.add("hidden");
-  pageDashboard.classList.add("hidden");
-
-  document
-  .getElementById(page)
-  .classList.remove("hidden");
-
-}
-
-function showPanel(id){
-
-  document
-  .querySelectorAll(".panel")
-  .forEach(p=>p.classList.add("hidden"));
-
-  document
-  .getElementById(id)
-  .classList.remove("hidden");
-
-}
-
-async function register(){
-
-  const result = await post(
-    "/register",
-    {
-      name:registerName.value,
-      email:registerEmail.value,
-      password:registerPassword.value
-    }
-  );
-
-  if(result.includes("Compte")){
-    await checkStatus();
-  }
-
-}
-
-async function login(){
-
-  const result = await post(
-    "/login",
-    {
-      email:loginEmail.value,
-      password:loginPassword.value
-    }
-  );
-
-  if(result.includes("Connexion")){
-
-    setPage("pageDashboard");
-
-    await chargerTournois();
-
-  }
-
-}
-
-async function logout(){
-
-  await post("/logout",{});
-
-  setPage("pageAuth");
-
-}
-
-async function abonnement(){
-
-  const result =
-    await post("/abonnement",{});
-
-  if(result.includes("Abonnement")){
-
-    setPage("pageDashboard");
-
-    await chargerTournois();
-
-  }
-
-}
-
-async function checkStatus(){
-
-  const data = await get("/me");
-
-  if(!data || data.connected === false){
-
-    setPage("pageAuth");
-
-    return;
-
-  }
-
-  if(data.abonnement !== 1){
-
-    setPage("pageAbonnement");
-
-    return;
-
-  }
-
-  setPage("pageDashboard");
-
-  await chargerTournois();
-
-}
-
-async function creerTournoi(){
-
-  const nom = tournoiNom.value;
-
-  if(!nom){
-
-    message.textContent =
-      "Nom tournoi obligatoire";
-
-    return;
-
-  }
-
-  const result = await post(
-    "/tournoi",
-    {
-      name:nom,
-      max_teams:48
-    }
-  );
-
   message.textContent = result;
 
-  await chargerTournois();
-
-}
-
-async function chargerTournois(){
-
-  const data = await get("/tournois");
-
-  if(!Array.isArray(data)) return;
-
-  tournoiSelect.innerHTML =
-    data.map(t=>`
-
-      <option value="${t.id}">
-        ${t.name}
-      </option>
-
-    `).join("");
-
-  tournois.innerHTML =
-    data.map(t=>`
-
-      <div class="match">
-
-        <b>${t.name}</b><br>
-
-        ID : ${t.id}<br>
-
-        Équipes :
-        ${t.max_teams}<br>
-
-        Statut :
-        ${t.status}
-
-      </div>
-
-    `).join("");
-
-  await loadAll();
-
-}
-
-async function ajouterParticipant(){
-
-  if(!tournoiSelect.value){
-
-    message.textContent =
-      "Choisis tournoi";
-
-    return;
-
-  }
-
-  await post(
-    "/participant",
-    {
-      tournament_id:
-        tournoiSelect.value,
-      prenom:prenom.value,
-      email:participantEmail.value,
-      username:username.value,
-      telephone:telephone.value,
-      numero_serie:numeroSerie.value,
-      club_logo:clubLogo.value,
-      preuve:preuve.value
-    }
-  );
-
-  await chargerParticipants();
-
-}
-
-async function chargerParticipants(){
-
-  if(!tournoiSelect.value) return;
-
-  const data =
-    await get(
-      "/participants/" +
-      tournoiSelect.value
-    );
-
-  if(!Array.isArray(data)) return;
-
-  participantsCount.innerHTML =
-    `<h3>${data.length}/48 équipes</h3>`;
-
-  participantsCheckbox.innerHTML =
-    data.map(p=>`
-
-      <label>
-
-        <input
-        type="checkbox"
-        class="participantCheck"
-        value="${p.id}">
-
-        ${p.prenom}
-
-      </label><br>
-
-    `).join("");
-
-  participants.innerHTML =
-    data.map(p=>`
-
-      <div class="match">
-
-        <b>${p.prenom}</b><br>
-
-        ${p.club_logo || ""}<br>
-
-        Groupe :
-        ${p.group_name || "Aucun"}
-
-      </div>
-
-    `).join("");
-
-}
-
-function cocherTous(etat){
-
-  document
-  .querySelectorAll(".participantCheck")
-  .forEach(c=>c.checked=etat);
-
-}
-
-async function supprimerParticipantsCoches(){
-
-  const ids =
-    Array.from(
-      document.querySelectorAll(
-        ".participantCheck:checked"
-      )
-    ).map(i=>i.value);
-
-  if(!ids.length){
-
-    message.textContent =
-      "Aucun participant sélectionné";
-
-    return;
-
-  }
-
-  if(
-    !confirm(
-      "Supprimer participants ?"
-    )
-  ) return;
-
-  await post(
-    "/supprimer-participants-selection",
-    { ids }
-  );
-
-  await chargerParticipants();
-
-}
-
-async function supprimerTournoiComplet(){
-
-  if(!tournoiSelect.value){
-
-    message.textContent =
-      "Choisis tournoi";
-
-    return;
-
-  }
-
-  if(
-    !confirm(
-      "Supprimer complètement le tournoi ?"
-    )
-  ) return;
-
-  await post(
-    "/supprimer-tournoi-complet",
-    {
-      tournament_id:
-        tournoiSelect.value
-    }
-  );
-
-  nettoyerAffichage();
-
-  await chargerTournois();
-
-}
-
-async function resetTournoi(){
-
-  if(!tournoiSelect.value){
-
-    message.textContent =
-      "Choisis tournoi";
-
-    return;
-
-  }
-
-  if(
-    !confirm(
-      "Réinitialiser le tournoi ?"
-    )
-  ) return;
-
-  await post(
-    "/reset-tournoi",
-    {
-      tournament_id:
-        tournoiSelect.value
-    }
-  );
-
-  nettoyerAffichage();
-
-  await chargerParticipants();
-
-}
-
-async function tirageAutomatiquePoulePro(){
-
-  if(!tournoiSelect.value){
-
-    message.textContent =
-      "Choisis tournoi";
-
-    return;
-
-  }
-
-  const result =
-    await post(
-      "/tirage-automatique-poule-pro",
-      {
-        tournament_id:
-          tournoiSelect.value
-      }
-    );
-
-  message.textContent = result;
-
-  await afficherTiragePoulePro();
-
-  await afficherClassements();
-
-  await afficherPhaseFinale();
+  setTimeout(async ()=>{
+    await afficherTiragePoulePro();
+    await afficherClassements();
+    await afficherPhaseFinale();
+  },500);
 
 }
 
@@ -1095,31 +782,66 @@ function matchCard(match){
       VS
       <b>${match.player2_name || "Équipe 2"}</b>
 
-      <input type="number" id="score1_${match.id}" value="${match.score1 ?? ""}" placeholder="Score 1">
-      <input type="number" id="score2_${match.id}" value="${match.score2 ?? ""}" placeholder="Score 2">
+      <input
+      type="number"
+      id="score1_${match.id}"
+      value="${match.score1 ?? ""}"
+      placeholder="Score 1">
 
-      <input type="hidden" id="photo_${match.id}" value="${match.proof_photo || ""}">
+      <input
+      type="number"
+      id="score2_${match.id}"
+      value="${match.score2 ?? ""}"
+      placeholder="Score 2">
 
-      <input type="file" accept="image/*" id="file_${match.id}">
+      <input
+      type="hidden"
+      id="photo_${match.id}"
+      value="${match.proof_photo || ""}">
 
-      <button onclick="validerScore(${match.id})">
-        Valider score
+      <input
+      type="file"
+      accept="image/*"
+      id="file_${match.id}">
+
+      <button
+      class="secondary"
+      onclick="validerScore(${match.id})">
+
+      Valider score
+
       </button>
 
-      <button class="danger" onclick="annulerScore(${match.id})">
-        Annuler score
+      <button
+      class="danger"
+      onclick="annulerScore(${match.id})">
+
+      Annuler score
+
       </button>
 
-      <p>${match.played ? match.score1 + " - " + match.score2 : "Non joué"}</p>
+      <p>
+      ${
+        match.played
+        ? match.score1 + " - " + match.score2
+        : "Non joué"
+      }
+      </p>
 
-      ${match.locked === 1 ? "<p>🔒 Score verrouillé</p>" : ""}
+      ${
+        match.locked === 1
+        ? "<p>🔒 Score verrouillé</p>"
+        : ""
+      }
 
       <div id="preview_${match.id}">
+
         ${
           match.proof_photo
           ? `<img class="proof" src="${match.proof_photo}">`
           : ""
         }
+
       </div>
 
     </div>
@@ -1143,9 +865,9 @@ async function afficherTiragePoulePro(){
 
       <div class="card">
 
-      <h3>${bloc.tour}</h3>
+        <h3>${bloc.tour}</h3>
 
-      ${bloc.matchs.map(matchCard).join("")}
+        ${bloc.matchs.map(matchCard).join("")}
 
       </div>
 
@@ -1155,53 +877,135 @@ async function afficherTiragePoulePro(){
 
 async function validerScore(matchId){
 
-  let photo = document.getElementById("photo_" + matchId).value;
+  let photo =
+    document
+    .getElementById(
+      "photo_" + matchId
+    )
+    .value;
 
-  const fileInput = document.getElementById("file_" + matchId);
+  const fileInput =
+    document
+    .getElementById(
+      "file_" + matchId
+    );
 
   if(fileInput && fileInput.files.length){
 
-    const formData = new FormData();
-    formData.append("image", fileInput.files[0]);
+    const formData =
+      new FormData();
 
-    const uploadRes = await fetch("/upload-image",{
-      method:"POST",
-      body:formData
-    });
+    formData.append(
+      "image",
+      fileInput.files[0]
+    );
 
-    const uploadData = await uploadRes.json();
+    const uploadRes =
+      await fetch(
+        "/upload-image",
+        {
+          method:"POST",
+          body:formData
+        }
+      );
+
+    const uploadData =
+      await uploadRes.json();
 
     if(!uploadData.ok){
-      message.textContent = uploadData.message || "Erreur upload image";
+
+      message.textContent =
+        uploadData.message ||
+        "Erreur upload image";
+
       return;
+
     }
 
     photo = uploadData.url;
 
-    alert("Image uploadée : " + photo);
+    document
+    .getElementById(
+      "photo_" + matchId
+    )
+    .value = photo;
 
-    document.getElementById("photo_" + matchId).value = photo;
-
-    document.getElementById("preview_" + matchId).innerHTML =
+    document
+    .getElementById(
+      "preview_" + matchId
+    )
+    .innerHTML =
       `<img class="proof" src="${photo}">`;
+
   }
 
-  const result = await post("/update-match-proof",{
-    match_id:matchId,
-    score1:document.getElementById("score1_" + matchId).value,
-    score2:document.getElementById("score2_" + matchId).value,
-    photo_url:photo
-  });
+  const result =
+    await post(
+      "/update-match-proof",
+      {
+        match_id:matchId,
+
+        score1:
+          document
+          .getElementById(
+            "score1_" + matchId
+          ).value,
+
+        score2:
+          document
+          .getElementById(
+            "score2_" + matchId
+          ).value,
+
+        photo_url:photo
+      }
+    );
 
   message.textContent = result;
 
   setTimeout(async ()=>{
 
-  await afficherTiragePoulePro();
-  await afficherClassements();
-  await afficherPhaseFinale();
+    await afficherTiragePoulePro();
 
-},500);
+    await afficherClassements();
+
+    await afficherPhaseFinale();
+
+  },500);
+
+}
+
+async function uploadPreuve(matchId){
+
+  const fileInput = document.getElementById("file_" + matchId);
+
+  if(!fileInput.files.length){
+    message.textContent = "Choisis une image";
+    return;
+  }
+
+  const formData = new FormData();
+  formData.append("image", fileInput.files[0]);
+
+  const res = await fetch("/upload-image",{
+    method:"POST",
+    body:formData
+  });
+
+  const data = await res.json();
+
+  if(!data.ok){
+    message.textContent = data.message || "Erreur upload";
+    return;
+  }
+
+  document.getElementById("photo_" + matchId).value = data.url;
+
+  document.getElementById("preview_" + matchId).innerHTML =
+    `<img class="proof" src="${data.url}">`;
+
+  message.textContent = "Image uploadée";
+}
 
 async function afficherClassements(){
 
@@ -1395,12 +1199,14 @@ function nettoyerAffichage(){
   ];
 
   ids.forEach(id=>{
+
     const el =
       document.getElementById(id);
 
     if(el){
       el.innerHTML = "";
     }
+
   });
 
 }
@@ -1414,52 +1220,6 @@ async function loadAll(){
   await afficherClassements();
 
   await afficherPhaseFinale();
-
-}
-
-async function uploadPreuve(matchId){
-
-  const fileInput =
-    document.getElementById(
-      "file_" + matchId
-    );
-
-  if(!fileInput.files.length){
-    message.textContent = "Choisis une image";
-    return;
-  }
-
-  const formData = new FormData();
-
-  formData.append(
-    "image",
-    fileInput.files[0]
-  );
-
-  const res = await fetch(
-    "/upload-image",
-    {
-      method:"POST",
-      body:formData
-    }
-  );
-
-  const data = await res.json();
-
-  if(!data.ok){
-    message.textContent =
-      data.message || "Erreur upload";
-    return;
-  }
-
-  document
-  .getElementById(
-    "photo_" + matchId
-  )
-  .value = data.url;
-
-  message.textContent =
-    "Image uploadée : " + data.url;
 
 }
 
