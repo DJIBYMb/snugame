@@ -1406,12 +1406,21 @@ async function voirChampion(){
 
 function creerLienPublic(){
 
-  if(!tournoiSelect.value) return;
+  if(!tournoiSelect.value){
+
+    message.textContent =
+      "Choisis tournoi";
+
+    return;
+  }
 
   lienPublic.value =
     location.origin +
-    "/tirage/" +
+    "/public-tournoi/" +
     tournoiSelect.value;
+
+  message.textContent =
+    "Lien public créé. Copie-le ou partage-le.";
 
 }
 

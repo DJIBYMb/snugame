@@ -1326,6 +1326,307 @@ process.on("unhandledRejection", err => {
   console.log("Promesse rejetée :", err);
 });
 
+function escapeHtml(text){
+  return String(text || "")
+    .replace(/&/g,"&amp;")
+    .replace(/</g,"&lt;")
+    .replace(/>/g,"&gt;")
+    .replace(/"/g,"&quot;")
+    .replace(/'/g,"&#039;");
+}
+
+app.get("/public-tournoi/:id", async (req,res)=>{
+
+  try{
+
+    const tournament_id = req.params.id;
+
+    const tournoi = await get(
+      "SELECT * FROM tournaments WHERE id=?",
+      [tournament_id]
+    );
+
+    if(!tournoi){
+      return res.send("Tournoi introuvable");
+    }
+
+    const classement = await classementPoules(tournament_id);
+
+    const matches = await all(
+      `
+      SELECT
+        m.*,
+        p1.prenom AS player1_name,
+        p2.prenom AS player2_name
+      FROM matches m
+      LEFT JOIN participants p1 ON p1.id=m.player1_id
+      LEFT JOIN participants p2 ON p2.id=m.player2_id
+      WHERE m.tournament_id=?
+      ORDER BY
+        CASE m.round
+          WHEN 'POULE' THEN 1
+          WHEN '16ES' THEN 2
+          WHEN '8ES' THEN 3
+          WHEN 'QUART' THEN 4
+          WHEN 'DEMI' THEN 5
+          WHEN '3E PLACE' THEN 6
+          WHEN 'FINALE' THEN 7
+          ELSE 99
+        END,
+        m.group_name,
+        m.match_order
+      `,
+      [tournament_id]
+    );
+
+    const champion = await get(
+      `
+      SELECT p.*
+      FROM tournaments t
+      JOIN participants p ON p.id=t.champion_id
+      WHERE t.id=?
+      `,
+      [tournament_id]
+    ).catch(()=>null);
+
+    const publicUrl =
+      req.protocol + "://" + req.get("host") +
+      "/public-tournoi/" + tournament_id;
+
+    const qrUrl =
+      "https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=" +
+      encodeURIComponent(publicUrl);
+
+    let html = `
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>${escapeHtml(tournoi.name)} - SNUGAME</title>
+
+<style>
+body{
+  margin:0;
+  font-family:Arial,sans-serif;
+  background:#07111f;
+  color:white;
+}
+
+header{
+  background:linear-gradient(135deg,#1455ff,#7c2cff);
+  padding:20px;
+  text-align:center;
+}
+
+.container{
+  max-width:1200px;
+  margin:auto;
+  padding:15px;
+}
+
+.card{
+  background:#152238;
+  border:1px solid #263852;
+  border-radius:16px;
+  padding:15px;
+  margin:15px 0;
+}
+
+.match{
+  background:#0f172a;
+  padding:12px;
+  border-radius:12px;
+  margin:8px 0;
+}
+
+table{
+  width:100%;
+  border-collapse:collapse;
+  margin-top:10px;
+}
+
+th,td{
+  border:1px solid #334155;
+  padding:8px;
+  text-align:center;
+}
+
+th{
+  background:#0b4ecb;
+}
+
+.qualifie{
+  background:#064e3b;
+}
+
+.troisieme{
+  background:#78350f;
+}
+
+button{
+  padding:12px;
+  border:none;
+  border-radius:10px;
+  background:#22c55e;
+  font-weight:bold;
+  cursor:pointer;
+  margin:5px;
+}
+
+.qr{
+  background:white;
+  padding:10px;
+  border-radius:12px;
+}
+
+@media print{
+  button{
+    display:none;
+  }
+}
+</style>
+</head>
+
+<body>
+
+<header>
+<h1>${escapeHtml(tournoi.name)}</h1>
+<p>Résultats publics SNUGAME</p>
+<button onclick="window.print()">Exporter PDF</button>
+</header>
+
+<div class="container">
+
+<div class="card">
+<h2>QR Code du tournoi</h2>
+<p>Scanne pour voir les résultats en direct :</p>
+<img class="qr" src="${qrUrl}">
+<p>${escapeHtml(publicUrl)}</p>
+</div>
+`;
+
+    if(champion){
+      html += `
+<div class="card">
+<h1>🏆 Champion</h1>
+<h2>${escapeHtml(champion.prenom)}</h2>
+<p>${escapeHtml(champion.club_logo || "")}</p>
+</div>
+`;
+    }
+
+    html += `<div class="card"><h2>Classements des poules</h2>`;
+
+    for(const groupe of Object.keys(classement).sort()){
+
+      if(groupe === "Sans groupe") continue;
+
+      html += `
+<h3>Groupe ${escapeHtml(groupe)}</h3>
+
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Équipe</th>
+<th>MJ</th>
+<th>V</th>
+<th>N</th>
+<th>D</th>
+<th>BP</th>
+<th>BC</th>
+<th>Diff</th>
+<th>Pts</th>
+</tr>
+</thead>
+<tbody>
+`;
+
+      classement[groupe].forEach((e,i)=>{
+
+        html += `
+<tr class="${i < 2 ? "qualifie" : i === 2 ? "troisieme" : ""}">
+<td>${i + 1}</td>
+<td>${escapeHtml(e.prenom)}</td>
+<td>${e.j}</td>
+<td>${e.v}</td>
+<td>${e.n}</td>
+<td>${e.d}</td>
+<td>${e.bp}</td>
+<td>${e.bc}</td>
+<td>${e.diff}</td>
+<td><b>${e.pts}</b></td>
+</tr>
+`;
+
+      });
+
+      html += `
+</tbody>
+</table>
+`;
+
+    }
+
+    html += `</div>`;
+
+    html += `<div class="card"><h2>Matchs et résultats</h2>`;
+
+    let current = "";
+
+    for(const m of matches){
+
+      const titre =
+        m.round === "POULE"
+        ? "Groupe " + m.group_name
+        : m.round;
+
+      if(titre !== current){
+        current = titre;
+        html += `<h3>${escapeHtml(titre)}</h3>`;
+      }
+
+      html += `
+<div class="match">
+<b>${escapeHtml(m.player1_name || "Équipe 1")}</b>
+VS
+<b>${escapeHtml(m.player2_name || "Équipe 2")}</b>
+<br>
+${m.played ? escapeHtml(m.score1 + " - " + m.score2) : "Non joué"}
+${m.locked === 1 ? "<br>🔒 Verrouillé" : ""}
+${m.proof_photo ? `<br><img src="${escapeHtml(m.proof_photo)}" style="max-width:100%;border-radius:10px;margin-top:10px;">` : ""}
+</div>
+`;
+
+    }
+
+    html += `
+</div>
+
+</div>
+
+<script>
+setTimeout(()=>{
+  location.reload();
+},30000);
+</script>
+
+</body>
+</html>
+`;
+
+    res.send(html);
+
+  }catch(e){
+
+    console.log(e);
+    res.send("Erreur page publique");
+
+  }
+
+});
+
 app.listen(PORT, () => {
 
   console.log(
