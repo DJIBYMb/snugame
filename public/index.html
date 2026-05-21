@@ -1,3 +1,658 @@
+
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+
+<meta charset="UTF-8">
+
+<meta
+name="viewport"
+content="width=device-width, initial-scale=1.0">
+
+<title>SNUGAME</title>
+
+<style>
+
+*{
+  box-sizing:border-box;
+}
+
+body{
+  margin:0;
+  font-family:Arial,sans-serif;
+  background:#07111f;
+  color:white;
+}
+
+header{
+  background:
+  linear-gradient(
+    135deg,
+    #1455ff,
+    #7c2cff
+  );
+
+  padding:18px;
+  text-align:center;
+  position:sticky;
+  top:0;
+  z-index:10;
+}
+
+.container{
+  max-width:1400px;
+  margin:auto;
+  padding:16px;
+}
+
+.card{
+  background:#152238;
+  border:1px solid #263852;
+  padding:18px;
+  border-radius:16px;
+  margin:14px 0;
+}
+
+.grid{
+  display:grid;
+
+  grid-template-columns:
+  repeat(
+    auto-fit,
+    minmax(300px,1fr)
+  );
+
+  gap:14px;
+}
+
+input,
+button,
+select{
+  width:100%;
+  padding:12px;
+  margin:7px 0;
+  border:none;
+  border-radius:10px;
+}
+
+input,
+select{
+  background:#263852;
+  color:white;
+}
+
+button{
+  background:#22c55e;
+  color:#052e16;
+  font-weight:bold;
+  cursor:pointer;
+}
+
+.secondary{
+  background:#3b82f6;
+  color:white;
+}
+
+.warning{
+  background:#f59e0b;
+  color:#111827;
+}
+
+.danger{
+  background:#ef4444;
+  color:white;
+}
+
+.hidden{
+  display:none!important;
+}
+
+.nav{
+  display:flex;
+  gap:8px;
+  overflow-x:auto;
+  padding:10px 0;
+}
+
+.nav button{
+  white-space:nowrap;
+  background:#1e293b;
+  color:white;
+}
+
+#message{
+  white-space:pre-wrap;
+  background:#020617;
+  padding:12px;
+  border-radius:12px;
+  min-height:55px;
+}
+
+.match{
+  background:#0f172a;
+  padding:12px;
+  border-radius:12px;
+  margin:8px 0;
+}
+
+.table-wrap{
+  overflow-x:auto;
+}
+
+table{
+  width:100%;
+  border-collapse:collapse;
+}
+
+th,
+td{
+  border:1px solid #334155;
+  padding:10px;
+  text-align:center;
+}
+
+th{
+  background:#0b4ecb;
+}
+
+.qualifie{
+  background:#064e3b;
+}
+
+.troisieme{
+  background:#78350f;
+}
+
+.bracket{
+  display:grid;
+
+  grid-template-columns:
+  repeat(
+    auto-fit,
+    minmax(260px,1fr)
+  );
+
+  gap:12px;
+}
+
+.proof{
+  width:100%;
+  border-radius:12px;
+  margin-top:10px;
+}
+
+.small{
+  font-size:13px;
+  color:#cbd5e1;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<header>
+
+<h1>SNUGAME</h1>
+
+<p>
+Tournoi eFootball Mobile
+</p>
+
+</header>
+
+<div class="container">
+
+<section id="pageAuth">
+
+<div class="card">
+
+<h2>Connexion</h2>
+
+<input
+id="loginEmail"
+placeholder="Adresse email">
+
+<input
+id="loginPassword"
+type="password"
+placeholder="Mot de passe">
+
+<button onclick="login()">
+Connexion
+</button>
+
+<button
+class="secondary"
+onclick="showRegister()">
+
+Créer un compte
+
+</button>
+
+</div>
+
+<div
+class="card hidden"
+id="registerBox">
+
+<h2>Créer compte</h2>
+
+<input
+id="registerName"
+placeholder="Nom">
+
+<input
+id="registerEmail"
+placeholder="Adresse email">
+
+<input
+id="registerPassword"
+type="password"
+placeholder="Mot de passe">
+
+<button onclick="register()">
+Créer compte
+</button>
+
+</div>
+
+</section>
+
+<section
+id="pageAbonnement"
+class="hidden">
+
+<div class="card">
+
+<h2>Abonnement</h2>
+
+<p>
+5000 FCFA / mois
+</p>
+
+<button onclick="abonnement()">
+Payer abonnement
+</button>
+
+<button
+class="danger"
+onclick="logout()">
+Déconnexion
+</button>
+
+</div>
+
+</section>
+
+<section
+id="pageDashboard"
+class="hidden">
+
+<div class="nav">
+
+<button
+onclick="showPanel('panelTournoi')">
+
+Tournoi
+
+</button>
+
+<button
+onclick="showPanel('panelParticipants')">
+
+Participants
+
+</button>
+
+<button
+onclick="showPanel('panelPoulePro')">
+
+Poule Pro
+
+</button>
+
+<button
+onclick="showPanel('panelClassement')">
+
+Classements
+
+</button>
+
+<button
+onclick="showPanel('panelFinale')">
+
+Phase finale
+
+</button>
+
+<button
+onclick="showPanel('panelParametres')">
+
+Paramètres
+
+</button>
+
+<button
+class="danger"
+onclick="logout()">
+
+Déconnexion
+
+</button>
+
+</div>
+
+<div
+id="panelTournoi"
+class="panel">
+
+<div class="grid">
+
+<div class="card">
+
+<h2>Créer tournoi</h2>
+
+<input
+id="tournoiNom"
+placeholder="Nom du tournoi">
+
+<input
+id="tournoiMax"
+type="number"
+value="48"
+placeholder="Nombre équipes">
+
+<button onclick="creerTournoi()">
+
+Créer tournoi
+
+</button>
+
+<button
+class="secondary"
+onclick="chargerTournois()">
+
+Afficher tournois
+
+</button>
+
+<select
+id="tournoiSelect"
+onchange="loadAll()">
+</select>
+
+</div>
+
+<div class="card">
+
+<h2>Gestion tournoi</h2>
+
+<button
+class="danger"
+onclick="supprimerTournoiComplet()">
+
+Supprimer tournoi complètement
+
+</button>
+
+<button
+class="warning"
+onclick="resetTournoi()">
+
+Réinitialiser tournoi
+
+</button>
+
+<button
+class="secondary"
+onclick="creerLienPublic()">
+
+Créer lien public
+
+</button>
+
+<input
+id="lienPublic"
+readonly
+placeholder="Lien public résultats">
+
+<div id="tournois"></div>
+
+</div>
+
+</div>
+
+</div>
+
+<div
+id="panelParticipants"
+class="panel hidden">
+
+<div class="grid">
+
+<div class="card">
+
+<h2>Ajouter participant</h2>
+
+<input
+id="prenom"
+placeholder="Prénom">
+
+<input
+id="participantEmail"
+placeholder="Email">
+
+<input
+id="username"
+placeholder="Nom utilisateur">
+
+<input
+id="telephone"
+placeholder="Téléphone">
+
+<input
+id="numeroSerie"
+placeholder="Numéro série">
+
+<input
+id="clubLogo"
+placeholder="Club">
+
+<input
+id="preuve"
+placeholder="Lien preuve">
+
+<button onclick="ajouterParticipant()">
+
+Ajouter participant
+
+</button>
+
+</div>
+
+<div class="card">
+
+<h2>Participants</h2>
+
+<div id="participantsCount"></div>
+
+<button
+class="secondary"
+onclick="chargerParticipants()">
+
+Afficher participants
+
+</button>
+
+<button
+class="secondary"
+onclick="cocherTous(true)">
+
+Tout cocher
+
+</button>
+
+<button
+class="secondary"
+onclick="cocherTous(false)">
+
+Tout décocher
+
+</button>
+
+<button
+class="danger"
+onclick="supprimerParticipantsCoches()">
+
+Supprimer sélectionnés
+
+</button>
+
+<div id="participantsCheckbox"></div>
+
+<div id="participants"></div>
+
+</div>
+
+</div>
+
+</div>
+
+<div
+id="panelPoulePro"
+class="panel hidden">
+
+<div class="card">
+
+<h2>Poule Pro</h2>
+
+<p class="small">
+
+Le bouton unique génère :
+
+Poules → 16es → 8es →
+Quarts → Demis →
+Finale → Champion
+
+</p>
+
+<button
+class="warning"
+onclick="tirageAutomatiquePoulePro()">
+
+Tirage automatique poule pro
+
+</button>
+
+<button
+class="secondary"
+onclick="afficherTiragePoulePro()">
+
+Afficher matchs
+
+</button>
+
+<div id="pouleProResult"></div>
+
+</div>
+
+</div>
+
+<div
+id="panelClassement"
+class="panel hidden">
+
+<div class="card">
+
+<h2>Classements</h2>
+
+<button
+class="secondary"
+onclick="afficherClassements()">
+
+Afficher classements
+
+</button>
+
+<div id="classementsResult"></div>
+
+</div>
+
+</div>
+
+<div
+id="panelFinale"
+class="panel hidden">
+
+<div class="card">
+
+<h2>Phase finale</h2>
+
+<button
+class="secondary"
+onclick="afficherPhaseFinale()">
+
+Afficher phase finale
+
+</button>
+
+<button
+class="secondary"
+onclick="voirChampion()">
+
+Voir champion
+
+</button>
+
+<div id="phaseFinaleResult"></div>
+
+</div>
+
+</div>
+
+<div
+id="panelParametres"
+class="panel hidden">
+
+<div class="card">
+
+<h2>Paramètres</h2>
+
+<button
+class="secondary"
+onclick="nettoyerAffichage()">
+
+Nettoyer affichage
+
+</button>
+
+<button
+class="secondary"
+onclick="checkStatus()">
+
+Recharger page
+
+</button>
+
+</div>
+
+</div>
+
+</section>
+
+<div class="card">
+
+<h2>Message</h2>
+
+<div id="message"></div>
+
+</div>
+
+</div>
+
+
 <script>
 
 async function post(url,data){
