@@ -1208,30 +1208,64 @@ async function afficherTiragePoulePro(){
 
 async function validerScore(matchId){
 
-  const photo =
+  let photo =
+    document.getElementById(
+      "photo_" + matchId
+    ).value;
+
+  const fileInput =
+    document.getElementById(
+      "file_" + matchId
+    );
+
+  if(fileInput && fileInput.files.length){
+
+    const formData = new FormData();
+
+    formData.append(
+      "image",
+      fileInput.files[0]
+    );
+
+    const uploadRes = await fetch(
+      "/upload-image",
+      {
+        method:"POST",
+        body:formData
+      }
+    );
+
+    const uploadData =
+      await uploadRes.json();
+
+    if(!uploadData.ok){
+      message.textContent =
+        uploadData.message || "Erreur upload image";
+      return;
+    }
+
+    photo = uploadData.url;
+
     document
     .getElementById(
       "photo_" + matchId
-    ).value;
+    )
+    .value = photo;
+  }
 
   const result =
     await post(
       "/update-match-proof",
       {
         match_id:matchId,
-
         score1:
-          document
-          .getElementById(
+          document.getElementById(
             "score1_" + matchId
           ).value,
-
         score2:
-          document
-          .getElementById(
+          document.getElementById(
             "score2_" + matchId
           ).value,
-
         photo_url:photo
       }
     );
@@ -1239,32 +1273,7 @@ async function validerScore(matchId){
   message.textContent = result;
 
   await afficherTiragePoulePro();
-
   await afficherClassements();
-
-  await afficherPhaseFinale();
-
-}
-
-
-async function annulerScore(matchId){
-
-  if(!confirm("Annuler ce score ?")) return;
-
-  const result =
-    await post(
-      "/annuler-score",
-      {
-        match_id:matchId
-      }
-    );
-
-  message.textContent = result;
-
-  await afficherTiragePoulePro();
-
-  await afficherClassements();
-
   await afficherPhaseFinale();
 
 }
