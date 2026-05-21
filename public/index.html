@@ -727,6 +727,12 @@ Voir classement
       Afficher tableau poules
     </button>
 
+    <button
+     class="warning"
+     onclick="tirageAutomatiquePoulesPro()">
+     Tirage automatique poule pro
+    </button>
+
     <div class="grid">
 
       <button onclick="ouvrirGroupe('A')">Groupe A</button>
@@ -1682,6 +1688,24 @@ async function tirageDesPoules(){
 
   await tirage();
 
+}
+
+async function tirageAutomatiquePoulesPro(){
+
+  if(!tournoiSelect.value){
+    message.textContent = "Choisis un tournoi";
+    return;
+  }
+
+  await post("/generer-poules",{
+    tournament_id:tournoiSelect.value,
+    group_size:document.getElementById("groupSize").value
+  });
+
+  await afficherPoulesPro();
+
+  message.textContent =
+    "Tirage poule pro terminé. Les points se calculent avec les scores : victoire 3 pts, nul 1 pt.";
 }
 
 checkStatus();
