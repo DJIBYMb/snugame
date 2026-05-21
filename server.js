@@ -1700,7 +1700,7 @@ app.post("/upload-image",(req,res)=>{
 
     if(err){
 
-      console.log("ERREUR UPLOAD EXACTE :", err);
+      console.log("ERREUR UPLOAD EXACTE :", err.message, err.code);
 
       return res.status(400).json({
         ok:false,
