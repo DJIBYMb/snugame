@@ -8,25 +8,34 @@ const path = require("path");
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-const db = new sqlite3.Database(path.join(__dirname, "database.sqlite"));
+const db = new sqlite3.Database(
+  path.join(__dirname, "database.sqlite")
+);
 
 app.use(express.json({ limit:"10mb" }));
 app.use(express.urlencoded({ extended:true }));
 app.use(express.static("public"));
 
 app.use(session({
-  store:new SQLiteStore({ db:"sessions.sqlite", dir:"." }),
-  secret:process.env.SESSION_SECRET || "efootball-secret",
+  store:new SQLiteStore({
+    db:"sessions.sqlite",
+    dir:"."
+  }),
+  secret:
+    process.env.SESSION_SECRET
+    || "snugame-secret",
   resave:false,
   saveUninitialized:false,
   cookie:{
-    maxAge:1000 * 60 * 60 * 24 * 30,
+    maxAge:
+      1000 * 60 * 60 * 24 * 30,
     sameSite:"lax"
   }
 }));
 
 function connected(req){
-  return req.session && req.session.userId;
+  return req.session &&
+         req.session.userId;
 }
 
 function run(sql, params=[]){
@@ -59,7 +68,7 @@ function all(sql, params=[]){
 db.serialize(()=>{
 
   db.run(`
-    CREATE TABLE IF NOT EXISTS users (
+    CREATE TABLE IF NOT EXISTS users(
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT,
       email TEXT UNIQUE,
@@ -69,7 +78,7 @@ db.serialize(()=>{
   `);
 
   db.run(`
-    CREATE TABLE IF NOT EXISTS tournaments (
+    CREATE TABLE IF NOT EXISTS tournaments(
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       user_id INTEGER,
       name TEXT,
@@ -80,7 +89,7 @@ db.serialize(()=>{
   `);
 
   db.run(`
-    CREATE TABLE IF NOT EXISTS participants (
+    CREATE TABLE IF NOT EXISTS participants(
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       tournament_id INTEGER,
       prenom TEXT,
@@ -95,7 +104,7 @@ db.serialize(()=>{
   `);
 
   db.run(`
-    CREATE TABLE IF NOT EXISTS matches (
+    CREATE TABLE IF NOT EXISTS matches(
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       tournament_id INTEGER,
       round TEXT,
@@ -108,51 +117,97 @@ db.serialize(()=>{
       winner_id INTEGER DEFAULT NULL,
       loser_id INTEGER DEFAULT NULL,
       proof_photo TEXT,
-      played INTEGER DEFAULT 0
+      played INTEGER DEFAULT 0,
+      locked INTEGER DEFAULT 0
     )
   `);
 
-  db.run("ALTER TABLE tournaments ADD COLUMN champion_id INTEGER DEFAULT NULL", ()=>{});
-  db.run("ALTER TABLE matches ADD COLUMN winner_id INTEGER DEFAULT NULL", ()=>{});
-  db.run("ALTER TABLE matches ADD COLUMN loser_id INTEGER DEFAULT NULL", ()=>{});
 });
 
 app.get("/", (req,res)=>{
-  res.sendFile(path.join(__dirname,"public","index.html"));
+  res.sendFile(
+    path.join(
+      __dirname,
+      "public",
+      "index.html"
+    )
+  );
 });
 
 app.post("/register", async (req,res)=>{
-  try{
-    const { name, email, password } = req.body;
 
-    if(!name || !email || !password){
-      return res.send("Tous les champs sont obligatoires");
+  try{
+
+    const {
+      name,
+      email,
+      password
+    } = req.body;
+
+    if(
+      !name ||
+      !email ||
+      !password
+    ){
+      return res.send(
+        "Tous les champs sont obligatoires"
+      );
     }
 
-    const hash = await bcrypt.hash(password,10);
+    const hash =
+      await bcrypt.hash(password,10);
 
     db.run(
-      "INSERT INTO users(name,email,password) VALUES(?,?,?)",
-      [name.trim(), email.trim().toLowerCase(), hash],
+      `
+      INSERT INTO users(
+        name,
+        email,
+        password
+      )
+      VALUES(?,?,?)
+      `,
+      [
+        name.trim(),
+        email.trim().toLowerCase(),
+        hash
+      ],
       function(err){
-        if(err) return res.send("Email déjà utilisé");
 
-        req.session.userId = this.lastID;
+        if(err){
+          return res.send(
+            "Email déjà utilisé"
+          );
+        }
+
+        req.session.userId =
+          this.lastID;
+
         res.send("Compte créé");
+
       }
     );
 
   }catch(e){
+
     console.log(e);
+
     res.send("Erreur inscription");
+
   }
+
 });
 
 app.post("/login",(req,res)=>{
-  const { email, password } = req.body;
+
+  const {
+    email,
+    password
+  } = req.body;
 
   if(!email || !password){
-    return res.send("Email et mot de passe obligatoires");
+    return res.send(
+      "Email et mot de passe obligatoires"
+    );
   }
 
   db.get(
@@ -160,81 +215,150 @@ app.post("/login",(req,res)=>{
     [email.trim().toLowerCase()],
     async (err,user)=>{
 
-      if(!user) return res.send("Compte introuvable");
+      if(!user){
+        return res.send(
+          "Compte introuvable"
+        );
+      }
 
-      const ok = await bcrypt.compare(password,user.password);
+      const ok =
+        await bcrypt.compare(
+          password,
+          user.password
+        );
 
-      if(!ok) return res.send("Mot de passe incorrect");
+      if(!ok){
+        return res.send(
+          "Mot de passe incorrect"
+        );
+      }
 
       req.session.userId = user.id;
+
       res.send("Connexion réussie");
+
     }
   );
+
 });
 
 app.post("/logout",(req,res)=>{
+
   req.session.destroy(()=>{
     res.send("Déconnexion");
   });
+
 });
 
 app.get("/me",(req,res)=>{
+
   if(!connected(req)){
-    return res.json({connected:false});
+    return res.json({
+      connected:false
+    });
   }
 
   db.get(
-    "SELECT id,name,email,abonnement FROM users WHERE id=?",
+    `
+    SELECT
+      id,
+      name,
+      email,
+      abonnement
+    FROM users
+    WHERE id=?
+    `,
     [req.session.userId],
     (err,user)=>{
-      if(err || !user) return res.json({connected:false});
+
+      if(err || !user){
+        return res.json({
+          connected:false
+        });
+      }
+
       res.json(user);
+
     }
   );
+
 });
 
 app.post("/abonnement",(req,res)=>{
+
   if(!connected(req)){
-    return res.send("Connecte-toi");
+    return res.send(
+      "Connecte-toi"
+    );
   }
 
   db.run(
-    "UPDATE users SET abonnement=1 WHERE id=?",
+    `
+    UPDATE users
+    SET abonnement=1
+    WHERE id=?
+    `,
     [req.session.userId],
     ()=>{
-      res.send("Abonnement activé");
+      res.send(
+        "Abonnement activé"
+      );
     }
   );
+
 });
 
 app.post("/tournoi", async (req,res)=>{
+
   try{
+
     if(!connected(req)){
-      return res.send("Connecte-toi d'abord");
+      return res.send(
+        "Connecte-toi d'abord"
+      );
     }
 
     const user = await get(
-      "SELECT * FROM users WHERE id=?",
+      `
+      SELECT *
+      FROM users
+      WHERE id=?
+      `,
       [req.session.userId]
     );
 
-    if(!user || user.abonnement !== 1){
-      return res.send("Tu dois payer l'abonnement");
+    if(
+      !user ||
+      user.abonnement !== 1
+    ){
+      return res.send(
+        "Tu dois payer l'abonnement"
+      );
     }
 
     const active = await get(
-      "SELECT * FROM tournaments WHERE user_id=? AND status='active'",
+      `
+      SELECT *
+      FROM tournaments
+      WHERE
+      user_id=?
+      AND status='active'
+      `,
       [req.session.userId]
     );
 
     if(active){
-      return res.send("Tu as déjà un tournoi actif");
+      return res.send(
+        "Tu as déjà un tournoi actif"
+      );
     }
 
-    const { name, max_teams } = req.body;
+    const { name } = req.body;
 
     if(!name){
-      return res.send("Nom du tournoi obligatoire");
+      return res.send(
+        "Nom tournoi obligatoire"
+      );
     }
 
     await run(
@@ -258,29 +382,46 @@ app.post("/tournoi", async (req,res)=>{
     res.send("Tournoi créé");
 
   }catch(e){
+
     console.log(e);
-    res.send("Erreur création tournoi");
+
+    res.send(
+      "Erreur création tournoi"
+    );
+
   }
+
 });
 
 app.get("/tournois",(req,res)=>{
+
   if(!connected(req)){
     return res.json([]);
   }
 
   db.all(
-    "SELECT * FROM tournaments WHERE user_id=? ORDER BY id DESC",
+    `
+    SELECT *
+    FROM tournaments
+    WHERE user_id=?
+    ORDER BY id DESC
+    `,
     [req.session.userId],
     (err,rows)=>{
       res.json(rows || []);
     }
   );
+
 });
 
 app.post("/participant", async (req,res)=>{
+
   try{
+
     if(!connected(req)){
-      return res.send("Connecte-toi");
+      return res.send(
+        "Connecte-toi"
+      );
     }
 
     const {
@@ -294,17 +435,29 @@ app.post("/participant", async (req,res)=>{
       preuve
     } = req.body;
 
-    if(!tournament_id || !prenom || !email){
-      return res.send("Tournoi, prénom et email obligatoires");
+    if(
+      !tournament_id ||
+      !prenom ||
+      !email
+    ){
+      return res.send(
+        "Tournoi, prénom et email obligatoires"
+      );
     }
 
     const count = await get(
-      "SELECT COUNT(*) AS total FROM participants WHERE tournament_id=?",
+      `
+      SELECT COUNT(*) AS total
+      FROM participants
+      WHERE tournament_id=?
+      `,
       [tournament_id]
     );
 
     if(count.total >= 48){
-      return res.send("Maximum 48 équipes atteint");
+      return res.send(
+        "Maximum 48 équipes atteint"
+      );
     }
 
     await run(
@@ -336,91 +489,167 @@ app.post("/participant", async (req,res)=>{
     res.send("Participant ajouté");
 
   }catch(e){
+
     console.log(e);
-    res.send("Erreur ajout participant");
+
+    res.send(
+      "Erreur ajout participant"
+    );
+
   }
+
 });
 
 app.get("/participants/:id",(req,res)=>{
+
   db.all(
-    "SELECT * FROM participants WHERE tournament_id=? ORDER BY id",
+    `
+    SELECT *
+    FROM participants
+    WHERE tournament_id=?
+    ORDER BY id
+    `,
     [req.params.id],
     (err,rows)=>{
       res.json(rows || []);
     }
   );
+
 });
 
-app.post("/supprimer-participants-selection", async (req,res)=>{
+app.post(
+"/supprimer-participants-selection",
+async (req,res)=>{
+
   try{
+
     const { ids } = req.body;
 
-    if(!ids || !Array.isArray(ids) || ids.length === 0){
-      return res.send("Aucun participant");
+    if(
+      !ids ||
+      !Array.isArray(ids) ||
+      ids.length === 0
+    ){
+      return res.send(
+        "Aucun participant"
+      );
     }
 
-    const placeholders = ids.map(()=>"?").join(",");
+    const placeholders =
+      ids.map(()=>"?").join(",");
 
     await run(
-      `DELETE FROM matches
-       WHERE player1_id IN (${placeholders})
-       OR player2_id IN (${placeholders})
-       OR winner_id IN (${placeholders})
-       OR loser_id IN (${placeholders})`,
-      [...ids,...ids,...ids,...ids]
-    ).catch(()=>{});
-
-    await run(
-      `DELETE FROM participants WHERE id IN (${placeholders})`,
+      `
+      DELETE FROM participants
+      WHERE id IN (${placeholders})
+      `,
       ids
     );
 
-    res.send("Participants supprimés");
+    res.send(
+      "Participants supprimés"
+    );
 
   }catch(e){
+
     console.log(e);
-    res.send("Erreur suppression");
+
+    res.send(
+      "Erreur suppression"
+    );
+
   }
+
 });
 
-app.post("/supprimer-tournoi-complet", async (req,res)=>{
+app.post(
+"/supprimer-tournoi-complet",
+async (req,res)=>{
+
   try{
-    const { tournament_id } = req.body;
 
-    if(!tournament_id){
-      return res.send("Tournoi obligatoire");
-    }
+    const { tournament_id } =
+      req.body;
 
-    await run("DELETE FROM matches WHERE tournament_id=?", [tournament_id]);
-    await run("DELETE FROM participants WHERE tournament_id=?", [tournament_id]);
-    await run("DELETE FROM tournaments WHERE id=?", [tournament_id]);
+    await run(
+      `
+      DELETE FROM matches
+      WHERE tournament_id=?
+      `,
+      [tournament_id]
+    );
 
-    res.send("Tournoi supprimé");
+    await run(
+      `
+      DELETE FROM participants
+      WHERE tournament_id=?
+      `,
+      [tournament_id]
+    );
+
+    await run(
+      `
+      DELETE FROM tournaments
+      WHERE id=?
+      `,
+      [tournament_id]
+    );
+
+    res.send(
+      "Tournoi supprimé"
+    );
 
   }catch(e){
+
     console.log(e);
-    res.send("Erreur suppression tournoi");
+
+    res.send(
+      "Erreur suppression tournoi"
+    );
+
   }
+
 });
 
 app.post("/reset-tournoi", async (req,res)=>{
+
   try{
+
     const { tournament_id } = req.body;
 
     if(!tournament_id){
       return res.send("Tournoi obligatoire");
     }
 
-    await run("DELETE FROM matches WHERE tournament_id=?", [tournament_id]);
-    await run("UPDATE participants SET group_name=NULL WHERE tournament_id=?", [tournament_id]);
-    await run("UPDATE tournaments SET status='draft', champion_id=NULL WHERE id=?", [tournament_id]);
+    await run(
+      "DELETE FROM matches WHERE tournament_id=?",
+      [tournament_id]
+    );
+
+    await run(
+      "UPDATE participants SET group_name=NULL WHERE tournament_id=?",
+      [tournament_id]
+    );
+
+    await run(
+      `
+      UPDATE tournaments
+      SET status='draft',
+          champion_id=NULL
+      WHERE id=?
+      `,
+      [tournament_id]
+    );
 
     res.send("Tournoi réinitialisé");
 
   }catch(e){
+
     console.log(e);
     res.send("Erreur reset tournoi");
+
   }
+
 });
 
 async function classementPoules(tournament_id){
@@ -431,13 +660,19 @@ async function classementPoules(tournament_id){
   );
 
   const matches = await all(
-    "SELECT * FROM matches WHERE tournament_id=? AND round='POULE'",
+    `
+    SELECT *
+    FROM matches
+    WHERE tournament_id=?
+    AND round='POULE'
+    `,
     [tournament_id]
   );
 
   const table = {};
 
   for(const t of teams){
+
     table[t.id] = {
       id:t.id,
       prenom:t.prenom,
@@ -451,9 +686,11 @@ async function classementPoules(tournament_id){
       bc:0,
       diff:0
     };
+
   }
 
   for(const m of matches){
+
     if(m.played !== 1) continue;
 
     const a = table[m.player1_id];
@@ -489,11 +726,13 @@ async function classementPoules(tournament_id){
       a.pts++;
       b.pts++;
     }
+
   }
 
   const groups = {};
 
   for(const t of Object.values(table)){
+
     t.diff = t.bp - t.bc;
 
     const g = t.group_name || "Sans groupe";
@@ -503,29 +742,43 @@ async function classementPoules(tournament_id){
     }
 
     groups[g].push(t);
+
   }
 
   for(const g in groups){
+
     groups[g].sort((a,b)=>
       b.pts - a.pts ||
       b.diff - a.diff ||
       b.bp - a.bp
     );
+
   }
 
   return groups;
+
 }
 
 app.get("/classement-poules/:id", async (req,res)=>{
+
   try{
-    res.json(await classementPoules(req.params.id));
+
+    const result =
+      await classementPoules(req.params.id);
+
+    res.json(result);
+
   }catch(e){
+
     console.log(e);
     res.json({});
+
   }
+
 });
 
 app.post("/update-match-proof",(req,res)=>{
+
   const {
     match_id,
     score1,
@@ -540,6 +793,10 @@ app.post("/update-match-proof",(req,res)=>{
 
       if(!match){
         return res.send("Match introuvable");
+      }
+
+      if(match.locked === 1){
+        return res.send("Score verrouillé");
       }
 
       const s1 = Number(score1);
@@ -573,13 +830,12 @@ app.post("/update-match-proof",(req,res)=>{
       db.run(
         `
         UPDATE matches
-        SET
-          score1=?,
-          score2=?,
-          proof_photo=?,
-          winner_id=?,
-          loser_id=?,
-          played=1
+        SET score1=?,
+            score2=?,
+            proof_photo=?,
+            winner_id=?,
+            loser_id=?,
+            played=1
         WHERE id=?
         `,
         [
@@ -594,12 +850,64 @@ app.post("/update-match-proof",(req,res)=>{
           res.send("Score validé");
         }
       );
+
     }
   );
+
+});
+
+app.post("/annuler-score", async (req,res)=>{
+
+  try{
+
+    const { match_id } = req.body;
+
+    if(!match_id){
+      return res.send("Match obligatoire");
+    }
+
+    const match = await get(
+      "SELECT * FROM matches WHERE id=?",
+      [match_id]
+    );
+
+    if(!match){
+      return res.send("Match introuvable");
+    }
+
+    if(match.locked === 1){
+      return res.send("Score verrouillé impossible à annuler");
+    }
+
+    await run(
+      `
+      UPDATE matches
+      SET score1=NULL,
+          score2=NULL,
+          winner_id=NULL,
+          loser_id=NULL,
+          proof_photo='',
+          played=0
+      WHERE id=?
+      `,
+      [match_id]
+    );
+
+    res.send("Score annulé");
+
+  }catch(e){
+
+    console.log(e);
+    res.send("Erreur annulation score");
+
+  }
+
 });
 
 app.post("/tirage-automatique-poule-pro", async (req,res)=>{
+
   try{
+
     const { tournament_id } = req.body;
 
     const participants = await all(
@@ -608,7 +916,11 @@ app.post("/tirage-automatique-poule-pro", async (req,res)=>{
     );
 
     if(participants.length !== 48){
-      return res.send("Il faut exactement 48 équipes. Actuel : " + participants.length + "/48");
+      return res.send(
+        "Il faut exactement 48 équipes. Actuel : " +
+        participants.length +
+        "/48"
+      );
     }
 
     const existingMatches = await all(
@@ -619,7 +931,9 @@ app.post("/tirage-automatique-poule-pro", async (req,res)=>{
     if(existingMatches.length === 0){
 
       const lettres = "ABCDEFGHIJKL".split("");
-      const melange = [...participants].sort(()=>Math.random() - 0.5);
+
+      const melange =
+        [...participants].sort(()=>Math.random() - 0.5);
 
       const matchs = [
         [0,1],
@@ -631,17 +945,23 @@ app.post("/tirage-automatique-poule-pro", async (req,res)=>{
       ];
 
       for(let g=0; g<12; g++){
+
         const groupe = lettres[g];
-        const equipes = melange.slice(g*4,g*4+4);
+
+        const equipes =
+          melange.slice(g * 4, g * 4 + 4);
 
         for(const equipe of equipes){
+
           await run(
             "UPDATE participants SET group_name=? WHERE id=?",
             [groupe,equipe.id]
           );
+
         }
 
         for(let i=0;i<matchs.length;i++){
+
           const [a,b] = matchs[i];
 
           await run(
@@ -660,12 +980,14 @@ app.post("/tirage-automatique-poule-pro", async (req,res)=>{
               tournament_id,
               "POULE",
               groupe,
-              i+1,
+              i + 1,
               equipes[a].id,
               equipes[b].id
             ]
           );
+
         }
+
       }
 
       await run(
@@ -674,9 +996,11 @@ app.post("/tirage-automatique-poule-pro", async (req,res)=>{
       );
 
       return res.send("Poules créées : 12 groupes et 72 matchs");
+
     }
 
-    const matchsPoule = existingMatches.filter(m => m.round === "POULE");
+    const matchsPoule =
+      existingMatches.filter(m => m.round === "POULE");
 
     if(matchsPoule.some(m => m.played !== 1)){
       return res.send("Finis tous les scores des poules");
@@ -687,12 +1011,14 @@ app.post("/tirage-automatique-poule-pro", async (req,res)=>{
 
     if(!phaseFinaleExiste){
 
-      const classement = await classementPoules(tournament_id);
+      const classement =
+        await classementPoules(tournament_id);
 
       const qualifies = [];
       const troisiemes = [];
 
       for(const groupe of "ABCDEFGHIJKL".split("")){
+
         const equipes = classement[groupe];
 
         if(!equipes || equipes.length < 4){
@@ -701,7 +1027,9 @@ app.post("/tirage-automatique-poule-pro", async (req,res)=>{
 
         qualifies.push(equipes[0]);
         qualifies.push(equipes[1]);
+
         troisiemes.push(equipes[2]);
+
       }
 
       troisiemes.sort((a,b)=>
@@ -712,7 +1040,18 @@ app.post("/tirage-automatique-poule-pro", async (req,res)=>{
 
       qualifies.push(...troisiemes.slice(0,8));
 
+      await run(
+        `
+        UPDATE matches
+        SET locked=1
+        WHERE tournament_id=?
+        AND round='POULE'
+        `,
+        [tournament_id]
+      );
+
       for(let i=0; i<32; i+=2){
+
         await run(
           `
           INSERT INTO matches(
@@ -727,27 +1066,40 @@ app.post("/tirage-automatique-poule-pro", async (req,res)=>{
           [
             tournament_id,
             "16ES",
-            (i/2)+1,
+            (i/2) + 1,
             qualifies[i].id,
             qualifies[i+1].id
           ]
         );
+
       }
 
       return res.send("16es générés automatiquement");
+
     }
 
-    const ordre = ["16ES","8ES","QUART","DEMI","FINALE"];
+    const ordre = [
+      "16ES",
+      "8ES",
+      "QUART",
+      "DEMI",
+      "FINALE"
+    ];
+
     let tourActuel = null;
 
     for(const tour of ordre){
+
       if(existingMatches.some(m => m.round === tour)){
         tourActuel = tour;
       }
+
     }
 
     if(tourActuel === "FINALE"){
-      const finale = existingMatches.find(m => m.round === "FINALE");
+
+      const finale =
+        existingMatches.find(m => m.round === "FINALE");
 
       if(!finale || finale.played !== 1){
         return res.send("La finale doit être jouée");
@@ -759,11 +1111,26 @@ app.post("/tirage-automatique-poule-pro", async (req,res)=>{
         : finale.player2_id;
 
       await run(
-        "UPDATE tournaments SET status='finished', champion_id=? WHERE id=?",
+        `
+        UPDATE tournaments
+        SET status='finished',
+            champion_id=?
+        WHERE id=?
+        `,
         [champion,tournament_id]
       );
 
+      await run(
+        `
+        UPDATE matches
+        SET locked=1
+        WHERE tournament_id=?
+        `,
+        [tournament_id]
+      );
+
       return res.send("Champion validé 🏆");
+
     }
 
     const prochain = {
@@ -784,16 +1151,30 @@ app.post("/tirage-automatique-poule-pro", async (req,res)=>{
     const perdants = [];
 
     for(const m of matchsTour){
+
       if(Number(m.score1) > Number(m.score2)){
         gagnants.push(m.player1_id);
         perdants.push(m.player2_id);
-      }else{
+      }
+      else{
         gagnants.push(m.player2_id);
         perdants.push(m.player1_id);
       }
+
     }
 
+    await run(
+      `
+      UPDATE matches
+      SET locked=1
+      WHERE tournament_id=?
+      AND round=?
+      `,
+      [tournament_id,tourActuel]
+    );
+
     for(let i=0;i<gagnants.length;i+=2){
+
       await run(
         `
         INSERT INTO matches(
@@ -808,14 +1189,16 @@ app.post("/tirage-automatique-poule-pro", async (req,res)=>{
         [
           tournament_id,
           prochain[tourActuel],
-          (i/2)+1,
+          (i/2) + 1,
           gagnants[i],
           gagnants[i+1]
         ]
       );
+
     }
 
     if(tourActuel === "DEMI" && perdants.length >= 2){
+
       await run(
         `
         INSERT INTO matches(
@@ -835,17 +1218,25 @@ app.post("/tirage-automatique-poule-pro", async (req,res)=>{
           perdants[1]
         ]
       );
+
     }
 
-    return res.send(prochain[tourActuel] + " généré automatiquement");
+    return res.send(
+      prochain[tourActuel] +
+      " généré automatiquement"
+    );
 
   }catch(e){
+
     console.log(e);
     res.send("Erreur tirage automatique poule pro");
+
   }
+
 });
 
 app.get("/tirage/:id",(req,res)=>{
+
   db.all(
     `
     SELECT
@@ -853,8 +1244,10 @@ app.get("/tirage/:id",(req,res)=>{
       p1.prenom AS player1_name,
       p2.prenom AS player2_name
     FROM matches m
-    LEFT JOIN participants p1 ON p1.id=m.player1_id
-    LEFT JOIN participants p2 ON p2.id=m.player2_id
+    LEFT JOIN participants p1
+      ON p1.id=m.player1_id
+    LEFT JOIN participants p2
+      ON p2.id=m.player2_id
     WHERE m.tournament_id=?
     ORDER BY
       CASE m.round
@@ -872,6 +1265,7 @@ app.get("/tirage/:id",(req,res)=>{
     `,
     [req.params.id],
     (err,rows)=>{
+
       if(err){
         return res.json([]);
       }
@@ -879,6 +1273,7 @@ app.get("/tirage/:id",(req,res)=>{
       const grouped = {};
 
       rows.forEach(m=>{
+
         const key =
           m.round === "POULE"
           ? "Groupe " + m.group_name
@@ -889,6 +1284,7 @@ app.get("/tirage/:id",(req,res)=>{
         }
 
         grouped[key].push(m);
+
       });
 
       res.json(
@@ -898,16 +1294,20 @@ app.get("/tirage/:id",(req,res)=>{
           matchs
         }))
       );
+
     }
   );
+
 });
 
 app.get("/champion/:id",(req,res)=>{
+
   db.get(
     `
     SELECT p.*
     FROM tournaments t
-    JOIN participants p ON p.id=t.champion_id
+    JOIN participants p
+      ON p.id=t.champion_id
     WHERE t.id=?
     `,
     [req.params.id],
@@ -915,6 +1315,7 @@ app.get("/champion/:id",(req,res)=>{
       res.json(row || null);
     }
   );
+
 });
 
 process.on("uncaughtException", err => {
@@ -926,5 +1327,9 @@ process.on("unhandledRejection", err => {
 });
 
 app.listen(PORT, () => {
-  console.log("Serveur lancé sur le port " + PORT);
+
+  console.log(
+    "Serveur lancé sur le port " + PORT
+  );
+
 });

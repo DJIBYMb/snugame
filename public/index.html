@@ -1,8 +1,12 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
+
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<meta
+name="viewport"
+content="width=device-width, initial-scale=1.0">
 
 <title>SNUGAME</title>
 
@@ -20,7 +24,13 @@ body{
 }
 
 header{
-  background:linear-gradient(135deg,#1455ff,#7c2cff);
+  background:
+  linear-gradient(
+    135deg,
+    #1455ff,
+    #7c2cff
+  );
+
   padding:18px;
   text-align:center;
   position:sticky;
@@ -44,8 +54,13 @@ header{
 
 .grid{
   display:grid;
+
   grid-template-columns:
-  repeat(auto-fit,minmax(300px,1fr));
+  repeat(
+    auto-fit,
+    minmax(300px,1fr)
+  );
+
   gap:14px;
 }
 
@@ -128,7 +143,8 @@ table{
   border-collapse:collapse;
 }
 
-th,td{
+th,
+td{
   border:1px solid #334155;
   padding:10px;
   text-align:center;
@@ -148,8 +164,13 @@ th{
 
 .bracket{
   display:grid;
+
   grid-template-columns:
-  repeat(auto-fit,minmax(260px,1fr));
+  repeat(
+    auto-fit,
+    minmax(260px,1fr)
+  );
+
   gap:12px;
 }
 
@@ -165,6 +186,7 @@ th{
 }
 
 </style>
+
 </head>
 
 <body>
@@ -269,39 +291,61 @@ class="hidden">
 
 <div class="nav">
 
-<button onclick="showPanel('panelTournoi')">
+<button
+onclick="showPanel('panelTournoi')">
+
 Tournoi
+
 </button>
 
-<button onclick="showPanel('panelParticipants')">
+<button
+onclick="showPanel('panelParticipants')">
+
 Participants
+
 </button>
 
-<button onclick="showPanel('panelPoulePro')">
+<button
+onclick="showPanel('panelPoulePro')">
+
 Poule Pro
+
 </button>
 
-<button onclick="showPanel('panelClassement')">
+<button
+onclick="showPanel('panelClassement')">
+
 Classements
+
 </button>
 
-<button onclick="showPanel('panelFinale')">
+<button
+onclick="showPanel('panelFinale')">
+
 Phase finale
+
 </button>
 
-<button onclick="showPanel('panelParametres')">
+<button
+onclick="showPanel('panelParametres')">
+
 Paramètres
+
 </button>
 
 <button
 class="danger"
 onclick="logout()">
+
 Déconnexion
+
 </button>
 
 </div>
 
-<div id="panelTournoi" class="panel">
+<div
+id="panelTournoi"
+class="panel">
 
 <div class="grid">
 
@@ -320,13 +364,17 @@ value="48"
 placeholder="Nombre équipes">
 
 <button onclick="creerTournoi()">
+
 Créer tournoi
+
 </button>
 
 <button
 class="secondary"
 onclick="chargerTournois()">
+
 Afficher tournois
+
 </button>
 
 <select
@@ -416,7 +464,9 @@ id="preuve"
 placeholder="Lien preuve">
 
 <button onclick="ajouterParticipant()">
+
 Ajouter participant
+
 </button>
 
 </div>
@@ -430,19 +480,25 @@ Ajouter participant
 <button
 class="secondary"
 onclick="chargerParticipants()">
+
 Afficher participants
+
 </button>
 
 <button
 class="secondary"
 onclick="cocherTous(true)">
+
 Tout cocher
+
 </button>
 
 <button
 class="secondary"
 onclick="cocherTous(false)">
+
 Tout décocher
+
 </button>
 
 <button
@@ -472,8 +528,13 @@ class="panel hidden">
 <h2>Poule Pro</h2>
 
 <p class="small">
+
 Le bouton unique génère :
-Poules → 16es → 8es → Quarts → Demis → Finale → Champion
+
+Poules → 16es → 8es →
+Quarts → Demis →
+Finale → Champion
+
 </p>
 
 <button
@@ -731,6 +792,7 @@ async function checkStatus(){
     setPage("pageAuth");
 
     return;
+
   }
 
   if(data.abonnement !== 1){
@@ -738,6 +800,7 @@ async function checkStatus(){
     setPage("pageAbonnement");
 
     return;
+
   }
 
   setPage("pageDashboard");
@@ -756,6 +819,7 @@ async function creerTournoi(){
       "Nom tournoi obligatoire";
 
     return;
+
   }
 
   const result = await post(
@@ -779,21 +843,32 @@ async function chargerTournois(){
   if(!Array.isArray(data)) return;
 
   tournoiSelect.innerHTML =
-    data.map(t=>
-      `<option value="${t.id}">
+    data.map(t=>`
+
+      <option value="${t.id}">
         ${t.name}
-      </option>`
-    ).join("");
+      </option>
+
+    `).join("");
 
   tournois.innerHTML =
-    data.map(t=>
-      `<div class="match">
+    data.map(t=>`
+
+      <div class="match">
+
         <b>${t.name}</b><br>
+
         ID : ${t.id}<br>
-        Équipes : ${t.max_teams}<br>
-        Statut : ${t.status}
-      </div>`
-    ).join("");
+
+        Équipes :
+        ${t.max_teams}<br>
+
+        Statut :
+        ${t.status}
+
+      </div>
+
+    `).join("");
 
   await loadAll();
 
@@ -807,6 +882,7 @@ async function ajouterParticipant(){
       "Choisis tournoi";
 
     return;
+
   }
 
   await post(
@@ -844,25 +920,36 @@ async function chargerParticipants(){
     `<h3>${data.length}/48 équipes</h3>`;
 
   participantsCheckbox.innerHTML =
-    data.map((p,i)=>
-      `<label>
+    data.map(p=>`
+
+      <label>
+
         <input
         type="checkbox"
         class="participantCheck"
         value="${p.id}">
+
         ${p.prenom}
-      </label><br>`
-    ).join("");
+
+      </label><br>
+
+    `).join("");
 
   participants.innerHTML =
-    data.map((p,i)=>
-      `<div class="match">
+    data.map(p=>`
+
+      <div class="match">
+
         <b>${p.prenom}</b><br>
+
         ${p.club_logo || ""}<br>
+
         Groupe :
         ${p.group_name || "Aucun"}
-      </div>`
-    ).join("");
+
+      </div>
+
+    `).join("");
 
 }
 
@@ -889,7 +976,14 @@ async function supprimerParticipantsCoches(){
       "Aucun participant sélectionné";
 
     return;
+
   }
+
+  if(
+    !confirm(
+      "Supprimer participants ?"
+    )
+  ) return;
 
   await post(
     "/supprimer-participants-selection",
@@ -908,11 +1002,14 @@ async function supprimerTournoiComplet(){
       "Choisis tournoi";
 
     return;
+
   }
 
-  if(!confirm(
-    "Supprimer complètement le tournoi ?"
-  )) return;
+  if(
+    !confirm(
+      "Supprimer complètement le tournoi ?"
+    )
+  ) return;
 
   await post(
     "/supprimer-tournoi-complet",
@@ -936,7 +1033,14 @@ async function resetTournoi(){
       "Choisis tournoi";
 
     return;
+
   }
+
+  if(
+    !confirm(
+      "Réinitialiser le tournoi ?"
+    )
+  ) return;
 
   await post(
     "/reset-tournoi",
@@ -960,6 +1064,7 @@ async function tirageAutomatiquePoulePro(){
       "Choisis tournoi";
 
     return;
+
   }
 
   const result =
@@ -1021,6 +1126,14 @@ function matchCard(match){
 
       </button>
 
+      <button
+      class="danger"
+      onclick="annulerScore(${match.id})">
+
+      Annuler score
+
+      </button>
+
       <p>
       ${
         match.played
@@ -1028,6 +1141,12 @@ function matchCard(match){
         : "Non joué"
       }
       </p>
+
+      ${
+        match.locked === 1
+        ? "<p>🔒 Score verrouillé</p>"
+        : ""
+      }
 
       ${
         match.proof_photo
@@ -1098,6 +1217,30 @@ async function validerScore(matchId){
   await afficherTiragePoulePro();
 
   await afficherClassements();
+
+  await afficherPhaseFinale();
+
+}
+
+async function annulerScore(matchId){
+
+  if(!confirm("Annuler ce score ?")) return;
+
+  const result =
+    await post(
+      "/annuler-score",
+      {
+        match_id:matchId
+      }
+    );
+
+  message.textContent = result;
+
+  await afficherTiragePoulePro();
+
+  await afficherClassements();
+
+  await afficherPhaseFinale();
 
 }
 
