@@ -1117,20 +1117,21 @@ function matchCard(match){
       <input
       id="photo_${match.id}"
       value="${match.proof_photo || ""}"
-      placeholder="Lien preuve">
+      placeholder="Lien preuve"
+      readonly>
 
       <input
-type="file"
-accept="image/*"
-id="file_${match.id}">
+      type="file"
+      accept="image/*"
+      id="file_${match.id}">
 
-<button
-class="secondary"
-onclick="uploadPreuve(${match.id})">
+      <button
+      class="secondary"
+      onclick="uploadPreuve(${match.id})">
 
-Uploader preuve
+      Uploader preuve
 
-</button>
+      </button>
 
       <button
       onclick="validerScore(${match.id})">
@@ -1202,26 +1203,31 @@ async function afficherTiragePoulePro(){
 
 async function validerScore(matchId){
 
+  const photo =
+    document
+    .getElementById(
+      "photo_" + matchId
+    ).value;
+
   const result =
     await post(
       "/update-match-proof",
       {
         match_id:matchId,
+
         score1:
           document
           .getElementById(
             "score1_" + matchId
           ).value,
+
         score2:
           document
           .getElementById(
             "score2_" + matchId
           ).value,
-        photo_url:
-          document
-          .getElementById(
-            "photo_" + matchId
-          ).value
+
+        photo_url:photo
       }
     );
 
@@ -1234,6 +1240,7 @@ async function validerScore(matchId){
   await afficherPhaseFinale();
 
 }
+
 
 async function annulerScore(matchId){
 
