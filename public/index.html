@@ -541,6 +541,44 @@ function showPanel(id){
 
 }
 
+async function register(){
+  const result = await post("/register",{
+    name:registerName.value,
+    email:registerEmail.value,
+    password:registerPassword.value
+  });
+
+  if(result.includes("Compte")){
+    await checkStatus();
+  }
+}
+
+async function login(){
+  const result = await post("/login",{
+    email:loginEmail.value,
+    password:loginPassword.value
+  });
+
+  if(result.includes("Connexion")){
+    setPage("pageDashboard");
+    await chargerTournois();
+  }
+}
+
+async function logout(){
+  await post("/logout",{});
+  setPage("pageAuth");
+}
+
+async function abonnement(){
+  const result = await post("/abonnement",{});
+
+  if(result.includes("Abonnement")){
+    setPage("pageDashboard");
+    await chargerTournois();
+  }
+}
+
 checkStatus();
 
 </script>
