@@ -1699,20 +1699,28 @@ app.post("/upload-image",(req,res)=>{
   upload.single("image")(req,res,(err)=>{
 
     if(err){
-      console.log("Erreur upload :", err.message);
+
+      console.log("ERREUR UPLOAD EXACTE :", err);
 
       return res.status(400).json({
         ok:false,
-        message:err.message
+        message:err.message || "Erreur upload"
       });
+
     }
 
     if(!req.file){
+
+      console.log("AUCUN FICHIER RECU");
+
       return res.status(400).json({
         ok:false,
-        message:"Aucune image"
+        message:"Aucune image reçue"
       });
+
     }
+
+    console.log("IMAGE OK :", req.file.filename);
 
     res.json({
       ok:true,
