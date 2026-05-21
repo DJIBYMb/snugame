@@ -1119,6 +1119,19 @@ function matchCard(match){
       value="${match.proof_photo || ""}"
       placeholder="Lien preuve">
 
+      <input
+type="file"
+accept="image/*"
+id="file_${match.id}">
+
+<button
+class="secondary"
+onclick="uploadPreuve(${match.id})">
+
+Uploader preuve
+
+</button>
+
       <button
       onclick="validerScore(${match.id})">
 
@@ -1455,6 +1468,63 @@ async function loadAll(){
   await afficherClassements();
 
   await afficherPhaseFinale();
+
+}
+
+async function uploadPreuve(matchId){
+
+  const fileInput =
+    document.getElementById(
+      "file_" + matchId
+    );
+
+  if(!fileInput.files.length){
+
+    message.textContent =
+      "Choisis une image";
+
+    return;
+
+  }
+
+  const formData =
+    new FormData();
+
+  formData.append(
+    "image",
+    fileInput.files[0]
+  );
+
+  const res =
+    await fetch(
+      "/upload-image",
+      {
+        method:"POST",
+        body:formData
+      }
+    );
+
+  const data =
+    await res.json();
+
+  if(!data.ok){
+
+    message.textContent =
+      data.message ||
+      "Erreur upload";
+
+    return;
+
+  }
+
+  document
+  .getElementById(
+    "photo_" + matchId
+  )
+  .value = data.url;
+
+  message.textContent =
+    "Image uploadée";
 
 }
 

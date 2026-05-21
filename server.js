@@ -4,6 +4,8 @@ const SQLiteStore = require("connect-sqlite3")(session);
 const bcrypt = require("bcryptjs");
 const sqlite3 = require("sqlite3").verbose();
 const path = require("path");
+const fs = require("fs");
+const multer = require("multer");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -15,6 +17,69 @@ const db = new sqlite3.Database(
 app.use(express.json({ limit:"10mb" }));
 app.use(express.urlencoded({ extended:true }));
 app.use(express.static("public"));
+
+const uploadDir = path.join(__dirname, "uploads");
+
+if(!fs.existsSync(uploadDir)){
+  fs.mkdirSync(uploadDir);
+}
+
+const storage = multer.diskStorage({
+
+  destination:(req,file,cb)=>{
+    cb(null, uploadDir);
+  },
+
+  filename:(req,file,cb)=>{
+
+    const ext =
+      path.extname(file.originalname)
+      .toLowerCase();
+
+    cb(
+      null,
+      Date.now() +
+      "-" +
+      Math.random()
+      .toString(36)
+      .slice(2) +
+      ext
+    );
+
+  }
+
+});
+
+const upload = multer({
+
+  storage,
+
+  limits:{
+    fileSize:5 * 1024 * 1024
+  },
+
+  fileFilter:(req,file,cb)=>{
+
+    const allowed = [
+      "image/jpeg",
+      "image/png",
+      "image/webp",
+      "image/jpg"
+    ];
+
+    if(!allowed.includes(file.mimetype)){
+      return cb(
+        new Error("Image seulement")
+      );
+    }
+
+    cb(null,true);
+
+  }
+
+});
+
+app.use("/uploads", express.static(uploadDir));
 
 app.use(session({
   store:new SQLiteStore({
@@ -1624,6 +1689,32 @@ setTimeout(()=>{
     res.send("Erreur page publique");
 
   }
+
+});
+
+app.post(
+  "/upload-image",
+  upload.single("image"),
+  (req,res)=>{
+
+    if(!req.file){
+
+      return res.json({
+        ok:false,
+        message:"Aucune image"
+      });
+
+    }
+
+    res.json({
+
+      ok:true,
+
+      url:
+        "/uploads/" +
+        req.file.filename
+
+    });
 
 });
 
