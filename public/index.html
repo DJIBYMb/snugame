@@ -1682,53 +1682,25 @@ async function verifierTournoi(){
 async function tirageAutomatiquePoulesPro(){
 
   if(!tournoiSelect.value){
-
-    message.textContent =
-      "Choisis un tournoi";
-
-    return;
-  }
-
-  const result = await post(
-    "/tirage-automatique-poule-pro",
-    {
-      tournament_id:
-        tournoiSelect.value,
-
-      group_size:
-        document.getElementById(
-          "groupSize"
-        ).value
-    }
-  );
-
-  message.textContent = result;
-
-  await chargerParticipants();
-
-  await tirage();
-
-  await afficherPoulesPro();
-
-}
-
-async function tirageAutomatiquePoulesPro(){
-
-  if(!tournoiSelect.value){
     message.textContent = "Choisis un tournoi";
     return;
   }
 
-  await post("/generer-poules",{
+  const result = await post("/tirage-automatique-poule-pro",{
     tournament_id:tournoiSelect.value,
     group_size:document.getElementById("groupSize").value
   });
 
-  await afficherPoulesPro();
+  message.textContent = result;
 
-  message.textContent =
-    "Tirage poule pro terminé. Les points se calculent avec les scores : victoire 3 pts, nul 1 pt.";
+  await chargerParticipants();
+  await tirage();
+
+  if(typeof afficherPoulesPro === "function"){
+    await afficherPoulesPro();
+  }
 }
+
 
 async function validerScorePoule(matchId){
 
