@@ -1692,29 +1692,32 @@ setTimeout(()=>{
 
 });
 
-app.post(
-  "/upload-image",
-  upload.single("image"),
-  (req,res)=>{
+app.post("/upload-image",(req,res)=>{
+
+  upload.single("image")(req,res,(err)=>{
+
+    if(err){
+      console.log("Erreur upload :", err.message);
+
+      return res.status(400).json({
+        ok:false,
+        message:err.message
+      });
+    }
 
     if(!req.file){
-
-      return res.json({
+      return res.status(400).json({
         ok:false,
         message:"Aucune image"
       });
-
     }
 
     res.json({
-
       ok:true,
-
-      url:
-        "/uploads/" +
-        req.file.filename
-
+      url:"/uploads/" + req.file.filename
     });
+
+  });
 
 });
 
