@@ -1571,6 +1571,333 @@ process.on("unhandledRejection", err => {
   console.log("Promesse rejetée :", err);
 });
 
+function nomTourSelonNombre(nb){
+  if(nb === 32) return "16ES";
+  if(nb === 16) return "8ES";
+  if(nb === 8) return "QUART";
+  if(nb === 4) return "DEMI";
+  if(nb === 2) return "FINALE";
+  return null;
+}
+
+function prochainePuissanceDeux(n){
+  if(n <= 4) return 4;
+  if(n <= 8) return 8;
+  if(n <= 16) return 16;
+  if(n <= 32) return 32;
+  return 64;
+}
+
+app.post("/tirage-automatique-poule-pro", async (req,res)=>{
+
+  try{
+
+    const { tournament_id, group_size } = req.body;
+
+    const taillePoule = Number(group_size || 4);
+
+    const taillesAutorisees = [3,4,5,8,10];
+
+    if(!taillesAutorisees.includes(taillePoule)){
+      return res.send("Taille poule autorisée : 3, 4, 5, 8 ou 10");
+    }
+
+    const participants = await all(
+      "SELECT * FROM participants WHERE tournament_id=?",
+      [tournament_id]
+    );
+
+    if(participants.length > 100){
+      return res.send("Maximum 100 participants");
+    }
+
+    if(participants.length < taillePoule * 2){
+      return res.send("Il faut minimum 2 poules complètes");
+    }
+
+    if(participants.length % taillePoule !== 0){
+
+      const manque = taillePoule - (participants.length % taillePoule);
+
+      return res.send(
+        "Poules impossibles : il manque " +
+        manque +
+        " participant(s)"
+      );
+    }
+
+    const matchs = await all(
+      "SELECT * FROM matches WHERE tournament_id=?",
+      [tournament_id]
+    );
+
+    const matchsPoule = matchs.filter(m => m.round === "POULE");
+
+    if(matchsPoule.length === 0){
+
+      await run(
+        "DELETE FROM matches WHERE tournament_id=?",
+        [tournament_id]
+      );
+
+      await run(
+        "UPDATE tournaments SET status='active' WHERE id=?",
+        [tournament_id]
+      );
+
+      const lettres = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+
+      const melange = [...participants].sort(()=>Math.random() - 0.5);
+
+      const nombreGroupes = participants.length / taillePoule;
+
+      for(let g=0; g<nombreGroupes; g++){
+
+        const groupe = lettres[g] || ("G" + (g + 1));
+
+        const equipes = melange.slice(
+          g * taillePoule,
+          g * taillePoule + taillePoule
+        );
+
+        for(const equipe of equipes){
+          await run(
+            "UPDATE participants SET group_name=? WHERE id=?",
+            [groupe,equipe.id]
+          );
+        }
+
+        for(let i=0; i<equipes.length; i++){
+          for(let j=i+1; j<equipes.length; j++){
+
+            await run(
+              `
+              INSERT INTO matches(
+                tournament_id,
+                round,
+                group_name,
+                player1_id,
+                player2_id
+              )
+              VALUES(?,?,?,?,?)
+              `,
+              [
+                tournament_id,
+                "POULE",
+                groupe,
+                equipes[i].id,
+                equipes[j].id
+              ]
+            );
+
+          }
+        }
+
+      }
+
+      return res.send(
+        "Poules créées : " +
+        nombreGroupes +
+        " groupes de " +
+        taillePoule
+      );
+    }
+
+    const poulesNonTerminees = matchsPoule.some(m => m.played !== 1);
+
+    if(poulesNonTerminees){
+      return res.send("Finis tous les scores des poules avant le tirage suivant");
+    }
+
+    const existePhaseFinale = matchs.some(m => m.round !== "POULE");
+
+    if(!existePhaseFinale){
+
+      const classement = await classementPoules(tournament_id);
+
+      const qualifies = [];
+      const restants = [];
+
+      Object.keys(classement).forEach(groupe => {
+
+        const equipes = classement[groupe];
+
+        equipes.forEach((e,index)=>{
+          if(index < 2){
+            qualifies.push(e);
+          }else{
+            restants.push(e);
+          }
+        });
+
+      });
+
+      restants.sort((a,b)=>
+        b.pts - a.pts ||
+        b.diff - a.diff ||
+        b.bp - a.bp
+      );
+
+      const totalQualifies = prochainePuissanceDeux(qualifies.length);
+
+      while(qualifies.length < totalQualifies && restants.length > 0){
+        qualifies.push(restants.shift());
+      }
+
+      const nomTour = nomTourSelonNombre(qualifies.length);
+
+      if(!nomTour){
+        return res.send("Impossible de créer le tour suivant avec ce nombre d’équipes");
+      }
+
+      for(let i=0; i<qualifies.length; i+=2){
+
+        await run(
+          `
+          INSERT INTO matches(
+            tournament_id,
+            round,
+            player1_id,
+            player2_id
+          )
+          VALUES(?,?,?,?)
+          `,
+          [
+            tournament_id,
+            nomTour,
+            qualifies[i].id,
+            qualifies[i+1].id
+          ]
+        );
+
+      }
+
+      return res.send(nomTour + " généré automatiquement");
+    }
+
+    const ordreTours = ["16ES","8ES","QUART","DEMI","FINALE"];
+
+    const toursExistants = ordreTours.filter(t =>
+      matchs.some(m => m.round === t)
+    );
+
+    const tourActuel = toursExistants[toursExistants.length - 1];
+
+    if(tourActuel === "FINALE"){
+
+      const finale = matchs.find(m => m.round === "FINALE");
+
+      if(!finale || finale.played !== 1){
+        return res.send("La finale doit être jouée");
+      }
+
+      let champion = null;
+
+      if(Number(finale.score1) > Number(finale.score2)){
+        champion = finale.player1_id;
+      }
+      else if(Number(finale.score2) > Number(finale.score1)){
+        champion = finale.player2_id;
+      }
+      else{
+        return res.send("Égalité en finale : il faut un gagnant");
+      }
+
+      await run(
+        "UPDATE tournaments SET champion_id=?, status='finished' WHERE id=?",
+        [champion,tournament_id]
+      );
+
+      return res.send("Champion validé 🏆");
+    }
+
+    const matchsTour = matchs.filter(m => m.round === tourActuel);
+
+    if(matchsTour.some(m => m.played !== 1)){
+      return res.send("Finis tous les matchs du tour " + tourActuel);
+    }
+
+    const gagnants = [];
+    const perdants = [];
+
+    for(const m of matchsTour){
+
+      if(Number(m.score1) > Number(m.score2)){
+        gagnants.push(m.player1_id);
+        perdants.push(m.player2_id);
+      }
+      else if(Number(m.score2) > Number(m.score1)){
+        gagnants.push(m.player2_id);
+        perdants.push(m.player1_id);
+      }
+      else{
+        return res.send("Égalité détectée : il faut un gagnant");
+      }
+
+    }
+
+    const prochainTour = {
+      "16ES":"8ES",
+      "8ES":"QUART",
+      "QUART":"DEMI",
+      "DEMI":"FINALE"
+    }[tourActuel];
+
+    for(let i=0; i<gagnants.length; i+=2){
+
+      await run(
+        `
+        INSERT INTO matches(
+          tournament_id,
+          round,
+          player1_id,
+          player2_id
+        )
+        VALUES(?,?,?,?)
+        `,
+        [
+          tournament_id,
+          prochainTour,
+          gagnants[i],
+          gagnants[i+1]
+        ]
+      );
+
+    }
+
+    if(tourActuel === "DEMI" && perdants.length >= 2){
+
+      await run(
+        `
+        INSERT INTO matches(
+          tournament_id,
+          round,
+          player1_id,
+          player2_id
+        )
+        VALUES(?,?,?,?)
+        `,
+        [
+          tournament_id,
+          "3E PLACE",
+          perdants[0],
+          perdants[1]
+        ]
+      );
+
+    }
+
+    res.send(prochainTour + " généré automatiquement");
+
+  }catch(e){
+
+    console.log(e);
+    res.send("Erreur tirage automatique poule pro");
+
+  }
+
+});
+
 app.listen(PORT, () => {
   console.log(
     "Serveur lancé sur le port " + PORT

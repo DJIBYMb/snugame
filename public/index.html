@@ -1679,23 +1679,36 @@ async function verifierTournoi(){
 
 }
 
-async function tirageDesPoules(){
+async function tirageAutomatiquePoulesPro(){
 
-  const tournoiId =
-    document.getElementById("tournoiSelect").value;
+  if(!tournoiSelect.value){
 
-  if(!tournoiId){
-    message.textContent = "Choisis un tournoi";
+    message.textContent =
+      "Choisis un tournoi";
+
     return;
   }
 
-  const result = await post("/generer-16es",{
-    tournament_id:tournoiId
-  });
+  const result = await post(
+    "/tirage-automatique-poule-pro",
+    {
+      tournament_id:
+        tournoiSelect.value,
+
+      group_size:
+        document.getElementById(
+          "groupSize"
+        ).value
+    }
+  );
 
   message.textContent = result;
 
+  await chargerParticipants();
+
   await tirage();
+
+  await afficherPoulesPro();
 
 }
 
