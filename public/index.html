@@ -1193,10 +1193,13 @@ async function validerScore(matchId){
 
   message.textContent = result;
 
+  setTimeout(async ()=>{
+
   await afficherTiragePoulePro();
   await afficherClassements();
   await afficherPhaseFinale();
-}
+
+},500);
 
 async function afficherClassements(){
 
