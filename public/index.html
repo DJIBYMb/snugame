@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
 <title>SNUGAME</title>
 
 <style>
@@ -28,7 +29,7 @@ header{
 }
 
 .container{
-  max-width:1200px;
+  max-width:1300px;
   margin:auto;
   padding:16px;
 }
@@ -43,7 +44,8 @@ header{
 
 .grid{
   display:grid;
-  grid-template-columns:repeat(auto-fit,minmax(280px,1fr));
+  grid-template-columns:
+  repeat(auto-fit,minmax(280px,1fr));
   gap:14px;
 }
 
@@ -117,6 +119,33 @@ button{
   margin:8px 0;
 }
 
+.table-wrap{
+  overflow-x:auto;
+}
+
+table{
+  width:100%;
+  border-collapse:collapse;
+}
+
+th,td{
+  border:1px solid #334155;
+  padding:10px;
+  text-align:center;
+}
+
+th{
+  background:#0b4ecb;
+}
+
+.qualifie{
+  background:#064e3b;
+}
+
+.troisieme{
+  background:#78350f;
+}
+
 </style>
 </head>
 
@@ -161,14 +190,6 @@ Créer un compte
 
 </button>
 
-<button
-class="warning"
-onclick="showForgot()">
-
-Mot de passe oublié
-
-</button>
-
 </div>
 
 <div
@@ -192,35 +213,6 @@ placeholder="Mot de passe">
 
 <button onclick="register()">
 Créer compte
-</button>
-
-</div>
-
-<div
-class="card hidden"
-id="forgotBox">
-
-<h2>Mot de passe oublié</h2>
-
-<input
-id="forgotEmail"
-placeholder="Email du compte">
-
-<button onclick="forgotPassword()">
-Envoyer code
-</button>
-
-<input
-id="resetCode"
-placeholder="Code 6 chiffres">
-
-<input
-id="newPassword"
-type="password"
-placeholder="Nouveau mot de passe">
-
-<button onclick="resetPassword()">
-Changer mot de passe
 </button>
 
 </div>
@@ -271,8 +263,8 @@ Participants
 Poule Pro
 </button>
 
-<button onclick="showPanel('panelParametres')">
-Paramètres
+<button onclick="showPanel('panelClassement')">
+Classements
 </button>
 
 <button
@@ -298,6 +290,7 @@ placeholder="Nom du tournoi">
 <input
 id="tournoiMax"
 type="number"
+value="48"
 placeholder="Nombre équipes">
 
 <button onclick="creerTournoi()">
@@ -307,7 +300,7 @@ Créer tournoi
 <button
 class="secondary"
 onclick="chargerTournois()">
-Afficher mes tournois
+Afficher tournois
 </button>
 
 <select
@@ -319,20 +312,14 @@ onchange="loadAll()">
 
 <div class="card">
 
-<h2>Mes tournois</h2>
+<h2>Gestion tournoi</h2>
 
 <button
 class="danger"
 onclick="supprimerTournoiComplet()">
 
-Supprimer complètement le tournoi
+Supprimer tournoi
 
-</button>
-
-<button
-class="danger"
-onclick="supprimerTournoiComplet()">
-Supprimer tournoi complètement
 </button>
 
 <div id="tournois"></div>
@@ -355,15 +342,15 @@ class="panel hidden">
 
 <input
 id="prenom"
-placeholder="Prénom joueur">
+placeholder="Prénom">
 
 <input
 id="participantEmail"
-placeholder="Email participant">
+placeholder="Email">
 
 <input
 id="username"
-placeholder="Nom utilisateur eFootball">
+placeholder="Nom utilisateur">
 
 <input
 id="telephone"
@@ -375,7 +362,7 @@ placeholder="Numéro série">
 
 <input
 id="clubLogo"
-placeholder="Club / logo">
+placeholder="Club">
 
 <input
 id="preuve"
@@ -391,6 +378,8 @@ Ajouter participant
 
 <h2>Participants</h2>
 
+<div id="participantsCount"></div>
+
 <button
 class="secondary"
 onclick="chargerParticipants()">
@@ -398,9 +387,23 @@ Afficher participants
 </button>
 
 <button
+class="secondary"
+onclick="cocherTous(true)">
+Tout cocher
+</button>
+
+<button
+class="secondary"
+onclick="cocherTous(false)">
+Tout décocher
+</button>
+
+<button
 class="danger"
 onclick="supprimerParticipantsCoches()">
+
 Supprimer sélectionnés
+
 </button>
 
 <div id="participantsCheckbox"></div>
@@ -414,60 +417,52 @@ Supprimer sélectionnés
 </div>
 
 <div
-id="panelParametres"
+id="panelPoulePro"
 class="panel hidden">
 
 <div class="card">
 
-<h2>Paramètres anti-bug</h2>
+<h2>Poule Pro</h2>
 
 <button
-class="secondary"
-onclick="nettoyerAffichage()">
-Nettoyer affichage
+class="warning"
+onclick="tirageAutomatiquePoulePro()">
+
+Tirage automatique poule pro
+
 </button>
 
 <button
 class="secondary"
-onclick="verifierTournoi()">
-Vérifier tournoi
+onclick="afficherTiragePoulePro()">
+
+Afficher matchs
+
 </button>
 
-<button
-class="secondary"
-onclick="chargerTournois()">
-Recharger tournois
-</button>
-
-<button
-class="secondary"
-onclick="checkStatus()">
-Réinitialiser page
-</button>
-
-<div id="panelPoulePro" class="panel hidden">
-
-  <div class="card">
-
-    <h2>Poule Pro</h2>
-
-    <button
-    class="warning"
-    onclick="tirageAutomatiquePoulePro()">
-      Tirage automatique poule pro
-    </button>
-
-    <button
-    class="secondary"
-    onclick="afficherTiragePoulePro()">
-      Afficher matchs
-    </button>
-
-    <div id="pouleProResult"></div>
-
-  </div>
+<div id="pouleProResult"></div>
 
 </div>
+
+</div>
+
+<div
+id="panelClassement"
+class="panel hidden">
+
+<div class="card">
+
+<h2>Classements</h2>
+
+<button
+class="secondary"
+onclick="afficherClassements()">
+
+Afficher classements
+
+</button>
+
+<div id="classementsResult"></div>
 
 </div>
 
@@ -499,9 +494,7 @@ async function post(url,data){
 
   const text = await res.text();
 
-  document
-  .getElementById("message")
-  .textContent = text;
+  message.textContent = text;
 
   return text;
 
@@ -519,9 +512,7 @@ async function get(url){
 
   catch{
 
-    document
-    .getElementById("message")
-    .textContent = text;
+    message.textContent = text;
 
     return null;
 
@@ -531,33 +522,17 @@ async function get(url){
 
 function showRegister(){
 
-  document
-  .getElementById("registerBox")
-  .classList.toggle("hidden");
-
-}
-
-function showForgot(){
-
-  document
-  .getElementById("forgotBox")
-  .classList.toggle("hidden");
+  registerBox
+  .classList
+  .toggle("hidden");
 
 }
 
 function setPage(page){
 
-  document
-  .getElementById("pageAuth")
-  .classList.add("hidden");
-
-  document
-  .getElementById("pageAbonnement")
-  .classList.add("hidden");
-
-  document
-  .getElementById("pageDashboard")
-  .classList.add("hidden");
+  pageAuth.classList.add("hidden");
+  pageAbonnement.classList.add("hidden");
+  pageDashboard.classList.add("hidden");
 
   document
   .getElementById(page)
@@ -569,7 +544,7 @@ function showPanel(id){
 
   document
   .querySelectorAll(".panel")
-  .forEach(p => p.classList.add("hidden"));
+  .forEach(p=>p.classList.add("hidden"));
 
   document
   .getElementById(id)
@@ -578,138 +553,347 @@ function showPanel(id){
 }
 
 async function register(){
-  const result = await post("/register",{
-    name:registerName.value,
-    email:registerEmail.value,
-    password:registerPassword.value
-  });
+
+  const result = await post(
+    "/register",
+    {
+      name:registerName.value,
+      email:registerEmail.value,
+      password:registerPassword.value
+    }
+  );
 
   if(result.includes("Compte")){
     await checkStatus();
   }
+
 }
 
 async function login(){
-  const result = await post("/login",{
-    email:loginEmail.value,
-    password:loginPassword.value
-  });
+
+  const result = await post(
+    "/login",
+    {
+      email:loginEmail.value,
+      password:loginPassword.value
+    }
+  );
 
   if(result.includes("Connexion")){
+
     setPage("pageDashboard");
+
     await chargerTournois();
+
   }
+
 }
 
 async function logout(){
+
   await post("/logout",{});
+
   setPage("pageAuth");
+
 }
 
 async function abonnement(){
-  const result = await post("/abonnement",{});
+
+  const result =
+    await post("/abonnement",{});
 
   if(result.includes("Abonnement")){
+
     setPage("pageDashboard");
+
     await chargerTournois();
+
   }
+
 }
 
-</script>
+async function checkStatus(){
 
-<script>
+  const data = await get("/me");
 
-async function tirageAutomatiquePoulePro(){
+  if(!data || data.connected === false){
 
-  if(!tournoiSelect.value){
+    setPage("pageAuth");
+
+    return;
+  }
+
+  if(data.abonnement !== 1){
+
+    setPage("pageAbonnement");
+
+    return;
+  }
+
+  setPage("pageDashboard");
+
+  await chargerTournois();
+
+}
+
+async function creerTournoi(){
+
+  const nom = tournoiNom.value;
+  const max = tournoiMax.value;
+
+  if(!nom){
 
     message.textContent =
-      "Choisis un tournoi";
+      "Nom tournoi obligatoire";
 
     return;
   }
 
   const result = await post(
-    "/tirage-automatique-poule-pro",
+    "/tournoi",
+    {
+      name:nom,
+      max_teams:Number(max || 48)
+    }
+  );
+
+  message.textContent = result;
+
+  await chargerTournois();
+
+}
+
+async function chargerTournois(){
+
+  const data = await get("/tournois");
+
+  if(!Array.isArray(data)) return;
+
+  tournoiSelect.innerHTML =
+    data.map(t=>
+      `<option value="${t.id}">
+        ${t.name}
+      </option>`
+    ).join("");
+
+  tournois.innerHTML =
+    data.map(t=>
+      `<div class="match">
+        <b>${t.name}</b><br>
+        ID : ${t.id}<br>
+        Équipes : ${t.max_teams}
+      </div>`
+    ).join("");
+
+}
+
+async function ajouterParticipant(){
+
+  if(!tournoiSelect.value){
+
+    message.textContent =
+      "Choisis tournoi";
+
+    return;
+  }
+
+  await post(
+    "/participant",
+    {
+      tournament_id:
+        tournoiSelect.value,
+      prenom:prenom.value,
+      email:participantEmail.value,
+      username:username.value,
+      telephone:telephone.value,
+      numero_serie:numeroSerie.value,
+      club_logo:clubLogo.value,
+      preuve:preuve.value
+    }
+  );
+
+  await chargerParticipants();
+
+}
+
+async function chargerParticipants(){
+
+  if(!tournoiSelect.value) return;
+
+  const data =
+    await get(
+      "/participants/" +
+      tournoiSelect.value
+    );
+
+  if(!Array.isArray(data)) return;
+
+  participantsCount.innerHTML =
+    `<h3>${data.length}/48 équipes</h3>`;
+
+  participantsCheckbox.innerHTML =
+    data.map((p,i)=>
+      `<label>
+        <input
+        type="checkbox"
+        class="participantCheck"
+        value="${p.id}">
+        ${p.prenom}
+      </label><br>`
+    ).join("");
+
+  participants.innerHTML =
+    data.map((p,i)=>
+      `<div class="match">
+        <b>${p.prenom}</b><br>
+        ${p.club_logo || ""}
+      </div>`
+    ).join("");
+
+}
+
+function cocherTous(etat){
+
+  document
+  .querySelectorAll(".participantCheck")
+  .forEach(c=>c.checked=etat);
+
+}
+
+async function supprimerParticipantsCoches(){
+
+  const ids =
+    Array.from(
+      document.querySelectorAll(
+        ".participantCheck:checked"
+      )
+    ).map(i=>i.value);
+
+  if(!ids.length){
+
+    message.textContent =
+      "Aucun participant sélectionné";
+
+    return;
+  }
+
+  await post(
+    "/supprimer-participants-selection",
+    { ids }
+  );
+
+  await chargerParticipants();
+
+}
+
+async function supprimerTournoiComplet(){
+
+  if(!tournoiSelect.value){
+
+    message.textContent =
+      "Choisis tournoi";
+
+    return;
+  }
+
+  await post(
+    "/supprimer-tournoi-complet",
     {
       tournament_id:
         tournoiSelect.value
     }
   );
 
+  await chargerTournois();
+
+}
+
+async function tirageAutomatiquePoulePro(){
+
+  if(!tournoiSelect.value){
+
+    message.textContent =
+      "Choisis tournoi";
+
+    return;
+  }
+
+  const result =
+    await post(
+      "/tirage-automatique-poule-pro",
+      {
+        tournament_id:
+          tournoiSelect.value
+      }
+    );
+
   message.textContent = result;
 
   await afficherTiragePoulePro();
+
+  await afficherClassements();
 
 }
 
 async function afficherTiragePoulePro(){
 
-  if(!tournoiSelect.value){
-    return;
-  }
+  if(!tournoiSelect.value) return;
 
-  const data = await get(
-    "/tirage/" +
-    tournoiSelect.value
-  );
+  const data =
+    await get(
+      "/tirage/" +
+      tournoiSelect.value
+    );
 
-  if(!Array.isArray(data)){
-    return;
-  }
+  if(!Array.isArray(data)) return;
 
-  document
-  .getElementById("pouleProResult")
-  .innerHTML =
-
-    data.map(bloc => `
+  pouleProResult.innerHTML =
+    data.map(bloc=>`
 
       <div class="card">
 
-        <h3>${bloc.tour}</h3>
+      <h3>${bloc.tour}</h3>
 
-        ${bloc.matchs.map(match => `
+      ${bloc.matchs.map(match=>`
 
-          <div class="match">
+        <div class="match">
 
-            <b>
-              ${match.player1_name || "?"}
-            </b>
+          <b>
+          ${match.player1_name}
+          </b>
 
-            VS
+          VS
 
-            <b>
-              ${match.player2_name || "?"}
-            </b>
+          <b>
+          ${match.player2_name}
+          </b>
 
-            <br><br>
+          <input
+          type="number"
+          id="score1_${match.id}"
+          value="${match.score1 ?? ""}"
+          placeholder="Score 1">
 
-            <input
-            type="number"
-            id="score1_${match.id}"
-            placeholder="Score 1"
-            value="${match.score1 ?? ""}">
+          <input
+          type="number"
+          id="score2_${match.id}"
+          value="${match.score2 ?? ""}"
+          placeholder="Score 2">
 
-            <input
-            type="number"
-            id="score2_${match.id}"
-            placeholder="Score 2"
-            value="${match.score2 ?? ""}">
+          <input
+          id="photo_${match.id}"
+          placeholder="Lien preuve">
 
-            <input
-            id="photo_${match.id}"
-            placeholder="Lien preuve photo">
+          <button
+          onclick="validerScore(${match.id})">
 
-            <button
-            onclick="validerScore(${match.id})">
+          Valider score
 
-              Valider score
+          </button>
 
-            </button>
+        </div>
 
-          </div>
-
-        `).join("")}
+      `).join("")}
 
       </div>
 
@@ -719,127 +903,129 @@ async function afficherTiragePoulePro(){
 
 async function validerScore(matchId){
 
-  const score1 =
-    document.getElementById(
-      "score1_" + matchId
-    ).value;
-
-  const score2 =
-    document.getElementById(
-      "score2_" + matchId
-    ).value;
-
-  const photo =
-    document.getElementById(
-      "photo_" + matchId
-    ).value;
-
-  const result = await post(
-    "/update-match-proof",
-    {
-      match_id:matchId,
-      score1,
-      score2,
-      photo_url:photo
-    }
-  );
+  const result =
+    await post(
+      "/update-match-proof",
+      {
+        match_id:matchId,
+        score1:
+          document
+          .getElementById(
+            "score1_" + matchId
+          ).value,
+        score2:
+          document
+          .getElementById(
+            "score2_" + matchId
+          ).value,
+        photo_url:
+          document
+          .getElementById(
+            "photo_" + matchId
+          ).value
+      }
+    );
 
   message.textContent = result;
 
   await afficherTiragePoulePro();
 
-}
-
-async function creerTournoi(){
-
-  const nom =
-    document.getElementById("tournoiNom").value;
-
-  const max =
-    document.getElementById("tournoiMax").value;
-
-  if(!nom){
-
-    message.textContent =
-      "Écris le nom du tournoi";
-
-    return;
-  }
-
-  const result = await post(
-    "/tournoi",
-    {
-      name:nom,
-      max_teams:Number(max || 48)
-    }
-  );
-
-  message.textContent = result;
-
-  await chargerTournois();
-
-}async function creerTournoi(){
-
-  const nom =
-    document.getElementById("tournoiNom").value;
-
-  const max =
-    document.getElementById("tournoiMax").value;
-
-  if(!nom){
-
-    message.textContent =
-      "Écris le nom du tournoi";
-
-    return;
-  }
-
-  const result = await post(
-    "/tournoi",
-    {
-      name:nom,
-      max_teams:Number(max || 48)
-    }
-  );
-
-  message.textContent = result;
-
-  await chargerTournois();
+  await afficherClassements();
 
 }
 
-async function supprimerTournoiComplet(){
+async function afficherClassements(){
 
-  const tournoiId =
-    document.getElementById(
-      "tournoiSelect"
-    ).value;
+  if(!tournoiSelect.value) return;
 
-  if(!tournoiId){
+  const data =
+    await get(
+      "/classement-poules/" +
+      tournoiSelect.value
+    );
 
-    message.textContent =
-      "Choisis un tournoi";
+  if(!data) return;
 
-    return;
-  }
+  classementsResult.innerHTML =
+    Object.keys(data)
+    .map(groupe=>`
 
-  const result = await post(
-    "/supprimer-tournoi-complet",
-    {
-      tournament_id:tournoiId
-    }
-  );
+      <div class="card">
 
-  message.textContent = result;
+      <h3>
+      Groupe ${groupe}
+      </h3>
 
-  await chargerTournois();
+      <div class="table-wrap">
 
-  document
-  .getElementById("pouleProResult")
-  .innerHTML = "";
+      <table>
+
+      <thead>
+
+      <tr>
+
+      <th>#</th>
+      <th>Équipe</th>
+      <th>MJ</th>
+      <th>V</th>
+      <th>N</th>
+      <th>D</th>
+      <th>BP</th>
+      <th>BC</th>
+      <th>Diff</th>
+      <th>Pts</th>
+
+      </tr>
+
+      </thead>
+
+      <tbody>
+
+      ${data[groupe]
+      .map((e,i)=>`
+
+        <tr
+        class="
+        ${i<2 ? "qualifie" : ""}
+        ${i===2 ? "troisieme" : ""}
+        ">
+
+        <td>${i+1}</td>
+        <td>${e.prenom}</td>
+        <td>${e.j}</td>
+        <td>${e.v}</td>
+        <td>${e.n}</td>
+        <td>${e.d}</td>
+        <td>${e.bp}</td>
+        <td>${e.bc}</td>
+        <td>${e.diff}</td>
+        <td>${e.pts}</td>
+
+        </tr>
+
+      `).join("")}
+
+      </tbody>
+
+      </table>
+
+      </div>
+
+      </div>
+
+    `).join("");
 
 }
 
+async function loadAll(){
+
+  await chargerParticipants();
+
+  await afficherTiragePoulePro();
+
+  await afficherClassements();
+
+}
 
 checkStatus();
 
