@@ -324,6 +324,14 @@ onchange="loadAll()">
 <button
 class="danger"
 onclick="supprimerTournoiComplet()">
+
+Supprimer complètement le tournoi
+
+</button>
+
+<button
+class="danger"
+onclick="supprimerTournoiComplet()">
 Supprimer tournoi complètement
 </button>
 
@@ -739,6 +747,96 @@ async function validerScore(matchId){
   message.textContent = result;
 
   await afficherTiragePoulePro();
+
+}
+
+async function creerTournoi(){
+
+  const nom =
+    document.getElementById("tournoiNom").value;
+
+  const max =
+    document.getElementById("tournoiMax").value;
+
+  if(!nom){
+
+    message.textContent =
+      "Écris le nom du tournoi";
+
+    return;
+  }
+
+  const result = await post(
+    "/tournoi",
+    {
+      name:nom,
+      max_teams:Number(max || 48)
+    }
+  );
+
+  message.textContent = result;
+
+  await chargerTournois();
+
+}async function creerTournoi(){
+
+  const nom =
+    document.getElementById("tournoiNom").value;
+
+  const max =
+    document.getElementById("tournoiMax").value;
+
+  if(!nom){
+
+    message.textContent =
+      "Écris le nom du tournoi";
+
+    return;
+  }
+
+  const result = await post(
+    "/tournoi",
+    {
+      name:nom,
+      max_teams:Number(max || 48)
+    }
+  );
+
+  message.textContent = result;
+
+  await chargerTournois();
+
+}
+
+async function supprimerTournoiComplet(){
+
+  const tournoiId =
+    document.getElementById(
+      "tournoiSelect"
+    ).value;
+
+  if(!tournoiId){
+
+    message.textContent =
+      "Choisis un tournoi";
+
+    return;
+  }
+
+  const result = await post(
+    "/supprimer-tournoi-complet",
+    {
+      tournament_id:tournoiId
+    }
+  );
+
+  message.textContent = result;
+
+  await chargerTournois();
+
+  document
+  .getElementById("pouleProResult")
+  .innerHTML = "";
 
 }
 

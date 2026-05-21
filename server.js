@@ -220,35 +220,46 @@ app.post("/abonnement",(req,res)=>{
 
 });
 
-app.post("/tournoi",(req,res)=>{
+app.post("/tournoi", async (req,res)=>{
 
-  if(!connected(req)){
-    return res.send("Connecte-toi");
-  }
+  try{
 
-  const {
-    name,
-    max_teams
-  } = req.body;
-
-  db.run(
-    `
-    INSERT INTO tournaments(
-      user_id,
-      name,
-      max_teams
-    )
-    VALUES(?,?,?)
-    `,
-    [
-      req.session.userId,
-      name,
-      max_teams
-    ],
-    ()=>{
-      res.send("Tournoi créé");
+    if(!connected(req)){
+      return res.send("Connecte-toi d'abord");
     }
-  );
+
+    const { name, max_teams } = req.body;
+
+    if(!name){
+      return res.send("Nom du tournoi obligatoire");
+    }
+
+    await run(
+      `
+      INSERT INTO tournaments(
+        user_id,
+        name,
+        max_teams,
+        status
+      )
+      VALUES(?,?,?,?)
+      `,
+      [
+        req.session.userId,
+        name,
+        Number(max_teams || 48),
+        "draft"
+      ]
+    );
+
+    res.send("Tournoi créé");
+
+  }catch(e){
+
+    console.log(e);
+    res.send("Erreur création tournoi");
+
+  }
 
 });
 
@@ -355,23 +366,42 @@ app.post("/supprimer-participants-selection", async (req,res)=>{
 
 app.post("/supprimer-tournoi-complet", async (req,res)=>{
 
-  const { tournament_id } = req.body;
+  try{
 
-  if(!tournament_id){
-    return res.send("Tournoi obligatoire");
+    const { tournament_id } = req.body;
+
+    if(!tournament_id){
+      return res.send("Tournoi obligatoire");
+    }
+
+    await run(
+      "DELETE FROM matches WHERE tournament_id=?",
+      [tournament_id]
+    ).catch(()=>{});
+
+    await run(
+      "DELETE FROM participants WHERE tournament_id=?",
+      [tournament_id]
+    );
+
+    await run(
+      "DELETE FROM comments WHERE tournament_id=?",
+      [tournament_id]
+    ).catch(()=>{});
+
+    await run(
+      "DELETE FROM tournaments WHERE id=?",
+      [tournament_id]
+    );
+
+    res.send("Tournoi supprimé complètement");
+
+  }catch(e){
+
+    console.log("Erreur suppression tournoi :", e);
+    res.send("Erreur suppression tournoi");
+
   }
-
-  await run(
-    "DELETE FROM participants WHERE tournament_id=?",
-    [tournament_id]
-  );
-
-  await run(
-    "DELETE FROM tournaments WHERE id=?",
-    [tournament_id]
-  );
-
-  res.send("Tournoi supprimé complètement");
 
 });
 
