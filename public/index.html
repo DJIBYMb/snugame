@@ -267,6 +267,10 @@ Tournoi
 Participants
 </button>
 
+<button onclick="showPanel('panelPoulePro')">
+Poule Pro
+</button>
+
 <button onclick="showPanel('panelParametres')">
 Paramètres
 </button>
@@ -433,6 +437,30 @@ onclick="checkStatus()">
 Réinitialiser page
 </button>
 
+<div id="panelPoulePro" class="panel hidden">
+
+  <div class="card">
+
+    <h2>Poule Pro</h2>
+
+    <button
+    class="warning"
+    onclick="tirageAutomatiquePoulePro()">
+      Tirage automatique poule pro
+    </button>
+
+    <button
+    class="secondary"
+    onclick="afficherTiragePoulePro()">
+      Afficher matchs
+    </button>
+
+    <div id="pouleProResult"></div>
+
+  </div>
+
+</div>
+
 </div>
 
 </div>
@@ -578,6 +606,143 @@ async function abonnement(){
     await chargerTournois();
   }
 }
+
+</script>
+
+<script>
+
+async function tirageAutomatiquePoulePro(){
+
+  if(!tournoiSelect.value){
+
+    message.textContent =
+      "Choisis un tournoi";
+
+    return;
+  }
+
+  const result = await post(
+    "/tirage-automatique-poule-pro",
+    {
+      tournament_id:
+        tournoiSelect.value
+    }
+  );
+
+  message.textContent = result;
+
+  await afficherTiragePoulePro();
+
+}
+
+async function afficherTiragePoulePro(){
+
+  if(!tournoiSelect.value){
+    return;
+  }
+
+  const data = await get(
+    "/tirage/" +
+    tournoiSelect.value
+  );
+
+  if(!Array.isArray(data)){
+    return;
+  }
+
+  document
+  .getElementById("pouleProResult")
+  .innerHTML =
+
+    data.map(bloc => `
+
+      <div class="card">
+
+        <h3>${bloc.tour}</h3>
+
+        ${bloc.matchs.map(match => `
+
+          <div class="match">
+
+            <b>
+              ${match.player1_name || "?"}
+            </b>
+
+            VS
+
+            <b>
+              ${match.player2_name || "?"}
+            </b>
+
+            <br><br>
+
+            <input
+            type="number"
+            id="score1_${match.id}"
+            placeholder="Score 1"
+            value="${match.score1 ?? ""}">
+
+            <input
+            type="number"
+            id="score2_${match.id}"
+            placeholder="Score 2"
+            value="${match.score2 ?? ""}">
+
+            <input
+            id="photo_${match.id}"
+            placeholder="Lien preuve photo">
+
+            <button
+            onclick="validerScore(${match.id})">
+
+              Valider score
+
+            </button>
+
+          </div>
+
+        `).join("")}
+
+      </div>
+
+    `).join("");
+
+}
+
+async function validerScore(matchId){
+
+  const score1 =
+    document.getElementById(
+      "score1_" + matchId
+    ).value;
+
+  const score2 =
+    document.getElementById(
+      "score2_" + matchId
+    ).value;
+
+  const photo =
+    document.getElementById(
+      "photo_" + matchId
+    ).value;
+
+  const result = await post(
+    "/update-match-proof",
+    {
+      match_id:matchId,
+      score1,
+      score2,
+      photo_url:photo
+    }
+  );
+
+  message.textContent = result;
+
+  await afficherTiragePoulePro();
+
+}
+
+</script>
 
 checkStatus();
 
