@@ -1115,10 +1115,15 @@ function matchCard(match){
       placeholder="Score 2">
 
       <input
-      id="photo_${match.id}"
-      value="${match.proof_photo || ""}"
-      placeholder="Lien preuve"
-      readonly>
+     type="hidden"
+     id="photo_${match.id}"
+     value="${match.proof_photo || ""}">
+
+     ${
+     match.proof_photo
+     ? `<img class="proof" src="${match.proof_photo}">`
+     : ""
+     }
 
       <input
       type="file"
@@ -1529,6 +1534,8 @@ async function uploadPreuve(matchId){
     "photo_" + matchId
   )
   .value = data.url;
+
+  await afficherTiragePoulePro();
 
   message.textContent =
     "Image uploadée";
