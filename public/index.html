@@ -1445,6 +1445,15 @@ async function ouvrirGroupe(groupe){
         max="100"
         value="${m.score2 ?? 0}">
 
+        <input
+id="photo_${m.id}"
+placeholder="Lien photo résultat"
+value="${m.proof_photo || ""}">
+
+<button onclick="validerScorePoule(${m.id})">
+  Valider le score
+</button>
+
         <b>${m.player2_name || "Équipe 2"}</b>
 
       </div>
@@ -1706,6 +1715,28 @@ async function tirageAutomatiquePoulesPro(){
 
   message.textContent =
     "Tirage poule pro terminé. Les points se calculent avec les scores : victoire 3 pts, nul 1 pt.";
+}
+
+async function validerScorePoule(matchId){
+
+  const score1 =
+    document.getElementById("score1_" + matchId).value;
+
+  const score2 =
+    document.getElementById("score2_" + matchId).value;
+
+  const photo =
+    document.getElementById("photo_" + matchId).value;
+
+  await post("/update-match-proof",{
+    match_id:matchId,
+    score1:score1,
+    score2:score2,
+    photo_url:photo
+  });
+
+  await ouvrirGroupe(groupeActuel);
+
 }
 
 checkStatus();
