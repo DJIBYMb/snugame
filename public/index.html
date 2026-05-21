@@ -947,10 +947,23 @@ async function afficherTiragePoulePro(){
 }
 
 async function validerScore(matchId){
-  let photo = document.getElementById("photo_" + matchId).value;
-  const fileInput = document.getElementById("file_" + matchId);
 
-  if(fileInput && fileInput.files.length){
+  let photo = "";
+
+  const oldPhoto =
+    document.getElementById("photo_" + matchId);
+
+  if(oldPhoto){
+    photo = oldPhoto.value || "";
+  }
+
+  const fileInput =
+    document.getElementById("file_" + matchId);
+
+  if(fileInput && fileInput.files && fileInput.files.length > 0){
+
+    message.textContent = "Upload image en cours...";
+
     const formData = new FormData();
     formData.append("image", fileInput.files[0]);
 
@@ -959,32 +972,43 @@ async function validerScore(matchId){
       body:formData
     });
 
+    if(!uploadRes.ok){
+      message.textContent = "Erreur serveur upload image";
+      return;
+    }
+
     const uploadData = await uploadRes.json();
 
-    if(!uploadData.ok){
-      message.textContent = uploadData.message || "Erreur upload image";
+    if(!uploadData.ok || !uploadData.url){
+      message.textContent = uploadData.message || "Image non uploadée";
       return;
     }
 
     photo = uploadData.url;
 
     document.getElementById("photo_" + matchId).value = photo;
+
     document.getElementById("preview_" + matchId).innerHTML =
-      `<img class="proof" src="${photo}">`;
+      `<img class="proof" src="${photo}?t=${Date.now()}">`;
   }
 
-  await post("/update-match-proof",{
+  message.textContent = "Validation score en cours...";
+
+  const result = await post("/update-match-proof",{
     match_id:matchId,
     score1:document.getElementById("score1_" + matchId).value,
     score2:document.getElementById("score2_" + matchId).value,
     photo_url:photo
   });
 
+  message.textContent = result;
+
   setTimeout(async ()=>{
     await afficherTiragePoulePro();
     await afficherClassements();
     await afficherPhaseFinale();
-  },500);
+  },1000);
+
 }
 
 async function annulerScore(matchId){
