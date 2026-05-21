@@ -1089,94 +1089,41 @@ async function tirageAutomatiquePoulePro(){
 function matchCard(match){
 
   return `
-
     <div class="match">
 
-      <b>
-      ${match.player1_name || "Équipe 1"}
-      </b>
-
+      <b>${match.player1_name || "Équipe 1"}</b>
       VS
+      <b>${match.player2_name || "Équipe 2"}</b>
 
-      <b>
-      ${match.player2_name || "Équipe 2"}
-      </b>
+      <input type="number" id="score1_${match.id}" value="${match.score1 ?? ""}" placeholder="Score 1">
+      <input type="number" id="score2_${match.id}" value="${match.score2 ?? ""}" placeholder="Score 2">
 
-      <input
-      type="number"
-      id="score1_${match.id}"
-      value="${match.score1 ?? ""}"
-      placeholder="Score 1">
+      <input type="hidden" id="photo_${match.id}" value="${match.proof_photo || ""}">
 
-      <input
-      type="number"
-      id="score2_${match.id}"
-      value="${match.score2 ?? ""}"
-      placeholder="Score 2">
+      <input type="file" accept="image/*" id="file_${match.id}">
 
-      <input
-     type="hidden"
-     id="photo_${match.id}"
-     value="${match.proof_photo || ""}">
-
-     ${
-     match.proof_photo
-     ? `<img class="proof" src="${match.proof_photo}">`
-     : ""
-     }
-
-      <input
-      type="file"
-      accept="image/*"
-      id="file_${match.id}">
-
-      <button
-      class="secondary"
-      onclick="uploadPreuve(${match.id})">
-
-      Uploader preuve
-
+      <button onclick="validerScore(${match.id})">
+        Valider score
       </button>
 
-      <button
-      onclick="validerScore(${match.id})">
-
-      Valider score
-
+      <button class="danger" onclick="annulerScore(${match.id})">
+        Annuler score
       </button>
 
-      <button
-      class="danger"
-      onclick="annulerScore(${match.id})">
+      <p>${match.played ? match.score1 + " - " + match.score2 : "Non joué"}</p>
 
-      Annuler score
+      ${match.locked === 1 ? "<p>🔒 Score verrouillé</p>" : ""}
 
-      </button>
-
-      <p>
-      ${
-        match.played
-        ? match.score1 + " - " + match.score2
-        : "Non joué"
-      }
-      </p>
-
-      ${
-        match.locked === 1
-        ? "<p>🔒 Score verrouillé</p>"
-        : ""
-      }
-
-      ${
-        match.proof_photo
-        ? `<img class="proof" src="${match.proof_photo}">`
-        : ""
-      }
+      <div id="preview_${match.id}">
+        ${
+          match.proof_photo
+          ? `<img class="proof" src="${match.proof_photo}">`
+          : ""
+        }
+      </div>
 
     </div>
-
   `;
-
 }
 
 async function afficherTiragePoulePro(){
@@ -1208,74 +1155,47 @@ async function afficherTiragePoulePro(){
 
 async function validerScore(matchId){
 
-  let photo =
-    document.getElementById(
-      "photo_" + matchId
-    ).value;
+  let photo = document.getElementById("photo_" + matchId).value;
 
-  const fileInput =
-    document.getElementById(
-      "file_" + matchId
-    );
+  const fileInput = document.getElementById("file_" + matchId);
 
   if(fileInput && fileInput.files.length){
 
     const formData = new FormData();
+    formData.append("image", fileInput.files[0]);
 
-    formData.append(
-      "image",
-      fileInput.files[0]
-    );
+    const uploadRes = await fetch("/upload-image",{
+      method:"POST",
+      body:formData
+    });
 
-    const uploadRes = await fetch(
-      "/upload-image",
-      {
-        method:"POST",
-        body:formData
-      }
-    );
-
-    const uploadData =
-      await uploadRes.json();
+    const uploadData = await uploadRes.json();
 
     if(!uploadData.ok){
-      message.textContent =
-        uploadData.message || "Erreur upload image";
+      message.textContent = uploadData.message || "Erreur upload image";
       return;
     }
 
     photo = uploadData.url;
 
-    document
-    .getElementById(
-      "photo_" + matchId
-    )
-    .value = photo;
+    document.getElementById("photo_" + matchId).value = photo;
+
+    document.getElementById("preview_" + matchId).innerHTML =
+      `<img class="proof" src="${photo}">`;
   }
 
-  const result =
-    await post(
-      "/update-match-proof",
-      {
-        match_id:matchId,
-        score1:
-          document.getElementById(
-            "score1_" + matchId
-          ).value,
-        score2:
-          document.getElementById(
-            "score2_" + matchId
-          ).value,
-        photo_url:photo
-      }
-    );
+  const result = await post("/update-match-proof",{
+    match_id:matchId,
+    score1:document.getElementById("score1_" + matchId).value,
+    score2:document.getElementById("score2_" + matchId).value,
+    photo_url:photo
+  });
 
   message.textContent = result;
 
   await afficherTiragePoulePro();
   await afficherClassements();
   await afficherPhaseFinale();
-
 }
 
 async function afficherClassements(){
