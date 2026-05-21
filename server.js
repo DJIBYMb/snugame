@@ -6,9 +6,20 @@ const sqlite3 = require("sqlite3").verbose();
 const path = require("path");
 const fs = require("fs");
 const multer = require("multer");
+const rateLimit = require("express-rate-limit");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const loginLimiter = rateLimit({
+
+  windowMs:15 * 60 * 1000,
+
+  max:10,
+
+  message:
+    "Trop de tentatives. Réessaie plus tard."
+
+});
 
 const db = new sqlite3.Database(
   path.join(__dirname, "database.sqlite")
@@ -264,7 +275,9 @@ app.post("/register", async (req,res)=>{
 
 });
 
-app.post("/login",(req,res)=>{
+app.post("/login", loginLimiter, (req,res)=>{
+
+
 
   const {
     email,
