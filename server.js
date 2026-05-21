@@ -24,6 +24,8 @@ if(!fs.existsSync(uploadDir)){
   fs.mkdirSync(uploadDir);
 }
 
+app.use("/uploads", express.static(uploadDir));
+
 const storage = multer.diskStorage({
 
   destination:(req,file,cb)=>{
