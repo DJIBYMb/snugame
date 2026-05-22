@@ -923,12 +923,17 @@ async function chargerParticipants(){
   `).join("");
 
   participants.innerHTML = data.map(p=>`
-    <div class="match">
-      <b>${p.prenom}</b><br>
-      ${p.club_logo || ""}<br>
-      Groupe : ${p.group_name || "Aucun"}
-    </div>
-  `).join("");
+  <div class="match">
+    <b>ID joueur : ${p.id}</b><br>
+    <b>ID joueur : ${p.id}</b><br>
+<b>${p.prenom}</b><br>
+    ${p.club_logo || ""}<br>
+    Groupe : ${p.group_name || "Aucun"}<br>
+    <button class="secondary" onclick="ouvrirProfilJoueur(${p.id})">
+      Voir profil joueur
+    </button>
+  </div>
+`).join("");
 }
 
 function cocherTous(etat){
@@ -1277,6 +1282,10 @@ async function loadAll(){
   await afficherTiragePoulePro();
   await afficherClassements();
   await afficherPhaseFinale();
+}
+
+function ouvrirProfilJoueur(id){
+  window.open("/player/" + id, "_blank");
 }
 
 checkStatus();

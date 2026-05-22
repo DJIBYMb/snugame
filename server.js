@@ -208,6 +208,22 @@ db.serialize(()=>{
     )
   `);
 
+  db.run(`
+  CREATE TABLE IF NOT EXISTS player_stats(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    participant_id INTEGER UNIQUE,
+    matchs INTEGER DEFAULT 0,
+    victoires INTEGER DEFAULT 0,
+    nuls INTEGER DEFAULT 0,
+    defaites INTEGER DEFAULT 0,
+    buts INTEGER DEFAULT 0,
+    encaisses INTEGER DEFAULT 0,
+    points INTEGER DEFAULT 0,
+    niveau INTEGER DEFAULT 1,
+    xp INTEGER DEFAULT 0
+  )
+`);
+
 });
 
 app.get("/", (req,res)=>{
@@ -573,6 +589,29 @@ app.post("/participant", async (req,res)=>{
         preuve || ""
       ]
     );
+
+    const participant = await get(
+  `
+  SELECT id
+  FROM participants
+  WHERE tournament_id=?
+  ORDER BY id DESC
+  LIMIT 1
+  `,
+  [tournament_id]
+);
+
+if(participant){
+  await run(
+    `
+    INSERT OR IGNORE INTO player_stats(
+      participant_id
+    )
+    VALUES(?)
+    `,
+    [participant.id]
+  );
+}
 
     res.send("Participant ajouté");
 
@@ -1749,6 +1788,47 @@ app.post("/upload-image",(req,res)=>{
     });
 
   });
+
+});
+
+app.get("/player/:id", async (req,res)=>{
+
+  try{
+
+    const joueur = await get(
+      `
+      SELECT
+        p.*,
+        s.matchs,
+        s.victoires,
+        s.nuls,
+        s.defaites,
+        s.buts,
+        s.encaisses,
+        s.points,
+        s.niveau,
+        s.xp
+      FROM participants p
+      LEFT JOIN player_stats s
+      ON s.participant_id=p.id
+      WHERE p.id=?
+      `,
+      [req.params.id]
+    );
+
+    if(!joueur){
+      return res.send("Joueur introuvable");
+    }
+
+    res.json(joueur);
+
+  }catch(e){
+
+    console.log(e);
+
+    res.send("Erreur profil joueur");
+
+  }
 
 });
 
