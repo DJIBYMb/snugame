@@ -1820,17 +1820,157 @@ app.get("/player/:id", async (req,res)=>{
       return res.send("Joueur introuvable");
     }
 
-    res.json(joueur);
+    res.send(`
+<!DOCTYPE html>
+<html lang="fr">
 
-  }catch(e){
+<head>
 
-    console.log(e);
+<meta charset="UTF-8">
 
-    res.send("Erreur profil joueur");
+<meta
+name="viewport"
+content="width=device-width, initial-scale=1.0">
 
-  }
+<title>${joueur.prenom} - SNUGAME</title>
 
-});
+<style>
+
+body{
+  margin:0;
+  font-family:Arial,sans-serif;
+  background:
+    linear-gradient(180deg,#050816,#07111f);
+  color:white;
+  min-height:100vh;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  padding:20px;
+}
+
+.card{
+  width:100%;
+  max-width:450px;
+  background:
+    linear-gradient(180deg,#0f172a,#111c33);
+  border:1px solid #334155;
+  border-radius:24px;
+  padding:25px;
+  box-shadow:
+    0 0 30px #1455ff55;
+}
+
+h1{
+  margin-top:0;
+  text-align:center;
+  font-size:34px;
+  color:#93c5fd;
+}
+
+.level{
+  text-align:center;
+  font-size:20px;
+  margin-bottom:15px;
+}
+
+.bar{
+  height:18px;
+  background:#020617;
+  border-radius:999px;
+  overflow:hidden;
+  margin-bottom:25px;
+  border:1px solid #334155;
+}
+
+.fill{
+  height:100%;
+  width:${Math.min(joueur.xp || 0,100)}%;
+  background:
+    linear-gradient(90deg,#1455ff,#7c2cff);
+}
+
+.stats{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:12px;
+}
+
+.stat{
+  background:#020617;
+  border:1px solid #334155;
+  border-radius:16px;
+  padding:15px;
+  text-align:center;
+}
+
+.stat h2{
+  margin:0;
+  color:#22c55e;
+}
+
+.small{
+  color:#cbd5e1;
+  margin-top:8px;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div class="card">
+
+<h1>${joueur.prenom}</h1>
+
+<div class="level">
+⭐ Niveau ${joueur.niveau}
+</div>
+
+<div class="bar">
+<div class="fill"></div>
+</div>
+
+<div class="stats">
+
+<div class="stat">
+<h2>${joueur.matchs}</h2>
+<div class="small">Matchs</div>
+</div>
+
+<div class="stat">
+<h2>${joueur.victoires}</h2>
+<div class="small">Victoires</div>
+</div>
+
+<div class="stat">
+<h2>${joueur.defaites}</h2>
+<div class="small">Défaites</div>
+</div>
+
+<div class="stat">
+<h2>${joueur.buts}</h2>
+<div class="small">Buts</div>
+</div>
+
+<div class="stat">
+<h2>${joueur.points}</h2>
+<div class="small">Points</div>
+</div>
+
+<div class="stat">
+<h2>${joueur.xp}</h2>
+<div class="small">XP</div>
+</div>
+
+</div>
+
+</div>
+
+</body>
+</html>
+`);
 
 app.get("/fix-player-stats", async (req,res)=>{
 
