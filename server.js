@@ -1869,6 +1869,62 @@ app.post("/custom-auto-draw", async (req,res)=>{
 
 });
 
+app.post("/supprimer-tournoi-complet", async (req,res)=>{
+
+  try{
+
+    const { tournament_id } = req.body;
+
+    if(!tournament_id){
+      return res.send("Tournoi manquant");
+    }
+
+    await run(
+      "DELETE FROM matches WHERE tournament_id=?",
+      [tournament_id]
+    );
+
+    await run(
+      "DELETE FROM participants WHERE tournament_id=?",
+      [tournament_id]
+    );
+
+    await run(
+      "DELETE FROM tournaments WHERE id=?",
+      [tournament_id]
+    );
+
+    const reste = await get(
+      "SELECT COUNT(*) AS total FROM tournaments"
+    );
+
+    if(reste.total === 0){
+
+      await run(
+        "DELETE FROM sqlite_sequence WHERE name='tournaments'"
+      );
+
+      await run(
+        "DELETE FROM sqlite_sequence WHERE name='participants'"
+      );
+
+      await run(
+        "DELETE FROM sqlite_sequence WHERE name='matches'"
+      );
+
+    }
+
+    res.send("Tournoi supprimé complètement");
+
+  }catch(e){
+
+    console.log(e);
+    res.send("Erreur suppression tournoi");
+
+  }
+
+});
+
 app.listen(PORT, ()=>{
 
   console.log(
