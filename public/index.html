@@ -928,6 +928,10 @@ async function chargerParticipants(){
 <b>${p.prenom}</b><br>
     ${p.club_logo || ""}<br>
     Groupe : ${p.group_name || "Aucun"}<br>
+
+<button class="secondary" onclick="window.open('/player/${p.id}','_blank')">
+  Voir profil joueur
+</button>
     <button class="secondary" onclick="ouvrirProfilJoueur(${p.id})">
       Voir profil joueur
     </button>
