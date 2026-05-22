@@ -301,6 +301,11 @@ db.run(`
   )
 `);
 
+db.run(`
+  ALTER TABLE users
+  ADD COLUMN abonnement_expire_at TEXT
+`,()=>{});
+
 });
 
 app.get("/", (req,res)=>{
@@ -431,7 +436,7 @@ app.post("/logout",(req,res)=>{
 
 });
 
-app.get("/me",(req,res)=>{
+app.get("/me", async (req,res)=>{
 
   if(!connected(req)){
     return res.json({
@@ -445,17 +450,49 @@ app.get("/me",(req,res)=>{
       id,
       name,
       email,
-      abonnement
+      abonnement,
+      abonnement_expire_at
     FROM users
     WHERE id=?
     `,
     [req.session.userId],
-    (err,user)=>{
+
+    async (err,user)=>{
 
       if(err || !user){
         return res.json({
           connected:false
         });
+      }
+
+      if(
+        user.abonnement === 1 &&
+        user.abonnement_expire_at
+      ){
+
+        const maintenant =
+          new Date();
+
+        const expiration =
+          new Date(
+            user.abonnement_expire_at
+          );
+
+        if(maintenant > expiration){
+
+          await run(
+            `
+            UPDATE users
+            SET abonnement=0
+            WHERE id=?
+            `,
+            [user.id]
+          );
+
+          user.abonnement = 0;
+
+        }
+
       }
 
       res.json(user);
@@ -2491,13 +2528,14 @@ app.post("/admin-valider-paiement", async (req,res)=>{
     } = req.body;
 
     await run(
-      `
-      UPDATE users
-      SET abonnement=1
-      WHERE id=?
-      `,
-      [user_id]
-    );
+    `
+    UPDATE users
+    SET abonnement=1,
+      abonnement_expire_at=datetime('now','+30 days')
+    WHERE id=?
+    `,
+    [user_id]
+  );
 
     await run(
       `
