@@ -341,14 +341,119 @@ db.run(`
   )
 `);
 
-app.get("/", (req,res)=>{
-  res.sendFile(
-    path.join(
-      __dirname,
-      "public",
-      "index.html"
-    )
-  );
+app.get("/", async (req,res)=>{
+
+  try{
+
+    const highlights = await all(
+      `
+      SELECT
+        h.*,
+        p.prenom
+      FROM highlights h
+      LEFT JOIN participants p
+      ON p.id=h.participant_id
+      ORDER BY h.likes DESC, h.vues DESC, h.id DESC
+      LIMIT 6
+      `
+    );
+
+    let cards = highlights.map(h=>`
+      <div class="card">
+        <h3>🔥 ${h.titre}</h3>
+        <p><b>${h.prenom || "Joueur"}</b> a publié un nouveau highlight</p>
+        <p>${h.description || ""}</p>
+        <a href="${h.media_url}" target="_blank">Voir highlight</a>
+        <p>❤️ ${h.likes} • 👀 ${h.vues}</p>
+      </div>
+    `).join("");
+
+    res.send(`
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SNUGAME</title>
+<style>
+body{
+  margin:0;
+  font-family:Arial,sans-serif;
+  background:linear-gradient(180deg,#050816,#07111f);
+  color:white;
+}
+.hero{
+  padding:60px 20px;
+  text-align:center;
+  background:linear-gradient(135deg,#1455ff,#7c2cff);
+}
+.hero h1{
+  font-size:46px;
+  margin:0;
+}
+.hero p{
+  color:#e0e7ff;
+}
+.btn{
+  display:inline-block;
+  margin-top:20px;
+  padding:14px 22px;
+  border-radius:14px;
+  background:#22c55e;
+  color:#052e16;
+  font-weight:bold;
+  text-decoration:none;
+}
+.container{
+  max-width:1100px;
+  margin:auto;
+  padding:20px;
+}
+.grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
+  gap:15px;
+}
+.card{
+  background:#0f172a;
+  border:1px solid #334155;
+  border-radius:18px;
+  padding:16px;
+}
+a{
+  color:#60a5fa;
+}
+</style>
+</head>
+<body>
+
+<section class="hero">
+  <h1>SNUGAME</h1>
+  <p>Tournois • Ranking • Highlights • Esport Mobile</p>
+  <a class="btn" href="/app">Entrer sur la plateforme</a>
+</section>
+
+<div class="container">
+  <h2>🔥 Top Highlights</h2>
+  <div class="grid">
+    ${cards || "<p>Aucun highlight pour le moment.</p>"}
+  </div>
+</div>
+
+</body>
+</html>
+    `);
+
+  }catch(e){
+
+    console.log(e);
+
+    res.sendFile(
+      path.join(__dirname,"public","index.html")
+    );
+
+  }
+
 });
 
 app.post("/register", async (req,res)=>{
