@@ -2054,6 +2054,137 @@ app.get("/ranking", async (req,res)=>{
 
 });
 
+app.get("/ranking-page", async (req,res)=>{
+
+  try{
+
+    const joueurs = await all(
+      `
+      SELECT
+        p.id,
+        p.prenom,
+        s.matchs,
+        s.victoires,
+        s.defaites,
+        s.points,
+        s.niveau,
+        s.xp
+      FROM participants p
+      LEFT JOIN player_stats s
+      ON s.participant_id=p.id
+      ORDER BY
+        s.points DESC,
+        s.victoires DESC,
+        s.xp DESC
+      LIMIT 100
+      `
+    );
+
+    let html = `
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ranking SNUGAME</title>
+
+<style>
+body{
+  margin:0;
+  font-family:Arial,sans-serif;
+  background:linear-gradient(180deg,#050816,#07111f);
+  color:white;
+}
+
+header{
+  padding:25px;
+  text-align:center;
+  background:linear-gradient(135deg,#1455ff,#7c2cff);
+  box-shadow:0 0 30px #1455ff88;
+}
+
+.container{
+  max-width:900px;
+  margin:auto;
+  padding:20px;
+}
+
+.card{
+  background:#0f172a;
+  border:1px solid #334155;
+  border-radius:18px;
+  padding:15px;
+  margin:12px 0;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+}
+
+.rank{
+  font-size:28px;
+  font-weight:bold;
+  color:#22c55e;
+}
+
+.name{
+  font-size:20px;
+  font-weight:bold;
+  color:#93c5fd;
+}
+
+.small{
+  color:#cbd5e1;
+  font-size:13px;
+}
+</style>
+</head>
+
+<body>
+
+<header>
+<h1>🌍 Ranking Mondial SNUGAME</h1>
+<p>Top joueurs eFootball</p>
+</header>
+
+<div class="container">
+`;
+
+    joueurs.forEach((j,i)=>{
+
+      html += `
+<div class="card">
+  <div>
+    <div class="rank">#${i+1}</div>
+    <div class="name">${j.prenom}</div>
+    <div class="small">Niveau ${j.niveau || 1} • XP ${j.xp || 0}</div>
+  </div>
+
+  <div>
+    <b>${j.points || 0} pts</b><br>
+    <span class="small">${j.victoires || 0} V • ${j.defaites || 0} D • ${j.matchs || 0} matchs</span>
+  </div>
+</div>
+`;
+
+    });
+
+    html += `
+</div>
+</body>
+</html>
+`;
+
+    res.send(html);
+
+  }catch(e){
+
+    console.log(e);
+    res.send("Erreur ranking page");
+
+  }
+
+});
+
 app.listen(PORT, () => {
 
   console.log(
