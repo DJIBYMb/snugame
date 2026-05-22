@@ -940,11 +940,26 @@ async function chargerTournois(){
 
   if(!Array.isArray(data)) return;
 
-  tournoiSelect.innerHTML = data.map(t=>`
-  <option value="${t.id}" data-max="${t.max_teams}">
-  ${t.name}
-</option>
-  `).join("");
+  tournoiSelect.innerHTML = `
+  <option value="">
+    Sélectionner un tournoi
+  </option>
+` + data.map(t=>`
+  <option
+    value="${t.id}"
+    data-max="${t.max_teams}"
+  >
+    ${t.name} (${t.max_teams} équipes)
+  </option>
+`).join("");
+
+ if(
+  data.length > 0 &&
+  !tournoiSelect.value
+){
+  tournoiSelect.selectedIndex = 1;
+}
+
 
   if(data.length > 0){
   tournoiSelect.value = data[0].id;
@@ -1589,23 +1604,39 @@ async function commentHighlight(id){
 async function customAutoDraw(){
 
   if(!tournoiSelect.value){
+
     await chargerTournois();
+
   }
 
   if(!tournoiSelect.value){
-    message.textContent = "Aucun tournoi trouvé. Crée d'abord un tournoi.";
+
+    message.textContent =
+      "Aucun tournoi trouvé. Crée un tournoi.";
+
     return;
+
   }
 
-  const result = await post("/custom-auto-draw",{
-    tournament_id:tournoiSelect.value
-  });
+  message.textContent =
+    "Création du tirage en cours...";
+
+  const result = await post(
+    "/custom-auto-draw",
+    {
+      tournament_id:
+        tournoiSelect.value
+    }
+  );
 
   message.textContent = result;
 
   await chargerParticipants();
+
   await afficherTiragePoulePro();
+
   await afficherClassements();
+
   await afficherPhaseFinale();
 
 }
