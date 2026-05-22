@@ -20,6 +20,7 @@ const DATA_DIR =
 const PORT = process.env.PORT || 3000;
 const loginLimiter = rateLimit({
 
+
   windowMs:15 * 60 * 1000,
 
   max:10,
@@ -28,6 +29,8 @@ const loginLimiter = rateLimit({
     "Trop de tentatives. Réessaie plus tard."
 
 });
+const ADMIN_PASSWORD =
+  process.env.ADMIN_PASSWORD || "change-moi-admin";
 
 const db = new sqlite3.Database(
   path.join(DATA_DIR, "database.sqlite")
@@ -122,6 +125,14 @@ app.use("/uploads", express.static(uploadDir));
 function connected(req){
   return req.session &&
          req.session.userId;
+}
+
+function isAdmin(req){
+
+  return (
+    req.query.admin === ADMIN_PASSWORD
+  );
+
 }
 
 function run(sql, params=[]){
@@ -2410,6 +2421,10 @@ app.post("/preuve-paiement", async (req,res)=>{
 app.get("/admin-payments", async (req,res)=>{
 
   try{
+     
+    if(!isAdmin(req)){
+     return res.send("Accès admin refusé");
+   }
 
     const paiements = await all(
       `
@@ -2499,7 +2514,7 @@ a{color:#60a5fa;}
   ${
     p.status !== "approved"
     ? `
-      <form method="POST" action="/admin-valider-paiement">
+      <form method="POST" action="/admin-valider-paiement?admin=${ADMIN_PASSWORD}">
         <input type="hidden" name="payment_id" value="${p.id}">
         <input type="hidden" name="user_id" value="${p.user_id}">
         <button>

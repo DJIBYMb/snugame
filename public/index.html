@@ -459,6 +459,13 @@ Phase finale
 </button>
 
 <button
+onclick="showPanel('panelHighlights')">
+
+Highlights
+
+</button>
+
+<button
 onclick="showPanel('panelParametres')">
 
 Paramètres
@@ -740,6 +747,41 @@ Voir champion
 <div id="phaseFinaleResult"></div>
 
 </div>
+
+</div>
+
+<div
+id="panelHighlights"
+class="panel hidden">
+
+<h2>
+🔥 Highlights
+</h2>
+
+<input
+id="highlightParticipantId"
+placeholder="ID joueur">
+
+<input
+id="highlightTitre"
+placeholder="Titre highlight">
+
+<textarea
+id="highlightDescription"
+placeholder="Description"></textarea>
+
+<input
+id="highlightMedia"
+placeholder="Lien image ou vidéo">
+
+<button
+onclick="publierHighlight()">
+
+Publier Highlight
+
+</button>
+
+<div id="highlightsList"></div>
 
 </div>
 
@@ -1034,7 +1076,9 @@ async function tirageAutomatiquePoulePro(){
   await afficherTiragePoulePro();
   await afficherClassements();
   await afficherPhaseFinale();
-}
+  await chargerHighlights();
+} 
+
 
 function matchCard(match){
   return `
@@ -1337,6 +1381,111 @@ async function envoyerPreuvePaiement(){
   );
 
   message.textContent = result;
+
+}
+
+async function publierHighlight(){
+
+  const result = await post(
+    "/highlight",
+    {
+      participant_id:
+        highlightParticipantId.value,
+
+      titre:
+        highlightTitre.value,
+
+      description:
+        highlightDescription.value,
+
+      media_url:
+        highlightMedia.value
+    }
+  );
+
+  message.textContent = result;
+
+  chargerHighlights();
+
+}
+
+async function chargerHighlights(){
+
+  const data =
+    await fetch("/highlights")
+    .then(r=>r.json());
+
+  highlightsList.innerHTML =
+    data.map(h=>`
+
+      <div class="match">
+
+        <h3>
+          ${h.titre}
+        </h3>
+
+        <p>
+          👤 ${h.prenom || "Joueur"}
+        </p>
+
+        <p>
+          ${h.description || ""}
+        </p>
+
+        <button
+        class="secondary"
+        onclick="voirHighlight(${h.id}, '${h.media_url}')">
+
+        Voir média 👀
+
+       </button>
+        
+        
+
+        
+
+        
+
+        <p>
+          ❤️ ${h.likes}
+          👀 ${h.vues}
+        </p>
+
+        <button
+        class="secondary"
+        onclick="likeHighlight(${h.id})">
+
+        Like ❤️
+
+        </button>
+
+      </div>
+
+    `).join("");
+
+}
+
+async function likeHighlight(id){
+
+  await post(
+    "/like-highlight",
+    { id }
+  );
+
+  chargerHighlights();
+
+}
+
+async function voirHighlight(id,url){
+
+  await post(
+    "/view-highlight",
+    { id }
+  );
+
+  window.open(url,"_blank");
+
+  chargerHighlights();
 
 }
 
