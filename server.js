@@ -308,6 +308,19 @@ db.run(`
 
 });
 
+db.run(`
+  CREATE TABLE IF NOT EXISTS highlights(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    participant_id INTEGER,
+    titre TEXT,
+    description TEXT,
+    media_url TEXT,
+    likes INTEGER DEFAULT 0,
+    vues INTEGER DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  )
+`);
+
 app.get("/", (req,res)=>{
   res.sendFile(
     path.join(
@@ -2563,6 +2576,80 @@ app.get("/download-db",(req,res)=>{
     path.join(DATA_DIR,"database.sqlite");
 
   res.download(dbPath);
+
+});
+
+app.post("/highlight", async (req,res)=>{
+
+  try{
+
+    const {
+      participant_id,
+      titre,
+      description,
+      media_url
+    } = req.body;
+
+    if(!participant_id || !titre || !media_url){
+      return res.send("Participant, titre et média obligatoires");
+    }
+
+    await run(
+      `
+      INSERT INTO highlights(
+        participant_id,
+        titre,
+        description,
+        media_url
+      )
+      VALUES(?,?,?,?)
+      `,
+      [
+        participant_id,
+        titre,
+        description || "",
+        media_url
+      ]
+    );
+
+    await ajouterXP(participant_id,15);
+
+    res.send("Highlight publié + XP ajouté");
+
+  }catch(e){
+
+    console.log(e);
+    res.send("Erreur ajout highlight");
+
+  }
+
+});
+
+app.get("/highlights", async (req,res)=>{
+
+  try{
+
+    const highlights = await all(
+      `
+      SELECT
+        h.*,
+        p.prenom
+      FROM highlights h
+      LEFT JOIN participants p
+      ON p.id=h.participant_id
+      ORDER BY h.id DESC
+      `
+    );
+
+    res.json(highlights);
+
+  }catch(e){
+
+    console.log(e);
+
+    res.send("Erreur highlights");
+
+  }
 
 });
 
