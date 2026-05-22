@@ -1459,6 +1459,24 @@ async function chargerHighlights(){
 
         </button>
 
+        <input
+        id="comment_${h.id}"
+        placeholder="Écrire un commentaire">
+
+       <input
+       id="commentPlayer_${h.id}"
+       placeholder="ID joueur">
+
+       <button
+       class="secondary"
+       onclick="commentHighlight(${h.id})">
+
+       Commenter 💬
+
+       </button>
+
+       <div id="comments_${h.id}"></div>
+
       </div>
 
     `).join("");
@@ -1484,6 +1502,37 @@ async function voirHighlight(id,url){
   );
 
   window.open(url,"_blank");
+
+  chargerHighlights();
+
+}
+
+async function commentHighlight(id){
+
+  const comment =
+    document.getElementById(
+      "comment_" + id
+    ).value;
+
+  const participant_id =
+    document.getElementById(
+      "commentPlayer_" + id
+    ).value;
+
+  if(!comment || !participant_id){
+    message.textContent =
+      "ID joueur et commentaire obligatoires";
+    return;
+  }
+
+  await post(
+    "/comment-highlight",
+    {
+      highlight_id:id,
+      participant_id,
+      comment
+    }
+  );
 
   chargerHighlights();
 

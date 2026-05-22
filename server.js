@@ -331,6 +331,15 @@ db.run(`
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   )
 `);
+db.run(`
+  CREATE TABLE IF NOT EXISTS highlight_comments(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    highlight_id INTEGER,
+    participant_id INTEGER,
+    comment TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  )
+`);
 
 app.get("/", (req,res)=>{
   res.sendFile(
@@ -2717,6 +2726,84 @@ app.post("/view-highlight", async (req,res)=>{
     console.log(e);
 
     res.send("Erreur vue");
+
+  }
+
+});
+
+app.post("/comment-highlight", async (req,res)=>{
+
+  try{
+
+    const {
+      highlight_id,
+      participant_id,
+      comment
+    } = req.body;
+
+    if(
+      !highlight_id ||
+      !participant_id ||
+      !comment
+    ){
+      return res.send(
+        "Informations manquantes"
+      );
+    }
+
+    await run(
+      `
+      INSERT INTO highlight_comments(
+        highlight_id,
+        participant_id,
+        comment
+      )
+      VALUES(?,?,?)
+      `,
+      [
+        highlight_id,
+        participant_id,
+        comment
+      ]
+    );
+
+    res.send("Commentaire ajouté");
+
+  }catch(e){
+
+    console.log(e);
+
+    res.send("Erreur commentaire");
+
+  }
+
+});
+
+app.get("/comments-highlight/:id", async (req,res)=>{
+
+  try{
+
+    const comments = await all(
+      `
+      SELECT
+        c.*,
+        p.prenom
+      FROM highlight_comments c
+      LEFT JOIN participants p
+      ON p.id=c.participant_id
+      WHERE c.highlight_id=?
+      ORDER BY c.id DESC
+      `,
+      [req.params.id]
+    );
+
+    res.json(comments);
+
+  }catch(e){
+
+    console.log(e);
+
+    res.json([]);
 
   }
 
