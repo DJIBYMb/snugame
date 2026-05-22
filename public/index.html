@@ -946,6 +946,10 @@ async function chargerTournois(){
 </option>
   `).join("");
 
+  if(data.length > 0){
+  tournoiSelect.value = data[0].id;
+}
+
   tournois.innerHTML = data.map(t=>`
     <div class="match">
       <b>${t.name}</b><br>
