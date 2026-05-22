@@ -1401,18 +1401,367 @@ app.post("/custom-auto-draw", async (req,res)=>{
     );
 
     if(participants.length < 6){
-      return res.send(
-        "Minimum 6 équipes"
-      );
+      return res.send("Minimum 6 équipes");
     }
 
     if(participants.length > 100){
+      return res.send("Maximum 100 équipes");
+    }
+
+    const existingMatches = await all(
+      `
+      SELECT *
+      FROM matches
+      WHERE tournament_id=?
+      `,
+      [tournament_id]
+    );
+
+        if(existingMatches.length === 0){
+
+      const groupes =
+        genererGroupesAuto(participants);
+
+      const lettres =
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+        .split("");
+
+      for(let g=0; g<groupes.length; g++){
+
+        const nomGroupe =
+          lettres[g];
+
+        const equipes =
+          groupes[g];
+
+        for(const equipe of equipes){
+
+          await run(
+            `
+            UPDATE participants
+            SET group_name=?
+            WHERE id=?
+            `,
+            [nomGroupe,equipe.id]
+          );
+
+        }
+
+        let ordre = 1;
+
+        for(let i=0;i<equipes.length;i++){
+
+          for(let j=i+1;j<equipes.length;j++){
+
+            await run(
+              `
+              INSERT INTO matches(
+                tournament_id,
+                round,
+                group_name,
+                match_order,
+                player1_id,
+                player2_id
+              )
+              VALUES(?,?,?,?,?,?)
+              `,
+              [
+                tournament_id,
+                "POULE",
+                nomGroupe,
+                ordre,
+                equipes[i].id,
+                equipes[j].id
+              ]
+            );
+
+            ordre++;
+
+          }
+
+        }
+
+      }
+
+      await run(
+        `
+        UPDATE tournaments
+        SET status='active'
+        WHERE id=?
+        `,
+        [tournament_id]
+      );
+
       return res.send(
-        "Maximum 100 équipes"
+        "✅ Poules générées automatiquement"
+      );
+
+    }
+
+        const poules =
+      existingMatches.filter(
+        m => m.round === "POULE"
+      );
+
+    if(
+      poules.length > 0 &&
+      poules.some(m => m.played !== 1)
+    ){
+      return res.send(
+        "Finis tous les scores des poules"
       );
     }
 
-    const deja = await all(
+    const phaseFinaleExiste =
+      existingMatches.some(
+        m => m.round !== "POULE"
+      );
+
+    if(!phaseFinaleExiste){
+
+      const classement =
+        await classementPoules(tournament_id);
+
+      let qualifies = [];
+
+      for(const groupe of Object.keys(classement)){
+
+        if(groupe === "Sans groupe") continue;
+
+        const equipes = classement[groupe];
+
+        if(equipes && equipes.length > 0){
+          qualifies.push(equipes[0]);
+        }
+
+        if(equipes && equipes.length >= 4){
+          qualifies.push(equipes[1]);
+        }
+
+      }
+          qualifies.sort((a,b)=>
+        b.pts - a.pts ||
+        b.diff - a.diff ||
+        b.bp - a.bp
+      );
+
+      const puissances = [
+        64,32,16,8,4,2
+      ];
+
+      let taillePhase = 2;
+
+      for(const p of puissances){
+        if(qualifies.length >= p){
+          taillePhase = p;
+          break;
+        }
+      }
+
+      qualifies =
+        qualifies.slice(0, taillePhase);
+
+      if(qualifies.length < 2){
+        return res.send(
+          "Pas assez de qualifiés"
+        );
+      }
+
+      const nomTour =
+        taillePhase === 64 ? "64ES" :
+        taillePhase === 32 ? "16ES" :
+        taillePhase === 16 ? "8ES" :
+        taillePhase === 8 ? "QUART" :
+        taillePhase === 4 ? "DEMI" :
+        "FINALE";
+
+      for(let i=0;i<qualifies.length;i+=2){
+
+        await run(
+          `
+          INSERT INTO matches(
+            tournament_id,
+            round,
+            match_order,
+            player1_id,
+            player2_id
+          )
+          VALUES(?,?,?,?,?)
+          `,
+          [
+            tournament_id,
+            nomTour,
+            (i/2)+1,
+            qualifies[i].id,
+            qualifies[i+1].id
+          ]
+        );
+
+      }
+
+      await run(
+        `
+        UPDATE matches
+        SET locked=1
+        WHERE tournament_id=?
+        AND round='POULE'
+        `,
+        [tournament_id]
+      );
+
+      return res.send(
+        nomTour + " généré automatiquement"
+      );
+
+    }
+
+        const ordre = [
+      "64ES",
+      "16ES",
+      "8ES",
+      "QUART",
+      "DEMI",
+      "FINALE"
+    ];
+
+    let tourActuel = null;
+
+    for(const tour of ordre){
+
+      if(
+        existingMatches.some(
+          m => m.round === tour
+        )
+      ){
+        tourActuel = tour;
+      }
+
+    }
+
+    if(!tourActuel){
+      return res.send(
+        "Aucun tour final trouvé"
+      );
+    }
+
+        const matchsTour =
+      existingMatches.filter(
+        m => m.round === tourActuel
+      );
+
+    if(matchsTour.some(m => m.played !== 1)){
+      return res.send(
+        "Finis tous les matchs du tour " +
+        tourActuel
+      );
+    }
+
+    if(tourActuel === "FINALE"){
+
+      const finale = matchsTour[0];
+
+      const champion =
+        Number(finale.score1) > Number(finale.score2)
+        ? finale.player1_id
+        : finale.player2_id;
+
+      await run(
+        `
+        UPDATE tournaments
+        SET status='finished',
+            champion_id=?
+        WHERE id=?
+        `,
+        [champion,tournament_id]
+      );
+
+      await run(
+        `
+        UPDATE matches
+        SET locked=1
+        WHERE tournament_id=?
+        `,
+        [tournament_id]
+      );
+
+      await donnerBadge(champion,"🏆 Champion");
+
+      return res.send(
+        "Champion validé 🏆"
+      );
+
+    }
+   
+        const prochain = {
+      "64ES":"16ES",
+      "16ES":"8ES",
+      "8ES":"QUART",
+      "QUART":"DEMI",
+      "DEMI":"FINALE"
+    };
+
+    const gagnants = [];
+
+    for(const m of matchsTour){
+
+      if(Number(m.score1) > Number(m.score2)){
+        gagnants.push(m.player1_id);
+      }else{
+        gagnants.push(m.player2_id);
+      }
+
+    }
+
+    await run(
+      `
+      UPDATE matches
+      SET locked=1
+      WHERE tournament_id=?
+      AND round=?
+      `,
+      [tournament_id,tourActuel]
+    );
+
+    for(let i=0;i<gagnants.length;i+=2){
+
+      await run(
+        `
+        INSERT INTO matches(
+          tournament_id,
+          round,
+          match_order,
+          player1_id,
+          player2_id
+        )
+        VALUES(?,?,?,?,?)
+        `,
+        [
+          tournament_id,
+          prochain[tourActuel],
+          (i/2)+1,
+          gagnants[i],
+          gagnants[i+1]
+        ]
+      );
+
+    }
+
+    return res.send(
+      prochain[tourActuel] +
+      " généré automatiquement"
+    );
+
+  }catch(e){
+
+    console.log(e);
+    res.send("Erreur tirage personnalisé");
+
+  }
+
+}); 
+      
+
+  const deja = await all(
       `
       SELECT *
       FROM matches
@@ -1495,21 +1844,380 @@ app.post("/custom-auto-draw", async (req,res)=>{
 
     }
 
-    await run(
+   app.post("/custom-auto-draw", async (req,res)=>{
+
+  try{
+
+    const { tournament_id } = req.body;
+
+    const participants = await all(
       `
-      UPDATE tournaments
-      SET status='active'
-      WHERE id=?
+      SELECT *
+      FROM participants
+      WHERE tournament_id=?
       `,
       [tournament_id]
     );
 
-    res.send(
-      "✅ Tirage personnalisé créé : " +
-      groupes.length +
-      " groupes • " +
-      matchsCrees.length +
-      " matchs"
+    if(participants.length < 6){
+      return res.send("Minimum 6 équipes");
+    }
+
+    if(participants.length > 100){
+      return res.send("Maximum 100 équipes");
+    }
+
+    const existingMatches = await all(
+      `
+      SELECT *
+      FROM matches
+      WHERE tournament_id=?
+      `,
+      [tournament_id]
+    );
+
+    // PREMIER TIRAGE
+    if(existingMatches.length === 0){
+
+      const groupes =
+        genererGroupesAuto(participants);
+
+      const lettres =
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+
+      for(let g=0; g<groupes.length; g++){
+
+        const nomGroupe =
+          lettres[g];
+
+        const equipes =
+          groupes[g];
+
+        for(const equipe of equipes){
+
+          await run(
+            `
+            UPDATE participants
+            SET group_name=?
+            WHERE id=?
+            `,
+            [nomGroupe,equipe.id]
+          );
+
+        }
+
+        let ordre = 1;
+
+        for(let i=0;i<equipes.length;i++){
+
+          for(let j=i+1;j<equipes.length;j++){
+
+            await run(
+              `
+              INSERT INTO matches(
+                tournament_id,
+                round,
+                group_name,
+                match_order,
+                player1_id,
+                player2_id
+              )
+              VALUES(?,?,?,?,?,?)
+              `,
+              [
+                tournament_id,
+                "POULE",
+                nomGroupe,
+                ordre,
+                equipes[i].id,
+                equipes[j].id
+              ]
+            );
+
+            ordre++;
+
+          }
+
+        }
+
+      }
+
+      await run(
+        `
+        UPDATE tournaments
+        SET status='active'
+        WHERE id=?
+        `,
+        [tournament_id]
+      );
+
+      return res.send(
+        "✅ Poules générées automatiquement"
+      );
+
+    }
+
+    // POULES
+    const poules =
+      existingMatches.filter(
+        m => m.round === "POULE"
+      );
+
+    if(
+      poules.length > 0 &&
+      poules.some(m => m.played !== 1)
+    ){
+      return res.send(
+        "Finis tous les scores des poules"
+      );
+    }
+
+    // PHASE FINALE
+    const phaseExiste =
+      existingMatches.some(
+        m => m.round !== "POULE"
+      );
+
+    if(!phaseExiste){
+
+      const classement =
+        await classementPoules(tournament_id);
+
+      let qualifies = [];
+
+      for(const groupe of Object.keys(classement)){
+
+        if(groupe === "Sans groupe") continue;
+
+        const equipes =
+          classement[groupe];
+
+        if(equipes[0]){
+          qualifies.push(equipes[0]);
+        }
+
+        if(equipes[1]){
+          qualifies.push(equipes[1]);
+        }
+
+      }
+
+      qualifies.sort((a,b)=>
+        b.pts - a.pts ||
+        b.diff - a.diff ||
+        b.bp - a.bp
+      );
+
+      const tailles = [
+        64,32,16,8,4,2
+      ];
+
+      let taille = 2;
+
+      for(const t of tailles){
+
+        if(qualifies.length >= t){
+          taille = t;
+          break;
+        }
+
+      }
+
+      qualifies =
+        qualifies.slice(0,taille);
+
+      const roundName =
+        taille === 64 ? "64ES" :
+        taille === 32 ? "16ES" :
+        taille === 16 ? "8ES" :
+        taille === 8 ? "QUART" :
+        taille === 4 ? "DEMI" :
+        "FINALE";
+
+      for(let i=0;i<qualifies.length;i+=2){
+
+        await run(
+          `
+          INSERT INTO matches(
+            tournament_id,
+            round,
+            match_order,
+            player1_id,
+            player2_id
+          )
+          VALUES(?,?,?,?,?)
+          `,
+          [
+            tournament_id,
+            roundName,
+            (i/2)+1,
+            qualifies[i].id,
+            qualifies[i+1].id
+          ]
+        );
+
+      }
+
+      await run(
+        `
+        UPDATE matches
+        SET locked=1
+        WHERE tournament_id=?
+        AND round='POULE'
+        `,
+        [tournament_id]
+      );
+
+      return res.send(
+        roundName +
+        " généré automatiquement"
+      );
+
+    }
+
+    // SUITE PHASES
+    const ordre = [
+      "64ES",
+      "16ES",
+      "8ES",
+      "QUART",
+      "DEMI",
+      "FINALE"
+    ];
+
+    let tourActuel = null;
+
+    for(const tour of ordre){
+
+      if(
+        existingMatches.some(
+          m => m.round === tour
+        )
+      ){
+        tourActuel = tour;
+      }
+
+    }
+
+    const matchsTour =
+      existingMatches.filter(
+        m => m.round === tourActuel
+      );
+
+    if(
+      matchsTour.some(
+        m => m.played !== 1
+      )
+    ){
+      return res.send(
+        "Finis les matchs " +
+        tourActuel
+      );
+    }
+
+    // CHAMPION
+    if(tourActuel === "FINALE"){
+
+      const finale =
+        matchsTour[0];
+
+      const champion =
+        Number(finale.score1) >
+        Number(finale.score2)
+        ? finale.player1_id
+        : finale.player2_id;
+
+      await run(
+        `
+        UPDATE tournaments
+        SET status='finished',
+            champion_id=?
+        WHERE id=?
+        `,
+        [champion,tournament_id]
+      );
+
+      await run(
+        `
+        UPDATE matches
+        SET locked=1
+        WHERE tournament_id=?
+        `,
+        [tournament_id]
+      );
+
+      await donnerBadge(
+        champion,
+        "🏆 Champion"
+      );
+
+      return res.send(
+        "🏆 Champion validé"
+      );
+
+    }
+
+    // TOUR SUIVANT
+    const prochain = {
+      "64ES":"16ES",
+      "16ES":"8ES",
+      "8ES":"QUART",
+      "QUART":"DEMI",
+      "DEMI":"FINALE"
+    };
+
+    const gagnants = [];
+
+    for(const m of matchsTour){
+
+      if(
+        Number(m.score1) >
+        Number(m.score2)
+      ){
+        gagnants.push(m.player1_id);
+      }else{
+        gagnants.push(m.player2_id);
+      }
+
+    }
+
+    await run(
+      `
+      UPDATE matches
+      SET locked=1
+      WHERE tournament_id=?
+      AND round=?
+      `,
+      [tournament_id,tourActuel]
+    );
+
+    for(let i=0;i<gagnants.length;i+=2){
+
+      await run(
+        `
+        INSERT INTO matches(
+          tournament_id,
+          round,
+          match_order,
+          player1_id,
+          player2_id
+        )
+        VALUES(?,?,?,?,?)
+        `,
+        [
+          tournament_id,
+          prochain[tourActuel],
+          (i/2)+1,
+          gagnants[i],
+          gagnants[i+1]
+        ]
+      );
+
+    }
+
+    return res.send(
+      prochain[tourActuel] +
+      " généré automatiquement"
     );
 
   }catch(e){
@@ -1523,6 +2231,7 @@ app.post("/custom-auto-draw", async (req,res)=>{
   }
 
 });
+
 
 app.post("/tirage-automatique-poule-pro", async (req,res)=>{
 
