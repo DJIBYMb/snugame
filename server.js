@@ -1972,6 +1972,16 @@ h1{
 </html>
 `);
 
+  }catch(e){
+
+    console.log(e);
+
+    res.send("Erreur profil joueur");
+
+  }
+
+});
+
 app.get("/fix-player-stats", async (req,res)=>{
 
   try{
