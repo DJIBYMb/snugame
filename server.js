@@ -1832,6 +1832,40 @@ app.get("/player/:id", async (req,res)=>{
 
 });
 
+app.get("/fix-player-stats", async (req,res)=>{
+
+  try{
+
+    const participants = await all(
+      "SELECT id FROM participants"
+    );
+
+    for(const p of participants){
+
+      await run(
+        `
+        INSERT OR IGNORE INTO player_stats(
+          participant_id
+        )
+        VALUES(?)
+        `,
+        [p.id]
+      );
+
+    }
+
+    res.send("Stats joueurs réparées");
+
+  }catch(e){
+
+    console.log(e);
+
+    res.send("Erreur réparation stats");
+
+  }
+
+});
+
 app.listen(PORT, () => {
 
   console.log(
