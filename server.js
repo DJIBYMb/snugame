@@ -151,6 +151,63 @@ function all(sql, params=[]){
   });
 }
 
+async function donnerBadge(participant_id, badge){
+
+  await run(
+    `
+    INSERT OR IGNORE INTO player_badges(
+      participant_id,
+      badge
+    )
+    VALUES(?,?)
+    `,
+    [participant_id, badge]
+  );
+
+}
+
+async function ajouterXP(participant_id, xpAjoute){
+
+  const stats = await get(
+    `
+    SELECT *
+    FROM player_stats
+    WHERE participant_id=?
+    `,
+    [participant_id]
+  );
+
+  if(!stats) return;
+
+  const nouveauXP =
+    Number(stats.xp || 0) + xpAjoute;
+
+  const nouveauNiveau =
+    Math.floor(nouveauXP / 100) + 1;
+
+  await run(
+    `
+    UPDATE player_stats
+    SET xp=?,
+        niveau=?
+    WHERE participant_id=?
+    `,
+    [
+      nouveauXP,
+      nouveauNiveau,
+      participant_id
+    ]
+  );
+
+  if(nouveauNiveau >= 10){
+    await donnerBadge(
+      participant_id,
+      "⚡ Pro Player"
+    );
+  }
+
+}
+
 db.serialize(()=>{
 
   db.run(`
@@ -221,6 +278,16 @@ db.serialize(()=>{
     points INTEGER DEFAULT 0,
     niveau INTEGER DEFAULT 1,
     xp INTEGER DEFAULT 0
+  )
+`);
+
+db.run(`
+  CREATE TABLE IF NOT EXISTS player_badges(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    participant_id INTEGER,
+    badge TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(participant_id, badge)
   )
 `);
 
@@ -973,9 +1040,25 @@ app.post("/update-match-proof",(req,res)=>{
           loser,
           match_id
         ],
-        ()=>{
-          res.send("Score validé");
-        }
+   async ()=>{
+
+    await ajouterXP(match.player1_id, 5);
+    await ajouterXP(match.player2_id, 5);
+
+   if(winner){
+
+    await ajouterXP(winner, 10);
+
+    await donnerBadge(
+      winner,
+      "🔥 Winner"
+    );
+
+  }
+
+  res.send("Score validé + XP ajouté");
+
+}
       );
 
     }
@@ -1816,6 +1899,15 @@ app.get("/player/:id", async (req,res)=>{
       [req.params.id]
     );
 
+    const badges = await all(
+  `
+  SELECT badge
+  FROM player_badges
+  WHERE participant_id=?
+  `,
+  [req.params.id]
+);
+
     if(!joueur){
       return res.send("Joueur introuvable");
     }
@@ -1930,6 +2022,37 @@ h1{
 
 <div class="bar">
 <div class="fill"></div>
+</div>
+
+<div style="margin-bottom:20px;">
+
+<h2 style="color:#facc15;">
+🏆 Badges
+</h2>
+
+<div style="
+display:flex;
+flex-wrap:wrap;
+gap:10px;
+">
+
+${
+  badges.length
+  ? badges.map(b=>`
+      <div style="
+      background:#020617;
+      border:1px solid #334155;
+      padding:10px 14px;
+      border-radius:999px;
+      ">
+        ${b.badge}
+      </div>
+    `).join("")
+  : "<p>Aucun badge</p>"
+}
+
+</div>
+
 </div>
 
 <div class="stats">
