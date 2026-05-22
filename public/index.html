@@ -1586,6 +1586,26 @@ async function commentHighlight(id){
 
 }
 
+async function customAutoDraw(){
+
+  if(!tournoiSelect.value){
+    message.textContent = "Choisis un tournoi";
+    return;
+  }
+
+  const result = await post("/custom-auto-draw",{
+    tournament_id:tournoiSelect.value
+  });
+
+  message.textContent = result;
+
+  await chargerParticipants();
+  await afficherTiragePoulePro();
+  await afficherClassements();
+  await afficherPhaseFinale();
+
+}
+
 checkStatus();
 
 </script>
