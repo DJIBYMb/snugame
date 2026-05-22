@@ -9,6 +9,14 @@ const multer = require("multer");
 const rateLimit = require("express-rate-limit");
 
 const app = express();
+const DATA_DIR =
+  process.env.RENDER
+  ? "/opt/render/project/src/data"
+  : __dirname;
+
+ if(!fs.existsSync(DATA_DIR)){
+  fs.mkdirSync(DATA_DIR,{recursive:true});
+}
 const PORT = process.env.PORT || 3000;
 const loginLimiter = rateLimit({
 
@@ -22,14 +30,14 @@ const loginLimiter = rateLimit({
 });
 
 const db = new sqlite3.Database(
-  path.join(__dirname, "database.sqlite")
+  path.join(DATA_DIR, "database.sqlite")
 );
 
 app.use(express.json({ limit:"10mb" }));
 app.use(express.urlencoded({ extended:true }));
 app.use(express.static("public"));
 
-const uploadDir = path.join(__dirname, "uploads");
+const uploadDir = path.join(DATA_DIR, "uploads");
 
 if(!fs.existsSync(uploadDir)){
   fs.mkdirSync(uploadDir);
@@ -94,12 +102,12 @@ const upload = multer({
 
 app.use("/uploads", express.static(uploadDir));
 
-app.use(session({
+ app.use(session({
   store:new SQLiteStore({
     db:"sessions.sqlite",
-    dir:"."
+    dir:DATA_DIR
   }),
-  secret:
+ secret:
     process.env.SESSION_SECRET
     || "snugame-secret",
   resave:false,
