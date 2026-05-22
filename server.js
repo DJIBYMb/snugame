@@ -2653,6 +2653,60 @@ app.get("/highlights", async (req,res)=>{
 
 });
 
+app.post("/like-highlight", async (req,res)=>{
+
+  try{
+
+    const { id } = req.body;
+
+    await run(
+      `
+      UPDATE highlights
+      SET likes = likes + 1
+      WHERE id=?
+      `,
+      [id]
+    );
+
+    res.send("Like ajouté");
+
+  }catch(e){
+
+    console.log(e);
+
+    res.send("Erreur like");
+
+  }
+
+});
+
+app.post("/view-highlight", async (req,res)=>{
+
+  try{
+
+    const { id } = req.body;
+
+    await run(
+      `
+      UPDATE highlights
+      SET vues = vues + 1
+      WHERE id=?
+      `,
+      [id]
+    );
+
+    res.send("Vue ajoutée");
+
+  }catch(e){
+
+    console.log(e);
+
+    res.send("Erreur vue");
+
+  }
+
+});
+
 app.listen(PORT, () => {
 
   console.log(
