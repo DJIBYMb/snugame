@@ -1315,6 +1315,192 @@ app.post("/annuler-score", async (req,res)=>{
 
 });
 
+function genererGroupesAuto(participants){
+
+  const total = participants.length;
+
+  let tailleGroupe = 4;
+
+  if(total <= 10){
+    tailleGroupe = 5;
+  }
+
+  if(total % 4 !== 0){
+    tailleGroupe = 5;
+  }
+
+  let nombreGroupes =
+    Math.ceil(total / tailleGroupe);
+
+  const groupes = [];
+
+  const melange =
+    [...participants]
+    .sort(()=>Math.random() - 0.5);
+
+  for(let i=0;i<nombreGroupes;i++){
+
+    groupes.push([]);
+
+  }
+
+  let index = 0;
+
+  for(const p of melange){
+
+    groupes[index].push(p);
+
+    index++;
+
+    if(index >= groupes.length){
+      index = 0;
+    }
+
+  }
+
+  return groupes;
+
+}
+
+app.post("/custom-auto-draw", async (req,res)=>{
+
+  try{
+
+    const { tournament_id } = req.body;
+
+    const participants = await all(
+      `
+      SELECT *
+      FROM participants
+      WHERE tournament_id=?
+      `,
+      [tournament_id]
+    );
+
+    if(participants.length < 6){
+      return res.send(
+        "Minimum 6 équipes"
+      );
+    }
+
+    if(participants.length > 100){
+      return res.send(
+        "Maximum 100 équipes"
+      );
+    }
+
+    const deja = await all(
+      `
+      SELECT *
+      FROM matches
+      WHERE tournament_id=?
+      `,
+      [tournament_id]
+    );
+
+    if(deja.length > 0){
+      return res.send(
+        "Le tournoi possède déjà un tirage"
+      );
+    }
+
+    const groupes =
+      genererGroupesAuto(participants);
+
+    const lettres =
+      "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+      .split("");
+
+    const matchsCrees = [];
+
+    for(let g=0; g<groupes.length; g++){
+
+      const nomGroupe =
+        lettres[g];
+
+      const equipes =
+        groupes[g];
+
+      for(const equipe of equipes){
+
+        await run(
+          `
+          UPDATE participants
+          SET group_name=?
+          WHERE id=?
+          `,
+          [nomGroupe,equipe.id]
+        );
+
+      }
+
+      let ordre = 1;
+
+      for(let i=0;i<equipes.length;i++){
+
+        for(let j=i+1;j<equipes.length;j++){
+
+          await run(
+            `
+            INSERT INTO matches(
+              tournament_id,
+              round,
+              group_name,
+              match_order,
+              player1_id,
+              player2_id
+            )
+            VALUES(?,?,?,?,?,?)
+            `,
+            [
+              tournament_id,
+              "POULE",
+              nomGroupe,
+              ordre,
+              equipes[i].id,
+              equipes[j].id
+            ]
+          );
+
+          ordre++;
+
+          matchsCrees.push(1);
+
+        }
+
+      }
+
+    }
+
+    await run(
+      `
+      UPDATE tournaments
+      SET status='active'
+      WHERE id=?
+      `,
+      [tournament_id]
+    );
+
+    res.send(
+      "✅ Tirage personnalisé créé : " +
+      groupes.length +
+      " groupes • " +
+      matchsCrees.length +
+      " matchs"
+    );
+
+  }catch(e){
+
+    console.log(e);
+
+    res.send(
+      "Erreur tirage personnalisé"
+    );
+
+  }
+
+});
+
 app.post("/tirage-automatique-poule-pro", async (req,res)=>{
 
   try{
