@@ -2016,6 +2016,44 @@ app.get("/fix-player-stats", async (req,res)=>{
 
 });
 
+app.get("/ranking", async (req,res)=>{
+
+  try{
+
+    const joueurs = await all(
+      `
+      SELECT
+        p.id,
+        p.prenom,
+        s.matchs,
+        s.victoires,
+        s.defaites,
+        s.points,
+        s.niveau,
+        s.xp
+      FROM participants p
+      LEFT JOIN player_stats s
+      ON s.participant_id=p.id
+      ORDER BY
+        s.points DESC,
+        s.victoires DESC,
+        s.xp DESC
+      LIMIT 100
+      `
+    );
+
+    res.json(joueurs);
+
+  }catch(e){
+
+    console.log(e);
+
+    res.send("Erreur ranking");
+
+  }
+
+});
+
 app.listen(PORT, () => {
 
   console.log(
