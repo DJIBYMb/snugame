@@ -340,6 +340,16 @@ db.run(`
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   )
 `);
+db.run(`
+  CREATE TABLE IF NOT EXISTS follows(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    follower_id INTEGER,
+    following_participant_id INTEGER,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(follower_id, following_participant_id)
+  )
+`);
+
 
 app.get("/", async (req,res)=>{
 
@@ -454,6 +464,12 @@ a{
 
   }
 
+});
+
+app.get("/app",(req,res)=>{
+  res.sendFile(
+    path.join(__dirname,"public","index.html")
+  );
 });
 
 app.post("/register", async (req,res)=>{
@@ -2201,6 +2217,22 @@ h1{
 
 <h1>${joueur.prenom}</h1>
 
+<form method="POST" action="/follow-player">
+  <input type="hidden" name="participant_id" value="${joueur.id}">
+  <button style="
+    width:100%;
+    padding:12px;
+    border:none;
+    border-radius:12px;
+    background:#22c55e;
+    font-weight:bold;
+    cursor:pointer;
+    margin-bottom:15px;
+  ">
+    Suivre ce joueur 🔥
+  </button>
+</form>
+
 <div class="level">
 ⭐ Niveau ${joueur.niveau}
 </div>
@@ -2909,6 +2941,77 @@ app.get("/comments-highlight/:id", async (req,res)=>{
     console.log(e);
 
     res.json([]);
+
+  }
+
+});
+
+app.post("/follow-player", async (req,res)=>{
+
+  try{
+
+    if(!connected(req)){
+      return res.send("Connecte-toi");
+    }
+
+    const {
+      participant_id
+    } = req.body;
+
+    if(!participant_id){
+      return res.send("Participant manquant");
+    }
+
+    await run(
+      `
+      INSERT OR IGNORE INTO follows(
+        follower_id,
+        following_participant_id
+      )
+      VALUES(?,?)
+      `,
+      [
+        req.session.userId,
+        participant_id
+      ]
+    );
+
+    res.send("Joueur suivi 🔥");
+
+  }catch(e){
+
+    console.log(e);
+
+    res.send("Erreur follow");
+
+  }
+
+});
+
+app.get("/followers/:id", async (req,res)=>{
+
+  try{
+
+    const result = await get(
+      `
+      SELECT COUNT(*) AS total
+      FROM follows
+      WHERE following_participant_id=?
+      `,
+      [req.params.id]
+    );
+
+    res.json({
+      followers: result.total || 0
+    });
+
+  }catch(e){
+
+    console.log(e);
+
+    res.json({
+      followers:0
+    });
 
   }
 
