@@ -741,24 +741,23 @@ if(maxTeams < 6 || maxTeams > 100){
     "Nombre équipes entre 6 et 100"
   );
 }
-
-    await run(
-      `
-      INSERT INTO tournaments(
-        user_id,
-        name,
-        max_teams,
-        status
-      )
-      VALUES(?,?,?,?)
-      `,
-     );
-     [
-      req.session.userId,
-      name,
-       Number(max_teams) || 48,
-      "draft"
-     ]
+ await run(
+  `
+  INSERT INTO tournaments(
+    user_id,
+    name,
+    max_teams,
+    status
+  )
+  VALUES(?,?,?,?)
+  `,
+  [
+    req.session.userId,
+    name,
+    maxTeams,
+    "draft"
+  ]
+);
 
     res.send("Tournoi créé");
 
