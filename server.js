@@ -725,13 +725,22 @@ app.post("/tournoi", async (req,res)=>{
       );
     }
 
-    const { name } = req.body;
+    const { name, max_teams } = req.body;
 
     if(!name){
       return res.send(
         "Nom tournoi obligatoire"
       );
     }
+
+    const maxTeams =
+  Number(max_teams) || 48;
+
+if(maxTeams < 6 || maxTeams > 100){
+  return res.send(
+    "Nombre équipes entre 6 et 100"
+  );
+}
 
     await run(
       `
@@ -743,13 +752,13 @@ app.post("/tournoi", async (req,res)=>{
       )
       VALUES(?,?,?,?)
       `,
-      [
-        req.session.userId,
-        name,
-        48,
-        "draft"
-      ]
-    );
+     );
+     [
+      req.session.userId,
+      name,
+       Number(max_teams) || 48,
+      "draft"
+     ]
 
     res.send("Tournoi créé");
 
@@ -826,12 +835,27 @@ app.post("/participant", async (req,res)=>{
       [tournament_id]
     );
 
-    if(count.total >= 48){
-      return res.send(
-        "Maximum 48 équipes atteint"
-      );
-    }
+  const tournoi = await get(
+   `
+   SELECT max_teams
+   FROM tournaments
+   WHERE id=?
+   `,
+  [tournament_id]
+);
 
+if(
+   tournoi &&
+   count.total >= tournoi.max_teams
+){
+  return res.send(
+    "Maximum équipes atteint : " +
+    tournoi.max_teams
+  );
+}
+   
+      
+    
     await run(
       `
       INSERT INTO participants(

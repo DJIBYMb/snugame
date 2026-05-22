@@ -928,9 +928,9 @@ async function creerTournoi(){
   }
 
   await post("/tournoi",{
-    name:tournoiNom.value,
-    max_teams:48
-  });
+   name:tournoiNom.value,
+   max_teams:tournoiMax.value
+ });
 
   await chargerTournois();
 }
@@ -941,7 +941,9 @@ async function chargerTournois(){
   if(!Array.isArray(data)) return;
 
   tournoiSelect.innerHTML = data.map(t=>`
-    <option value="${t.id}">${t.name}</option>
+  <option value="${t.id}" data-max="${t.max_teams}">
+  ${t.name}
+</option>
   `).join("");
 
   tournois.innerHTML = data.map(t=>`
@@ -983,7 +985,18 @@ async function chargerParticipants(){
 
   if(!Array.isArray(data)) return;
 
-  participantsCount.innerHTML = `<h3>${data.length}/48 équipes</h3>`;
+  const selectedOption =
+  tournoiSelect.options[
+    tournoiSelect.selectedIndex
+  ];
+
+ const maxTeams =
+  selectedOption
+  ? selectedOption.dataset.max
+  : 48;
+
+ participantsCount.innerHTML =
+  `<h3>${data.length}/${maxTeams} équipes</h3>`;
 
   participantsCheckbox.innerHTML = data.map(p=>`
     <label>
