@@ -291,6 +291,16 @@ db.run(`
   )
 `);
 
+db.run(`
+  CREATE TABLE IF NOT EXISTS payments(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER,
+    preuve TEXT,
+    status TEXT DEFAULT 'pending',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  )
+`);
+
 });
 
 app.get("/", (req,res)=>{
@@ -2308,27 +2318,204 @@ header{
 
 });
 
-app.post("/preuve-paiement", (req,res)=>{
+app.post("/preuve-paiement", async (req,res)=>{
 
-  if(!connected(req)){
-    return res.send("Connecte-toi");
+  try{
+
+    if(!connected(req)){
+      return res.send("Connecte-toi");
+    }
+
+    const { preuve } = req.body;
+
+    if(!preuve){
+      return res.send("Preuve obligatoire");
+    }
+
+    await run(
+      `
+      INSERT INTO payments(
+        user_id,
+        preuve
+      )
+      VALUES(?,?)
+      `,
+      [
+        req.session.userId,
+        preuve
+      ]
+    );
+
+    res.send("Preuve envoyée. L’admin va vérifier ton paiement.");
+
+  }catch(e){
+
+    console.log(e);
+    res.send("Erreur preuve paiement");
+
   }
 
-  const { preuve } = req.body;
+});
 
-  if(!preuve){
-    return res.send("Preuve obligatoire");
+app.get("/admin-payments", async (req,res)=>{
+
+  try{
+
+    const paiements = await all(
+      `
+      SELECT
+        payments.id,
+        payments.user_id,
+        payments.preuve,
+        payments.status,
+        payments.created_at,
+        users.name,
+        users.email,
+        users.abonnement
+      FROM payments
+      JOIN users ON users.id=payments.user_id
+      ORDER BY payments.id DESC
+      `
+    );
+
+    let html = `
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Admin Paiements - SNUGAME</title>
+<style>
+body{
+  font-family:Arial,sans-serif;
+  background:#07111f;
+  color:white;
+  padding:20px;
+}
+.card{
+  background:#152238;
+  border:1px solid #334155;
+  border-radius:15px;
+  padding:15px;
+  margin:12px 0;
+}
+button{
+  padding:12px;
+  border:none;
+  border-radius:10px;
+  background:#22c55e;
+  font-weight:bold;
+  cursor:pointer;
+}
+a{color:#60a5fa;}
+.pending{color:#f59e0b;}
+.approved{color:#22c55e;}
+</style>
+</head>
+<body>
+
+<h1>Admin Paiements SNUGAME</h1>
+<p>Valider les abonnements manuels</p>
+`;
+
+    paiements.forEach(p=>{
+
+      html += `
+<div class="card">
+
+  <h2>${p.name}</h2>
+
+  <p><b>Email :</b> ${p.email}</p>
+
+  <p><b>Utilisateur ID :</b> ${p.user_id}</p>
+
+  <p><b>Date :</b> ${p.created_at}</p>
+
+  <p>
+    <b>Status paiement :</b>
+    <span class="${p.status === "approved" ? "approved" : "pending"}">
+      ${p.status}
+    </span>
+  </p>
+
+  <p><b>Abonnement actuel :</b> ${p.abonnement === 1 ? "Actif" : "Non actif"}</p>
+
+  <p>
+    <b>Preuve :</b>
+    <a href="${p.preuve}" target="_blank">
+      Ouvrir la preuve paiement
+    </a>
+  </p>
+
+  ${
+    p.status !== "approved"
+    ? `
+      <form method="POST" action="/admin-valider-paiement">
+        <input type="hidden" name="payment_id" value="${p.id}">
+        <input type="hidden" name="user_id" value="${p.user_id}">
+        <button>
+          Valider abonnement 1 mois
+        </button>
+      </form>
+    `
+    : "<p class='approved'>✅ Paiement déjà validé</p>"
   }
 
-  console.log(
-    "Nouvelle preuve paiement utilisateur:",
-    req.session.userId,
-    preuve
-  );
+</div>
+`;
 
-  res.send(
-    "Preuve envoyée. L’admin va vérifier ton paiement."
-  );
+    });
+
+    html += `
+</body>
+</html>
+`;
+
+    res.send(html);
+
+  }catch(e){
+
+    console.log(e);
+    res.send("Erreur admin paiements");
+
+  }
+
+});
+
+app.post("/admin-valider-paiement", async (req,res)=>{
+
+  try{
+
+    const {
+      payment_id,
+      user_id
+    } = req.body;
+
+    await run(
+      `
+      UPDATE users
+      SET abonnement=1
+      WHERE id=?
+      `,
+      [user_id]
+    );
+
+    await run(
+      `
+      UPDATE payments
+      SET status='approved'
+      WHERE id=?
+      `,
+      [payment_id]
+    );
+
+    res.redirect("/admin-payments");
+
+  }catch(e){
+
+    console.log(e);
+    res.send("Erreur validation paiement");
+
+  }
 
 });
 
