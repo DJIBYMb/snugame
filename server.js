@@ -1925,6 +1925,64 @@ app.post("/supprimer-tournoi-complet", async (req,res)=>{
 
 });
 
+app.get("/tirage/:id", async (req,res)=>{
+
+  try{
+
+    const rows = await all(
+      `
+      SELECT
+        m.*,
+        p1.prenom AS player1_name,
+        p2.prenom AS player2_name
+      FROM matches m
+      LEFT JOIN participants p1
+      ON p1.id=m.player1_id
+      LEFT JOIN participants p2
+      ON p2.id=m.player2_id
+      WHERE m.tournament_id=?
+      ORDER BY
+        m.round,
+        m.group_name,
+        m.match_order
+      `,
+      [req.params.id]
+    );
+
+    const grouped = {};
+
+    rows.forEach(m=>{
+
+      const key =
+        m.round === "POULE"
+        ? "Groupe " + m.group_name
+        : m.round;
+
+      if(!grouped[key]){
+        grouped[key] = [];
+      }
+
+      grouped[key].push(m);
+
+    });
+
+    res.json(
+      Object.entries(grouped)
+      .map(([tour,matchs])=>({
+        tour,
+        matchs
+      }))
+    );
+
+  }catch(e){
+
+    console.log(e);
+    res.json([]);
+
+  }
+
+});
+
 app.listen(PORT, ()=>{
 
   console.log(
