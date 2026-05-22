@@ -678,7 +678,7 @@ Finale → Champion
 
 <button
 class="warning"
-onclick="tirageAutomatiquePoulePro()">
+onclick="customAutoDraw()">
 
 Tirage automatique poule pro
 
@@ -1535,6 +1535,32 @@ async function commentHighlight(id){
   );
 
   chargerHighlights();
+
+}
+
+async function customAutoDraw(){
+
+  if(!currentTournamentId){
+    message.textContent =
+      "Choisis un tournoi";
+    return;
+  }
+
+  const result = await post(
+    "/custom-auto-draw",
+    {
+      tournament_id:
+        currentTournamentId
+    }
+  );
+
+  message.textContent = result;
+
+  await chargerParticipants();
+
+  await afficherTiragePoulePro();
+
+  await afficherClassements();
 
 }
 
