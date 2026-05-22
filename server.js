@@ -2230,7 +2230,6 @@ app.post("/custom-auto-draw", async (req,res)=>{
 
   }
 
-});
 
 
 app.post("/tirage-automatique-poule-pro", async (req,res)=>{
