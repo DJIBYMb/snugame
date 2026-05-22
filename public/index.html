@@ -1569,32 +1569,6 @@ async function commentHighlight(id){
 
 }
 
-async function customAutoDraw(){
-
-  if(!currentTournamentId){
-    message.textContent =
-      "Choisis un tournoi";
-    return;
-  }
-
-  const result = await post(
-    "/custom-auto-draw",
-    {
-      tournament_id:
-        currentTournamentId
-    }
-  );
-
-  message.textContent = result;
-
-  await chargerParticipants();
-
-  await afficherTiragePoulePro();
-
-  await afficherClassements();
-
-}
-
 checkStatus();
 
 </script>
