@@ -2519,6 +2519,15 @@ app.post("/admin-valider-paiement", async (req,res)=>{
 
 });
 
+app.get("/download-db",(req,res)=>{
+
+  const dbPath =
+    path.join(DATA_DIR,"database.sqlite");
+
+  res.download(dbPath);
+
+});
+
 app.listen(PORT, () => {
 
   console.log(
