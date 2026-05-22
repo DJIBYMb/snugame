@@ -372,6 +372,34 @@ class="hidden">
 <h2>Abonnement</h2>
 
 <p>
+💰 Paiement manuel
+</p>
+
+<p>
+Wave : 77XXXXXXXX
+</p>
+
+<p>
+Orange Money : 77XXXXXXXX
+</p>
+
+<p>
+Envoie le paiement puis contacte l’admin avec la preuve.
+</p>
+
+<input
+id="preuvePaiement"
+placeholder="Lien preuve paiement">
+
+<button
+class="secondary"
+onclick="envoyerPreuvePaiement()">
+
+Envoyer preuve paiement
+
+</button>
+
+<p>
 5000 FCFA / mois
 </p>
 
@@ -1291,6 +1319,25 @@ async function loadAll(){
 
 function ouvrirProfilJoueur(id){
   window.open("/player/" + id, "_blank");
+}
+
+async function envoyerPreuvePaiement(){
+
+  if(!preuvePaiement.value){
+    message.textContent =
+      "Ajoute une preuve paiement";
+    return;
+  }
+
+  const result = await post(
+    "/preuve-paiement",
+    {
+      preuve:preuvePaiement.value
+    }
+  );
+
+  message.textContent = result;
+
 }
 
 checkStatus();

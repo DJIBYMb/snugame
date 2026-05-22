@@ -2308,6 +2308,30 @@ header{
 
 });
 
+app.post("/preuve-paiement", (req,res)=>{
+
+  if(!connected(req)){
+    return res.send("Connecte-toi");
+  }
+
+  const { preuve } = req.body;
+
+  if(!preuve){
+    return res.send("Preuve obligatoire");
+  }
+
+  console.log(
+    "Nouvelle preuve paiement utilisateur:",
+    req.session.userId,
+    preuve
+  );
+
+  res.send(
+    "Preuve envoyée. L’admin va vérifier ton paiement."
+  );
+
+});
+
 app.listen(PORT, () => {
 
   console.log(
