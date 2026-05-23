@@ -1122,6 +1122,9 @@ async function customAutoDraw(){
 
   }
 
+  message.textContent =
+    "Traitement en cours...";
+
   const result = await post(
     "/tirage-automatique-poule-pro",
     {
@@ -1140,8 +1143,9 @@ async function customAutoDraw(){
 
   await afficherPhaseFinale();
 
-}
+  await voirChampion();
 
+}
 
 function matchCard(match){
   return `
