@@ -7,6 +7,7 @@ const path = require("path");
 const fs = require("fs");
 const multer = require("multer");
 const rateLimit = require("express-rate-limit");
+const nodemailer = require("nodemailer");
 
 const app = express();
 
@@ -20,6 +21,14 @@ if(!fs.existsSync(DATA_DIR)){
 }
 
 const PORT = process.env.PORT || 3000;
+
+const transporter = nodemailer.createTransport({
+  service:"gmail",
+  auth:{
+    user:process.env.MAIL_USER,
+    pass:process.env.MAIL_PASS
+  }
+});
 
 const loginLimiter = rateLimit({
   windowMs:15 * 60 * 1000,
@@ -270,6 +279,15 @@ db.serialize(()=>{
   `);
 
   db.run(`
+    CREATE TABLE IF NOT EXISTS email_codes(
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      email TEXT,
+      code TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
+
+  db.run(`
     CREATE TABLE IF NOT EXISTS tournaments(
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       user_id INTEGER,
@@ -433,7 +451,8 @@ body{
   margin:0;
   font-family:Arial,sans-serif;
   background:linear-gradient(180deg,#050816,#07111f);
-  color:white;
+  color:w
+  hite;
 }
 .hero{
   padding:60px 20px;
@@ -511,6 +530,70 @@ app.get("/app",(req,res)=>{
     path.join(__dirname,"public","index.html")
   );
 });
+
+app.post("/send-code", async (req,res)=>{
+
+  try{
+
+    const { email } = req.body;
+
+    if(!email){
+      return res.send("Email obligatoire");
+    }
+
+    const cleanEmail =
+      email.trim().toLowerCase();
+
+    const existe = await get(
+      `
+      SELECT id
+      FROM users
+      WHERE email=?
+      `,
+      [cleanEmail]
+    );
+
+    if(existe){
+      return res.send("Email déjà utilisé");
+    }
+
+    const code =
+      Math.floor(
+        100000 + Math.random() * 900000
+      ).toString();
+
+    await run(
+      `
+      INSERT INTO email_codes(
+        email,
+        code
+      )
+      VALUES(?,?)
+      `,
+      [
+        cleanEmail,
+        code
+      ]
+    );
+
+    await transporter.sendMail({
+      from:process.env.MAIL_USER,
+      to:cleanEmail,
+      subject:"Code de validation SNUGAME",
+      text:"Votre code de validation SNUGAME est : " + code
+    });
+
+    res.send("Code envoyé");
+
+  }catch(e){
+
+    console.log(e);
+    res.send("Erreur envoi code");
+
+  }
+
+});
+
 app.post("/register", async (req,res)=>{
 
   try{
@@ -518,13 +601,35 @@ app.post("/register", async (req,res)=>{
     const {
       name,
       email,
-      password
+      password,
+      code
     } = req.body;
 
-    if(!name || !email || !password){
+    if(!name || !email || !password || !code){
       return res.send(
         "Tous les champs sont obligatoires"
       );
+    }
+
+    const cleanEmail =
+      email.trim().toLowerCase();
+
+    const verification = await get(
+      `
+      SELECT *
+      FROM email_codes
+      WHERE email=?
+      AND code=?
+      ORDER BY id DESC
+      `,
+      [
+        cleanEmail,
+        code.trim()
+      ]
+    );
+
+    if(!verification){
+      return res.send("Code invalide");
     }
 
     const hash =
@@ -541,7 +646,7 @@ app.post("/register", async (req,res)=>{
       `,
       [
         name.trim(),
-        email.trim().toLowerCase(),
+        cleanEmail,
         hash
       ],
       function(err){
@@ -676,6 +781,7 @@ app.get("/me", async (req,res)=>{
   res.json(user);
 
 });
+
 app.post("/abonnement", async (req,res)=>{
 
   if(!connected(req)){
@@ -713,8 +819,8 @@ app.post("/tournoi", async (req,res)=>{
       [req.session.userId]
     );
 
-    if(!user || user.abonnement !== 1){
-      return res.send("Tu dois payer l'abonnement");
+    if(!user){
+      return res.send("Utilisateur introuvable");
     }
 
     const { name,max_teams } = req.body;
@@ -728,6 +834,34 @@ app.post("/tournoi", async (req,res)=>{
 
     if(maxTeams < 6 || maxTeams > 100){
       return res.send("Nombre équipes entre 6 et 100");
+    }
+
+    if(
+      maxTeams > 20 &&
+      user.abonnement !== 1
+    ){
+      return res.send(
+        "Abonnement requis pour créer un tournoi de plus de 20 équipes"
+      );
+    }
+
+    const actifs = await get(
+      `
+      SELECT COUNT(*) AS total
+      FROM tournaments
+      WHERE user_id=?
+      AND status!='finished'
+      `,
+      [req.session.userId]
+    );
+
+    if(
+      user.abonnement !== 1 &&
+      actifs.total >= 1
+    ){
+      return res.send(
+        "Abonnement requis pour organiser plusieurs tournois en même temps"
+      );
     }
 
     await run(
@@ -897,6 +1031,7 @@ app.get("/participants/:id",(req,res)=>{
   );
 
 });
+
 app.post(
 "/supprimer-participants-selection",
 async (req,res)=>{
@@ -1051,6 +1186,7 @@ app.post("/reset-tournoi", async (req,res)=>{
   }
 
 });
+
 async function classementPoules(tournament_id){
 
   const teams = await all(
@@ -1361,6 +1497,7 @@ app.post("/annuler-score", async (req,res)=>{
   }
 
 });
+
 function genererGroupesAuto(participants){
 
   const total = participants.length;
@@ -1433,7 +1570,8 @@ app.post("/tirage-automatique-poule-pro", async (req,res)=>{
       `,
       [tournament_id]
     );
-        if(existingMatches.length === 0){
+
+    if(existingMatches.length === 0){
 
       const groupes =
         genererGroupesAuto(participants);
@@ -1526,7 +1664,8 @@ app.post("/tirage-automatique-poule-pro", async (req,res)=>{
         "Finis tous les scores des poules"
       );
     }
-        const phaseExiste =
+
+    const phaseExiste =
       existingMatches.some(
         m => m.round !== "POULE"
       );
@@ -1648,7 +1787,7 @@ app.post("/tirage-automatique-poule-pro", async (req,res)=>{
       );
 
     }
-        const ordre = [
+      const ordre = [
       "64ES",
       "32ES",
       "16ES",
@@ -1734,7 +1873,8 @@ app.post("/tirage-automatique-poule-pro", async (req,res)=>{
       );
 
     }
-        const prochain = {
+
+    const prochain = {
       "64ES":"32ES",
       "32ES":"16ES",
       "16ES":"QUART",
@@ -1822,6 +1962,7 @@ app.post("/tirage-automatique-poule-pro", async (req,res)=>{
   }
 
 });
+
 app.get("/tirage/:id",(req,res)=>{
 
   db.all(
@@ -1904,6 +2045,7 @@ app.get("/champion/:id",(req,res)=>{
   );
 
 });
+
 app.get("/public-tournoi/:id", async (req,res)=>{
 
   try{
@@ -2049,7 +2191,6 @@ button{
 </style>
 </head>
 <body>
-
 <header>
 <h1>${escapeHtml(tournoi.name)}</h1>
 <p>Résultats publics SNUGAME</p>
@@ -2075,7 +2216,8 @@ button{
 `;
 
     }
-     html += `
+
+    html += `
 <div class="card">
 <h2>Classements</h2>
 `;
@@ -2205,6 +2347,7 @@ setTimeout(()=>{
   }
 
 });
+
 app.post("/upload-image",(req,res)=>{
 
   upload.single("image")(req,res,(err)=>{
@@ -2241,6 +2384,7 @@ app.post("/upload-image",(req,res)=>{
   });
 
 });
+
 app.get("/player/:id", async (req,res)=>{
 
   try{
@@ -2322,6 +2466,7 @@ ${
   }
 
 });
+
 app.get("/fix-player-stats", async (req,res)=>{
 
   try{
@@ -2390,6 +2535,7 @@ app.get("/ranking", async (req,res)=>{
   }
 
 });
+
 app.get("/ranking-page", async (req,res)=>{
 
   try{
@@ -2454,6 +2600,7 @@ app.get("/ranking-page", async (req,res)=>{
   }
 
 });
+
 app.post("/preuve-paiement", async (req,res)=>{
 
   try{
@@ -2578,6 +2725,7 @@ app.get("/admin-payments", async (req,res)=>{
   }
 
 });
+
 app.post("/admin-valider-paiement", async (req,res)=>{
 
   try{
@@ -2625,6 +2773,7 @@ app.get("/download-db",(req,res)=>{
   res.download(dbPath);
 
 });
+
 app.post("/highlight", async (req,res)=>{
 
   try{
@@ -2699,6 +2848,7 @@ app.get("/highlights", async (req,res)=>{
   }
 
 });
+
 app.post("/like-highlight", async (req,res)=>{
 
   try{
@@ -2826,6 +2976,7 @@ app.get("/comments-highlight/:id", async (req,res)=>{
   }
 
 });
+
 app.post("/follow-player", async (req,res)=>{
 
   try{
@@ -2893,6 +3044,7 @@ app.get("/followers/:id", async (req,res)=>{
   }
 
 });
+
 app.post("/generer-phase-finale", async (req,res)=>{
   req.url = "/tirage-automatique-poule-pro";
   return app._router.handle(req,res);
