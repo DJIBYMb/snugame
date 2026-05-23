@@ -1167,19 +1167,23 @@ function mediaPreview(url){
 }
 
 function matchCard(match){
+
+const uid =
+  match.round + "_" + match.id;
+
   return `
     <div class="match">
       <b>${match.player1_name || "Équipe 1"}</b>
       VS
       <b>${match.player2_name || "Équipe 2"}</b>
 
-      <input type="number" id="score1_${match.id}" value="${match.score1 ?? ""}" placeholder="Score 1">
-      <input type="number" id="score2_${match.id}" value="${match.score2 ?? ""}" placeholder="Score 2">
+      <input type="number" id="score1_${uid}" value="${match.score1 ?? ""}" placeholder="Score 1">
+      <input type="number" id="score2_${uid}" value="${match.score2 ?? ""}" placeholder="Score 2">
 
-      <input type="hidden" id="photo_${match.id}" value="${match.proof_photo || ""}">
-      <input type="file" accept="image/*,video/mp4" id="file_${match.id}">
+      <input type="hidden" id="photo_${uid}" value="${match.proof_photo || ""}">
+      <input type="file" accept="image/*,video/mp4" id="file_${uid}">
 
-      <button class="secondary" onclick="validerScore(${match.id})">
+      <button class="secondary" onclick="validerScore(${match.id}, '${uid}')">
         Valider score
       </button>
 
@@ -1191,7 +1195,7 @@ function matchCard(match){
 
       ${match.locked === 1 ? "<p>🔒 Score verrouillé</p>" : ""}
 
-      <div id="preview_${match.id}">
+      <div id="preview_${uid}">
         ${
           match.proof_photo
           ? mediaPreview(match.proof_photo)
@@ -1226,7 +1230,7 @@ async function afficherTiragePoulePro(){
 }
 
 
-async function validerScore(matchId){
+async function validerScore(matchId, uid){
 
   let photo = "";
 
@@ -1266,7 +1270,7 @@ async function validerScore(matchId){
 
     photo = uploadData.url;
 
-    document.getElementById("photo_" + matchId).value = photo;
+    document.getElementById("photo_" + uid).value = photo;
 
     document.getElementById("preview_" + matchId).innerHTML =
       mediaPreview(photo + "?t=" + Date.now());
@@ -1276,12 +1280,12 @@ async function validerScore(matchId){
 
   const s1Value =
   document.getElementById(
-    "score1_" + matchId
+    "score1_" + uid
   ).value;
 
 const s2Input =
   document.getElementById(
-    "score2_" + matchId
+    "score2_" + uid
   );
 
 const s2Value =
@@ -1349,7 +1353,7 @@ async function annulerScore(matchId){
 }
 
 async function uploadPreuve(matchId){
-  const fileInput = document.getElementById("file_" + matchId);
+  const fileInput = document.getElementById("file_" + uid);
 
   if(!fileInput.files.length){
     message.textContent = "Choisis une image";
@@ -1372,7 +1376,7 @@ async function uploadPreuve(matchId){
   }
 
   document.getElementById("photo_" + matchId).value = data.url;
-  document.getElementById("preview_" + matchId).innerHTML =
+  document.getElementById("preview_" + uid).innerHTML =
     mediaPreview(data.url);
 
   message.textContent = "Image uploadée";
