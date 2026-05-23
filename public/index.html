@@ -1274,10 +1274,50 @@ async function validerScore(matchId){
 
   message.textContent = "Validation score en cours...";
 
+  const s1Value =
+  document.getElementById(
+    "score1_" + matchId
+  ).value;
+
+const s2Value =
+  document.getElementById(
+    "score2_" + matchId
+  ).value;
+
+if(s1Value === "" || s2Value === ""){
+  message.textContent =
+    "Remplis les deux scores";
+  return;
+}
+
+if(s1Value === s2Value){
+
+  const bloc =
+    document.getElementById(
+      "phaseFinaleResult"
+    );
+
+  if(
+    bloc &&
+    bloc.innerHTML.includes("QUART") ||
+    bloc.innerHTML.includes("DEMI") ||
+    bloc.innerHTML.includes("FINALE") ||
+    bloc.innerHTML.includes("16ES") ||
+    bloc.innerHTML.includes("32ES") ||
+    bloc.innerHTML.includes("64ES")
+  ){
+    message.textContent =
+      "Match nul interdit en élimination directe";
+    return;
+  }
+
+}
+
   const result = await post("/update-match-proof",{
     match_id:matchId,
-    score1:document.getElementById("score1_" + matchId).value,
-    score2:document.getElementById("score2_" + matchId).value,
+    score1:s1Value,
+    score2:s2Value,
+    
     photo_url:photo
   });
 
