@@ -3059,6 +3059,66 @@ app.post("/valider-champion-auto", async (req,res)=>{
   req.url = "/tirage-automatique-poule-pro";
   return app._router.handle(req,res);
 });
+app.post("/send-reset-code", async (req,res)=>{
+
+  try{
+
+    const { email } = req.body;
+
+    if(!email){
+      return res.send("Email obligatoire");
+    }
+
+    const user = await get(
+      `
+      SELECT *
+      FROM users
+      WHERE email=?
+      `,
+      [email.trim().toLowerCase()]
+    );
+
+    if(!user){
+      return res.send("Compte introuvable");
+    }
+
+    const code =
+      Math.floor(
+        100000 + Math.random() * 900000
+      ).toString();
+
+    await run(
+      `
+      INSERT INTO email_codes(
+        email,
+        code
+      )
+      VALUES(?,?)
+      `,
+      [
+        email.trim().toLowerCase(),
+        code
+      ]
+    );
+
+    await transporter.sendMail({
+      from:process.env.MAIL_USER,
+      to:email,
+      subject:"Reset mot de passe SNUGAME",
+      text:"Code reset : " + code
+    });
+
+    res.send("Code envoyé");
+
+  }catch(e){
+
+    console.log(e);
+
+    res.send("Erreur reset code");
+
+  }
+
+});
 
 app.listen(PORT, () => {
 

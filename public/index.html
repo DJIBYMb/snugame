@@ -363,9 +363,28 @@ id="loginPassword"
 type="password"
 placeholder="Mot de passe">
 
+<div
+style="
+display:flex;
+gap:10px;
+flex-wrap:wrap;
+">
+
 <button onclick="login()">
 Connexion
 </button>
+
+<button
+class="secondary"
+onclick="ouvrirMotDePasseOublie()">
+
+Mot de passe oublié
+
+</button>
+
+</div>
+
+
 
 <button
 class="secondary"
@@ -374,6 +393,44 @@ onclick="showRegister()">
 Créer un compte
 
 </button>
+
+<div
+class="card hidden"
+id="forgotBox">
+
+<h2>
+Mot de passe oublié
+</h2>
+
+<input
+id="forgotEmail"
+placeholder="Ton email">
+
+<button
+class="secondary"
+onclick="envoyerCodeReset()">
+
+Envoyer code
+
+</button>
+
+<input
+id="forgotCode"
+placeholder="Code reçu">
+
+<input
+id="newPassword"
+type="password"
+placeholder="Nouveau mot de passe">
+
+<button
+onclick="resetPassword()">
+
+Changer mot de passe
+
+</button>
+
+</div>
 
 </div>
 
@@ -1858,6 +1915,37 @@ async function customAutoDraw(){
   await afficherTiragePoulePro();
   await afficherClassements();
   await afficherPhaseFinale();
+
+}
+function ouvrirMotDePasseOublie(){
+
+  forgotBox.classList.toggle("hidden");
+
+}
+async function envoyerCodeReset(){
+
+  const result = await post(
+    "/send-reset-code",
+    {
+      email:forgotEmail.value
+    }
+  );
+
+  messageShow(result);
+
+}
+async function resetPassword(){
+
+  const result = await post(
+    "/reset-password",
+    {
+      email:forgotEmail.value,
+      code:forgotCode.value,
+      password:newPassword.value
+    }
+  );
+
+  messageShow(result);
 
 }
 
