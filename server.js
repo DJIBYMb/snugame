@@ -1520,7 +1520,7 @@ app.post("/tirage-automatique-poule-pro", async (req,res)=>{
 
     if(
       poules.length > 0 &&
-      poules.some(m => m.played !== 1)
+      poules.some(m => Number(m.played) !== 1)
     ){
       return res.send(
         "Finis tous les scores des poules"
@@ -1683,9 +1683,10 @@ app.post("/tirage-automatique-poule-pro", async (req,res)=>{
       );
 
     if(
-      matchsTour.some(
-        m => m.played !== 1
-      )
+     matchsTour.some(
+       m => Number(m.played) !== 1
+     )
+        
     ){
       return res.send(
         "Finis tous les matchs du tour " +
