@@ -1293,34 +1293,7 @@ const s2Value =
   ? s2Input.value.trim()
   : "";
 
-if(s1Value === "" || s2Value === ""){
-  message.textContent =
-    "Remplis les deux scores";
-  return;
-}
 
-if(s1Value === s2Value){
-
-  const bloc =
-    document.getElementById(
-      "phaseFinaleResult"
-    );
-
-  if(
-    bloc &&
-    bloc.innerHTML.includes("QUART") ||
-    bloc.innerHTML.includes("DEMI") ||
-    bloc.innerHTML.includes("FINALE") ||
-    bloc.innerHTML.includes("16ES") ||
-    bloc.innerHTML.includes("32ES") ||
-    bloc.innerHTML.includes("64ES")
-  ){
-    message.textContent =
-      "Match nul interdit en élimination directe";
-    return;
-  }
-
-}
 
   const result = await post("/update-match-proof",{
     match_id:matchId,
