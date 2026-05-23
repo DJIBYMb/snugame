@@ -2702,6 +2702,13 @@ app.get("/admin-payments", async (req,res)=>{
         <input type="hidden" name="user_id" value="${p.user_id}">
         <button>Valider abonnement 1 mois</button>
       </form>
+      <form method="POST" action="/admin-refuser-paiement?admin=${ADMIN_PASSWORD}">
+  <input type="hidden" name="payment_id" value="${p.id}">
+  <input type="hidden" name="user_id" value="${p.user_id}">
+  <button style="background:#ef4444;color:white;">
+    Refuser abonnement
+  </button>
+</form>
     `
     : "<p>✅ Paiement déjà validé</p>"
   }
@@ -2760,6 +2767,45 @@ app.post("/admin-valider-paiement", async (req,res)=>{
 
     console.log(e);
     res.send("Erreur validation paiement");
+
+  }
+
+});
+app.post("/admin-refuser-paiement", async (req,res)=>{
+
+  try{
+
+    if(!isAdmin(req)){
+      return res.send("Accès admin refusé");
+    }
+
+    const { payment_id,user_id } = req.body;
+
+    await run(
+      `
+      UPDATE users
+      SET abonnement=0,
+          abonnement_expire_at=NULL
+      WHERE id=?
+      `,
+      [user_id]
+    );
+
+    await run(
+      `
+      UPDATE payments
+      SET status='refused'
+      WHERE id=?
+      `,
+      [payment_id]
+    );
+
+    res.redirect("/admin-payments?admin=" + ADMIN_PASSWORD);
+
+  }catch(e){
+
+    console.log(e);
+    res.send("Erreur refus paiement");
 
   }
 

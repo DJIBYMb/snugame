@@ -477,6 +477,12 @@ class="hidden">
 
 <div class="card">
 
+<button
+class="secondary"
+onclick="setPage('pageDashboard')">
+ Retour
+</button>
+
 <h2>Abonnement</h2>
 
 <p>
@@ -540,6 +546,12 @@ id="pageProfil"
 class="hidden">
 
 <div class="card">
+
+<button
+class="secondary"
+onclick="setPage('pageDashboard')">
+ Retour
+</button>
 
 <h2>Mon profil</h2>
 
@@ -837,6 +849,14 @@ Afficher matchs
 </button>
 
 <button
+class="warning"
+onclick="customAutoDraw()">
+
+1️⃣ Générer / continuer tirage
+
+</button>
+
+<button
 class="secondary"
 onclick="afficherPhaseFinale()">
 
@@ -1101,9 +1121,21 @@ async function checkStatus(){
   await chargerTournois();
 }
 
-function ouvrirAbonnement(){
+async function ouvrirAbonnement(){
+
+  const data = await get("/me");
+
+  if(!data || data.connected === false){
+    message.textContent =
+      "Tu dois créer un compte ou te connecter avant de demander l'abonnement.";
+    setPage("pageAuth");
+    return;
+  }
+
   setPage("pageAbonnement");
+
 }
+
 
 async function ouvrirProfilCompte(){
 
