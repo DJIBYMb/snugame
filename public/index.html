@@ -988,23 +988,6 @@ async function chargerTournois(){
 }
 
 
-
-  if(data.length > 0){
-  tournoiSelect.value = data[0].id;
-}
-
-  tournois.innerHTML = data.map(t=>`
-    <div class="match">
-      <b>${t.name}</b><br>
-      ID : ${t.id}<br>
-      Équipes : ${t.max_teams}<br>
-      Statut : ${t.status}
-    </div>
-  `).join("");
-
-  await loadAll();
-}
-
 async function ajouterParticipant(){
   if(!tournoiSelect.value){
     message.textContent = "Choisis tournoi";
@@ -1140,6 +1123,25 @@ async function tirageAutomatiquePoulePro(){
 } 
 
 
+
+function mediaPreview(url){
+
+  if(!url) return "";
+
+  const clean = String(url).split("?")[0].toLowerCase();
+
+  if(clean.endsWith(".mp4")){
+    return `
+      <video class="proof" controls>
+        <source src="${url}" type="video/mp4">
+      </video>
+    `;
+  }
+
+  return `<img class="proof" src="${url}">`;
+
+}
+
 function matchCard(match){
   return `
     <div class="match">
@@ -1168,7 +1170,7 @@ function matchCard(match){
       <div id="preview_${match.id}">
         ${
           match.proof_photo
-          ? `<img class="proof" src="${match.proof_photo}">`
+          ? mediaPreview(match.proof_photo)
           : ""
         }
       </div>
@@ -1243,7 +1245,7 @@ async function validerScore(matchId){
     document.getElementById("photo_" + matchId).value = photo;
 
     document.getElementById("preview_" + matchId).innerHTML =
-      `<img class="proof" src="${photo}?t=${Date.now()}">`;
+      mediaPreview(photo + "?t=" + Date.now());
   }
 
   message.textContent = "Validation score en cours...";
@@ -1302,7 +1304,7 @@ async function uploadPreuve(matchId){
 
   document.getElementById("photo_" + matchId).value = data.url;
   document.getElementById("preview_" + matchId).innerHTML =
-    `<img class="proof" src="${data.url}">`;
+    mediaPreview(data.url);
 
   message.textContent = "Image uploadée";
 }
