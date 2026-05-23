@@ -1983,6 +1983,86 @@ app.get("/tirage/:id", async (req,res)=>{
 
 });
 
+app.post("/update-match-proof", async (req,res)=>{
+
+  try{
+
+    const {
+      match_id,
+      score1,
+      score2,
+      photo_url
+    } = req.body;
+
+    const match = await get(
+      "SELECT * FROM matches WHERE id=?",
+      [match_id]
+    );
+
+    if(!match){
+      return res.send("Match introuvable");
+    }
+
+    if(match.locked === 1){
+      return res.send("Score verrouillé");
+    }
+
+    const s1 = Number(score1);
+    const s2 = Number(score2);
+
+    if(Number.isNaN(s1) || Number.isNaN(s2)){
+      return res.send("Score invalide");
+    }
+
+    if(match.round !== "POULE" && s1 === s2){
+      return res.send("Match nul interdit");
+    }
+
+    let winner = null;
+    let loser = null;
+
+    if(s1 > s2){
+      winner = match.player1_id;
+      loser = match.player2_id;
+    }
+
+    if(s2 > s1){
+      winner = match.player2_id;
+      loser = match.player1_id;
+    }
+
+    await run(
+      `
+      UPDATE matches
+      SET score1=?,
+          score2=?,
+          proof_photo=?,
+          winner_id=?,
+          loser_id=?,
+          played=1
+      WHERE id=?
+      `,
+      [
+        s1,
+        s2,
+        photo_url || "",
+        winner,
+        loser,
+        match_id
+      ]
+    );
+
+    res.send("Score validé");
+
+  }catch(e){
+
+    console.log(e);
+    res.send("Erreur validation score");
+
+  }
+
+});
+
 app.listen(PORT, ()=>{
 
   console.log(
