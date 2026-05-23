@@ -680,7 +680,31 @@ Finale → Champion
 class="warning"
 onclick="customAutoDraw()">
 
-Tirage automatique poule pro
+1️⃣ Générer / continuer tirage
+
+</button>
+
+<button
+class="secondary"
+onclick="afficherTiragePoulePro()">
+
+Afficher matchs
+
+</button>
+
+<button
+class="secondary"
+onclick="afficherPhaseFinale()">
+
+Afficher phase finale
+
+</button>
+
+<button
+class="secondary"
+onclick="voirChampion()">
+
+Voir champion
 
 </button>
 
@@ -1651,7 +1675,6 @@ async function customAutoDraw(){
   await afficherTiragePoulePro();
   await afficherClassements();
   await afficherPhaseFinale();
-  await voirChampion();
 
 }
 

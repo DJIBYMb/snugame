@@ -2893,6 +2893,20 @@ app.get("/followers/:id", async (req,res)=>{
   }
 
 });
+app.post("/generer-phase-finale", async (req,res)=>{
+  req.url = "/tirage-automatique-poule-pro";
+  return app._router.handle(req,res);
+});
+
+app.post("/generer-tour-suivant", async (req,res)=>{
+  req.url = "/tirage-automatique-poule-pro";
+  return app._router.handle(req,res);
+});
+
+app.post("/valider-champion-auto", async (req,res)=>{
+  req.url = "/tirage-automatique-poule-pro";
+  return app._router.handle(req,res);
+});
 
 app.listen(PORT, () => {
 
