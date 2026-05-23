@@ -1279,10 +1279,15 @@ async function validerScore(matchId){
     "score1_" + matchId
   ).value;
 
-const s2Value =
+const s2Input =
   document.getElementById(
     "score2_" + matchId
-  ).value;
+  );
+
+const s2Value =
+  s2Input
+  ? s2Input.value.trim()
+  : "";
 
 if(s1Value === "" || s2Value === ""){
   message.textContent =
