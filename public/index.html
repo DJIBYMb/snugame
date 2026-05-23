@@ -922,43 +922,71 @@ async function checkStatus(){
 }
 
 async function creerTournoi(){
+
   if(!tournoiNom.value){
     message.textContent = "Nom tournoi obligatoire";
     return;
   }
 
+  const maxTeams = Number(tournoiMax.value) || 48;
+
+  if(maxTeams < 6 || maxTeams > 100){
+    message.textContent = "Le nombre d'équipes doit être entre 6 et 100";
+    return;
+  }
+
   await post("/tournoi",{
-   name:tournoiNom.value,
-   max_teams:tournoiMax.value
- });
+    name:tournoiNom.value,
+    max_teams:maxTeams
+  });
+
+  tournoiNom.value = "";
 
   await chargerTournois();
+
 }
 
+
 async function chargerTournois(){
+
+  const oldValue = tournoiSelect.value;
+
   const data = await get("/tournois");
 
   if(!Array.isArray(data)) return;
 
   tournoiSelect.innerHTML = `
-  <option value="">
-    Sélectionner un tournoi
-  </option>
-` + data.map(t=>`
-  <option
-    value="${t.id}"
-    data-max="${t.max_teams}"
-  >
-    ${t.name} (${t.max_teams} équipes)
-  </option>
-`).join("");
+    <option value="">
+      Sélectionner un tournoi
+    </option>
+  ` + data.map(t=>`
+    <option
+      value="${t.id}"
+      data-max="${t.max_teams || 48}"
+    >
+      ${t.name} (${t.max_teams || 48} équipes) - ID ${t.id}
+    </option>
+  `).join("");
 
- if(
-  data.length > 0 &&
-  !tournoiSelect.value
-){
-  tournoiSelect.selectedIndex = 1;
+  if(oldValue && data.some(t=>String(t.id) === String(oldValue))){
+    tournoiSelect.value = oldValue;
+  }else if(data.length > 0){
+    tournoiSelect.value = data[0].id;
+  }
+
+  tournois.innerHTML = data.map(t=>`
+    <div class="match">
+      <b>${t.name}</b><br>
+      ID : ${t.id}<br>
+      Équipes : ${t.max_teams || 48}<br>
+      Statut : ${t.status}
+    </div>
+  `).join("");
+
+  await loadAll();
+
 }
+
 
 
   if(data.length > 0){
@@ -1111,41 +1139,6 @@ async function tirageAutomatiquePoulePro(){
   await chargerHighlights();
 } 
 
-async function customAutoDraw(){
-
-  if(!tournoiSelect.value){
-
-    message.textContent =
-      "Choisis un tournoi";
-
-    return;
-
-  }
-
-  message.textContent =
-    "Traitement en cours...";
-
-  const result = await post(
-    "/tirage-automatique-poule-pro",
-    {
-      tournament_id:
-        tournoiSelect.value
-    }
-  );
-
-  message.textContent = result;
-
-  await chargerParticipants();
-
-  await afficherTiragePoulePro();
-
-  await afficherClassements();
-
-  await afficherPhaseFinale();
-
-  await voirChampion();
-
-}
 
 function matchCard(match){
   return `
@@ -1158,7 +1151,7 @@ function matchCard(match){
       <input type="number" id="score2_${match.id}" value="${match.score2 ?? ""}" placeholder="Score 2">
 
       <input type="hidden" id="photo_${match.id}" value="${match.proof_photo || ""}">
-      <input type="file" accept="image/*" id="file_${match.id}">
+      <input type="file" accept="image/*,video/mp4" id="file_${match.id}">
 
       <button class="secondary" onclick="validerScore(${match.id})">
         Valider score
@@ -1184,11 +1177,18 @@ function matchCard(match){
 }
 
 async function afficherTiragePoulePro(){
+
   if(!tournoiSelect.value) return;
 
   const data = await get("/tirage/" + tournoiSelect.value);
 
   if(!Array.isArray(data)) return;
+
+  if(data.length === 0){
+    pouleProResult.innerHTML =
+      "<p>Aucun match. Clique sur Tirage automatique.</p>";
+    return;
+  }
 
   pouleProResult.innerHTML = data.map(bloc=>`
     <div class="card">
@@ -1196,7 +1196,9 @@ async function afficherTiragePoulePro(){
       ${bloc.matchs.map(matchCard).join("")}
     </div>
   `).join("");
+
 }
+
 
 async function validerScore(matchId){
 
@@ -1354,6 +1356,7 @@ async function afficherClassements(){
 }
 
 async function afficherPhaseFinale(){
+
   if(!tournoiSelect.value) return;
 
   const data = await get("/tirage/" + tournoiSelect.value);
@@ -1361,6 +1364,12 @@ async function afficherPhaseFinale(){
   if(!Array.isArray(data)) return;
 
   const finale = data.filter(b=>!b.tour.startsWith("Groupe"));
+
+  if(finale.length === 0){
+    phaseFinaleResult.innerHTML =
+      "<p>La phase finale n'est pas encore générée.</p>";
+    return;
+  }
 
   phaseFinaleResult.innerHTML = `
     <div class="bracket">
@@ -1372,15 +1381,18 @@ async function afficherPhaseFinale(){
       `).join("")}
     </div>
   `;
+
 }
 
+
 async function voirChampion(){
+
   if(!tournoiSelect.value) return;
 
   const champion = await get("/champion/" + tournoiSelect.value);
 
   if(!champion){
-    message.textContent = "Aucun champion";
+    message.textContent = "Aucun champion pour le moment";
     return;
   }
 
@@ -1391,7 +1403,9 @@ async function voirChampion(){
       <p>${champion.club_logo || ""}</p>
     </div>
   `;
+
 }
+
 
 function creerLienPublic(){
   if(!tournoiSelect.value){
@@ -1608,25 +1622,20 @@ async function commentHighlight(id){
 async function customAutoDraw(){
 
   if(!tournoiSelect.value){
-
     await chargerTournois();
-
   }
 
   if(!tournoiSelect.value){
-
     message.textContent =
-      "Aucun tournoi trouvé. Crée un tournoi.";
-
+      "Choisis un tournoi";
     return;
-
   }
 
   message.textContent =
-    "Création du tirage en cours...";
+    "Traitement en cours...";
 
   const result = await post(
-    "/custom-auto-draw",
+    "/tirage-automatique-poule-pro",
     {
       tournament_id:
         tournoiSelect.value
@@ -1635,15 +1644,15 @@ async function customAutoDraw(){
 
   message.textContent = result;
 
+  await chargerTournois();
   await chargerParticipants();
-
   await afficherTiragePoulePro();
-
   await afficherClassements();
-
   await afficherPhaseFinale();
+  await voirChampion();
 
 }
+
 checkStatus();
 
 </script>
