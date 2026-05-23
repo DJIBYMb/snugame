@@ -1183,7 +1183,7 @@ const uid =
       <input type="hidden" id="photo_${uid}" value="${match.proof_photo || ""}">
       <input type="file" accept="image/*,video/mp4" id="file_${uid}">
 
-      <button class="secondary" onclick="validerScore(${match.id}, '${uid}')">
+      <button class="secondary" onclick="validerScoreDirect(${match.id}, this)">
         Valider score
       </button>
 
@@ -1310,6 +1310,34 @@ const s2Value =
     await afficherClassements();
     await afficherPhaseFinale();
   },1000);
+
+}
+async function validerScoreDirect(matchId, btn){
+
+  const box = btn.closest(".match");
+
+  const inputs = box.querySelectorAll("input[type='number']");
+
+  const score1 = inputs[0].value;
+  const score2 = inputs[1].value;
+
+  if(score1 === "" || score2 === ""){
+    message.textContent = "Remplis les deux scores";
+    return;
+  }
+
+  const result = await post("/update-match-proof",{
+    match_id:matchId,
+    score1:score1,
+    score2:score2,
+    photo_url:""
+  });
+
+  message.textContent = result;
+
+  await afficherTiragePoulePro();
+  await afficherClassements();
+  await afficherPhaseFinale();
 
 }
 
