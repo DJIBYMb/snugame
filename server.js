@@ -612,6 +612,8 @@ app.post("/register", async (req,res)=>{
 
   try{
 
+    console.log("JOIN BODY:", req.body);
+
     const {
       name,
       email,
@@ -3581,8 +3583,8 @@ app.post("/join-tournament", async (req,res)=>{
   }catch(e){
 
     console.log(e);
-    res.send("Erreur inscription automatique tournoi");
-
+    
+   res.send("Erreur inscription automatique tournoi : " + e.message);
   }
 
 });
