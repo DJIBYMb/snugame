@@ -3247,32 +3247,126 @@ app.get("/join/:code", async (req,res)=>{
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<title>Rejoindre tournoi</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rejoindre ${escapeHtml(tournoi.name)} - SNUGAME</title>
+
+<style>
+*{box-sizing:border-box}
+body{
+  margin:0;
+  font-family:Arial,sans-serif;
+  background:
+    radial-gradient(circle at top left,#1455ff33,transparent 35%),
+    radial-gradient(circle at top right,#7c2cff33,transparent 35%),
+    linear-gradient(180deg,#050816,#07111f);
+  color:white;
+  min-height:100vh;
+}
+header{
+  background:linear-gradient(135deg,#1455ff,#7c2cff);
+  padding:24px 18px;
+  text-align:center;
+  box-shadow:0 0 35px #1455ff88;
+}
+header h1{
+  margin:0;
+  font-size:34px;
+  letter-spacing:3px;
+}
+.container{
+  max-width:520px;
+  margin:auto;
+  padding:18px;
+}
+.card{
+  background:linear-gradient(180deg,#0f172aee,#111c33);
+  border:1px solid #334155;
+  padding:22px;
+  border-radius:22px;
+  margin-top:22px;
+  box-shadow:0 0 25px #00000055;
+}
+input,button{
+  width:100%;
+  padding:13px;
+  margin:8px 0;
+  border:none;
+  border-radius:14px;
+  font-size:15px;
+}
+input{
+  background:#020617;
+  color:white;
+  border:1px solid #334155;
+}
+button{
+  background:linear-gradient(135deg,#22c55e,#86efac);
+  color:#052e16;
+  font-weight:900;
+  cursor:pointer;
+}
+.secondary{
+  background:linear-gradient(135deg,#2563eb,#06b6d4);
+  color:white;
+}
+.small{
+  color:#cbd5e1;
+  font-size:13px;
+}
+#msg{
+  white-space:pre-wrap;
+  background:#020617;
+  padding:14px;
+  border-radius:16px;
+  border:1px solid #334155;
+  margin-top:12px;
+  color:#dbeafe;
+}
+</style>
 </head>
 
-<body style="background:#07111f;color:white;font-family:Arial;padding:20px;">
+<body>
 
-<h1>🏆 ${escapeHtml(tournoi.name)}</h1>
+<header>
+  <h1>SNUGAME</h1>
+  <p>Inscription tournoi eFootball Mobile</p>
+</header>
 
-<p>Crée ton compte SNUGAME pour participer automatiquement.</p>
+<div class="container">
 
-<input id="joinName" placeholder="Nom joueur" style="padding:12px;width:100%;margin:8px 0;">
+<div class="card">
 
-<input id="joinEmail" placeholder="Email" style="padding:12px;width:100%;margin:8px 0;">
+<h2>🏆 ${escapeHtml(tournoi.name)}</h2>
 
-<input id="joinPassword" type="password" placeholder="Mot de passe" style="padding:12px;width:100%;margin:8px 0;">
+<p class="small">
+Places : ${count.total}/${tournoi.max_teams}
+</p>
 
-<button onclick="sendCode()" style="padding:12px;width:100%;margin:8px 0;">
+<p>
+Crée ton compte SNUGAME et participe automatiquement à ce tournoi.
+</p>
+
+<input id="joinName" placeholder="Nom joueur">
+
+<input id="joinEmail" placeholder="Adresse email">
+
+<input id="joinPassword" type="password" placeholder="Mot de passe">
+
+<button class="secondary" onclick="sendCode()">
 Envoyer code email
 </button>
 
-<input id="joinCode" placeholder="Code reçu" style="padding:12px;width:100%;margin:8px 0;">
+<input id="joinCode" placeholder="Code reçu par email">
 
-<button onclick="joinTournament()" style="padding:12px;width:100%;margin:8px 0;background:#22c55e;font-weight:bold;">
+<button onclick="joinTournament()">
 Créer compte et participer
 </button>
 
 <p id="msg"></p>
+
+</div>
+
+</div>
 
 <script>
 async function post(url,data){
