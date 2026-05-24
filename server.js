@@ -3271,25 +3271,6 @@ padding:20px;
 Crée ton compte SNUGAME pour participer automatiquement.
 </p>
 
-${
-  tournoi.group_link
-  ? `
-    <button
-    onclick="window.open('${tournoi.group_link}','_blank')"
-    style="
-      padding:12px;
-      border:none;
-      border-radius:10px;
-      background:#22c55e;
-      font-weight:bold;
-      margin-bottom:15px;
-    ">
-    Rejoindre groupe tournoi
-    </button>
-  `
-  : ""
-}
-
 <input
 id="name"
 placeholder="Nom"
@@ -3366,20 +3347,27 @@ async function sendCode(){
 
 async function joinTournament(){
 
-  msg.textContent =
+  msg.textContent = "Inscription en cours...";
+
+  const result =
     await post("/join-tournament",{
 
       join_code:"${escapeHtml(req.params.code)}",
 
-      name:name.value,
+      name:name.value.trim(),
 
-      email:email.value,
+      email:email.value.trim(),
 
       password:password.value,
 
-      code:code.value
+      code:document
+  .getElementById("joinCode")
+  .value
+  .trim()
 
     });
+
+  msg.innerHTML = result;
 
 }
 
@@ -3560,9 +3548,35 @@ app.post("/join-tournament", async (req,res)=>{
 
     req.session.userId = user.id;
 
-    res.send(
-      "Inscription réussie. Tu es ajouté automatiquement aux participants. Attends que l'organisateur lance le tirage."
-    );
+    res.send(`
+  ✅ Inscription réussie.<br>
+  Tu es ajouté automatiquement aux participants.<br>
+  Attends que l'organisateur lance le tirage.<br><br>
+
+  ${
+    tournoi.group_link
+    ? `
+      <a
+      href="${escapeHtml(tournoi.group_link)}"
+      target="_blank"
+      style="
+        display:block;
+        background:#22c55e;
+        color:#052e16;
+        padding:12px;
+        border-radius:10px;
+        text-align:center;
+        font-weight:bold;
+        text-decoration:none;
+      ">
+      Rejoindre le groupe du tournoi
+      </a>
+    `
+    : ""
+  }
+`);
+      
+    
 
   }catch(e){
 
