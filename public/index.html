@@ -1403,46 +1403,166 @@ function mediaPreview(url){
 
 }
 
+
 function matchCard(match){
 
-const uid =
-  match.round + "_" + match.id;
+  const uid =
+    match.round + "_" + match.id;
 
   return `
+
     <div class="match">
-      <b>${match.player1_name || "Équipe 1"}</b>
-      VS
-      <b>${match.player2_name || "Équipe 2"}</b>
 
-      <input type="number" id="score1_${uid}" value="${match.score1 ?? ""}" placeholder="Score 1">
-      <input type="number" id="score2_${uid}" value="${match.score2 ?? ""}" placeholder="Score 2">
+      <div
+      style="
+        display:flex;
+        justify-content:space-between;
+        align-items:center;
+        gap:10px;
+        margin-bottom:10px;
+        flex-wrap:wrap;
+      ">
 
-      <input type="hidden" id="photo_${uid}" value="${match.proof_photo || ""}">
-      <input type="file" accept="image/*,video/mp4" id="file_${uid}">
+        <b
+        style="
+          cursor:pointer;
+          color:#60a5fa;
+          font-size:16px;
+        "
+        onclick="
+          window.open(
+            '/player/${match.player1_id}',
+            '_blank'
+          )
+        ">
+          ${match.player1_name || "Équipe 1"}
+        </b>
 
-      <button class="secondary" onclick="validerScoreDirect(${match.id}, this)">
-        Valider score
-      </button>
+        <span
+        style="
+          font-weight:900;
+          color:#f8fafc;
+        ">
+          VS
+        </span>
 
-      <button class="danger" onclick="annulerScore(${match.id})">
-        Annuler score
-      </button>
+        <b
+        style="
+          cursor:pointer;
+          color:#60a5fa;
+          font-size:16px;
+        "
+        onclick="
+          window.open(
+            '/player/${match.player2_id}',
+            '_blank'
+          )
+        ">
+          ${match.player2_name || "Équipe 2"}
+        </b>
 
-      <p>${match.played ? match.score1 + " - " + match.score2 : "Non joué"}</p>
+      </div>
 
-      ${match.locked === 1 ? "<p>🔒 Score verrouillé</p>" : ""}
+      <div
+      style="
+        display:grid;
+        grid-template-columns:1fr 1fr;
+        gap:10px;
+      ">
+
+        <input
+        type="number"
+        id="score1_${uid}"
+        value="${match.score1 ?? ""}"
+        placeholder="Score 1">
+
+        <input
+        type="number"
+        id="score2_${uid}"
+        value="${match.score2 ?? ""}"
+        placeholder="Score 2">
+
+      </div>
+
+      <input
+      type="hidden"
+      id="photo_${uid}"
+      value="${match.proof_photo || ""}">
+
+      <input
+      type="file"
+      accept="image/*,video/mp4"
+      id="file_${uid}">
+
+      ${
+        Number(match.locked) === 1
+        ? `
+          <p
+          style="
+            color:#f87171;
+            font-weight:bold;
+          ">
+            🔒 Score verrouillé
+          </p>
+        `
+        : `
+          <button
+          class="secondary"
+          onclick="
+            validerScoreDirect(
+              ${match.id},
+              this
+            )
+          ">
+            ✅ Valider score
+          </button>
+
+          <button
+          class="danger"
+          onclick="
+            annulerScore(
+              ${match.id}
+            )
+          ">
+            ❌ Annuler score
+          </button>
+        `
+      }
+
+      <div
+      style="
+        margin-top:10px;
+        font-weight:bold;
+        color:#cbd5e1;
+      ">
+
+        ${
+          Number(match.played) === 1
+          ? `
+            Résultat :
+            ${match.score1}
+            -
+            ${match.score2}
+          `
+          : "⏳ Match non joué"
+        }
+
+      </div>
 
       <div id="preview_${uid}">
+
         ${
           match.proof_photo
           ? mediaPreview(match.proof_photo)
           : ""
         }
+
       </div>
+
     </div>
+
   `;
 }
-
 async function afficherTiragePoulePro(){
 
   if(!tournoiSelect.value) return;

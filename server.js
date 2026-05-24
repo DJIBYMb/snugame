@@ -1273,7 +1273,7 @@ async function classementPoules(tournament_id){
 
   for(const m of matches){
 
-    if(m.played !== 1) continue;
+    if(Number(m.played) !== 1) continue;
 
     const a = table[m.player1_id];
     const b = table[m.player2_id];
@@ -1282,6 +1282,8 @@ async function classementPoules(tournament_id){
 
     const s1 = Number(m.score1);
     const s2 = Number(m.score2);
+
+    if(Number.isNaN(s1) || Number.isNaN(s2)) continue;
 
     a.j++;
     b.j++;
@@ -1308,8 +1310,8 @@ async function classementPoules(tournament_id){
 
       a.n++;
       b.n++;
-      a.pts++;
-      b.pts++;
+      a.pts += 1;
+      b.pts += 1;
 
     }
 
@@ -1321,8 +1323,7 @@ async function classementPoules(tournament_id){
 
     t.diff = t.bp - t.bc;
 
-    const g =
-      t.group_name || "Sans groupe";
+    const g = t.group_name || "Sans groupe";
 
     if(!groups[g]){
       groups[g] = [];
@@ -1337,10 +1338,11 @@ async function classementPoules(tournament_id){
     groups[g].sort((a,b)=>
 
       b.pts - a.pts ||
-
       b.diff - a.diff ||
-
-      b.bp - a.bp
+      b.bp - a.bp ||
+      b.v - a.v ||
+      a.bc - b.bc ||
+      a.prenom.localeCompare(b.prenom)
 
     );
 
@@ -1349,7 +1351,6 @@ async function classementPoules(tournament_id){
   return groups;
 
 }
-
 app.get(
 "/classement-poules/:id",
 async (req,res)=>{
@@ -1383,6 +1384,10 @@ app.post("/update-match-proof", async (req,res)=>{
       photo_url
     } = req.body;
 
+    if(!match_id){
+      return res.send("Match obligatoire");
+    }
+
     const match = await get(
       `
       SELECT *
@@ -1396,33 +1401,22 @@ app.post("/update-match-proof", async (req,res)=>{
       return res.send("Match introuvable");
     }
 
-    if(match.locked === 1){
+    if(Number(match.locked) === 1){
       return res.send("Score verrouillé");
     }
 
     const s1 = Number(score1);
     const s2 = Number(score2);
 
-    if(
-      Number.isNaN(s1) ||
-      Number.isNaN(s2)
-    ){
+    if(Number.isNaN(s1) || Number.isNaN(s2)){
       return res.send("Score invalide");
     }
 
-    if(
-      s1 < 0 ||
-      s2 < 0 ||
-      s1 > 100 ||
-      s2 > 100
-    ){
+    if(s1 < 0 || s2 < 0 || s1 > 100 || s2 > 100){
       return res.send("Score entre 0 et 100");
     }
 
-    if(
-      match.round !== "POULE" &&
-      s1 === s2
-    ){
+    if(match.round !== "POULE" && s1 === s2){
       return res.send(
         "Match nul interdit en élimination directe"
       );
@@ -1434,9 +1428,7 @@ app.post("/update-match-proof", async (req,res)=>{
     if(s1 > s2){
       winner = match.player1_id;
       loser = match.player2_id;
-    }
-
-    if(s2 > s1){
+    }else if(s2 > s1){
       winner = match.player2_id;
       loser = match.player1_id;
     }
@@ -1462,26 +1454,25 @@ app.post("/update-match-proof", async (req,res)=>{
       ]
     );
 
-    await ajouterXP(match.player1_id,5);
-    await ajouterXP(match.player2_id,5);
-
-    if(winner){
-
-      await ajouterXP(winner,10);
-
-      await donnerBadge(
-        winner,
-        "🔥 Winner"
-      );
-
+    if(match.player1_id){
+      await ajouterXP(match.player1_id,5);
     }
 
-    res.send("Score validé + XP ajouté");
+    if(match.player2_id){
+      await ajouterXP(match.player2_id,5);
+    }
+
+    if(winner){
+      await ajouterXP(winner,10);
+      await donnerBadge(winner,"🔥 Winner");
+    }
+
+    res.send("Score validé");
 
   }catch(e){
 
     console.log(e);
-    res.send("Erreur validation score");
+    res.send("Erreur validation score : " + e.message);
 
   }
 
@@ -1547,7 +1538,11 @@ function genererGroupesAuto(participants){
 
   let tailleGroupe = 4;
 
-  if(total <= 10 || total % 4 !== 0){
+  if(total <= 10){
+    tailleGroupe = 3;
+  }else if(total <= 30){
+    tailleGroupe = 4;
+  }else{
     tailleGroupe = 5;
   }
 
@@ -1556,19 +1551,19 @@ function genererGroupesAuto(participants){
 
   const groupes = [];
 
-  const melange =
-    [...participants]
-    .sort(()=>Math.random() - 0.5);
-
   for(let i=0;i<nombreGroupes;i++){
     groupes.push([]);
   }
 
+  const melange =
+    [...participants]
+    .sort(()=>Math.random() - 0.5);
+
   let index = 0;
 
-  for(const p of melange){
+  for(const joueur of melange){
 
-    groupes[index].push(p);
+    groupes[index].push(joueur);
 
     index++;
 
@@ -1616,22 +1611,15 @@ app.post("/tirage-automatique-poule-pro", async (req,res)=>{
 
     if(existingMatches.length === 0){
 
-      const groupes =
-        genererGroupesAuto(participants);
-
-      const lettres =
-        "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+      const groupes = genererGroupesAuto(participants);
+      const lettres = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
 
       for(let g=0; g<groupes.length; g++){
 
-        const nomGroupe =
-          lettres[g];
-
-        const equipes =
-          groupes[g];
+        const nomGroupe = lettres[g];
+        const equipes = groupes[g];
 
         for(const equipe of equipes){
-
           await run(
             `
             UPDATE participants
@@ -1640,13 +1628,11 @@ app.post("/tirage-automatique-poule-pro", async (req,res)=>{
             `,
             [nomGroupe,equipe.id]
           );
-
         }
 
-        let ordre = 1;
+        let ordreMatch = 1;
 
         for(let i=0;i<equipes.length;i++){
-
           for(let j=i+1;j<equipes.length;j++){
 
             await run(
@@ -1665,18 +1651,15 @@ app.post("/tirage-automatique-poule-pro", async (req,res)=>{
                 tournament_id,
                 "POULE",
                 nomGroupe,
-                ordre,
+                ordreMatch,
                 equipes[i].id,
                 equipes[j].id
               ]
             );
 
-            ordre++;
-
+            ordreMatch++;
           }
-
         }
-
       }
 
       await run(
@@ -1688,109 +1671,68 @@ app.post("/tirage-automatique-poule-pro", async (req,res)=>{
         [tournament_id]
       );
 
-      return res.send(
-        "✅ Poules générées automatiquement"
-      );
-
+      return res.send("✅ Poules générées automatiquement");
     }
 
-    const poules =
-      existingMatches.filter(
-        m => m.round === "POULE"
-      );
+    const poules = existingMatches.filter(m => m.round === "POULE");
 
     if(
       poules.length > 0 &&
       poules.some(m => Number(m.played) !== 1)
     ){
-      return res.send(
-        "Finis tous les scores des poules"
-      );
+      return res.send("Finis tous les scores des poules");
     }
 
-    const phaseExiste =
-      existingMatches.some(
-        m => m.round !== "POULE"
-      );
+    const phaseExiste = existingMatches.some(m => m.round !== "POULE");
 
     if(!phaseExiste){
 
-      const classement =
-        await classementPoules(
-          tournament_id
-        );
+      const classement = await classementPoules(tournament_id);
 
       let qualifies = [];
 
-      for(
-        const groupe of
-        Object.keys(classement)
-      ){
+      for(const groupe of Object.keys(classement)){
 
-        if(groupe === "Sans groupe"){
-          continue;
-        }
+        if(groupe === "Sans groupe") continue;
 
-        const equipes =
-          classement[groupe];
+        const equipes = classement[groupe];
 
-        if(equipes && equipes[0]){
-          qualifies.push(equipes[0]);
-        }
-
-        if(equipes && equipes[1]){
-          qualifies.push(equipes[1]);
-        }
-
+        if(equipes && equipes[0]) qualifies.push(equipes[0]);
+        if(equipes && equipes[1]) qualifies.push(equipes[1]);
       }
 
       qualifies.sort((a,b)=>
-
         b.pts - a.pts ||
-
         b.diff - a.diff ||
-
         b.bp - a.bp
-
       );
 
-      const tailles = [
-        64,32,16,8,4,2
-      ];
+      const tailles = [64,32,16,8,4,2];
 
       let taille = 2;
 
       for(const t of tailles){
-
         if(qualifies.length >= t){
           taille = t;
           break;
         }
-
       }
 
-      qualifies =
-        qualifies.slice(0,taille);
+      qualifies = qualifies.slice(0,taille);
 
       if(qualifies.length < 2){
-        return res.send(
-          "Pas assez de qualifiés"
-        );
+        return res.send("Pas assez de qualifiés");
       }
 
       const roundName =
         taille === 64 ? "64ES" :
         taille === 32 ? "32ES" :
         taille === 16 ? "16ES" :
-        taille === 8 ? "QUART" :
-        taille === 4 ? "DEMI" :
+        taille === 8 ? "8ES" :
+        taille === 4 ? "DEMIS" :
         "FINALE";
 
-      for(
-        let i=0;
-        i<qualifies.length;
-        i+=2
-      ){
+      for(let i=0;i<qualifies.length;i+=2){
 
         await run(
           `
@@ -1811,7 +1753,6 @@ app.post("/tirage-automatique-poule-pro", async (req,res)=>{
             qualifies[i+1].id
           ]
         );
-
       }
 
       await run(
@@ -1824,66 +1765,45 @@ app.post("/tirage-automatique-poule-pro", async (req,res)=>{
         [tournament_id]
       );
 
-      return res.send(
-        roundName +
-        " généré automatiquement"
-      );
-
+      return res.send(roundName + " généré automatiquement");
     }
-      const ordre = [
+
+    const ordre = [
       "64ES",
       "32ES",
       "16ES",
-      "QUART",
-      "DEMI",
+      "8ES",
+      "QUARTS",
+      "DEMIS",
       "FINALE"
     ];
 
     let tourActuel = null;
 
     for(const tour of ordre){
-
-      if(
-        existingMatches.some(
-          m => m.round === tour
-        )
-      ){
+      if(existingMatches.some(m => m.round === tour)){
         tourActuel = tour;
       }
-
     }
 
     if(!tourActuel){
-      return res.send(
-        "Aucun tour trouvé"
-      );
+      return res.send("Aucun tour trouvé");
     }
 
-    const matchsTour =
-      existingMatches.filter(
-        m => m.round === tourActuel
-      );
+    const matchsTour = existingMatches.filter(
+      m => m.round === tourActuel
+    );
 
-    if(
-     matchsTour.some(
-       m => Number(m.played) !== 1
-     )
-        
-    ){
-      return res.send(
-        "Finis tous les matchs du tour " +
-        tourActuel
-      );
+    if(matchsTour.some(m => Number(m.played) !== 1)){
+      return res.send("Finis tous les matchs du tour " + tourActuel);
     }
 
     if(tourActuel === "FINALE"){
 
-      const finale =
-        matchsTour[0];
+      const finale = matchsTour[0];
 
       const champion =
-        Number(finale.score1) >
-        Number(finale.score2)
+        Number(finale.score1) > Number(finale.score2)
         ? finale.player1_id
         : finale.player2_id;
 
@@ -1906,42 +1826,29 @@ app.post("/tirage-automatique-poule-pro", async (req,res)=>{
         [tournament_id]
       );
 
-      await donnerBadge(
-        champion,
-        "🏆 Champion"
-      );
+      await donnerBadge(champion,"🏆 Champion");
 
-      return res.send(
-        "Champion validé 🏆"
-      );
-
+      return res.send("Champion validé 🏆");
     }
 
     const prochain = {
       "64ES":"32ES",
       "32ES":"16ES",
-      "16ES":"QUART",
-      "QUART":"DEMI",
-      "DEMI":"FINALE"
+      "16ES":"8ES",
+      "8ES":"QUARTS",
+      "QUARTS":"DEMIS",
+      "DEMIS":"FINALE"
     };
 
     const gagnants = [];
 
     for(const m of matchsTour){
 
-      if(
-        Number(m.score1) >
-        Number(m.score2)
-      ){
-        gagnants.push(
-          m.player1_id
-        );
+      if(Number(m.score1) > Number(m.score2)){
+        gagnants.push(m.player1_id);
       }else{
-        gagnants.push(
-          m.player2_id
-        );
+        gagnants.push(m.player2_id);
       }
-
     }
 
     await run(
@@ -1951,21 +1858,12 @@ app.post("/tirage-automatique-poule-pro", async (req,res)=>{
       WHERE tournament_id=?
       AND round=?
       `,
-      [
-        tournament_id,
-        tourActuel
-      ]
+      [tournament_id,tourActuel]
     );
 
-    for(
-      let i=0;
-      i<gagnants.length;
-      i+=2
-    ){
+    for(let i=0;i<gagnants.length;i+=2){
 
-      if(!gagnants[i+1]){
-        continue;
-      }
+      if(!gagnants[i+1]) continue;
 
       await run(
         `
@@ -1986,21 +1884,16 @@ app.post("/tirage-automatique-poule-pro", async (req,res)=>{
           gagnants[i+1]
         ]
       );
-
     }
 
     return res.send(
-      prochain[tourActuel] +
-      " généré automatiquement"
+      prochain[tourActuel] + " généré automatiquement"
     );
 
   }catch(e){
 
     console.log(e);
-
-    res.send(
-      "Erreur tirage automatique poule pro"
-    );
+    res.send("Erreur tirage automatique poule pro");
 
   }
 
@@ -2026,9 +1919,10 @@ app.get("/tirage/:id",(req,res)=>{
         WHEN '64ES' THEN 2
         WHEN '32ES' THEN 3
         WHEN '16ES' THEN 4
-        WHEN 'QUART' THEN 5
-        WHEN 'DEMI' THEN 6
-        WHEN 'FINALE' THEN 7
+        WHEN '8ES' THEN 5
+        WHEN 'QUARTS' THEN 6
+        WHEN 'DEMIS' THEN 7
+        WHEN 'FINALE' THEN 8
         ELSE 99
       END,
       m.group_name,
@@ -2124,16 +2018,17 @@ app.get("/public-tournoi/:id", async (req,res)=>{
       ON p2.id=m.player2_id
       WHERE m.tournament_id=?
       ORDER BY
-        CASE m.round
-          WHEN 'POULE' THEN 1
-          WHEN '64ES' THEN 2
-          WHEN '32ES' THEN 3
-          WHEN '16ES' THEN 4
-          WHEN 'QUART' THEN 5
-          WHEN 'DEMI' THEN 6
-          WHEN 'FINALE' THEN 7
-          ELSE 99
-        END,
+       CASE m.round
+        WHEN 'POULE' THEN 1
+        WHEN '64ES' THEN 2
+        WHEN '32ES' THEN 3
+        WHEN '16ES' THEN 4
+        WHEN '8ES' THEN 5
+        WHEN 'QUARTS' THEN 6
+        WHEN 'DEMIS' THEN 7
+        WHEN 'FINALE' THEN 8
+        ELSE 99
+      END,
         m.group_name,
         m.match_order
       `,
@@ -2345,9 +2240,27 @@ button{
 
       html += `
 <div class="match">
-<b>${escapeHtml(m.player1_name || "Équipe 1")}</b>
+<b>
+  <a
+  href="/player/${m.player1_id}"
+  target="_blank"
+  style="color:#60a5fa;text-decoration:none;">
+    ${escapeHtml(m.player1_name || "Équipe 1")}
+  </a>
+</b>
+
 VS
-<b>${escapeHtml(m.player2_name || "Équipe 2")}</b>
+
+<b>
+  <a
+  href="/player/${m.player2_id}"
+  target="_blank"
+  style="color:#60a5fa;text-decoration:none;">
+    ${escapeHtml(m.player2_name || "Équipe 2")}
+  </a>
+</b>
+
+
 <br>
 ${
   m.played
@@ -2427,7 +2340,6 @@ app.post("/upload-image",(req,res)=>{
   });
 
 });
-
 app.get("/player/:id", async (req,res)=>{
 
   try{
@@ -2471,31 +2383,267 @@ app.get("/player/:id", async (req,res)=>{
 <html lang="fr">
 <head>
 <meta charset="UTF-8">
-<title>${escapeHtml(joueur.prenom)} - SNUGAME</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>${escapeHtml(joueur.prenom)} - Carte joueur SNUGAME</title>
+
+<style>
+*{
+  box-sizing:border-box;
+}
+
+body{
+  margin:0;
+  min-height:100vh;
+  font-family:Arial,sans-serif;
+  background:
+    radial-gradient(circle at top left,#1455ff55,transparent 35%),
+    radial-gradient(circle at top right,#7c2cff55,transparent 35%),
+    linear-gradient(180deg,#050816,#07111f);
+  color:white;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:20px;
+}
+
+.player-card{
+  width:100%;
+  max-width:420px;
+  background:
+    linear-gradient(160deg,#1e3a8a,#111827 45%,#020617);
+  border:2px solid #60a5fa;
+  border-radius:28px;
+  padding:22px;
+  box-shadow:
+    0 0 35px #1455ff88,
+    inset 0 0 25px #ffffff12;
+  position:relative;
+  overflow:hidden;
+}
+
+.player-card::before{
+  content:"";
+  position:absolute;
+  inset:-40%;
+  background:linear-gradient(120deg,transparent,#ffffff22,transparent);
+  transform:rotate(25deg);
+}
+
+.card-content{
+  position:relative;
+  z-index:2;
+}
+
+.logo{
+  text-align:center;
+  font-weight:900;
+  letter-spacing:3px;
+  color:#93c5fd;
+  margin-bottom:12px;
+}
+
+.player-name{
+  text-align:center;
+  font-size:34px;
+  font-weight:900;
+  margin:10px 0;
+  text-transform:uppercase;
+}
+
+.level{
+  text-align:center;
+  font-size:18px;
+  color:#fde047;
+  margin-bottom:18px;
+}
+
+.avatar{
+  width:120px;
+  height:120px;
+  margin:15px auto;
+  border-radius:50%;
+  background:
+    linear-gradient(135deg,#1455ff,#7c2cff);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:48px;
+  font-weight:900;
+  box-shadow:0 0 30px #60a5fa88;
+  border:3px solid #bfdbfe;
+}
+
+.club{
+  text-align:center;
+  color:#cbd5e1;
+  margin-bottom:18px;
+}
+
+.stats{
+  display:grid;
+  grid-template-columns:repeat(2,1fr);
+  gap:10px;
+  margin:18px 0;
+}
+
+.stat{
+  background:#020617cc;
+  border:1px solid #334155;
+  border-radius:16px;
+  padding:12px;
+  text-align:center;
+}
+
+.stat b{
+  display:block;
+  color:#93c5fd;
+  font-size:20px;
+}
+
+.badges{
+  background:#020617aa;
+  border:1px solid #334155;
+  border-radius:16px;
+  padding:14px;
+  margin-top:15px;
+}
+
+.badge{
+  display:inline-block;
+  background:#f59e0b;
+  color:#111827;
+  padding:8px 10px;
+  border-radius:999px;
+  margin:5px;
+  font-weight:900;
+}
+
+button{
+  width:100%;
+  margin-top:14px;
+  padding:13px;
+  border:none;
+  border-radius:16px;
+  background:linear-gradient(135deg,#22c55e,#86efac);
+  color:#052e16;
+  font-weight:900;
+  cursor:pointer;
+}
+
+.small{
+  color:#cbd5e1;
+  font-size:13px;
+  text-align:center;
+}
+</style>
 </head>
-<body style="background:#07111f;color:white;font-family:Arial;padding:20px;">
 
-<h1>${escapeHtml(joueur.prenom)}</h1>
+<body>
 
-<p>⭐ Niveau ${joueur.niveau || 1}</p>
-<p>XP : ${joueur.xp || 0}</p>
-<p>Matchs : ${joueur.matchs || 0}</p>
-<p>Victoires : ${joueur.victoires || 0}</p>
-<p>Défaites : ${joueur.defaites || 0}</p>
-<p>Points : ${joueur.points || 0}</p>
+<button
+onclick="history.back()"
+style="
+position:fixed;
+top:15px;
+left:15px;
+z-index:1000;
+padding:12px 18px;
+border:none;
+border-radius:14px;
+background:linear-gradient(135deg,#2563eb,#06b6d4);
+color:white;
+font-weight:900;
+cursor:pointer;
+box-shadow:0 0 20px #1455ff88;
+">
 
-<h2>🏆 Badges</h2>
+ Retour
 
+</button>
+
+<div class="player-card">
+
+<div class="card-content">
+
+<div class="logo">
+SNUGAME CARD
+</div>
+
+<div class="avatar">
+${escapeHtml((joueur.prenom || "?").charAt(0).toUpperCase())}
+</div>
+
+<div class="player-name">
+${escapeHtml(joueur.prenom)}
+</div>
+
+<div class="level">
+★ Niveau ${joueur.niveau || 1}
+</div>
+
+<div class="club">
+${escapeHtml(joueur.club_logo || "Club non renseigné")}
+</div>
+
+<div class="stats">
+
+<div class="stat">
+<b>${joueur.xp || 0}</b>
+XP
+</div>
+
+<div class="stat">
+<b>${joueur.matchs || 0}</b>
+Matchs
+</div>
+
+<div class="stat">
+<b>${joueur.victoires || 0}</b>
+Victoires
+</div>
+
+<div class="stat">
+<b>${joueur.defaites || 0}</b>
+Défaites
+</div>
+
+<div class="stat">
+<b>${joueur.points || 0}</b>
+Points
+</div>
+
+<div class="stat">
+<b>${joueur.nuls || 0}</b>
+Nuls
+</div>
+
+</div>
+
+<div class="badges">
+<h3>Insignes</h3>
 ${
   badges.length
-  ? badges.map(b=>`<p>${escapeHtml(b.badge)}</p>`).join("")
-  : "<p>Aucun badge</p>"
+  ? badges.map(b=>`
+      <span class="badge">
+        ${escapeHtml(b.badge)}
+      </span>
+    `).join("")
+  : "<p class='small'>Aucun badge</p>"
 }
+</div>
 
 <form method="POST" action="/follow-player">
   <input type="hidden" name="participant_id" value="${joueur.id}">
   <button>Suivre ce joueur 🔥</button>
 </form>
+
+<p class="small">
+Profil joueur SNUGAME eFootball Mobile
+</p>
+
+</div>
+
+</div>
 
 </body>
 </html>
