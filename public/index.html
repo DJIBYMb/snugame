@@ -283,6 +283,61 @@ h2,h3{
   }
 }
 
+.bracket-pro{
+  display:flex;
+  gap:18px;
+  overflow-x:auto;
+  padding:15px 0;
+}
+
+.bracket-round{
+  min-width:240px;
+  background:#020617aa;
+  border:1px solid #334155;
+  border-radius:18px;
+  padding:12px;
+}
+
+.bracket-round h3{
+  text-align:center;
+  color:#93c5fd;
+}
+
+.bracket-match{
+  background:linear-gradient(180deg,#0f172a,#020617);
+  border:1px solid #334155;
+  border-radius:16px;
+  padding:12px;
+  margin:12px 0;
+  box-shadow:0 0 14px #1455ff44;
+}
+
+.bracket-player{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:8px;
+  padding:8px;
+  margin:6px 0;
+  background:#111827;
+  border-radius:12px;
+  cursor:pointer;
+}
+
+.bracket-player:hover{
+  background:#1e3a8a;
+}
+
+.bracket-score{
+  font-weight:900;
+  color:#fde047;
+}
+
+.bracket-winner{
+  border:1px solid #22c55e;
+  box-shadow:0 0 12px #22c55e66;
+}
+
 @media(max-width:600px){
   header h1{
     font-size:26px;
@@ -918,6 +973,8 @@ onclick="voirChampion()">
 Voir champion
 
 </button>
+
+<div id="bracketProResult"></div>
 
 <div id="phaseFinaleResult"></div>
 
@@ -1837,6 +1894,118 @@ async function afficherClassements(){
   `).join("");
 }
 
+async function afficherBracketPro(){
+
+  const data = await get(
+    "/tirage/" + tournoiSelect.value
+  );
+
+  if(!data) return;
+
+  const rounds = [
+    "64ES",
+    "32ES",
+    "16ES",
+    "8ES",
+    "QUARTS",
+    "DEMIS",
+    "FINALE"
+  ];
+
+  let html = `
+    <div class="bracket-pro">
+  `;
+
+  for(const round of rounds){
+
+    const bloc =
+      data.find(
+        x => x.tour === round
+      );
+
+    if(!bloc) continue;
+
+    html += `
+      <div class="bracket-round">
+        <h3>${round}</h3>
+    `;
+
+    for(const m of bloc.matchs){
+
+      const p1Winner =
+        Number(m.score1) >
+        Number(m.score2);
+
+      const p2Winner =
+        Number(m.score2) >
+        Number(m.score1);
+
+      html += `
+        <div class="bracket-match">
+
+          <div
+          class="
+            bracket-player
+            ${p1Winner ? "bracket-winner" : ""}
+          "
+          onclick="
+            window.open(
+              '/player/${m.player1_id}',
+              '_blank'
+            )
+          ">
+
+            <span>
+              ${m.player1_name || "Équipe 1"}
+            </span>
+
+            <span class="bracket-score">
+              ${m.score1 ?? "-"}
+            </span>
+
+          </div>
+
+          <div
+          class="
+            bracket-player
+            ${p2Winner ? "bracket-winner" : ""}
+          "
+          onclick="
+            window.open(
+              '/player/${m.player2_id}',
+              '_blank'
+            )
+          ">
+
+            <span>
+              ${m.player2_name || "Équipe 2"}
+            </span>
+
+            <span class="bracket-score">
+              ${m.score2 ?? "-"}
+            </span>
+
+          </div>
+
+        </div>
+      `;
+
+    }
+
+    html += `
+      </div>
+    `;
+
+  }
+
+  html += `
+    </div>
+  `;
+
+  bracketProResult.innerHTML = html;
+
+}
+
 async function afficherPhaseFinale(){
 
   if(!tournoiSelect.value) return;
@@ -1863,6 +2032,21 @@ async function afficherPhaseFinale(){
       `).join("")}
     </div>
   `;
+
+     phaseFinaleResult.innerHTML = `
+    <div class="bracket">
+      ${finale.map(bloc=>`
+        <div class="card">
+          <h3>${bloc.tour}</h3>
+          ${bloc.matchs.map(matchCard).join("")}
+        </div>
+      `).join("")}
+    </div>
+  `;
+
+  await afficherBracketPro();
+
+}
 
 }
 
@@ -2123,7 +2307,7 @@ async function customAutoDraw(){
   await afficherTiragePoulePro();
   await afficherClassements();
   await afficherPhaseFinale();
-
+  await afficherBracketPro();
 }
 
 function ouvrirMotDePasseOublie(){
