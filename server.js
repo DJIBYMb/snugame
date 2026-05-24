@@ -3351,21 +3351,30 @@ async function joinTournament(){
 
   msg.textContent = "Inscription en cours...";
 
+  const nomInput =
+    document.getElementById("name");
+
+  const emailInput =
+    document.getElementById("email");
+
+  const passwordInput =
+    document.getElementById("password");
+
+  const codeInput =
+    document.getElementById("joinCode");
+
   const result =
     await post("/join-tournament",{
 
       join_code:"${escapeHtml(req.params.code)}",
 
-      name:name.value.trim(),
+      name:nomInput.value.trim(),
 
-      email:email.value.trim(),
+      email:emailInput.value.trim(),
 
-      password:password.value,
+      password:passwordInput.value,
 
-      code:document
-  .getElementById("joinCode")
-  .value
-  .trim()
+      code:codeInput.value.trim()
 
     });
 
