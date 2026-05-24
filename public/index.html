@@ -650,6 +650,10 @@ type="number"
 value="48"
 placeholder="Nombre équipes">
 
+<input
+id="tournoiGroupLink"
+placeholder="Lien groupe WhatsApp / Telegram / Discord">
+
 <button onclick="creerTournoi()">
 
 Créer tournoi
@@ -1174,9 +1178,10 @@ async function creerTournoi(){
   }
 
   await post("/tournoi",{
-    name:tournoiNom.value,
-    max_teams:maxTeams
-  });
+  name:tournoiNom.value,
+  max_teams:maxTeams,
+  group_link:tournoiGroupLink.value
+});
 
   tournoiNom.value = "";
 
@@ -1217,7 +1222,26 @@ async function chargerTournois(){
       <b>${t.name}</b><br>
       ID : ${t.id}<br>
       Équipes : ${t.max_teams || 48}<br>
-      Statut : ${t.status}
+      Statut : ${t.status}<br>
+
+Lien inscription :
+<input
+readonly
+value="${location.origin + '/join/' + t.join_code}">
+
+${
+  t.group_link
+  ? `
+    <br>
+    Groupe :
+    <button
+    class="secondary"
+    onclick="window.open('${t.group_link}','_blank')">
+    Rejoindre groupe
+    </button>
+  `
+  : ""
+}
     </div>
   `).join("");
 

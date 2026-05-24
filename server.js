@@ -407,6 +407,20 @@ db.serialize(()=>{
   `,()=>{});
 
 });
+db.run(`
+  ALTER TABLE users
+  ADD COLUMN abonnement_expire_at TEXT
+`,()=>{});
+db.run(`
+  ALTER TABLE tournaments
+  ADD COLUMN join_code TEXT
+`,()=>{});
+
+db.run(`
+  ALTER TABLE tournaments
+  ADD COLUMN group_link TEXT
+`,()=>{});
+
 app.get("/", async (req,res)=>{
 
   try{
@@ -801,6 +815,14 @@ app.post("/abonnement", async (req,res)=>{
   res.send("Abonnement activé");
 
 });
+function generateJoinCode(){
+
+  return Math.random()
+    .toString(36)
+    .substring(2,10)
+    .toUpperCase();
+
+}
 
 app.post("/tournoi", async (req,res)=>{
 
@@ -823,7 +845,11 @@ app.post("/tournoi", async (req,res)=>{
       return res.send("Utilisateur introuvable");
     }
 
-    const { name,max_teams } = req.body;
+  const {
+    name,
+    max_teams,
+    group_link
+  } = req.body;
 
     if(!name){
       return res.send("Nom tournoi obligatoire");
@@ -867,19 +893,34 @@ app.post("/tournoi", async (req,res)=>{
     await run(
       `
       INSERT INTO tournaments(
-        user_id,
-        name,
-        max_teams,
-        status
-      )
-      VALUES(?,?,?,?)
+  user_id,
+  name,
+  max_teams,
+  status,
+  join_code,
+  group_link
+)
+VALUES(?,?,?,?,?,?)
+        
+        
+        
+        
+      
+      
       `,
-      [
-        req.session.userId,
-        name,
-        maxTeams,
-        "draft"
-      ]
+  [
+   req.session.userId,
+   name,
+   maxTeams,
+   "draft",
+   generateJoinCode(),
+    group_link || ""
+ ]
+        
+        
+        
+        
+      
     );
 
     res.send("Tournoi créé");
@@ -3161,6 +3202,372 @@ app.post("/send-reset-code", async (req,res)=>{
     console.log(e);
 
     res.send("Erreur reset code");
+
+  }
+
+});
+app.get("/join/:code", async (req,res)=>{
+
+  try{
+
+    const tournoi = await get(
+      `
+      SELECT *
+      FROM tournaments
+      WHERE join_code=?
+      `,
+      [req.params.code]
+    );
+
+    if(!tournoi){
+      return res.send(
+        "Lien inscription invalide"
+      );
+    }
+
+    const count = await get(
+      `
+      SELECT COUNT(*) AS total
+      FROM participants
+      WHERE tournament_id=?
+      `,
+      [tournoi.id]
+    );
+
+    if(
+      tournoi.status !== "draft"
+    ){
+      return res.send(
+        "Les inscriptions sont fermées. Le tirage a commencé."
+      );
+    }
+
+    if(
+      count.total >= tournoi.max_teams
+    ){
+      return res.send(
+        "Tournoi complet. Inscriptions fermées."
+      );
+    }
+
+    res.send(`
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Rejoindre tournoi</title>
+</head>
+
+<body style="
+background:#07111f;
+color:white;
+font-family:Arial;
+padding:20px;
+">
+
+<h1>🏆 ${escapeHtml(tournoi.name)}</h1>
+
+<p>
+Crée ton compte SNUGAME pour participer automatiquement.
+</p>
+
+${
+  tournoi.group_link
+  ? `
+    <button
+    onclick="window.open('${tournoi.group_link}','_blank')"
+    style="
+      padding:12px;
+      border:none;
+      border-radius:10px;
+      background:#22c55e;
+      font-weight:bold;
+      margin-bottom:15px;
+    ">
+    Rejoindre groupe tournoi
+    </button>
+  `
+  : ""
+}
+
+<input
+id="name"
+placeholder="Nom"
+style="padding:12px;width:100%;margin:8px 0;">
+
+<input
+id="email"
+placeholder="Email"
+style="padding:12px;width:100%;margin:8px 0;">
+
+<input
+id="password"
+type="password"
+placeholder="Mot de passe"
+style="padding:12px;width:100%;margin:8px 0;">
+
+<button
+onclick="sendCode()"
+style="
+padding:12px;
+width:100%;
+margin:8px 0;
+">
+
+Envoyer code email
+
+</button>
+
+<input
+id="code"
+placeholder="Code reçu"
+style="padding:12px;width:100%;margin:8px 0;">
+
+<button
+onclick="joinTournament()"
+style="
+padding:12px;
+width:100%;
+margin:8px 0;
+background:#22c55e;
+font-weight:bold;
+">
+
+Créer compte et participer
+
+</button>
+
+<p id="msg"></p>
+
+<script>
+
+async function post(url,data){
+
+  const r = await fetch(url,{
+    method:"POST",
+    headers:{
+      "Content-Type":"application/json"
+    },
+    body:JSON.stringify(data)
+  });
+
+  return r.text();
+
+}
+
+async function sendCode(){
+
+  msg.textContent =
+    await post("/send-code",{
+      email:email.value
+    });
+
+}
+
+async function joinTournament(){
+
+  msg.textContent =
+    await post("/join-tournament",{
+
+      join_code:"${escapeHtml(req.params.code)}",
+
+      name:name.value,
+
+      email:email.value,
+
+      password:password.value,
+
+      code:code.value
+
+    });
+
+}
+
+</script>
+
+</body>
+</html>
+    `);
+
+  }catch(e){
+
+    console.log(e);
+
+    res.send(
+      "Erreur page inscription tournoi"
+    );
+
+  }
+
+});
+app.post("/join-tournament", async (req,res)=>{
+
+  try{
+
+    const {
+      join_code,
+      name,
+      email,
+      password,
+      code
+    } = req.body;
+
+    if(!join_code || !name || !email || !password || !code){
+      return res.send("Tous les champs sont obligatoires");
+    }
+
+    const tournoi = await get(
+      `
+      SELECT *
+      FROM tournaments
+      WHERE join_code=?
+      `,
+      [join_code]
+    );
+
+    if(!tournoi){
+      return res.send("Tournoi introuvable");
+    }
+
+    if(tournoi.status !== "draft"){
+      return res.send("Les inscriptions sont fermées. Le tirage a commencé.");
+    }
+
+    const count = await get(
+      `
+      SELECT COUNT(*) AS total
+      FROM participants
+      WHERE tournament_id=?
+      `,
+      [tournoi.id]
+    );
+
+    if(count.total >= tournoi.max_teams){
+      return res.send("Tournoi complet. Le lien est fermé.");
+    }
+
+    const cleanEmail =
+      email.trim().toLowerCase();
+
+    const verification = await get(
+      `
+      SELECT *
+      FROM email_codes
+      WHERE email=?
+      AND code=?
+      ORDER BY id DESC
+      `,
+      [
+        cleanEmail,
+        code.trim()
+      ]
+    );
+
+    if(!verification){
+      return res.send("Code invalide");
+    }
+
+    let user = await get(
+      `
+      SELECT *
+      FROM users
+      WHERE email=?
+      `,
+      [cleanEmail]
+    );
+
+    if(!user){
+
+      const hash =
+        await bcrypt.hash(password,10);
+
+      const created = await run(
+        `
+        INSERT INTO users(
+          name,
+          email,
+          password
+        )
+        VALUES(?,?,?)
+        `,
+        [
+          name.trim(),
+          cleanEmail,
+          hash
+        ]
+      );
+
+      user = {
+        id:created.lastID,
+        name:name.trim(),
+        email:cleanEmail
+      };
+
+    }
+
+    const already = await get(
+      `
+      SELECT *
+      FROM participants
+      WHERE tournament_id=?
+      AND email=?
+      `,
+      [
+        tournoi.id,
+        cleanEmail
+      ]
+    );
+
+    if(already){
+      return res.send("Tu es déjà inscrit à ce tournoi");
+    }
+
+    const result = await run(
+      `
+      INSERT INTO participants(
+        tournament_id,
+        prenom,
+        email,
+        username,
+        telephone,
+        numero_serie,
+        club_logo,
+        preuve
+      )
+      VALUES(?,?,?,?,?,?,?,?)
+      `,
+      [
+        tournoi.id,
+        name.trim(),
+        cleanEmail,
+        name.trim(),
+        "",
+        "",
+        "",
+        "Inscription lien tournoi"
+      ]
+    );
+
+    await run(
+      `
+      INSERT OR IGNORE INTO player_stats(
+        participant_id
+      )
+      VALUES(?)
+      `,
+      [result.lastID]
+    );
+
+    req.session.userId = user.id;
+
+    res.send(
+      "Inscription réussie. Tu es ajouté automatiquement aux participants. Attends que l'organisateur lance le tirage."
+    );
+
+  }catch(e){
+
+    console.log(e);
+    res.send("Erreur inscription automatique tournoi");
 
   }
 
