@@ -3222,9 +3222,7 @@ app.get("/join/:code", async (req,res)=>{
     );
 
     if(!tournoi){
-      return res.send(
-        "Lien inscription invalide"
-      );
+      return res.send("Lien inscription invalide");
     }
 
     const count = await get(
@@ -3236,20 +3234,12 @@ app.get("/join/:code", async (req,res)=>{
       [tournoi.id]
     );
 
-    if(
-      tournoi.status !== "draft"
-    ){
-      return res.send(
-        "Les inscriptions sont fermées. Le tirage a commencé."
-      );
+    if(tournoi.status !== "draft"){
+      return res.send("Les inscriptions sont fermées. Le tirage a commencé.");
     }
 
-    if(
-      count.total >= tournoi.max_teams
-    ){
-      return res.send(
-        "Tournoi complet. Inscriptions fermées."
-      );
+    if(count.total >= tournoi.max_teams){
+      return res.send("Tournoi complet. Inscriptions fermées.");
     }
 
     res.send(`
@@ -3260,148 +3250,65 @@ app.get("/join/:code", async (req,res)=>{
 <title>Rejoindre tournoi</title>
 </head>
 
-<body style="
-background:#07111f;
-color:white;
-font-family:Arial;
-padding:20px;
-">
+<body style="background:#07111f;color:white;font-family:Arial;padding:20px;">
 
 <h1>🏆 ${escapeHtml(tournoi.name)}</h1>
 
-<p>
-Crée ton compte SNUGAME pour participer automatiquement.
-</p>
+<p>Crée ton compte SNUGAME pour participer automatiquement.</p>
 
-<input
-id="name"
-placeholder="Nom"
-style="padding:12px;width:100%;margin:8px 0;">
+<input id="joinName" placeholder="Nom joueur" style="padding:12px;width:100%;margin:8px 0;">
 
-<input
-id="email"
-placeholder="Email"
-style="padding:12px;width:100%;margin:8px 0;">
+<input id="joinEmail" placeholder="Email" style="padding:12px;width:100%;margin:8px 0;">
 
-<input
-id="password"
-type="password"
-placeholder="Mot de passe"
-style="padding:12px;width:100%;margin:8px 0;">
+<input id="joinPassword" type="password" placeholder="Mot de passe" style="padding:12px;width:100%;margin:8px 0;">
 
-<button
-onclick="sendCode()"
-style="
-padding:12px;
-width:100%;
-margin:8px 0;
-">
-
+<button onclick="sendCode()" style="padding:12px;width:100%;margin:8px 0;">
 Envoyer code email
-
 </button>
 
-<input
-id="code"
-placeholder="Code reçu"
-style="padding:12px;width:100%;margin:8px 0;">
+<input id="joinCode" placeholder="Code reçu" style="padding:12px;width:100%;margin:8px 0;">
 
-<button
-onclick="joinTournament()"
-style="
-padding:12px;
-width:100%;
-margin:8px 0;
-background:#22c55e;
-font-weight:bold;
-">
-
+<button onclick="joinTournament()" style="padding:12px;width:100%;margin:8px 0;background:#22c55e;font-weight:bold;">
 Créer compte et participer
-
 </button>
 
 <p id="msg"></p>
 
 <script>
-
 async function post(url,data){
-
   try{
-
     const r = await fetch(url,{
       method:"POST",
-      headers:{
-        "Content-Type":"application/json"
-      },
+      headers:{"Content-Type":"application/json"},
       body:JSON.stringify(data)
     });
-
-    const text = await r.text();
-
-    return text;
-
+    return await r.text();
   }catch(e){
-
     return "Erreur navigateur : " + e.message;
-
   }
-
 }
+
 async function sendCode(){
-
-  msg.textContent =
-    await post("/send-code",{
-      email:email.value
-    });
-
+  msg.textContent = await post("/send-code",{
+    email:document.getElementById("joinEmail").value.trim()
+  });
 }
 
 async function joinTournament(){
 
-  try{
+  msg.textContent = "Inscription en cours...";
 
-    msg.textContent = "Inscription en cours...";
+  const payload = {
+    join_code:"${escapeHtml(req.params.code)}",
+    name:document.getElementById("joinName").value.trim(),
+    email:document.getElementById("joinEmail").value.trim(),
+    password:document.getElementById("joinPassword").value,
+    code:document.getElementById("joinCode").value.trim()
+  };
 
-    const nomInput = document.getElementById("name");
-    const emailInput = document.getElementById("email");
-    const passwordInput = document.getElementById("password");
-    const codeInput = document.getElementById("joinCode");
+  const result = await post("/join-tournament",payload);
 
-    if(!nomInput || !emailInput || !passwordInput || !codeInput){
-      msg.textContent = "Erreur HTML : champ introuvable";
-      return;
-    }
-
-    const payload = {
-      join_code:"${escapeHtml(req.params.code)}",
-      name:nomInput.value.trim(),
-      email:emailInput.value.trim(),
-      password:passwordInput.value,
-      code:codeInput.value.trim()
-    };
-
-    msg.textContent =
-      "Envoi au serveur... " +
-      JSON.stringify({
-        join_code:payload.join_code,
-        name:payload.name,
-        email:payload.email,
-        password:payload.password ? "OK" : "",
-        code:payload.code
-      });
-
-    const result =
-      await post("/join-tournament",payload);
-
-    msg.innerHTML = result;
-
-  }catch(e){
-
-    msg.textContent =
-      "Erreur JavaScript : " + e.message;
-
-  }
-
+  msg.innerHTML = result;
 }
 </script>
 
@@ -3412,10 +3319,7 @@ async function joinTournament(){
   }catch(e){
 
     console.log(e);
-
-    res.send(
-      "Erreur page inscription tournoi"
-    );
+    res.send("Erreur page inscription tournoi : " + e.message);
 
   }
 
