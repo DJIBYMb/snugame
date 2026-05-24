@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -384,8 +383,6 @@ Mot de passe oublié
 
 </div>
 
-
-
 <button
 class="secondary"
 onclick="showRegister()">
@@ -415,11 +412,8 @@ Envoyer code
 </button>
 
 <input
-id="joinCode"
-placeholder="Code reçu"
-style="padding:12px;width:100%;margin:8px 0;">
-
-
+id="forgotCode"
+placeholder="Code reçu">
 
 <input
 id="newPassword"
@@ -483,7 +477,7 @@ class="hidden">
 <button
 class="secondary"
 onclick="setPage('pageDashboard')">
- Retour
+⬅ Retour
 </button>
 
 <h2>Abonnement</h2>
@@ -534,12 +528,6 @@ Envoyer preuve paiement
 Payer abonnement
 </button>
 
-<button
-class="danger"
-onclick="logout()">
-Déconnexion
-</button>
-
 </div>
 
 </section>
@@ -553,7 +541,7 @@ class="hidden">
 <button
 class="secondary"
 onclick="setPage('pageDashboard')">
- Retour
+⬅ Retour
 </button>
 
 <h2>Mon profil</h2>
@@ -1015,6 +1003,10 @@ Recharger page
 
 <script>
 
+function messageShow(text){
+  message.textContent = text;
+}
+
 async function post(url,data){
   const res = await fetch(url,{
     method:"POST",
@@ -1135,7 +1127,6 @@ async function ouvrirAbonnement(){
 
 }
 
-
 async function ouvrirProfilCompte(){
 
   const data = await get("/me");
@@ -1165,7 +1156,6 @@ async function ouvrirProfilCompte(){
   setPage("pageProfil");
 
 }
-
 async function creerTournoi(){
 
   if(!tournoiNom.value){
@@ -1181,17 +1171,16 @@ async function creerTournoi(){
   }
 
   await post("/tournoi",{
-  name:tournoiNom.value,
-  max_teams:maxTeams,
-  group_link:tournoiGroupLink.value
-});
+    name:tournoiNom.value,
+    max_teams:maxTeams,
+    group_link:tournoiGroupLink.value
+  });
 
   tournoiNom.value = "";
 
   await chargerTournois();
 
 }
-
 
 async function chargerTournois(){
 
@@ -1227,31 +1216,40 @@ async function chargerTournois(){
       Équipes : ${t.max_teams || 48}<br>
       Statut : ${t.status}<br>
 
-Lien inscription :
-<input
-readonly
-value="${location.origin + '/join/' + t.join_code}">
+      ${
+        t.join_code
+        ? `
+          Lien inscription :
+          <input
+          readonly
+          value="${location.origin + '/join/' + t.join_code}">
+        `
+        : `
+          <p class="small">
+          Lien inscription indisponible. Recrée le tournoi si besoin.
+          </p>
+        `
+      }
 
-${
-  t.group_link
-  ? `
-    <br>
-    Groupe :
-    <button
-    class="secondary"
-    onclick="window.open('${t.group_link}','_blank')">
-    Rejoindre groupe
-    </button>
-  `
-  : ""
-}
+      ${
+        t.group_link
+        ? `
+          <br>
+          Groupe :
+          <button
+          class="secondary"
+          onclick="window.open('${t.group_link}','_blank')">
+          Rejoindre groupe
+          </button>
+        `
+        : ""
+      }
     </div>
   `).join("");
 
   await loadAll();
 
 }
-
 
 async function ajouterParticipant(){
   if(!tournoiSelect.value){
@@ -1387,8 +1385,6 @@ async function tirageAutomatiquePoulePro(){
   await chargerHighlights();
 } 
 
-
-
 function mediaPreview(url){
 
   if(!url) return "";
@@ -1470,7 +1466,6 @@ async function afficherTiragePoulePro(){
 
 }
 
-
 async function validerScore(matchId, uid){
 
   let photo = "";
@@ -1534,13 +1529,10 @@ const s2Value =
   ? s2Input.value.trim()
   : "";
 
-
-
   const result = await post("/update-match-proof",{
     match_id:matchId,
     score1:s1Value,
     score2:s2Value,
-    
     photo_url:photo
   });
 
@@ -1553,6 +1545,7 @@ const s2Value =
   },1000);
 
 }
+
 async function validerScoreDirect(matchId, btn){
 
   const box = btn.closest(".match");
@@ -1701,7 +1694,6 @@ async function afficherPhaseFinale(){
 
 }
 
-
 async function voirChampion(){
 
   if(!tournoiSelect.value) return;
@@ -1722,7 +1714,6 @@ async function voirChampion(){
   `;
 
 }
-
 
 function creerLienPublic(){
   if(!tournoiSelect.value){
@@ -1837,12 +1828,6 @@ async function chargerHighlights(){
         Voir média 👀
 
        </button>
-        
-        
-
-        
-
-        
 
         <p>
           ❤️ ${h.likes}
@@ -1968,11 +1953,13 @@ async function customAutoDraw(){
   await afficherPhaseFinale();
 
 }
+
 function ouvrirMotDePasseOublie(){
 
   forgotBox.classList.toggle("hidden");
 
 }
+
 async function envoyerCodeReset(){
 
   const result = await post(
@@ -1985,6 +1972,7 @@ async function envoyerCodeReset(){
   messageShow(result);
 
 }
+
 async function resetPassword(){
 
   const result = await post(
