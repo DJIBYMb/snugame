@@ -1670,22 +1670,74 @@ async function validerScoreDirect(matchId, btn){
 
   const box = btn.closest(".match");
 
-  const inputs = box.querySelectorAll("input[type='number']");
+  const inputs =
+    box.querySelectorAll("input[type='number']");
 
   const score1 = inputs[0].value;
   const score2 = inputs[1].value;
 
   if(score1 === "" || score2 === ""){
-    message.textContent = "Remplis les deux scores";
+    message.textContent =
+      "Remplis les deux scores";
     return;
   }
 
-  const result = await post("/update-match-proof",{
-    match_id:matchId,
-    score1:score1,
-    score2:score2,
-    photo_url:""
-  });
+  let photoUrl = "";
+
+  const fileInput =
+    box.querySelector("input[type='file']");
+
+  if(
+    fileInput &&
+    fileInput.files &&
+    fileInput.files.length > 0
+  ){
+
+    message.textContent =
+      "Upload preuve en cours...";
+
+    const formData = new FormData();
+
+    formData.append(
+      "image",
+      fileInput.files[0]
+    );
+
+    const uploadRes =
+      await fetch(
+        "/upload-image",
+        {
+          method:"POST",
+          body:formData
+        }
+      );
+
+    const uploadData =
+      await uploadRes.json();
+
+    if(
+      !uploadData.ok ||
+      !uploadData.url
+    ){
+      message.textContent =
+        uploadData.message ||
+        "Erreur upload preuve";
+      return;
+    }
+
+    photoUrl = uploadData.url;
+
+  }
+
+  const result = await post(
+    "/update-match-proof",
+    {
+      match_id:matchId,
+      score1:score1,
+      score2:score2,
+      photo_url:photoUrl
+    }
+  );
 
   message.textContent = result;
 
