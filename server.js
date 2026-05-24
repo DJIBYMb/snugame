@@ -3326,18 +3326,27 @@ Créer compte et participer
 
 async function post(url,data){
 
-  const r = await fetch(url,{
-    method:"POST",
-    headers:{
-      "Content-Type":"application/json"
-    },
-    body:JSON.stringify(data)
-  });
+  try{
 
-  return r.text();
+    const r = await fetch(url,{
+      method:"POST",
+      headers:{
+        "Content-Type":"application/json"
+      },
+      body:JSON.stringify(data)
+    });
+
+    const text = await r.text();
+
+    return text;
+
+  }catch(e){
+
+    return "Erreur navigateur : " + e.message;
+
+  }
 
 }
-
 async function sendCode(){
 
   msg.textContent =
@@ -3349,39 +3358,51 @@ async function sendCode(){
 
 async function joinTournament(){
 
-  msg.textContent = "Inscription en cours...";
+  try{
 
-  const nomInput =
-    document.getElementById("name");
+    msg.textContent = "Inscription en cours...";
 
-  const emailInput =
-    document.getElementById("email");
+    const nomInput = document.getElementById("name");
+    const emailInput = document.getElementById("email");
+    const passwordInput = document.getElementById("password");
+    const codeInput = document.getElementById("joinCode");
 
-  const passwordInput =
-    document.getElementById("password");
+    if(!nomInput || !emailInput || !passwordInput || !codeInput){
+      msg.textContent = "Erreur HTML : champ introuvable";
+      return;
+    }
 
-  const codeInput =
-    document.getElementById("joinCode");
-
-  const result =
-    await post("/join-tournament",{
-
+    const payload = {
       join_code:"${escapeHtml(req.params.code)}",
-
       name:nomInput.value.trim(),
-
       email:emailInput.value.trim(),
-
       password:passwordInput.value,
-
       code:codeInput.value.trim()
+    };
 
-    });
+    msg.textContent =
+      "Envoi au serveur... " +
+      JSON.stringify({
+        join_code:payload.join_code,
+        name:payload.name,
+        email:payload.email,
+        password:payload.password ? "OK" : "",
+        code:payload.code
+      });
 
-  msg.innerHTML = result;
+    const result =
+      await post("/join-tournament",payload);
+
+    msg.innerHTML = result;
+
+  }catch(e){
+
+    msg.textContent =
+      "Erreur JavaScript : " + e.message;
+
+  }
 
 }
-
 </script>
 
 </body>
