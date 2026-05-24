@@ -338,6 +338,45 @@ h2,h3{
   box-shadow:0 0 12px #22c55e66;
 }
 
+#notifBox{
+  position:fixed;
+  top:20px;
+  right:20px;
+  z-index:9999;
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
+
+.notif{
+  background:linear-gradient(
+    135deg,
+    #1455ff,
+    #7c2cff
+  );
+  color:white;
+  padding:14px 18px;
+  border-radius:16px;
+  min-width:260px;
+  box-shadow:0 0 25px #1455ff88;
+  animation:slideNotif .3s ease;
+  font-weight:bold;
+}
+
+@keyframes slideNotif{
+
+  from{
+    opacity:0;
+    transform:translateX(40px);
+  }
+
+  to{
+    opacity:1;
+    transform:translateX(0);
+  }
+
+}
+
 @media(max-width:600px){
   header h1{
     font-size:26px;
@@ -1053,6 +1092,8 @@ Recharger page
 
 <div id="message"></div>
 
+<div id="notifBox"></div>
+
 </div>
 
 </div>
@@ -1062,6 +1103,25 @@ Recharger page
 
 function messageShow(text){
   message.textContent = text;
+
+}
+function showNotif(text){
+
+  const div =
+    document.createElement("div");
+
+  div.className = "notif";
+
+  div.textContent = text;
+
+  notifBox.appendChild(div);
+
+  setTimeout(()=>{
+
+    div.remove();
+
+  },4000);
+
 }
 
 async function post(url,data){
@@ -1797,6 +1857,8 @@ async function validerScoreDirect(matchId, btn){
   );
 
   message.textContent = result;
+
+   showNotif(result);
 
   await afficherTiragePoulePro();
   await afficherClassements();
