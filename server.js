@@ -8,8 +8,10 @@ const fs = require("fs");
 const multer = require("multer");
 const rateLimit = require("express-rate-limit");
 const nodemailer = require("nodemailer");
+const compression = require("compression");
 
 const app = express();
+app.use(compression());
 
 const DATA_DIR =
   process.env.RENDER
@@ -42,6 +44,13 @@ const ADMIN_PASSWORD =
 const db = new sqlite3.Database(
   path.join(DATA_DIR,"database.sqlite")
 );
+
+db.serialize(()=>{
+  db.run("PRAGMA journal_mode = WAL");
+  db.run("PRAGMA synchronous = NORMAL");
+  db.run("PRAGMA cache_size = 10000");
+  db.run("PRAGMA temp_store = MEMORY");
+});
 
 app.use(express.json({ limit:"20mb" }));
 app.use(express.urlencoded({ extended:true }));
@@ -380,6 +389,30 @@ db.serialize(()=>{
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )
   `);
+  db.run(`
+  CREATE INDEX IF NOT EXISTS idx_tournaments_user
+  ON tournaments(user_id)
+`);
+
+db.run(`
+  CREATE INDEX IF NOT EXISTS idx_participants_tournament
+  ON participants(tournament_id)
+`);
+
+db.run(`
+  CREATE INDEX IF NOT EXISTS idx_matches_tournament
+  ON matches(tournament_id)
+`);
+
+db.run(`
+  CREATE INDEX IF NOT EXISTS idx_matches_round
+  ON matches(round)
+`);
+
+db.run(`
+  CREATE INDEX IF NOT EXISTS idx_email_codes_email
+  ON email_codes(email)
+`);
 
   db.run(`
     CREATE TABLE IF NOT EXISTS highlight_comments(
@@ -2541,7 +2574,13 @@ button{
 <body>
 
 <button
-onclick="history.back()"
+onclick="
+  if(document.referrer){
+    history.back();
+  }else{
+    window.location.href='/app';
+  }
+"
 style="
 position:fixed;
 top:15px;
@@ -2556,9 +2595,7 @@ font-weight:900;
 cursor:pointer;
 box-shadow:0 0 20px #1455ff88;
 ">
-
- Retour
-
+⬅ Retour
 </button>
 
 <div class="player-card">
@@ -3518,16 +3555,37 @@ Créer compte et participer
 
 <script>
 async function post(url,data){
+
+  message.textContent =
+    "⏳ Chargement...";
+
   try{
-    const r = await fetch(url,{
+
+    const res = await fetch(url,{
       method:"POST",
-      headers:{"Content-Type":"application/json"},
+      headers:{
+        "Content-Type":"application/json"
+      },
       body:JSON.stringify(data)
     });
-    return await r.text();
+
+    const text =
+      await res.text();
+
+    message.textContent =
+      text;
+
+    return text;
+
   }catch(e){
-    return "Erreur navigateur : " + e.message;
+
+    message.textContent =
+      "Erreur réseau. Réessaie.";
+
+    return "";
+
   }
+
 }
 
 async function sendCode(){
