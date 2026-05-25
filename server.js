@@ -1083,13 +1083,12 @@ app.post("/participant", async (req,res)=>{
     const {
       tournament_id,
       prenom,
-      email,
       username,
       telephone,
-      numero_serie,
-      club_logo,
-      preuve
-    } = req.body;
+      club_logo
+   } = req.body;
+      
+  
 
     if(!tournament_id || !prenom){
       return res.send(
@@ -1134,7 +1133,7 @@ app.post("/participant", async (req,res)=>{
         prenom,
         username,
         telephone,
-        club_logo,
+        club_logo
       )
       VALUES(?,?,?,?,?,?,?,?)
       `,
@@ -1143,7 +1142,7 @@ app.post("/participant", async (req,res)=>{
         prenom,
         username || "",
         telephone || "",
-        club_logo || "",
+        club_logo || ""
       ]
     );
 
