@@ -1398,58 +1398,47 @@ async function ajouterParticipant(){
   await chargerParticipants();
 }
 
-async function chargerParticipants(){
-  if(!tournoiSelect.value) return;
+participants.innerHTML = data.map(p=>`
 
-  const data = await get("/participants/" + tournoiSelect.value);
-
-  if(!Array.isArray(data)) return;
-
-  const selectedOption =
-  tournoiSelect.options[
-    tournoiSelect.selectedIndex
-  ];
-
- const maxTeams =
-  selectedOption
-  ? selectedOption.dataset.max
-  : 48;
-
- participantsCount.innerHTML =
-  `<h3>${data.length}/${maxTeams} équipes</h3>`;
-
-  participantsCheckbox.innerHTML = data.map(p=>`
-    <label>
-      <input type="checkbox" class="participantCheck" value="${p.id}">
-      ${p.prenom}
-    </label><br>
-  `).join("");
-
-  participants.innerHTML = data.map(p=>`
   <div class="match">
+
     <b>ID joueur : ${p.id}</b><br>
 
-     <button
-     class="danger"
-     onclick="banUser(${p.id})">
-    🚫 Bannir
-    </button>
+    ${
+      localStorage.getItem("isAdmin") === "1"
+      ? `
+        <button
+        class="danger"
+        onclick="banUser(${p.user_id || p.id})">
+        🚫 Bannir
+        </button>
+      `
+      : ""
+    }
 
-   <b
+    <b
     style="
-   cursor:pointer;
-   color:#60a5fa;
-  "
-   onclick="window.open('/player/${p.id}','_blank')"
-  >
-  ${p.prenom}
-  </b><br>
+      cursor:pointer;
+      color:#60a5fa;
+    "
+    onclick="
+      window.open(
+        '/player/${p.id}',
+        '_blank'
+      )
+    ">
+      ${p.prenom}
+    </b><br>
+
     ${p.club_logo || ""}<br>
-    Groupe : ${p.group_name || "Aucun"}<br>
-    
+
+    Groupe :
+    ${p.group_name || "Aucun"}<br>
+
   </div>
+
 `).join("");
-}
+
 
 function cocherTous(etat){
   document.querySelectorAll(".participantCheck").forEach(c=>c.checked=etat);
@@ -1713,6 +1702,9 @@ async function afficherTiragePoulePro(){
 
   pouleProResult.innerHTML = data.map(bloc=>`
     <div class="card">
+
+
+
       <h3>${bloc.tour}</h3>
       ${bloc.matchs.map(matchCard).join("")}
     </div>
