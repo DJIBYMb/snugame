@@ -865,9 +865,9 @@ Ajouter participant
 
 <button
 class="secondary"
-onclick="chargerParticipants()">
+onclick="toggleParticipants()">
 
-Afficher participants
+Afficher / cacher participants
 
 </button>
 
@@ -2460,6 +2460,24 @@ async function banUser(userId){
   message.textContent = result;
 
   showNotif(result);
+
+}
+async function toggleParticipants(){
+
+  if(participants.innerHTML.trim() !== ""){
+
+    participants.innerHTML = "";
+    participantsCheckbox.innerHTML = "";
+    participantsCount.innerHTML = "";
+
+    message.textContent =
+      "Participants cachés";
+
+    return;
+
+  }
+
+  await chargerParticipants();
 
 }
 
