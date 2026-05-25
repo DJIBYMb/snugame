@@ -3912,6 +3912,121 @@ app.post("/admin-ban-user", async (req,res)=>{
   }
 
 });
+app.get("/admin-users", async (req,res)=>{
+
+  try{
+
+    if(!isAdmin(req)){
+      return res.send("Accès admin refusé");
+    }
+
+    const users = await all(
+      `
+      SELECT
+        id,
+        name,
+        email,
+        abonnement,
+        banned
+      FROM users
+      ORDER BY id DESC
+      `
+    );
+
+    let html = `
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Admin Utilisateurs</title>
+</head>
+<body style="background:#07111f;color:white;font-family:Arial;padding:20px;">
+
+<h1>Admin Utilisateurs SNUGAME</h1>
+
+<a href="/admin-payments?admin=${ADMIN_PASSWORD}" style="color:#60a5fa;">
+Retour paiements
+</a>
+`;
+
+    users.forEach(u=>{
+
+      html += `
+<div style="background:#0f172a;border:1px solid #334155;border-radius:15px;padding:15px;margin:12px 0;">
+  <h2>${escapeHtml(u.name || "Sans nom")}</h2>
+  <p>ID : ${u.id}</p>
+  <p>Email : ${escapeHtml(u.email || "")}</p>
+  <p>Abonnement : ${u.abonnement === 1 ? "Premium" : "Gratuit"}</p>
+  <p>Status : ${u.banned === 1 ? "🚫 Banni" : "✅ Actif"}</p>
+
+  ${
+    u.banned === 1
+    ? `
+      <form method="POST" action="/admin-unban-user?admin=${ADMIN_PASSWORD}">
+        <input type="hidden" name="user_id" value="${u.id}">
+        <button>Débannir</button>
+      </form>
+    `
+    : `
+      <form method="POST" action="/admin-ban-user?admin=${ADMIN_PASSWORD}">
+        <input type="hidden" name="user_id" value="${u.id}">
+        <button style="background:#ef4444;color:white;">Bannir</button>
+      </form>
+    `
+  }
+</div>
+`;
+
+    });
+
+    html += `
+</body>
+</html>
+`;
+
+    res.send(html);
+
+  }catch(e){
+
+    console.log(e);
+    res.send("Erreur admin utilisateurs");
+
+  }
+
+});
+app.post("/admin-unban-user", async (req,res)=>{
+
+  try{
+
+    if(!isAdmin(req)){
+      return res.send("Accès admin refusé");
+    }
+
+    const { user_id } = req.body;
+
+    if(!user_id){
+      return res.send("Utilisateur obligatoire");
+    }
+
+    await run(
+      `
+      UPDATE users
+      SET banned=0
+      WHERE id=?
+      `,
+      [user_id]
+    );
+
+    res.redirect("/admin-users?admin=" + ADMIN_PASSWORD);
+
+  }catch(e){
+
+    console.log(e);
+    res.send("Erreur débannissement");
+
+  }
+
+});
 
 app.listen(PORT, () => {
 
