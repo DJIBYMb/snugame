@@ -1404,18 +1404,6 @@ participants.innerHTML = data.map(p=>`
 
     <b>ID joueur : ${p.id}</b><br>
 
-    ${
-  localStorage.getItem("isAdmin") === "1"
-  ? `
-    <button
-    class="danger"
-    onclick="banUser(${p.id})">
-    🚫 Bannir
-    </button><br>
-  `
-  : ""
-}
-
     <b
     style="cursor:pointer;color:#60a5fa;"
     onclick="window.open('/player/${p.id}','_blank')">
@@ -1430,7 +1418,6 @@ participants.innerHTML = data.map(p=>`
   </div>
 
 `).join("");
-
 
 function cocherTous(etat){
   document.querySelectorAll(".participantCheck").forEach(c=>c.checked=etat);
