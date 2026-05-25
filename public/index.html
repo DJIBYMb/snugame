@@ -1405,28 +1405,20 @@ participants.innerHTML = data.map(p=>`
     <b>ID joueur : ${p.id}</b><br>
 
     ${
-      localStorage.getItem("isAdmin") === "1"
-      ? `
-        <button
-        class="danger"
-        onclick="banUser(${p.user_id || p.id})">
-        🚫 Bannir
-        </button>
-      `
-      : ""
-    }
+  localStorage.getItem("isAdmin") === "1"
+  ? `
+    <button
+    class="danger"
+    onclick="banUser(${p.id})">
+    🚫 Bannir
+    </button><br>
+  `
+  : ""
+}
 
     <b
-    style="
-      cursor:pointer;
-      color:#60a5fa;
-    "
-    onclick="
-      window.open(
-        '/player/${p.id}',
-        '_blank'
-      )
-    ">
+    style="cursor:pointer;color:#60a5fa;"
+    onclick="window.open('/player/${p.id}','_blank')">
       ${p.prenom}
     </b><br>
 
