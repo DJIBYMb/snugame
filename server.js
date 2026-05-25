@@ -1092,7 +1092,7 @@ app.post("/participant", async (req,res)=>{
 
     if(!tournament_id || !prenom){
       return res.send(
-        "Tournoi, prénom et email obligatoires"
+        "Tournoi, prénom et obligatoires"
       );
     }
 
