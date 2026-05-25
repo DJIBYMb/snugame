@@ -1,3 +1,5 @@
+require("dotenv").config();
+
 const express = require("express");
 const session = require("express-session");
 const SQLiteStore = require("connect-sqlite3")(session);
@@ -1089,7 +1091,7 @@ app.post("/participant", async (req,res)=>{
       preuve
     } = req.body;
 
-    if(!tournament_id || !prenom || !email){
+    if(!tournament_id || !prenom){
       return res.send(
         "Tournoi, prénom et email obligatoires"
       );
@@ -1130,24 +1132,18 @@ app.post("/participant", async (req,res)=>{
       INSERT INTO participants(
         tournament_id,
         prenom,
-        email,
         username,
         telephone,
-        numero_serie,
         club_logo,
-        preuve
       )
       VALUES(?,?,?,?,?,?,?,?)
       `,
       [
         tournament_id,
         prenom,
-        email,
         username || "",
         telephone || "",
-        numero_serie || "",
         club_logo || "",
-        preuve || ""
       ]
     );
 
