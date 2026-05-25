@@ -476,6 +476,30 @@ db.run(`
   ALTER TABLE users
   ADD COLUMN banned INTEGER DEFAULT 0
 `,()=>{});
+db.run(`
+  ALTER TABLE users
+  ADD COLUMN world_points INTEGER DEFAULT 0
+`,()=>{});
+
+db.run(`
+  ALTER TABLE users
+  ADD COLUMN world_wins INTEGER DEFAULT 0
+`,()=>{});
+
+db.run(`
+  ALTER TABLE users
+  ADD COLUMN world_losses INTEGER DEFAULT 0
+`,()=>{});
+
+db.run(`
+  ALTER TABLE users
+  ADD COLUMN world_goals INTEGER DEFAULT 0
+`,()=>{});
+
+db.run(`
+  ALTER TABLE users
+  ADD COLUMN world_titles INTEGER DEFAULT 0
+`,()=>{});
 
 app.get("/", async (req,res)=>{
 
@@ -1556,6 +1580,66 @@ app.post("/update-match-proof", async (req,res)=>{
       await ajouterXP(winner,10);
       await donnerBadge(winner,"🔥 Winner");
     }
+    if(winner){
+
+  await run(
+    `
+    UPDATE users
+    SET world_points = world_points + 3,
+        world_wins = world_wins + 1
+    WHERE email = (
+      SELECT email
+      FROM participants
+      WHERE id=?
+    )
+    `,
+    [winner]
+  );
+
+}
+
+if(loser){
+
+  await run(
+    `
+    UPDATE users
+    SET world_losses = world_losses + 1
+    WHERE email = (
+      SELECT email
+      FROM participants
+      WHERE id=?
+    )
+    `,
+    [loser]
+  );
+
+}
+
+await run(
+  `
+  UPDATE users
+  SET world_goals = world_goals + ?
+  WHERE email = (
+    SELECT email
+    FROM participants
+    WHERE id=?
+  )
+  `,
+  [s1, match.player1_id]
+);
+
+await run(
+  `
+  UPDATE users
+  SET world_goals = world_goals + ?
+  WHERE email = (
+    SELECT email
+    FROM participants
+    WHERE id=?
+  )
+  `,
+  [s2, match.player2_id]
+);
 
     res.send("Score validé");
 
@@ -1896,6 +1980,19 @@ app.post("/tirage-automatique-poule-pro", async (req,res)=>{
         Number(finale.score1) > Number(finale.score2)
         ? finale.player1_id
         : finale.player2_id;
+      await run(
+       `
+     UPDATE users
+      SET world_points = world_points + 20,
+      world_titles = world_titles + 1
+      WHERE email = (
+      SELECT email
+      FROM participants
+      WHERE id=?
+     )
+    `,
+      [champion]
+   );
 
       await run(
         `
