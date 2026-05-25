@@ -2454,6 +2454,24 @@ if("serviceWorker" in navigator){
   });
 
 }
+async function banUser(userId){
+
+  if(!confirm("Bannir cet utilisateur ?")){
+    return;
+  }
+
+  const result = await post(
+    "/admin-ban-user",
+    {
+      user_id:userId
+    }
+  );
+
+  message.textContent = result;
+
+  showNotif(result);
+
+}
 
 checkStatus();
 
