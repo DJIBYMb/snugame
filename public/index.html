@@ -1435,29 +1435,6 @@ async function chargerParticipants(){
     🚫 Bannir
     </button>
 
-    async function banUser(userId){
-
-  if(
-    !confirm(
-      "Bannir cet utilisateur ?"
-    )
-  ){
-    return;
-  }
-
-  const result = await post(
-    "/admin-ban-user",
-    {
-      user_id:userId
-    }
-  );
-
-  message.textContent = result;
-
-  showNotif(result);
-
-}
-
    <b
     style="
    cursor:pointer;
