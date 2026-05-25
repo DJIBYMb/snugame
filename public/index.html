@@ -1395,30 +1395,72 @@ async function ajouterParticipant(){
     preuve:preuve.value
   });
 
-  await chargerParticipants();
+  
 }
 
-participants.innerHTML = data.map(p=>`
+async function chargerParticipants(){
 
-  <div class="match">
+  if(!tournoiSelect.value) return;
 
-    <b>ID joueur : ${p.id}</b><br>
+  const data =
+    await get(
+      "/participants/" +
+      tournoiSelect.value
+    );
 
-    <b
-    style="cursor:pointer;color:#60a5fa;"
-    onclick="window.open('/player/${p.id}','_blank')">
-      ${p.prenom}
-    </b><br>
+  if(!Array.isArray(data)) return;
 
-    ${p.club_logo || ""}<br>
+  const selectedOption =
+    tournoiSelect.options[
+      tournoiSelect.selectedIndex
+    ];
 
-    Groupe :
-    ${p.group_name || "Aucun"}<br>
+  const maxTeams =
+    selectedOption
+    ? selectedOption.dataset.max
+    : 48;
 
-  </div>
+  participantsCount.innerHTML =
+    `<h3>${data.length}/${maxTeams} équipes</h3>`;
 
-`).join("");
+  participantsCheckbox.innerHTML =
+    data.map(p=>`
+      <label>
+        <input
+        type="checkbox"
+        class="participantCheck"
+        value="${p.id}">
+        ${p.prenom}
+      </label><br>
+    `).join("");
 
+  participants.innerHTML = data.map(p=>`
+
+    <div class="match">
+
+      <b>ID joueur : ${p.id}</b><br>
+
+      <b
+      style="cursor:pointer;color:#60a5fa;"
+      onclick="
+        window.open(
+          '/player/${p.id}',
+          '_blank'
+        )
+      ">
+        ${p.prenom}
+      </b><br>
+
+      ${p.club_logo || ""}<br>
+
+      Groupe :
+      ${p.group_name || "Aucun"}<br>
+
+    </div>
+
+  `).join("");
+
+}
 function cocherTous(etat){
   document.querySelectorAll(".participantCheck").forEach(c=>c.checked=etat);
 }
