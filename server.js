@@ -502,6 +502,22 @@ db.run(`
   ALTER TABLE users
   ADD COLUMN world_titles INTEGER DEFAULT 0
 `,()=>{});
+db.run(`
+  ALTER TABLE tournaments
+  ADD COLUMN status TEXT DEFAULT 'draft'
+`,()=>{});
+db.run(`
+  ALTER TABLE participants
+  ADD COLUMN group_name TEXT
+`,()=>{});
+db.run(`
+  ALTER TABLE matches
+  ADD COLUMN locked INTEGER DEFAULT 0
+`,()=>{});
+db.run(`
+  ALTER TABLE matches
+  ADD COLUMN journee TEXT
+`,()=>{});
 
 app.get("/", async (req,res)=>{
 
@@ -1701,6 +1717,7 @@ app.post("/annuler-score", async (req,res)=>{
 
 });
 
+
 function genererGroupesAuto(participants){
 
   const total = participants.length;
@@ -1745,6 +1762,46 @@ function genererGroupesAuto(participants){
   return groupes;
 
 }
+function genererMatchsPoule(equipes){
+
+  const list = [...equipes];
+
+  if(list.length % 2 !== 0){
+    list.push(null);
+  }
+
+  const rounds = [];
+  const n = list.length;
+
+  for(let r=0; r<n-1; r++){
+
+    const matchs = [];
+
+    for(let i=0; i<n/2; i++){
+
+      const a = list[i];
+      const b = list[n - 1 - i];
+
+      if(a && b){
+        matchs.push([a,b]);
+      }
+
+    }
+
+    rounds.push(matchs);
+
+    const fixed = list[0];
+    const rest = list.slice(1);
+
+    rest.unshift(rest.pop());
+
+    list.splice(0,list.length,fixed,...rest);
+
+  }
+
+  return rounds;
+
+}
 
 app.post("/tirage-automatique-poule-pro", async (req,res)=>{
 
@@ -1780,77 +1837,201 @@ app.post("/tirage-automatique-poule-pro", async (req,res)=>{
 
     if(existingMatches.length === 0){
 
-      const groupes = genererGroupesAuto(participants);
-      const lettres = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+  const groupes = genererGroupesAuto(participants);
+  const lettres = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
 
-      for(let g=0; g<groupes.length; g++){
+  for(let g=0; g<groupes.length; g++){
 
-        const nomGroupe = lettres[g];
-        const equipes = groupes[g];
+    const nomGroupe = lettres[g];
+    const equipes = groupes[g];
 
-        for(const equipe of equipes){
-          await run(
-            `
-            UPDATE participants
-            SET group_name=?
-            WHERE id=?
-            `,
-            [nomGroupe,equipe.id]
-          );
-        }
-
-        let ordreMatch = 1;
-
-        for(let i=0;i<equipes.length;i++){
-          for(let j=i+1;j<equipes.length;j++){
-
-            await run(
-              `
-              INSERT INTO matches(
-                tournament_id,
-                round,
-                group_name,
-                match_order,
-                player1_id,
-                player2_id
-              )
-              VALUES(?,?,?,?,?,?)
-              `,
-              [
-                tournament_id,
-                "POULE",
-                nomGroupe,
-                ordreMatch,
-                equipes[i].id,
-                equipes[j].id
-              ]
-            );
-
-            ordreMatch++;
-          }
-        }
-      }
+    for(const equipe of equipes){
 
       await run(
         `
-        UPDATE tournaments
-        SET status='active'
+        UPDATE participants
+        SET group_name=?
         WHERE id=?
         `,
-        [tournament_id]
+        [nomGroupe,equipe.id]
       );
 
-      return res.send("✅ Poules générées automatiquement");
     }
+
+    const journees = genererMatchsPoule(equipes);
+
+     const matchsJ1 = journees[0];
+
+   let ordreMatch = 1;
+
+   for(const duel of matchsJ1){
+
+    const player1 = duel[0];
+    const player2 = duel[1];
+
+    await run(
+    `
+    INSERT INTO matches(
+      tournament_id,
+      round,
+      group_name,
+      match_order,
+      journee,
+      player1_id,
+      player2_id
+    )
+    VALUES(?,?,?,?,?,?,?)
+    `,
+    [
+      tournament_id,
+      "POULE",
+      nomGroupe,
+      ordreMatch,
+      "J1",
+      player1.id,
+      player2.id
+    ]
+  );
+
+   ordreMatch++;
+  }
+
+}
+
+  await run(
+    `
+    UPDATE tournaments
+    SET status='active'
+    WHERE id=?
+    `,
+    [tournament_id]
+  );
+
+  return res.send("✅ Poules générées automatiquement");
+
+}
 
     const poules = existingMatches.filter(m => m.round === "POULE");
 
-    if(
-      poules.length > 0 &&
-      poules.some(m => Number(m.played) !== 1)
-    ){
-      return res.send("Finis tous les scores des poules");
+     if(poules.length > 0){
+
+  const journeesExistantes =
+    [...new Set(
+      poules.map(m => m.journee)
+    )];
+
+  const derniereJournee =
+    journeesExistantes.length;
+
+  const matchsDerniereJournee =
+    poules.filter(
+      m => m.journee === "J" + derniereJournee
+    );
+
+  if(
+    matchsDerniereJournee.some(
+      m => Number(m.played) !== 1
+    )
+  ){
+    return res.send(
+      "Finis tous les scores de J" +
+      derniereJournee
+    );
+  }
+
+} 
+  if(poules.length > 0){
+
+  const groupes =
+    [...new Set(
+      poules.map(m => m.group_name)
+    )];
+
+  const journeesExistantes =
+    [...new Set(
+      poules.map(m => m.journee)
+    )];
+
+  const prochaineJourneeNumero =
+    journeesExistantes.length + 1;
+
+  let nouvelleJourneeCreee = false;
+
+  for(const nomGroupe of groupes){
+
+    const equipes =
+      await all(
+        `
+        SELECT *
+        FROM participants
+        WHERE tournament_id=?
+        AND group_name=?
+        `,
+        [
+          tournament_id,
+          nomGroupe
+        ]
+      );
+
+    const calendrier =
+      genererMatchsPoule(equipes);
+
+    const prochaineJournee =
+      calendrier[
+        prochaineJourneeNumero - 1
+      ];
+
+    if(prochaineJournee){
+
+      let ordreMatch = 1;
+
+      for(const duel of prochaineJournee){
+
+        const player1 = duel[0];
+        const player2 = duel[1];
+
+        await run(
+          `
+          INSERT INTO matches(
+            tournament_id,
+            round,
+            group_name,
+            match_order,
+            journee,
+            player1_id,
+            player2_id
+          )
+          VALUES(?,?,?,?,?,?,?)
+          `,
+          [
+            tournament_id,
+            "POULE",
+            nomGroupe,
+            ordreMatch,
+            "J" + prochaineJourneeNumero,
+            player1.id,
+            player2.id
+          ]
+        );
+
+        ordreMatch++;
+
+      }
+
+      nouvelleJourneeCreee = true;
+
     }
+
+  }
+
+  if(nouvelleJourneeCreee){
+    return res.send(
+      "J" + prochaineJourneeNumero +
+      " générée automatiquement"
+    );
+  }
+
+}
 
     const phaseExiste = existingMatches.some(m => m.round !== "POULE");
 

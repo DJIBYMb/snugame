@@ -888,6 +888,8 @@ Supprimer sélectionnés
 
 <div id="participants"></div>
 
+<div id="calendrierPoules"></div>
+
 </div>
 
 </div>
@@ -922,9 +924,9 @@ onclick="customAutoDraw()">
 
 <button
 class="secondary"
-onclick="afficherTiragePoulePro()">
+onclick="afficherCalendrierPoules()">
 
-Afficher matchs
+📅 Calendrier poules
 
 </button>
 
@@ -1327,6 +1329,7 @@ async function chargerTournois(){
 
   tournois.innerHTML = data.map(t=>`
     <div class="match">
+
       <b>${t.name}</b><br>
       ID : ${t.id}<br>
       Équipes : ${t.max_teams || 48}<br>
@@ -1540,6 +1543,26 @@ function matchCard(match){
     match.round + "_" + match.id;
 
   return `
+
+  <div class="match">
+
+    ${
+      match.round === "POULE" && match.journee
+      ? `
+        <div style="
+          background:#1455ff;
+          color:white;
+          padding:8px;
+          border-radius:10px;
+          margin-bottom:10px;
+          font-weight:bold;
+          text-align:center;
+        ">
+          📅 ${match.journee}
+        </div>
+      `
+      : ""
+    }
 
     <div class="match">
 
@@ -2466,6 +2489,83 @@ async function toggleParticipants(){
   await chargerParticipants();
 
 }
+async function afficherCalendrierPoules(){
+
+  if(!tournoiSelect.value){
+    message.textContent = "Choisis tournoi";
+    return;
+  }
+
+  const data =
+    await get("/tirage/" + tournoiSelect.value);
+
+  if(!Array.isArray(data)){
+    message.textContent = "Aucun calendrier";
+    return;
+  }
+
+  let html = "";
+
+  const poules =
+    data.filter(b =>
+      b.tour.startsWith("Groupe")
+    );
+
+  if(poules.length === 0){
+    message.textContent = "Aucun match de poule";
+    return;
+  }
+
+  for(const bloc of poules){
+
+    html += `
+      <div class="card">
+        <h2>📅 ${bloc.tour}</h2>
+    `;
+
+    const journees = {};
+
+    for(const m of bloc.matchs){
+
+      const j =
+        m.journee || "Calendrier";
+
+      if(!journees[j]){
+        journees[j] = [];
+      }
+
+      journees[j].push(m);
+
+    }
+
+    for(const j of Object.keys(journees)){
+
+      html += `
+        <h3>${j}</h3>
+      `;
+
+      for(const m of journees[j]){
+
+        html += `
+          <div class="match">
+            <b>${m.player1_name || "Joueur 1"}</b>
+            VS
+            <b>${m.player2_name || "Joueur 2"}</b>
+          </div>
+        `;
+
+      }
+
+    }
+
+    html += `</div>`;
+
+  }
+
+  pouleProResult.innerHTML = html;
+
+}
+  
 
 checkStatus();
 
