@@ -826,10 +826,6 @@ id="prenom"
 placeholder="Prénom">
 
 <input
-id="participantEmail"
-placeholder="Email">
-
-<input
 id="username"
 placeholder="Nom utilisateur">
 
@@ -838,16 +834,9 @@ id="telephone"
 placeholder="Téléphone">
 
 <input
-id="numeroSerie"
-placeholder="Numéro série">
-
-<input
 id="clubLogo"
 placeholder="Club">
 
-<input
-id="preuve"
-placeholder="Lien preuve">
 
 <button onclick="ajouterParticipant()">
 
@@ -1382,21 +1371,16 @@ async function ajouterParticipant(){
   if(!tournoiSelect.value){
     message.textContent = "Choisis tournoi";
     return;
-  }
-
-  await post("/participant",{
-    tournament_id:tournoiSelect.value,
-    prenom:prenom.value,
-    email:participantEmail.value,
-    username:username.value,
-    telephone:telephone.value,
-    numero_serie:numeroSerie.value,
-    club_logo:clubLogo.value,
-    preuve:preuve.value
-  });
-
-  
+ }
+   
 }
+await post("/participant",{
+  tournament_id:tournoiSelect.value,
+  prenom:prenom.value,
+  username:username.value,
+  telephone:telephone.value,
+  club_logo:clubLogo.value
+});
 
 async function chargerParticipants(){
 
