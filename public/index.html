@@ -1368,20 +1368,22 @@ async function chargerTournois(){
 }
 
 async function ajouterParticipant(){
-  if(!tournoiSelect.value){
-    message.textContent = "Choisis tournoi";
-    return;
- }
-   
-}
-await post("/participant",{
-  tournament_id:tournoiSelect.value,
-  prenom:prenom.value,
-  username:username.value,
-  telephone:telephone.value,
-  club_logo:clubLogo.value
-});
 
+  if(!tournoiSelect.value){
+    message.textContent =
+      "Choisis tournoi";
+    return;
+  }
+
+  await post("/participant",{
+    tournament_id:tournoiSelect.value,
+    prenom:prenom.value,
+    username:username.value,
+    telephone:telephone.value,
+    club_logo:clubLogo.value
+  });
+
+}
 async function chargerParticipants(){
 
   if(!tournoiSelect.value) return;
