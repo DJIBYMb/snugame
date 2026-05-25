@@ -1135,7 +1135,7 @@ app.post("/participant", async (req,res)=>{
         telephone,
         club_logo
       )
-      VALUES(?,?,?,?,?,?,?,?)
+      VALUES(?,?,?,?,?)
       `,
       [
         tournament_id,
