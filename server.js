@@ -93,21 +93,40 @@ const upload = multer({
   storage,
 
   limits:{
-    fileSize:20 * 1024 * 1024
+    fileSize:10 * 1024 * 1024
   },
 
   fileFilter:(req,file,cb)=>{
 
-    const allowed = [
+    const allowedMime = [
       "image/jpeg",
       "image/png",
       "image/webp",
-      "image/jpg",
       "video/mp4"
     ];
 
-    if(!allowed.includes(file.mimetype)){
-      return cb(new Error("Image ou MP4 seulement"));
+    const allowedExt = [
+      ".jpg",
+      ".jpeg",
+      ".png",
+      ".webp",
+      ".mp4"
+    ];
+
+    const ext =
+      path.extname(
+        file.originalname
+      ).toLowerCase();
+
+    if(
+      !allowedMime.includes(file.mimetype) ||
+      !allowedExt.includes(ext)
+    ){
+      return cb(
+        new Error(
+          "Fichier interdit. Images JPG/PNG/WEBP ou vidéo MP4 seulement."
+        )
+      );
     }
 
     cb(null,true);
@@ -453,6 +472,10 @@ db.run(`
   ALTER TABLE tournaments
   ADD COLUMN group_link TEXT
 `,()=>{});
+db.run(`
+  ALTER TABLE users
+  ADD COLUMN banned INTEGER DEFAULT 0
+`,()=>{});
 
 app.get("/", async (req,res)=>{
 
@@ -640,6 +663,28 @@ app.post("/send-code", async (req,res)=>{
   }
 
 });
+const bannedWords = [
+  "porn",
+  "sexe",
+  "pute",
+  "escort",
+  "terror",
+  "hack",
+  "casino",
+  "bet",
+  "pari",
+  "drogue"
+];
+function containsBadWords(text=""){
+
+  const lower =
+    text.toLowerCase();
+
+  return bannedWords.some(
+    w => lower.includes(w)
+  );
+
+}
 
 app.post("/register", async (req,res)=>{
 
@@ -653,6 +698,14 @@ app.post("/register", async (req,res)=>{
       password,
       code
     } = req.body;
+    if(
+     containsBadWords(name) ||
+     containsBadWords(email)
+  ){
+     return res.send(
+     "Contenu interdit détecté"
+    );
+  }
 
     if(!name || !email || !password || !code){
       return res.send(
@@ -744,6 +797,10 @@ app.post("/login", loginLimiter, (req,res)=>{
 
       if(!user){
         return res.send("Compte introuvable");
+      }
+
+      if(Number(user.banned) === 1){
+       return res.send("Compte banni. Contacte l’admin.");
       }
 
       const ok =
@@ -3819,6 +3876,39 @@ app.post("/join-tournament", async (req,res)=>{
     console.log(e);
     
    res.send("Erreur inscription automatique tournoi : " + e.message);
+  }
+
+});
+app.post("/admin-ban-user", async (req,res)=>{
+
+  try{
+
+    if(!isAdmin(req)){
+      return res.send("Accès admin refusé");
+    }
+
+    const { user_id } = req.body;
+
+    if(!user_id){
+      return res.send("Utilisateur obligatoire");
+    }
+
+    await run(
+      `
+      UPDATE users
+      SET banned=1
+      WHERE id=?
+      `,
+      [user_id]
+    );
+
+    res.send("Utilisateur banni");
+
+  }catch(e){
+
+    console.log(e);
+    res.send("Erreur bannissement");
+
   }
 
 });

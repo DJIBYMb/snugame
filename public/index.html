@@ -1428,6 +1428,36 @@ async function chargerParticipants(){
   participants.innerHTML = data.map(p=>`
   <div class="match">
     <b>ID joueur : ${p.id}</b><br>
+
+     <button
+     class="danger"
+     onclick="banUser(${p.id})">
+    🚫 Bannir
+    </button>
+
+    async function banUser(userId){
+
+  if(
+    !confirm(
+      "Bannir cet utilisateur ?"
+    )
+  ){
+    return;
+  }
+
+  const result = await post(
+    "/admin-ban-user",
+    {
+      user_id:userId
+    }
+  );
+
+  message.textContent = result;
+
+  showNotif(result);
+
+}
+
    <b
     style="
    cursor:pointer;
