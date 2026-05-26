@@ -95,7 +95,7 @@ const upload = multer({
   storage,
 
   limits:{
-    fileSize:10 * 1024 * 1024
+    fileSize:5 * 1024 * 1024
   },
 
   fileFilter:(req,file,cb)=>{
@@ -459,6 +459,15 @@ db.run(`
     ALTER TABLE users
     ADD COLUMN abonnement_expire_at TEXT
   `,()=>{});
+  db.run(`
+  CREATE INDEX IF NOT EXISTS idx_matches_tournament
+  ON matches(tournament_id)
+  `);
+
+  db.run(`
+  CREATE INDEX IF NOT EXISTS idx_participants_tournament
+  ON participants(tournament_id)
+ `);
 
 });
 db.run(`

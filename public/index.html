@@ -372,6 +372,21 @@ h2,h3{
   animation:slideNotif .3s ease;
   font-weight:bold;
 }
+button:disabled{
+  opacity:.5;
+  cursor:not-allowed;
+  transform:none!important;
+}
+
+*{
+  -webkit-tap-highlight-color:transparent;
+}
+
+button,
+.card,
+.match{
+  transition:.15s ease;
+}
 
 @keyframes slideNotif{
 
@@ -385,6 +400,11 @@ h2,h3{
     transform:translateX(0);
   }
 
+}
+button:disabled{
+  opacity:.5;
+  cursor:not-allowed;
+  transform:none!important;
 }
 
 @media(max-width:600px){
@@ -417,6 +437,7 @@ h2,h3{
     font-size:16px;
   }
 }
+
 </style>
 
 </head>
@@ -1824,84 +1845,80 @@ const s2Value =
 
 async function validerScoreDirect(matchId, btn){
 
-  const box = btn.closest(".match");
+  try{
 
-  const inputs =
-    box.querySelectorAll("input[type='number']");
+    btn.disabled = true;
+    btn.textContent = "Validation...";
 
-  const score1 = inputs[0].value;
-  const score2 = inputs[1].value;
+    const box = btn.closest(".match");
 
-  if(score1 === "" || score2 === ""){
-    message.textContent =
-      "Remplis les deux scores";
-    return;
-  }
+    const inputs =
+      box.querySelectorAll("input[type='number']");
 
-  let photoUrl = "";
+    const score1 = inputs[0].value;
+    const score2 = inputs[1].value;
 
-  const fileInput =
-    box.querySelector("input[type='file']");
-
-  if(
-    fileInput &&
-    fileInput.files &&
-    fileInput.files.length > 0
-  ){
-
-    message.textContent =
-      "Upload preuve en cours...";
-
-    const formData = new FormData();
-
-    formData.append(
-      "image",
-      fileInput.files[0]
-    );
-
-    const uploadRes =
-      await fetch(
-        "/upload-image",
-        {
-          method:"POST",
-          body:formData
-        }
-      );
-
-    const uploadData =
-      await uploadRes.json();
-
-    if(
-      !uploadData.ok ||
-      !uploadData.url
-    ){
-      message.textContent =
-        uploadData.message ||
-        "Erreur upload preuve";
+    if(score1 === "" || score2 === ""){
+      message.textContent = "Remplis les deux scores";
+      btn.disabled = false;
+      btn.textContent = "✅ Valider score";
       return;
     }
 
-    photoUrl = uploadData.url;
+    let photoUrl = "";
 
-  }
+    const fileInput =
+      box.querySelector("input[type='file']");
 
-  const result = await post(
-    "/update-match-proof",
-    {
+    if(fileInput && fileInput.files.length > 0){
+
+      message.textContent = "Upload preuve...";
+
+      const formData = new FormData();
+      formData.append("image", fileInput.files[0]);
+
+      const uploadRes = await fetch("/upload-image",{
+        method:"POST",
+        body:formData
+      });
+
+      const uploadData = await uploadRes.json();
+
+      if(!uploadData.ok){
+        message.textContent =
+          uploadData.message || "Erreur upload preuve";
+
+        btn.disabled = false;
+        btn.textContent = "✅ Valider score";
+        return;
+      }
+
+      photoUrl = uploadData.url;
+    }
+
+    const result = await post("/update-match-proof",{
       match_id:matchId,
       score1:score1,
       score2:score2,
       photo_url:photoUrl
-    }
-  );
+    });
 
-  message.textContent = result;
+    showNotif("🔥 Score validé");
 
-   showNotif(result);
+    message.textContent = result;
 
-  await afficherTiragePoulePro();
-  await afficherClassements();
-  await afficherPhaseFinale();
+    await afficherTiragePoulePro();
+    await afficherClassements();
+
+  }catch(e){
+
+    message.textContent =
+      "Erreur bouton score : " + e.message;
+
+    btn.disabled = false;
+    btn.textContent = "✅ Valider score";
+
+  }
 
 }
 
