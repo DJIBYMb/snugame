@@ -449,22 +449,80 @@ button:disabled{
 <h1>SNUGAME</h1>
 
 <p>
-Tournoi eFootball Mobile
+Tournoi
 </p>
 
-<div class="top-actions">
-
-<button
-class="warning"
-onclick="ouvrirAbonnement()">
-⭐ Abonnement
-</button>
+<div
+style="
+display:flex;
+justify-content:center;
+margin-top:10px;
+">
 
 <button
 class="secondary"
-onclick="ouvrirProfilCompte()">
-👤 Profil
+onclick="toggleSearchUsers()">
+Recherche
 </button>
+
+</div>
+
+<div
+class="card hidden"
+id="searchUsersBox"
+style="
+margin-top:10px;
+">
+
+<input
+id="searchUserInput"
+placeholder="@username"
+oninput="rechercherUtilisateurs()">
+
+<div id="searchUsersResult"></div>
+
+</div>
+
+<div class="top-actions">
+
+<div
+style="
+position:relative;
+width:100%;
+margin-bottom:15px;
+min-height:50px;
+">
+
+<button
+class="warning"
+onclick="ouvrirAbonnement()"
+style="
+position:absolute;
+left:0;
+top:0;
+">
+⭐ Abonnement
+</button>
+
+<img
+id="topProfilePhoto"
+src="/default-avatar.png"
+onclick="ouvrirProfilCompte()"
+style="
+position:absolute;
+right:0;
+top:0;
+width:45px;
+height:45px;
+border-radius:50%;
+object-fit:cover;
+border:2px solid white;
+cursor:pointer;
+">
+
+</div>
+
+</div>
 
 </div>
 
@@ -661,6 +719,7 @@ Payer abonnement
 id="pageProfil"
 class="hidden">
 
+
 <div class="card">
 
 <button
@@ -669,15 +728,42 @@ onclick="setPage('pageDashboard')">
 ⬅ Retour
 </button>
 
+<div id="profilPhoto"></div>
+
 <h2>Mon profil</h2>
 
 <p id="profilNom"></p>
+
+<p id="profilUsername"></p>
+
+<input
+id="newUsername"
+placeholder="Nouveau nom utilisateur">
+
+<button
+class="secondary"
+onclick="updateUsername()">
+Changer nom utilisateur
+</button>
 
 <p id="profilEmail"></p>
 
 <p id="profilAbonnement"></p>
 
 <p id="profilExpiration"></p>
+
+<h3>Photo profil</h3>
+
+<input
+type="file"
+id="profilePhotoInput"
+accept="image/*">
+
+<button
+class="secondary"
+onclick="uploadPhotoProfil()">
+📸 Changer photo profil
+</button>
 
 <button
 class="danger"
@@ -708,6 +794,7 @@ onclick="showPanel('panelParticipants')">
 Participants
 
 </button>
+
 
 <button
 onclick="showPanel('panelPoulePro')">
@@ -843,8 +930,8 @@ class="panel hidden">
 <h2>Ajouter participant</h2>
 
 <input
-id="prenom"
-placeholder="Prénom">
+id="participantUsername"
+placeholder="@username SNUGAME">
 
 <input
 id="username"
@@ -1270,17 +1357,40 @@ async function ouvrirProfilCompte(){
 
   const data = await get("/me");
 
+  topProfilePhoto.src =
+  data.profile_photo ||
+  "/default-avatar.png";
+
   if(!data || data.connected === false){
     setPage("pageAuth");
     message.textContent = "Connecte-toi pour voir ton profil";
     return;
   }
 
-  profilNom.textContent =
-    "Nom : " + (data.name || "");
+  profilPhoto.innerHTML = `
+  <img
+  src="${
+    data.profile_photo ||
+    '/default-avatar.png'
+  }"
+  style="
+    width:120px;
+    height:120px;
+    border-radius:50%;
+    object-fit:cover;
+    border:4px solid #1455ff;
+  ">
+`;
 
-  profilEmail.textContent =
-    "Email : " + (data.email || "");
+profilNom.textContent =
+
+profilUsername.textContent =
+  "@" + (data.username || "aucun");
+
+  "Nom : " + (data.name || "");
+
+profilEmail.textContent =
+  "Email : " + (data.email || "");
 
   profilAbonnement.textContent =
     data.abonnement === 1
@@ -1446,29 +1556,41 @@ async function chargerParticipants(){
 
   participants.innerHTML = data.map(p=>`
 
-    <div class="match">
+  <div class="match">
 
-      <b>ID joueur : ${p.id}</b><br>
+    <b>ID joueur : ${p.id}</b><br>
 
-      <b
-      style="cursor:pointer;color:#60a5fa;"
-      onclick="
-        window.open(
-          '/player/${p.id}',
-          '_blank'
-        )
-      ">
-        ${p.prenom}
-      </b><br>
+    <b
+    style="cursor:pointer;color:#60a5fa;"
+    onclick="
+      window.open(
+        '/player/${p.id}',
+        '_blank'
+      )
+    ">
+      ${p.prenom}
+    </b><br>
 
-      ${p.club_logo || ""}<br>
+    ${
+      p.user_id
+      ? `
+        <button
+        class="secondary"
+        onclick="suivreJoueur(${p.user_id})">
+          ➕ Suivre
+        </button><br>
+      `
+      : ""
+    }
 
-      Groupe :
-      ${p.group_name || "Aucun"}<br>
+    ${p.club_logo || ""}<br>
 
-    </div>
+    Groupe :
+    ${p.group_name || "Aucun"}<br>
 
-  `).join("");
+  </div>
+
+`).join("");
 
 }
 function cocherTous(etat){
@@ -2582,8 +2704,171 @@ async function afficherCalendrierPoules(){
   pouleProResult.innerHTML = html;
 
 }
-  
+async function uploadPhotoProfil(){
 
+  const file =
+    profilePhotoInput.files[0];
+
+  if(!file){
+    message.textContent =
+      "Choisis une image";
+    return;
+  }
+
+  const formData = new FormData();
+
+  formData.append("image", file);
+
+  message.textContent =
+    "Upload photo...";
+
+  const res = await fetch(
+    "/upload-image",
+    {
+      method:"POST",
+      body:formData
+    }
+  );
+
+  const data = await res.json();
+
+  if(!data.ok){
+
+    message.textContent =
+      data.message ||
+      "Erreur upload";
+
+    return;
+
+  }
+
+  const result = await post(
+    "/update-profile-photo",
+    {
+      photo:data.url
+    }
+  );
+
+  message.textContent = result;
+
+  await chargerProfil();
+
+}
+async function suivreJoueur(userId){
+
+  const result = await post(
+    "/follow-player",
+    {
+      player_user_id:userId
+    }
+  );
+
+  message.textContent = result;
+
+  showNotif(result);
+
+}
+async function updateUsername(){
+
+  const username =
+    newUsername.value.trim();
+
+  if(!username){
+    message.textContent =
+      "Entre un nom utilisateur";
+    return;
+  }
+
+  const result = await post(
+    "/update-username",
+    {
+      username
+    }
+  );
+
+  message.textContent = result;
+
+  showNotif(result);
+
+  await ouvrirProfilCompte();
+
+}
+
+async function rechercherUtilisateurs(){
+
+  const q =
+    searchUserInput.value.trim();
+
+  if(!q){
+
+    searchUsersResult.innerHTML = "";
+    return;
+
+  }
+
+  const users =
+    await get(
+      "/search-users?q=" +
+      encodeURIComponent(q)
+    );
+
+  searchUsersResult.innerHTML =
+    users.map(u=>`
+
+      <div class="match"
+      style="
+      display:flex;
+      align-items:center;
+      gap:10px;
+      ">
+
+        <img
+        src="${
+          u.profile_photo ||
+          '/default-avatar.png'
+        }"
+        style="
+        width:45px;
+        height:45px;
+        border-radius:50%;
+        object-fit:cover;
+        ">
+
+        <div style="flex:1;">
+
+          <b>${u.name || ""}</b><br>
+
+          <span style="color:#60a5fa;">
+            @${u.username || ""}
+          </span>
+
+        </div>
+
+        <button
+        class="secondary"
+        onclick="suivreJoueur(${u.id})">
+          ➕ Suivre
+        </button>
+
+      </div>
+
+    `).join("");
+
+}
+
+function toggleSearchUsers(){
+  searchUsersBox.classList.toggle("hidden");
+}
+
+  
+function toggleSearchUsers(){
+
+  const box =
+    document.getElementById("searchUsersBox");
+
+  box.classList.toggle("hidden");
+
+}
 checkStatus();
 
 </script>

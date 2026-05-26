@@ -527,6 +527,44 @@ db.run(`
   ALTER TABLE matches
   ADD COLUMN journee TEXT
 `,()=>{});
+db.run(`
+  ALTER TABLE users
+  ADD COLUMN profile_photo TEXT
+`,()=>{});
+db.run(`
+CREATE TABLE IF NOT EXISTS followers(
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  follower_id INTEGER,
+  following_id INTEGER
+)
+`);
+db.run(`
+  ALTER TABLE participants
+  ADD COLUMN user_id INTEGER
+`,()=>{});
+db.run(`
+  ALTER TABLE users
+  ADD COLUMN username TEXT
+`,()=>{});
+
+db.run(`
+  ALTER TABLE users
+  ADD COLUMN username_updated_at TEXT
+`,()=>{});
+
+db.run(`
+  CREATE UNIQUE INDEX IF NOT EXISTS idx_users_username
+  ON users(username)
+`);
+db.run(`
+  ALTER TABLE users
+  ADD COLUMN username TEXT
+`,()=>{});
+
+db.run(`
+  ALTER TABLE users
+  ADD COLUMN username_updated_at TEXT
+`,()=>{});
 
 app.get("/", async (req,res)=>{
 
@@ -895,8 +933,11 @@ app.get("/me", async (req,res)=>{
       id,
       name,
       email,
+      username,
+      username_updated_at,
       abonnement,
-      abonnement_expire_at
+      abonnement_expire_at,
+      profile_photo
     FROM users
     WHERE id=?
     `,
@@ -935,7 +976,10 @@ app.get("/me", async (req,res)=>{
 
   }
 
-  res.json(user);
+  res.json({
+    connected:true,
+    ...user
+  });
 
 });
 
@@ -1107,8 +1151,7 @@ app.post("/participant", async (req,res)=>{
 
     const {
       tournament_id,
-      prenom,
-      username,
+      participantUsername,
       telephone,
       club_logo
    } = req.body;
@@ -1150,21 +1193,43 @@ app.post("/participant", async (req,res)=>{
         " équipes atteint"
       );
     }
+    const user = await get(
+  `
+  SELECT *
+  FROM users
+  WHERE username=?
+  `,
+  [
+    participantUsername
+    .trim()
+    .toLowerCase()
+  ]
+);
+
+if(!user){
+  return res.send(
+    "Compte SNUGAME introuvable"
+  );
+}
+
+const prenom = user.name;
 
     const result = await run(
       `
       INSERT INTO participants(
         tournament_id,
         prenom,
+        req.session.userId
         username,
         telephone,
         club_logo
       )
-      VALUES(?,?,?,?,?)
+      VALUES(?,?,?,?,?,?)
       `,
       [
         tournament_id,
         prenom,
+        req.session.userId,
         username || "",
         telephone || "",
         club_logo || ""
@@ -4300,6 +4365,224 @@ app.post("/admin-unban-user", async (req,res)=>{
 
     console.log(e);
     res.send("Erreur débannissement");
+
+  }
+
+});
+app.post("/update-profile-photo", async (req,res)=>{
+
+  try{
+
+    if(!req.session.userId){
+      return res.send("Connecte-toi");
+    }
+
+    const { photo } = req.body;
+
+    if(!photo){
+      return res.send("Photo obligatoire");
+    }
+
+    await run(
+      `
+      UPDATE users
+      SET profile_photo=?
+      WHERE id=?
+      `,
+      [
+        photo,
+        req.session.userId
+      ]
+    );
+
+    res.send("Photo profil mise à jour");
+
+  }catch(e){
+
+    console.log(e);
+    res.send("Erreur photo profil");
+
+  }
+
+});
+app.post("/follow-player", async (req,res)=>{
+
+  try{
+
+    if(!req.session.userId){
+      return res.send("Connecte-toi d'abord");
+    }
+
+    const { player_user_id } = req.body;
+
+    if(!player_user_id){
+      return res.send("Joueur obligatoire");
+    }
+
+    if(Number(player_user_id) === Number(req.session.userId)){
+      return res.send("Tu ne peux pas t'abonner à toi-même");
+    }
+
+    const exist = await get(
+      `
+      SELECT *
+      FROM followers
+      WHERE follower_id=?
+      AND following_id=?
+      `,
+      [
+        req.session.userId,
+        player_user_id
+      ]
+    );
+
+    if(exist){
+      return res.send("Déjà abonné");
+    }
+
+    await run(
+      `
+      INSERT INTO followers(
+        follower_id,
+        following_id
+      )
+      VALUES(?,?)
+      `,
+      [
+        req.session.userId,
+        player_user_id
+      ]
+    );
+
+    res.send("Abonnement réussi ✅");
+
+  }catch(e){
+
+    console.log(e);
+    res.send("Erreur abonnement joueur");
+
+  }
+
+});
+app.post("/update-username", async (req,res)=>{
+
+  try{
+
+    if(!req.session.userId){
+      return res.send("Connecte-toi");
+    }
+
+    const { username } = req.body;
+
+    if(!username){
+      return res.send("Nom utilisateur obligatoire");
+    }
+
+    const clean =
+      username.trim().toLowerCase();
+
+    if(clean.length < 3){
+      return res.send("Minimum 3 caractères");
+    }
+
+    if(!/^[a-z0-9._]+$/.test(clean)){
+      return res.send("Utilise seulement lettres, chiffres, point ou _");
+    }
+
+    const user = await get(
+      `
+      SELECT username_updated_at
+      FROM users
+      WHERE id=?
+      `,
+      [req.session.userId]
+    );
+
+    if(user && user.username_updated_at){
+
+      const last = new Date(user.username_updated_at);
+      const now = new Date();
+      const diffDays =
+        (now - last) / (1000 * 60 * 60 * 24);
+
+      if(diffDays < 30){
+        return res.send("Tu peux changer le nom utilisateur une fois par mois");
+      }
+
+    }
+
+    const exist = await get(
+      `
+      SELECT id
+      FROM users
+      WHERE username=?
+      AND id!=?
+      `,
+      [clean,req.session.userId]
+    );
+
+    if(exist){
+      return res.send("Ce nom utilisateur est déjà pris");
+    }
+
+    await run(
+      `
+      UPDATE users
+      SET username=?,
+          username_updated_at=?
+      WHERE id=?
+      `,
+      [
+        clean,
+        new Date().toISOString(),
+        req.session.userId
+      ]
+    );
+
+    res.send("Nom utilisateur mis à jour ✅");
+
+  }catch(e){
+
+    console.log(e);
+    res.send("Erreur nom utilisateur");
+
+  }
+
+});
+
+app.get("/search-users", async (req,res)=>{
+
+  try{
+
+    const q =
+      (req.query.q || "")
+      .trim()
+      .toLowerCase();
+
+    if(!q){
+      return res.json([]);
+    }
+
+    const users = await all(
+      `
+      SELECT
+        id,
+        name,
+        username,
+        profile_photo
+      FROM users
+      WHERE username LIKE ?
+      LIMIT 20
+      `,
+      [`%${q}%`]
+    );
+
+    res.json(users);
+
+  }catch(e){
+
+    console.log(e);
+    res.json([]);
 
   }
 
