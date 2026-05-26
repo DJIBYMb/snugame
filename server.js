@@ -565,6 +565,15 @@ db.run(`
   ALTER TABLE users
   ADD COLUMN username_updated_at TEXT
 `,()=>{});
+db.run(`
+  ALTER TABLE users
+  ADD COLUMN username TEXT
+`,()=>{});
+
+db.run(`
+  ALTER TABLE users
+  ADD COLUMN username_updated_at TEXT
+`,()=>{});
 
 app.get("/", async (req,res)=>{
 
