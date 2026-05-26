@@ -1372,6 +1372,7 @@ async function classementPoules(tournament_id){
     FROM matches
     WHERE tournament_id=?
     AND round='POULE'
+    AND played=1
     `,
     [tournament_id]
   );
@@ -1383,7 +1384,7 @@ async function classementPoules(tournament_id){
     table[t.id] = {
       id:t.id,
       prenom:t.prenom,
-      group_name:t.group_name,
+      group_name:t.group_name || "Sans groupe",
       pts:0,
       j:0,
       v:0,
@@ -1397,8 +1398,6 @@ async function classementPoules(tournament_id){
   }
 
   for(const m of matches){
-
-    if(Number(m.played) !== 1) continue;
 
     const a = table[m.player1_id];
     const b = table[m.player2_id];
@@ -1448,27 +1447,23 @@ async function classementPoules(tournament_id){
 
     t.diff = t.bp - t.bc;
 
-    const g = t.group_name || "Sans groupe";
-
-    if(!groups[g]){
-      groups[g] = [];
+    if(!groups[t.group_name]){
+      groups[t.group_name] = [];
     }
 
-    groups[g].push(t);
+    groups[t.group_name].push(t);
 
   }
 
   for(const g in groups){
 
     groups[g].sort((a,b)=>
-
       b.pts - a.pts ||
       b.diff - a.diff ||
       b.bp - a.bp ||
       b.v - a.v ||
       a.bc - b.bc ||
       a.prenom.localeCompare(b.prenom)
-
     );
 
   }
