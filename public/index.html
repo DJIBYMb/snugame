@@ -537,6 +537,115 @@ button:disabled{
   box-shadow:
     0 0 24px #06b6d488;
 }
+.notification-card{
+  display:flex;
+  gap:12px;
+  align-items:flex-start;
+  background:linear-gradient(180deg,#020617,#0f172a);
+  border:1px solid #334155;
+  border-radius:18px;
+  padding:14px;
+  margin:10px 0;
+  box-shadow:0 0 16px #00000044;
+}
+
+.notification-icon{
+  width:42px;
+  height:42px;
+  border-radius:50%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:linear-gradient(135deg,#1455ff,#7c2cff);
+  box-shadow:0 0 18px #1455ff66;
+  flex-shrink:0;
+}
+
+.notification-text{
+  flex:1;
+}
+
+.notification-time{
+  color:#94a3b8;
+  font-size:12px;
+  margin-top:5px;
+}
+
+.back-btn{
+  width:44px;
+  height:44px;
+  border-radius:50%;
+  padding:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+
+  background:rgba(255,255,255,.06)!important;
+
+  border:1px solid rgba(255,255,255,.12)!important;
+
+  backdrop-filter:blur(14px);
+  -webkit-backdrop-filter:blur(14px);
+
+  color:white;
+  font-size:24px;
+
+  box-shadow:
+    0 0 20px #1455ff22,
+    inset 0 0 12px #ffffff08;
+}
+
+.back-btn:hover{
+  background:rgba(255,255,255,.12)!important;
+  transform:scale(1.08);
+}
+
+.search-modern{
+  position:relative;
+  width:100%;
+  max-width:420px;
+  margin:auto;
+}
+
+.search-modern input{
+  padding-left:50px;
+  border-radius:999px;
+  background:rgba(255,255,255,.06);
+  border:1px solid rgba(255,255,255,.12);
+  backdrop-filter:blur(14px);
+  -webkit-backdrop-filter:blur(14px);
+  color:white;
+  box-shadow:
+    0 0 20px #1455ff22,
+    inset 0 0 12px #ffffff08;
+}
+
+.search-modern::before{
+  content:"🔍";
+  position:absolute;
+  left:18px;
+  top:50%;
+  transform:translateY(-50%);
+  font-size:18px;
+  opacity:.8;
+}
+
+.glass-btn{
+  background:rgba(255,255,255,.06)!important;
+  border:1px solid rgba(255,255,255,.12)!important;
+  backdrop-filter:blur(14px);
+  -webkit-backdrop-filter:blur(14px);
+  color:white!important;
+  border-radius:999px;
+  box-shadow:
+    0 0 20px #1455ff22,
+    inset 0 0 12px #ffffff08;
+}
+
+.glass-btn:hover{
+  background:rgba(255,255,255,.12)!important;
+  transform:scale(1.04);
+}
 
 </style>
 
@@ -560,9 +669,9 @@ margin-top:10px;
 ">
 
 <button
-class="secondary"
+class="glass-btn"
 onclick="toggleSearchUsers()">
-Recherche
+ Recherche
 </button>
 
 </div>
@@ -574,10 +683,14 @@ style="
 margin-top:10px;
 ">
 
+<div class="search-modern">
+
 <input
 id="searchUserInput"
-placeholder="@username"
+placeholder="Rechercher joueur..."
 oninput="rechercherUtilisateurs()">
+
+</div>
 
 <div id="searchUsersResult"></div>
 
@@ -594,7 +707,7 @@ min-height:50px;
 ">
 
 <button
-class="warning"
+class="glass-btn"
 onclick="ouvrirAbonnement()"
 style="
 position:absolute;
@@ -758,9 +871,9 @@ class="hidden">
 <div class="card">
 
 <button
-class="secondary"
+class="back-btn"
 onclick="setPage('pageDashboard')">
- Retour
+‹
 </button>
 
 <h2>Abonnement</h2>
@@ -3104,20 +3217,33 @@ async function ouvrirNotifications(){
   const data =
     await get("/notifications");
 
-  notificationsList.innerHTML =
-    data.map(n=>`
+notificationsList.innerHTML =
+  data.map(n=>`
 
-      <div class="match">
+    <div class="notification-card">
 
-        🔔 ${n.message}<br>
+      <div class="notification-icon">
+        🔔
+      </div>
 
-        <small>
+      <div class="notification-text">
+
+        <div style="
+          font-weight:bold;
+          color:#f8fafc;
+        ">
+          ${n.message}
+        </div>
+
+        <div class="notification-time">
           ${n.created_at || ""}
-        </small>
+        </div>
 
       </div>
 
-    `).join("");
+    </div>
+
+  `).join("");
 
   setPage("pageNotifications");
 
