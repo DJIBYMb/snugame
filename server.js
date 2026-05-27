@@ -574,6 +574,15 @@ db.run(`
   ALTER TABLE users
   ADD COLUMN username_updated_at TEXT
 `,()=>{});
+db.run(`
+CREATE TABLE IF NOT EXISTS notifications(
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER,
+  message TEXT,
+  seen INTEGER DEFAULT 0,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP
+)
+`);
 
 app.get("/", async (req,res)=>{
 
@@ -1163,13 +1172,11 @@ app.post("/participant", async (req,res)=>{
       participantUsername,
       telephone,
       club_logo
-   } = req.body;
-      
-  
+    } = req.body;
 
-    if(!tournament_id || !prenom){
+    if(!tournament_id || !participantUsername){
       return res.send(
-        "Tournoi, prénom et obligatoires"
+        "Tournoi et nom utilisateur obligatoires"
       );
     }
 
@@ -1202,33 +1209,56 @@ app.post("/participant", async (req,res)=>{
         " équipes atteint"
       );
     }
+
+    const cleanUsername =
+      participantUsername
+      .replace("@","")
+      .trim()
+      .toLowerCase();
+
     const user = await get(
-  `
-  SELECT *
-  FROM users
-  WHERE username=?
-  `,
-  [
-    participantUsername
-    .trim()
-    .toLowerCase()
-  ]
-);
+      `
+      SELECT *
+      FROM users
+      WHERE username=?
+      `,
+      [cleanUsername]
+    );
 
-if(!user){
-  return res.send(
-    "Compte SNUGAME introuvable"
-  );
-}
+    if(!user){
+      return res.send(
+        "Compte SNUGAME introuvable"
+      );
+    }
 
-const prenom = user.name;
+    const already = await get(
+      `
+      SELECT id
+      FROM participants
+      WHERE tournament_id=?
+      AND user_id=?
+      `,
+      [
+        tournament_id,
+        user.id
+      ]
+    );
+
+    if(already){
+      return res.send(
+        "Ce joueur est déjà dans ce tournoi"
+      );
+    }
+
+    const prenom =
+      user.name || user.username;
 
     const result = await run(
       `
       INSERT INTO participants(
         tournament_id,
         prenom,
-        req.session.userId
+        user_id,
         username,
         telephone,
         club_logo
@@ -1238,8 +1268,8 @@ const prenom = user.name;
       [
         tournament_id,
         prenom,
-        req.session.userId,
-        username || "",
+        user.id,
+        user.username || "",
         telephone || "",
         club_logo || ""
       ]
@@ -1255,31 +1285,55 @@ const prenom = user.name;
       [result.lastID]
     );
 
+    await run(
+      `
+      INSERT INTO notifications(
+        user_id,
+        message
+      )
+      VALUES(?,?)
+      `,
+      [
+        user.id,
+        "Vous avez été ajouté au tournoi : " +
+        (tournoi.name || "")
+      ]
+    );
+
     res.send("Participant ajouté");
 
   }catch(e){
 
     console.log(e);
-    res.send("Erreur ajout participant");
+    res.send(
+      "Erreur ajout participant : " + e.message
+    );
 
   }
 
 });
+app.get("/participants/:id", async (req,res)=>{
 
-app.get("/participants/:id",(req,res)=>{
+  try{
 
-  db.all(
-    `
-    SELECT *
-    FROM participants
-    WHERE tournament_id=?
-    ORDER BY id
-    `,
-    [req.params.id],
-    (err,rows)=>{
-      res.json(rows || []);
-    }
-  );
+    const rows = await all(
+      `
+      SELECT *
+      FROM participants
+      WHERE tournament_id=?
+      ORDER BY id
+      `,
+      [req.params.id]
+    );
+
+    res.json(rows);
+
+  }catch(e){
+
+    console.log(e);
+    res.json([]);
+
+  }
 
 });
 

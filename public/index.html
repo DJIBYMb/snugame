@@ -933,18 +933,6 @@ class="panel hidden">
 id="participantUsername"
 placeholder="@username SNUGAME">
 
-<input
-id="username"
-placeholder="Nom utilisateur">
-
-<input
-id="telephone"
-placeholder="Téléphone">
-
-<input
-id="clubLogo"
-placeholder="Club">
-
 
 <button onclick="ajouterParticipant()">
 
@@ -1510,12 +1498,10 @@ async function ajouterParticipant(){
   }
 
   await post("/participant",{
-    tournament_id:tournoiSelect.value,
-    prenom:prenom.value,
-    username:username.value,
-    telephone:telephone.value,
-    club_logo:clubLogo.value
-  });
+  tournament_id:tournoiSelect.value,
+  participantUsername:
+    participantUsername.value
+});
 
 }
 async function chargerParticipants(){
