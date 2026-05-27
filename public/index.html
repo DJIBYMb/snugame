@@ -647,6 +647,44 @@ button:disabled{
   transform:scale(1.04);
 }
 
+.back-btn{
+  width:44px;
+  height:44px;
+  border-radius:50%;
+  padding:0;
+
+  display:flex;
+  align-items:center;
+  justify-content:center;
+
+  background:rgba(255,255,255,.06)!important;
+
+  border:1px solid rgba(255,255,255,.12)!important;
+
+  backdrop-filter:blur(14px);
+  -webkit-backdrop-filter:blur(14px);
+
+  color:white;
+  font-size:24px;
+
+  box-shadow:
+    0 0 20px #1455ff22,
+    inset 0 0 12px #ffffff08;
+
+  cursor:pointer;
+}
+
+.back-btn:hover{
+  background:rgba(255,255,255,.12)!important;
+  transform:scale(1.08);
+}
+
+.tournoi-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:12px;
+}
+
 </style>
 
 </head>
@@ -935,9 +973,9 @@ class="hidden">
 <div class="card">
 
 <button
-class="secondary"
-onclick="setPage('pageDashboard')">
-⬅ Retour
+class="back-btn"
+onclick="retourDashboard()">
+‹
 </button>
 
 <div id="profilPhoto"></div>
@@ -994,9 +1032,9 @@ class="hidden">
 <div class="card">
 
 <button
-class="secondary"
-onclick="setPage('pageDashboard')">
-⬅ Retour
+class="back-btn"
+onclick="fermerProfilJoueur()">
+‹
 </button>
 
 <div id="playerProfileContent"></div>
@@ -1012,9 +1050,9 @@ class="hidden">
 <div class="card">
 
 <button
-class="secondary"
-onclick="setPage('pageDashboard')">
-⬅ Retour
+class="back-btn"
+onclick="fermerNotifications()">
+‹
 </button>
 
 <h2>🔔 Notifications</h2>
@@ -1092,7 +1130,7 @@ Paramètres
 id="panelTournoi"
 class="panel">
 
-<div class="grid">
+<div class="tournoi-grid"></div>
 
 <div class="card">
 
@@ -1570,7 +1608,14 @@ async function abonnement(){
 }
 
 async function checkStatus(){
+
   const data = await get("/me");
+
+  if(data && data.connected !== false){
+  topProfilePhoto.src =
+    data.profile_photo ||
+    "/default-avatar.png";
+}
 
   if(!data || data.connected === false){
     setPage("pageAuth");
@@ -1626,11 +1671,10 @@ async function ouvrirProfilCompte(){
 `;
 
 profilNom.textContent =
+  data.name || "";
 
 profilUsername.textContent =
-  "@" + (data.username || "aucun");
-
-  "Nom : " + (data.name || "");
+  "@" + (data.username || "");
 
 profilEmail.textContent =
   "Email : " + (data.email || "");
@@ -3246,6 +3290,28 @@ notificationsList.innerHTML =
   `).join("");
 
   setPage("pageNotifications");
+
+}
+
+function retourDashboard(){
+  setPage("pageDashboard");
+}
+
+function fermerNotifications(){
+
+  pageNotifications.classList.add("hidden");
+
+  setPage("pageDashboard");
+
+}
+
+function fermerProfilJoueur(){
+
+  pagePlayerProfile.classList.add(
+    "hidden"
+  );
+
+  setPage("pageDashboard");
 
 }
 
