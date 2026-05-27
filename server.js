@@ -4663,6 +4663,79 @@ app.get("/search-users", async (req,res)=>{
   }
 
 });
+app.get("/player-profile/:id", async (req,res)=>{
+
+  try{
+
+    const user = await get(
+      `
+      SELECT
+        id,
+        name,
+        username,
+        profile_photo,
+        abonnement
+      FROM users
+      WHERE id=?
+      `,
+      [req.params.id]
+    );
+
+    if(!user){
+      return res.json({
+        error:"Joueur introuvable"
+      });
+    }
+
+    const followers = await get(
+      `
+      SELECT COUNT(*) AS total
+      FROM followers
+      WHERE following_id=?
+      `,
+      [user.id]
+    );
+
+    const following = await get(
+      `
+      SELECT COUNT(*) AS total
+      FROM followers
+      WHERE follower_id=?
+      `,
+      [user.id]
+    );
+
+    const matchs = await get(
+      `
+      SELECT COUNT(*) AS total
+      FROM player_stats
+      WHERE participant_id IN (
+        SELECT id
+        FROM participants
+        WHERE user_id=?
+      )
+      `,
+      [user.id]
+    );
+
+    res.json({
+      ...user,
+      followers:followers.total || 0,
+      following:following.total || 0,
+      matchs:matchs.total || 0
+    });
+
+  }catch(e){
+
+    console.log(e);
+
+    res.json({
+      error:"Erreur profil joueur"
+    });
+
+  }
+
+});
 
 app.listen(PORT, () => {
 

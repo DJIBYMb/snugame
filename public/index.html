@@ -719,6 +719,9 @@ Payer abonnement
 id="pageProfil"
 class="hidden">
 
+<section
+id="pagePlayerProfile"
+class="hidden">
 
 <div class="card">
 
@@ -726,6 +729,20 @@ class="hidden">
 class="secondary"
 onclick="setPage('pageDashboard')">
 ⬅ Retour
+</button>
+
+<div id="playerProfileContent"></div>
+
+</div>
+
+</section>
+
+<div class="card">
+
+<button
+class="secondary"
+onclick="setPage('pageDashboard')">
+ Retour
 </button>
 
 <div id="profilPhoto"></div>
@@ -1548,12 +1565,7 @@ async function chargerParticipants(){
 
     <b
     style="cursor:pointer;color:#60a5fa;"
-    onclick="
-      window.open(
-        '/player/${p.id}',
-        '_blank'
-      )
-    ">
+    onclick="ouvrirProfilJoueur(${p.user_id})">
       ${p.prenom}
     </b><br>
 
@@ -2873,6 +2885,79 @@ async function suivreJoueur(userId){
   message.textContent = result;
 
   showNotif(result);
+
+}
+async function ouvrirProfilJoueur(userId){
+
+  const data = await get(
+    "/player-profile/" + userId
+  );
+
+  if(data.error){
+
+    message.textContent =
+      data.error;
+
+    return;
+
+  }
+
+  playerProfileContent.innerHTML = `
+
+    <div style="text-align:center;">
+
+      <img
+      src="${
+        data.profile_photo ||
+        '/default-avatar.png'
+      }"
+      style="
+      width:120px;
+      height:120px;
+      border-radius:50%;
+      object-fit:cover;
+      border:4px solid #1455ff;
+      ">
+
+      <h2>
+        ${data.name || ""}
+      </h2>
+
+      <p style="color:#60a5fa;">
+        @${data.username || ""}
+      </p>
+
+      <p>
+        👥 ${data.followers} abonnés
+      </p>
+
+      <p>
+        ➕ ${data.following} abonnements
+      </p>
+
+      <p>
+        ⚽ ${data.matchs} matchs
+      </p>
+
+      <p>
+        ${
+          data.abonnement === 1
+          ? "⭐ Premium"
+          : "Compte gratuit"
+        }
+      </p>
+
+      <button
+      class="secondary"
+      onclick="suivreJoueur(${data.id})">
+        ➕ Suivre
+      </button>
+
+    </div>
+
+  `;
+
+  setPage("pagePlayerProfile");
 
 }
 
