@@ -679,10 +679,16 @@ button:disabled{
   transform:scale(1.08);
 }
 
-.tournoi-grid{
-  display:grid;
-  grid-template-columns:1fr 1fr;
+.tournoi-row{
+  display:flex;
+  flex-direction:row;
   gap:12px;
+  width:100%;
+}
+
+.tournoi-row > .card{
+  flex:1;
+  min-width:0;
 }
 
 </style>
@@ -1130,7 +1136,7 @@ Paramètres
 id="panelTournoi"
 class="panel">
 
-<div class="tournoi-grid"></div>
+<div class="tournoi-row">
 
 <div class="card">
 
