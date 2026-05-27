@@ -1558,16 +1558,16 @@ async function chargerParticipants(){
     </b><br>
 
     ${
-      p.user_id
-      ? `
-        <button
-        class="secondary"
-        onclick="suivreJoueur(${p.user_id})">
-          ➕ Suivre
-        </button><br>
-      `
-      : ""
-    }
+  p.user_id
+  ? `
+    <button
+    class="secondary"
+    onclick="suivreJoueur(${Number(p.user_id)})">
+      ➕ Suivre
+    </button><br>
+  `
+  : ""
+}
 
     ${p.club_logo || ""}<br>
 
@@ -2855,6 +2855,27 @@ function toggleSearchUsers(){
   box.classList.toggle("hidden");
 
 }
+async function suivreJoueur(userId){
+
+  if(!userId){
+    message.textContent =
+      "Compte joueur introuvable";
+    return;
+  }
+
+  const result = await post(
+    "/follow-player",
+    {
+      player_user_id:userId
+    }
+  );
+
+  message.textContent = result;
+
+  showNotif(result);
+
+}
+
 checkStatus();
 
 </script>

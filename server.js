@@ -3713,45 +3713,59 @@ app.get("/comments-highlight/:id", async (req,res)=>{
 
 });
 
-app.post("/follow-player", async (req,res)=>{
+    app.post("/follow-player", async (req,res)=>{
 
   try{
 
-    if(!connected(req)){
-      return res.send("Connecte-toi");
+    if(!req.session.userId){
+      return res.send("Connecte-toi d'abord");
     }
 
-    const { participant_id } = req.body;
+    const { player_user_id } = req.body;
 
-    if(!participant_id){
-      return res.send("Participant manquant");
+    if(!player_user_id){
+      return res.send("Joueur manquant");
+    }
+
+    if(Number(player_user_id) === Number(req.session.userId)){
+      return res.send("Tu ne peux pas te suivre toi-même");
+    }
+
+    const exist = await get(
+      `
+      SELECT id
+      FROM followers
+      WHERE follower_id=?
+      AND following_id=?
+      `,
+      [req.session.userId, player_user_id]
+    );
+
+    if(exist){
+      return res.send("Déjà abonné");
     }
 
     await run(
       `
-      INSERT OR IGNORE INTO follows(
+      INSERT INTO followers(
         follower_id,
-        following_participant_id
+        following_id
       )
       VALUES(?,?)
       `,
-      [
-        req.session.userId,
-        participant_id
-      ]
+      [req.session.userId, player_user_id]
     );
 
-    res.send("Joueur suivi 🔥");
+    res.send("Abonnement réussi ✅");
 
   }catch(e){
 
     console.log(e);
-    res.send("Erreur follow");
+    res.send("Erreur abonnement joueur");
 
   }
 
 });
-
 app.get("/followers/:id", async (req,res)=>{
 
   try{
@@ -3759,8 +3773,8 @@ app.get("/followers/:id", async (req,res)=>{
     const result = await get(
       `
       SELECT COUNT(*) AS total
-      FROM follows
-      WHERE following_participant_id=?
+      FROM followers
+      WHERE following_id=?
       `,
       [req.params.id]
     );
@@ -3780,7 +3794,6 @@ app.get("/followers/:id", async (req,res)=>{
   }
 
 });
-
 app.post("/generer-phase-finale", async (req,res)=>{
   req.url = "/tirage-automatique-poule-pro";
   return app._router.handle(req,res);
