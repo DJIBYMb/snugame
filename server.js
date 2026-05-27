@@ -4737,6 +4737,36 @@ app.get("/player-profile/:id", async (req,res)=>{
 
 });
 
+app.get("/notifications", async (req,res)=>{
+
+  try{
+
+    if(!req.session.userId){
+      return res.json([]);
+    }
+
+    const rows = await all(
+      `
+      SELECT *
+      FROM notifications
+      WHERE user_id=?
+      ORDER BY id DESC
+      LIMIT 50
+      `,
+      [req.session.userId]
+    );
+
+    res.json(rows);
+
+  }catch(e){
+
+    console.log(e);
+    res.json([]);
+
+  }
+
+});
+
 app.listen(PORT, () => {
 
   console.log(

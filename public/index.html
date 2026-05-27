@@ -438,6 +438,106 @@ button:disabled{
   }
 }
 
+.player-profile-hero{
+  position:relative;
+  text-align:center;
+  padding:30px 20px;
+  border-radius:24px;
+  overflow:hidden;
+  background:
+    linear-gradient(
+      135deg,
+      #1455ff,
+      #7c2cff
+    );
+  box-shadow:
+    0 0 40px #1455ff66;
+}
+
+.player-profile-cover{
+  position:absolute;
+  inset:0;
+  background:
+    radial-gradient(
+      circle at top,
+      #ffffff22,
+      transparent 60%
+    );
+}
+
+.player-profile-avatar{
+  width:130px;
+  height:130px;
+  border-radius:50%;
+  object-fit:cover;
+  border:5px solid white;
+  box-shadow:
+    0 0 30px #ffffff88;
+  position:relative;
+  z-index:2;
+}
+
+.player-profile-name{
+  font-size:28px;
+  font-weight:900;
+  margin-top:15px;
+  position:relative;
+  z-index:2;
+}
+
+.player-profile-username{
+  color:#dbeafe;
+  font-size:16px;
+  position:relative;
+  z-index:2;
+}
+
+.player-stats{
+  display:grid;
+  grid-template-columns:
+    repeat(auto-fit,minmax(120px,1fr));
+  gap:14px;
+  margin-top:20px;
+}
+
+.player-stat{
+  background:#020617cc;
+  border:1px solid #334155;
+  border-radius:18px;
+  padding:16px;
+  text-align:center;
+  box-shadow:0 0 20px #00000044;
+}
+
+.player-stat h3{
+  margin:0;
+  font-size:24px;
+  color:#60a5fa;
+}
+
+.player-stat p{
+  margin:6px 0 0;
+  color:#cbd5e1;
+}
+
+.follow-btn{
+  margin-top:20px;
+  background:
+    linear-gradient(
+      135deg,
+      #06b6d4,
+      #2563eb
+    );
+  color:white;
+  font-weight:900;
+  border:none;
+  border-radius:999px;
+  padding:14px 24px;
+  font-size:16px;
+  box-shadow:
+    0 0 24px #06b6d488;
+}
+
 </style>
 
 </head>
@@ -719,30 +819,12 @@ Payer abonnement
 id="pageProfil"
 class="hidden">
 
-<section
-id="pagePlayerProfile"
-class="hidden">
-
 <div class="card">
 
 <button
 class="secondary"
 onclick="setPage('pageDashboard')">
 ⬅ Retour
-</button>
-
-<div id="playerProfileContent"></div>
-
-</div>
-
-</section>
-
-<div class="card">
-
-<button
-class="secondary"
-onclick="setPage('pageDashboard')">
- Retour
 </button>
 
 <div id="profilPhoto"></div>
@@ -793,6 +875,43 @@ Déconnexion
 </section>
 
 <section
+id="pagePlayerProfile"
+class="hidden">
+
+<div class="card">
+
+<button
+class="secondary"
+onclick="setPage('pageDashboard')">
+⬅ Retour
+</button>
+
+<div id="playerProfileContent"></div>
+
+</div>
+
+</section>
+
+<section
+id="pageNotifications"
+class="hidden">
+
+<div class="card">
+
+<button
+class="secondary"
+onclick="setPage('pageDashboard')">
+⬅ Retour
+</button>
+
+<h2>🔔 Notifications</h2>
+
+<div id="notificationsList"></div>
+
+</div>
+
+</section>
+<section
 id="pageDashboard"
 class="hidden">
 
@@ -810,6 +929,12 @@ onclick="showPanel('panelParticipants')">
 
 Participants
 
+</button>
+
+<button
+class="secondary"
+onclick="ouvrirNotifications()">
+🔔 Notifications
 </button>
 
 
@@ -2904,60 +3029,97 @@ async function ouvrirProfilJoueur(userId){
 
   playerProfileContent.innerHTML = `
 
-    <div style="text-align:center;">
+    <div class="player-profile-hero">
 
-      <img
-      src="${
-        data.profile_photo ||
-        '/default-avatar.png'
-      }"
-      style="
-      width:120px;
-      height:120px;
-      border-radius:50%;
-      object-fit:cover;
-      border:4px solid #1455ff;
-      ">
+  <div class="player-profile-cover"></div>
 
-      <h2>
-        ${data.name || ""}
-      </h2>
+  <img
+  src="${
+    data.profile_photo ||
+    '/default-avatar.png'
+  }"
+  class="player-profile-avatar">
 
-      <p style="color:#60a5fa;">
-        @${data.username || ""}
-      </p>
+  <div class="player-profile-name">
+    ${data.name || ""}
+  </div>
 
-      <p>
-        👥 ${data.followers} abonnés
-      </p>
+  <div class="player-profile-username">
+    @${data.username || ""}
+  </div>
 
-      <p>
-        ➕ ${data.following} abonnements
-      </p>
+</div>
 
-      <p>
-        ⚽ ${data.matchs} matchs
-      </p>
+<div class="player-stats">
 
-      <p>
-        ${
-          data.abonnement === 1
-          ? "⭐ Premium"
-          : "Compte gratuit"
-        }
-      </p>
+  <div class="player-stat">
+    <h3>${data.followers}</h3>
+    <p>Abonnés</p>
+  </div>
 
-      <button
-      class="secondary"
-      onclick="suivreJoueur(${data.id})">
-        ➕ Suivre
-      </button>
+  <div class="player-stat">
+    <h3>${data.following}</h3>
+    <p>Abonnements</p>
+  </div>
 
-    </div>
+  <div class="player-stat">
+    <h3>${data.matchs}</h3>
+    <p>Matchs</p>
+  </div>
+
+</div>
+
+<div style="text-align:center;">
+
+  <p style="
+    margin-top:20px;
+    font-weight:bold;
+    color:#fde047;
+  ">
+    ${
+      data.abonnement === 1
+      ? "⭐ Joueur Premium"
+      : "Compte gratuit"
+    }
+  </p>
+
+  <button
+  class="follow-btn"
+  onclick="suivreJoueur(${data.id})">
+
+    ➕ Suivre
+
+  </button>
+
+  </div>
 
   `;
 
   setPage("pagePlayerProfile");
+
+}
+
+async function ouvrirNotifications(){
+
+  const data =
+    await get("/notifications");
+
+  notificationsList.innerHTML =
+    data.map(n=>`
+
+      <div class="match">
+
+        🔔 ${n.message}<br>
+
+        <small>
+          ${n.created_at || ""}
+        </small>
+
+      </div>
+
+    `).join("");
+
+  setPage("pageNotifications");
 
 }
 
