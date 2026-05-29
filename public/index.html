@@ -691,6 +691,325 @@ button:disabled{
   min-width:0;
 }
 
+.tiktok-left{
+  position:absolute;
+  left:16px;
+  bottom:70px;
+  color:white;
+  max-width:70%;
+  z-index:5;
+}
+
+.tiktok-actions{
+  position:absolute;
+  right:16px;
+  bottom:90px;
+  display:flex;
+  flex-direction:column;
+  gap:18px;
+  align-items:center;
+  z-index:5;
+}
+
+body.video-mode header,
+body.video-mode .nav,
+body.video-mode #messageCard{
+  display:none!important;
+}
+
+body.video-mode .container{
+  max-width:none!important;
+  padding:0!important;
+  margin:0!important;
+}
+
+body.video-mode #panelHighlights{
+  display:block!important;
+}
+
+body.video-mode .tiktok-feed{
+  height:100vh!important;
+}
+
+body.video-mode .tiktok-video{
+  height:100vh!important;
+}
+
+.tiktok-feed{
+  height:100vh;
+  overflow-y:auto;
+  scroll-snap-type:y mandatory;
+  background:#000;
+}
+
+.tiktok-video{
+  position:relative;
+  width:100%;
+  height:100vh;
+  scroll-snap-align:start;
+  background:#000;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  overflow:hidden;
+}
+
+.tiktok-video video{
+  width:100vw;
+height:100vh;
+object-fit:cover;
+display:block;
+background:#000;
+}
+
+.tiktok-overlay{
+  position:absolute;
+  inset:0;
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-end;
+  padding:22px;
+  background:
+    linear-gradient(
+      transparent 40%,
+      rgba(0,0,0,.7)
+    );
+}
+
+.tiktok-left{
+  color:white;
+  max-width:70%;
+  padding-bottom:20px;
+}
+
+.tiktok-user{
+  font-weight:900;
+  font-size:18px;
+}
+
+.tiktok-title{
+  margin-top:8px;
+  color:#f1f5f9;
+  font-size:15px;
+}
+
+.tiktok-actions{
+  display:flex;
+  flex-direction:column;
+  gap:18px;
+  align-items:center;
+  padding-bottom:20px;
+}
+
+.tiktok-action-btn{
+  background:none!important;
+  border:none!important;
+  color:white!important;
+  font-size:30px;
+  box-shadow:none!important;
+}
+
+.plus-video-btn{
+  position:fixed!important;
+  bottom:95px!important;
+  left:50%!important;
+  transform:translateX(-50%)!important;
+  width:64px!important;
+  height:64px!important;
+  border-radius:50%!important;
+  font-size:42px!important;
+  z-index:9999!important;
+  color:white!important;
+
+  background:
+    rgba(255,255,255,.08)!important;
+
+  border:
+    1px solid rgba(255,255,255,.18)!important;
+
+  backdrop-filter:blur(18px);
+  -webkit-backdrop-filter:blur(18px);
+
+  box-shadow:
+    0 0 35px #1455ff55!important;
+}
+
+.video-upload-box{
+  position:fixed;
+  left:12px;
+  right:12px;
+  bottom:20px;
+  z-index:1000;
+
+  background:
+    rgba(2,6,23,.86);
+
+  border:
+    1px solid rgba(255,255,255,.12);
+
+  backdrop-filter:blur(18px);
+  -webkit-backdrop-filter:blur(18px);
+
+  border-radius:28px;
+  padding:16px;
+
+  box-shadow:
+    0 0 35px #00000099;
+}
+
+.delete-video-btn{
+  background:
+    rgba(239,68,68,.12)!important;
+
+  color:#fca5a5!important;
+
+  border:
+    1px solid rgba(239,68,68,.35)!important;
+
+  border-radius:999px;
+  padding:8px 12px;
+  font-size:12px;
+
+  box-shadow:none!important;
+}
+
+.delete-video-btn:hover{
+  background:
+    rgba(239,68,68,.22)!important;
+}
+
+.tiktok-left{
+  color:white;
+  max-width:70%;
+}
+
+.tiktok-user{
+  font-weight:900;
+  font-size:18px;
+}
+
+.tiktok-title{
+  margin-top:8px;
+  color:#e2e8f0;
+}
+
+.tiktok-actions{
+  display:flex;
+  flex-direction:column;
+  gap:18px;
+  align-items:center;
+}
+
+.tiktok-action-btn{
+  background:none!important;
+  border:none!important;
+  color:white!important;
+  font-size:28px;
+  box-shadow:none!important;
+}
+
+.plus-video-btn{
+  position:fixed!important;
+  bottom:85px!important;
+  left:50%!important;
+  transform:translateX(-50%)!important;
+  width:64px!important;
+  height:64px!important;
+  border-radius:50%!important;
+  font-size:40px!important;
+  z-index:9999!important;
+  color:white!important;
+  background:rgba(255,255,255,.08)!important;
+  border:1px solid rgba(255,255,255,.18)!important;
+  backdrop-filter:blur(16px);
+  -webkit-backdrop-filter:blur(16px);
+  box-shadow:0 0 30px #1455ff55!important;
+}
+
+.video-upload-box{
+  position:fixed;
+  left:12px;
+  right:12px;
+  bottom:20px;
+  z-index:1000;
+  background:rgba(2,6,23,.82);
+  border:1px solid rgba(255,255,255,.12);
+  backdrop-filter:blur(16px);
+  -webkit-backdrop-filter:blur(16px);
+  border-radius:24px;
+  padding:14px;
+  box-shadow:0 0 35px #00000099;
+}
+
+.delete-video-btn{
+  background:rgba(239,68,68,.12)!important;
+  color:#fca5a5!important;
+  border:1px solid rgba(239,68,68,.35)!important;
+  border-radius:999px;
+  padding:8px 12px;
+  font-size:12px;
+  box-shadow:none!important;
+}
+
+.delete-video-btn:hover{
+  background:rgba(239,68,68,.22)!important;
+}
+
+.video-back-btn{
+  position:fixed;
+  top:18px;
+  left:14px;
+  z-index:10000;
+
+  width:46px;
+  height:46px;
+
+  border-radius:50%;
+
+  background:
+    rgba(0,0,0,.45)!important;
+
+  color:white!important;
+
+  border:
+    1px solid rgba(255,255,255,.18)!important;
+
+  backdrop-filter:blur(12px);
+
+  font-size:28px;
+
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+
+body.video-mode{
+  overflow:hidden!important;
+}
+
+body.video-mode .tiktok-feed{
+  position:fixed!important;
+  inset:0!important;
+  width:100vw!important;
+  height:100vh!important;
+  overflow-y:scroll!important;
+  scroll-snap-type:y mandatory;
+  background:#000;
+  z-index:9998;
+}
+
+body.video-mode .tiktok-video{
+  width:100vw!important;
+  height:100vh!important;
+  scroll-snap-align:start;
+}
+
+body.video-mode .tiktok-video video{
+  width:100vw!important;
+  height:100vh!important;
+  object-fit:cover;
+}
+
 </style>
 
 </head>
@@ -1008,6 +1327,10 @@ Changer nom utilisateur
 
 <p id="profilExpiration"></p>
 
+<h3>🎬 Mes vidéos</h3>
+
+<div id="myVideosList"></div>
+
 <h3>Photo profil</h3>
 
 <input
@@ -1117,10 +1440,11 @@ Phase finale
 </button>
 
 <button
-onclick="showPanel('panelHighlights')">
-
-vidéos
-
+onclick="
+showPanel('panelHighlights');
+chargerHighlights();
+">
+🎬 Vidéos
 </button>
 
 <button
@@ -1421,34 +1745,59 @@ Voir champion
 id="panelHighlights"
 class="panel hidden">
 
-<h2>
- vidéo
-</h2>
-
-<input
-id="highlightParticipantId"
-placeholder="ID joueur">
-
-<input
-id="highlightTitre"
-placeholder="Titre highlight">
-
-<textarea
-id="highlightDescription"
-placeholder="Description"></textarea>
-
-<input
-id="highlightMedia"
-placeholder="Lien image ou vidéo">
+<div
+class="tiktok-feed"
+id="highlightsList">
+</div>
 
 <button
-onclick="publierHighlight()">
+class="video-back-btn"
+onclick="quitterVideos()">
 
-Publier vidéo
+‹
 
 </button>
 
-<div id="highlightsList"></div>
+<button
+class="plus-video-btn"
+onclick="document.getElementById('highlightVideoFile').click()">
++
+</button>
+
+<div
+class="video-upload-box hidden"
+id="videoUploadBox">
+
+<video
+id="videoPreview"
+controls
+playsinline
+style="
+width:100%;
+max-height:420px;
+border-radius:18px;
+object-fit:cover;
+">
+</video>
+
+<input
+type="file"
+id="highlightVideoFile"
+accept="video/mp4"
+class="hidden"
+onchange="prepareVideoUpload()">
+
+<input
+id="highlightTitre"
+placeholder="Titre de la vidéo">
+
+<button
+class="glass-btn"
+onclick="publierHighlight()">
+Publier
+</button>
+
+</div>
 
 </div>
 
@@ -1482,7 +1831,9 @@ Recharger page
 
 </section>
 
-<div class="card">
+<div
+class="card"
+id="messageCard">
 
 <h2>Message</h2>
 
@@ -1555,8 +1906,28 @@ function setPage(page){
 }
 
 function showPanel(id){
-  document.querySelectorAll(".panel").forEach(p=>p.classList.add("hidden"));
-  document.getElementById(id).classList.remove("hidden");
+
+  document
+  .querySelectorAll(".panel")
+  .forEach(p=>p.classList.add("hidden"));
+
+  document
+  .getElementById(id)
+  .classList.remove("hidden");
+
+  if(id === "panelHighlights"){
+    messageCard.classList.add("hidden");
+  }else{
+    messageCard.classList.remove("hidden");
+  }
+
+  if(id === "panelHighlights"){
+  document.body.classList.add("video-mode");
+  chargerHighlights();
+}else{
+  document.body.classList.remove("video-mode");
+}
+
 }
 
 async function envoyerCode(){
@@ -1685,18 +2056,20 @@ profilUsername.textContent =
 profilEmail.textContent =
   "Email : " + (data.email || "");
 
-  profilAbonnement.textContent =
-    data.abonnement === 1
-    ? "Statut : Abonné ⭐"
-    : "Statut : Compte gratuit";
+profilAbonnement.textContent =
+  data.abonnement === 1
+  ? "Statut : Abonné ⭐"
+  : "Statut : Compte gratuit";
 
-  profilExpiration.textContent =
+profilExpiration.textContent =
+  data.abonnement_expire_at
+  ? "Expiration : " +
     data.abonnement_expire_at
-    ? "Expiration : " + data.abonnement_expire_at
-    : "";
+  : "";
 
-  setPage("pageProfil");
+await chargerMesVideos();
 
+setPage("pageProfil");
 }
 async function creerTournoi(){
 
@@ -2656,26 +3029,75 @@ async function envoyerPreuvePaiement(){
 
 async function publierHighlight(){
 
-  const result = await post(
-    "/highlight",
-    {
-      participant_id:
-        highlightParticipantId.value,
+  const file =
+    highlightVideoFile.files[0];
 
-      titre:
-        highlightTitre.value,
+  if(!highlightTitre.value){
+    message.textContent =
+      "Titre obligatoire";
+    return;
+  }
 
-      description:
-        highlightDescription.value,
+  if(!file){
+    message.textContent =
+      "Choisis une vidéo";
+    return;
+  }
 
-      media_url:
-        highlightMedia.value
-    }
-  );
+  if(file.size > 50 * 1024 * 1024){
+    message.textContent =
+      "Vidéo maximum 50 MB";
+    return;
+  }
+
+  const ok =
+    await verifierVideoDuration(file);
+
+  if(!ok){
+    message.textContent =
+      "Vidéo maximum 1 minute";
+    return;
+  }
+
+  const formData =
+    new FormData();
+
+  formData.append("image", file);
+
+  message.textContent =
+    "Upload vidéo...";
+
+  const uploadRes =
+    await fetch("/upload-image",{
+      method:"POST",
+      body:formData
+    });
+
+  const uploadData =
+    await uploadRes.json();
+
+  if(!uploadData.ok){
+    message.textContent =
+      uploadData.message ||
+      "Erreur upload vidéo";
+    return;
+  }
+
+  const result =
+    await post("/highlight",{
+      titre:highlightTitre.value,
+      description:"",
+      media_url:uploadData.url
+    });
 
   message.textContent = result;
 
-  chargerHighlights();
+  highlightTitre.value = "";
+  highlightVideoFile.value = "";
+  videoPreview.src = "";
+  videoUploadBox.classList.add("hidden");
+
+  await chargerHighlights();
 
 }
 
@@ -2688,62 +3110,74 @@ async function chargerHighlights(){
   highlightsList.innerHTML =
     data.map(h=>`
 
-      <div class="match">
+    <div class="tiktok-video">
 
-        <h3>
-          ${h.titre}
-        </h3>
+      <video
+      src="${h.media_url}"
+      autoplay
+     loop
+     playsinline
+     onclick="toggleVideoPause(this)">
+     </video>
 
-        <p>
-          👤 ${h.prenom || "Joueur"}
-        </p>
+      <div class="tiktok-overlay">
 
-        <p>
-          ${h.description || ""}
-        </p>
+        <div class="tiktok-left">
 
-        <button
-        class="secondary"
-        onclick="voirHighlight(${h.id}, '${h.media_url}')">
+          <div class="tiktok-user">
+            @${h.username || h.prenom || "joueur"}
+          </div>
 
-        Voir média 👀
+          <div class="tiktok-title">
+            ${h.titre || ""}
+          </div>
 
-       </button>
+          ${
+            h.user_id === h.current_user_id
+            ? `
+              <button
+              class="delete-video-btn"
+               onclick="toggleVideoSound(this)">
+                Supprimer
+              </button>
+            `
+            : ""
+          }
 
-        <p>
-          ❤️ ${h.likes}
-          👀 ${h.vues}
-        </p>
+        </div>
 
-        <button
-        class="secondary"
-        onclick="likeHighlight(${h.id})">
+        <div class="tiktok-actions">
 
-        Like ❤️
+          <button
+          class="tiktok-action-btn"
+          onclick="likeHighlight(${h.id})">
 
-        </button>
+            ❤️
 
-        <input
-        id="comment_${h.id}"
-        placeholder="Écrire un commentaire">
+          </button>
 
-       <input
-       id="commentPlayer_${h.id}"
-       placeholder="ID joueur">
+          <div style="color:white;">
+            ${h.likes || 0}
+          </div>
 
-       <button
-       class="secondary"
-       onclick="commentHighlight(${h.id})">
+          <button
+          class="tiktok-action-btn">
 
-       Commenter 💬
+            💬
 
-       </button>
+          </button>
 
-       <div id="comments_${h.id}"></div>
+        </div>
 
       </div>
 
-    `).join("");
+    </div>
+
+   `).join("");
+
+  setTimeout(()=>{
+    initTikTokAutoplay();
+  },300);
 
 }
 
@@ -2765,9 +3199,8 @@ async function voirHighlight(id,url){
     { id }
   );
 
-  window.open(url,"_blank");
-
-  chargerHighlights();
+  showPanel("panelHighlights");
+  await chargerHighlights();
 
 }
 
@@ -3318,6 +3751,219 @@ function fermerProfilJoueur(){
   );
 
   setPage("pageDashboard");
+
+}
+
+async function verifierVideoDuration(file){
+
+  return new Promise((resolve)=>{
+
+    const video =
+      document.createElement("video");
+
+    video.preload = "metadata";
+
+    video.onloadedmetadata = function(){
+
+      URL.revokeObjectURL(video.src);
+
+      resolve(video.duration <= 60);
+
+    };
+
+    video.src =
+      URL.createObjectURL(file);
+
+  });
+
+}
+
+function openVideoUpload(){
+  videoUploadBox.classList.remove("hidden");
+  videoUploadBox.scrollIntoView({
+    behavior:"smooth"
+  });
+}
+
+function closeVideoUpload(){
+  videoUploadBox.classList.add("hidden");
+}
+
+function prepareVideoUpload(){
+
+  const file = highlightVideoFile.files[0];
+
+  if(!file) return;
+
+  videoPreview.src =
+    URL.createObjectURL(file);
+
+  videoUploadBox.classList.remove("hidden");
+}
+
+function initTikTokAutoplay(){
+
+  const videos =
+    document.querySelectorAll(
+      ".tiktok-video video"
+    );
+
+  const observer =
+    new IntersectionObserver(
+
+    entries=>{
+
+      entries.forEach(entry=>{
+
+        const video = entry.target;
+
+        if(entry.isIntersecting){
+
+          videos.forEach(v=>{
+            if(v !== video){
+              v.pause();
+            }
+          });
+
+          video.play();
+
+        }else{
+
+          video.pause();
+
+        }
+
+      });
+
+    },
+
+    {
+      threshold:0.7
+    }
+
+  );
+
+  videos.forEach(video=>{
+    observer.observe(video);
+  });
+
+}
+
+setTimeout(()=>{
+  initTikTokAutoplay();
+},300);
+
+function prepareVideoUpload(){
+
+  const file =
+    highlightVideoFile.files[0];
+
+  if(!file){
+    return;
+  }
+
+  videoPreview.src =
+    URL.createObjectURL(file);
+
+  videoUploadBox.classList.remove(
+    "hidden"
+  );
+
+}
+
+async function supprimerHighlight(id){
+
+  if(!confirm("Supprimer cette vidéo ?")){
+    return;
+  }
+
+  const result = await post(
+    "/delete-highlight",
+    { id }
+  );
+
+  message.textContent = result;
+
+  await chargerHighlights();
+
+}
+
+async function chargerMesVideos(){
+
+  const videos =
+    await get("/my-videos");
+
+  if(!Array.isArray(videos)){
+    return;
+  }
+
+  if(videos.length === 0){
+
+    myVideosList.innerHTML =
+      `<p class="small">Aucune vidéo publiée.</p>`;
+
+    return;
+
+  }
+
+  myVideosList.innerHTML =
+    videos.map(v=>`
+
+      <div class="match">
+
+        <video
+        src="${v.media_url}"
+        controls
+        playsinline
+        style="
+        width:100%;
+        border-radius:18px;
+        max-height:280px;
+        object-fit:cover;
+        ">
+        </video>
+
+        <b>${v.titre || "Vidéo"}</b><br>
+
+        <span class="small">
+          ❤️ ${v.likes || 0}
+          👀 ${v.vues || 0}
+        </span>
+
+      </div>
+
+    `).join("");
+
+}
+
+function toggleVideoPause(video){
+
+  if(video.paused){
+    video.play();
+  }else{
+    video.pause();
+  }
+
+}
+
+function quitterVideos(){
+
+  document.body.classList.remove(
+    "video-mode"
+  );
+
+  showPanel("panelTournoi");
+
+}
+
+function toggleVideoPause(video){
+
+  if(video.paused){
+    video.muted = true;
+    video.play();
+  }else{
+    video.pause();
+  }
 
 }
 

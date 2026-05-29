@@ -95,7 +95,8 @@ const upload = multer({
   storage,
 
   limits:{
-    fileSize:5 * 1024 * 1024
+    fileSize:50 * 1024 * 1024
+
   },
 
   fileFilter:(req,file,cb)=>{
@@ -583,6 +584,10 @@ CREATE TABLE IF NOT EXISTS notifications(
   created_at TEXT DEFAULT CURRENT_TIMESTAMP
 )
 `);
+db.run(`
+  ALTER TABLE highlights
+  ADD COLUMN user_id INTEGER
+`,()=>{});
 
 app.get("/", async (req,res)=>{
 
@@ -3521,30 +3526,31 @@ app.post("/highlight", async (req,res)=>{
       media_url
     } = req.body;
 
-    if(!participant_id || !titre || !media_url){
+    if(!titre || !media_url){
       return res.send(
         "Participant, titre et média obligatoires"
       );
     }
 
-    await run(
-      `
-      INSERT INTO highlights(
-        participant_id,
-        titre,
-        description,
-        media_url
-      )
-      VALUES(?,?,?,?)
-      `,
-      [
-        participant_id,
-        titre,
-        description || "",
-        media_url
-      ]
-    );
-
+  await run(
+  `
+  INSERT INTO highlights(
+    participant_id,
+    user_id,
+    titre,
+    description,
+    media_url
+  )
+  VALUES(?,?,?,?,?)
+  `,
+  [
+    participant_id,
+    req.session.userId,
+    titre,
+    description || "",
+    media_url
+  ]
+);
     await ajouterXP(participant_id,15);
 
     res.send("Highlight publié + XP ajouté");
@@ -3574,7 +3580,18 @@ app.get("/highlights", async (req,res)=>{
       `
     );
 
-    res.json(highlights);
+    res.json(
+
+  highlights.map(h=>({
+
+    ...h,
+
+    current_user_id:
+      req.session.userId
+
+  }))
+
+);
 
   }catch(e){
 
@@ -4766,6 +4783,87 @@ app.get("/notifications", async (req,res)=>{
   }
 
 });
+app.post("/delete-highlight", async (req,res)=>{
+
+  try{
+
+    if(!req.session.userId){
+      return res.send("Connecte-toi");
+    }
+
+    const { id } = req.body;
+
+    const highlight = await get(
+      `
+      SELECT *
+      FROM highlights
+      WHERE id=?
+      `,
+      [id]
+    );
+
+    if(!highlight){
+      return res.send("Vidéo introuvable");
+    }
+
+    if(Number(highlight.user_id) !== Number(req.session.userId)){
+      return res.send("Tu ne peux supprimer que tes vidéos");
+    }
+
+    await run(
+      `
+      DELETE FROM highlights
+      WHERE id=?
+      `,
+      [id]
+    );
+
+    res.send("Vidéo supprimée");
+
+  }catch(e){
+
+    console.log(e);
+    res.send("Erreur suppression vidéo");
+
+  }
+
+});
+
+app.get("/my-videos", async (req,res)=>{
+
+  try{
+
+    if(!req.session.userId){
+      return res.json([]);
+    }
+
+    const videos = await all(
+      `
+      SELECT
+        h.*,
+        u.name,
+        u.username,
+        u.profile_photo
+      FROM highlights h
+      LEFT JOIN users u
+      ON u.id=h.user_id
+      WHERE h.user_id=?
+      ORDER BY h.id DESC
+      `,
+      [req.session.userId]
+    );
+
+    res.json(videos);
+
+  }catch(e){
+
+    console.log(e);
+    res.json([]);
+
+  }
+
+});
+
 
 app.listen(PORT, () => {
 
