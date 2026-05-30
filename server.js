@@ -3519,8 +3519,11 @@ app.post("/highlight", async (req,res)=>{
 
   try{
 
+    if(!req.session.userId){
+      return res.send("Connecte-toi");
+    }
+
     const {
-      participant_id,
       titre,
       description,
       media_url
@@ -3528,37 +3531,34 @@ app.post("/highlight", async (req,res)=>{
 
     if(!titre || !media_url){
       return res.send(
-        "Participant, titre et média obligatoires"
+        "Titre et média obligatoires"
       );
     }
 
-  await run(
-  `
-  INSERT INTO highlights(
-    participant_id,
-    user_id,
-    titre,
-    description,
-    media_url
-  )
-  VALUES(?,?,?,?,?)
-  `,
-  [
-    participant_id,
-    req.session.userId,
-    titre,
-    description || "",
-    media_url
-  ]
-);
-    await ajouterXP(participant_id,15);
+    await run(
+      `
+      INSERT INTO highlights(
+        user_id,
+        titre,
+        description,
+        media_url
+      )
+      VALUES(?,?,?,?)
+      `,
+      [
+        req.session.userId,
+        titre,
+        description || "",
+        media_url
+      ]
+    );
 
-    res.send("Highlight publié + XP ajouté");
+    res.send("Vidéo publiée");
 
   }catch(e){
 
     console.log(e);
-    res.send("Erreur ajout highlight");
+    res.send("Erreur ajout vidéo");
 
   }
 
