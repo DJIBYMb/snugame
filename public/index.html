@@ -727,59 +727,66 @@ body.video-mode #panelHighlights{
   display:block!important;
 }
 
+body.video-mode{
+  overflow:hidden!important;
+}
+
+body.video-mode header,
+body.video-mode .nav,
+body.video-mode #messageCard{
+  display:none!important;
+}
+
+body.video-mode .container{
+  max-width:none!important;
+  padding:0!important;
+  margin:0!important;
+}
+
 body.video-mode .tiktok-feed{
+  position:fixed!important;
+  inset:0!important;
+  width:100vw!important;
   height:100vh!important;
-}
-
-body.video-mode .tiktok-video{
-  height:100vh!important;
-}
-
-.tiktok-feed{
-  height:100vh;
-  overflow-y:auto;
+  overflow-y:scroll!important;
   scroll-snap-type:y mandatory;
   background:#000;
+  z-index:9998;
 }
 
 .tiktok-video{
   position:relative;
-  width:100%;
+  width:100vw;
   height:100vh;
   scroll-snap-align:start;
   background:#000;
-  display:flex;
-  justify-content:center;
-  align-items:center;
   overflow:hidden;
 }
 
 .tiktok-video video{
   width:100vw;
-height:100vh;
-object-fit:cover;
-display:block;
-background:#000;
+  height:100vh;
+  object-fit:cover;
+  display:block;
+  background:#000;
 }
 
 .tiktok-overlay{
   position:absolute;
   inset:0;
-  display:flex;
-  justify-content:space-between;
-  align-items:flex-end;
-  padding:22px;
-  background:
-    linear-gradient(
-      transparent 40%,
-      rgba(0,0,0,.7)
-    );
+  background:linear-gradient(
+    transparent 45%,
+    rgba(0,0,0,.75)
+  );
+  z-index:5;
 }
 
 .tiktok-left{
+  position:absolute;
+  left:16px;
+  bottom:85px;
   color:white;
   max-width:70%;
-  padding-bottom:20px;
 }
 
 .tiktok-user{
@@ -794,11 +801,13 @@ background:#000;
 }
 
 .tiktok-actions{
+  position:absolute;
+  right:16px;
+  bottom:105px;
   display:flex;
   flex-direction:column;
   gap:18px;
   align-items:center;
-  padding-bottom:20px;
 }
 
 .tiktok-action-btn{
@@ -818,112 +827,13 @@ background:#000;
   height:64px!important;
   border-radius:50%!important;
   font-size:42px!important;
-  z-index:9999!important;
-  color:white!important;
-
-  background:
-    rgba(255,255,255,.08)!important;
-
-  border:
-    1px solid rgba(255,255,255,.18)!important;
-
-  backdrop-filter:blur(18px);
-  -webkit-backdrop-filter:blur(18px);
-
-  box-shadow:
-    0 0 35px #1455ff55!important;
-}
-
-.video-upload-box{
-  position:fixed;
-  left:12px;
-  right:12px;
-  bottom:20px;
-  z-index:1000;
-
-  background:
-    rgba(2,6,23,.86);
-
-  border:
-    1px solid rgba(255,255,255,.12);
-
-  backdrop-filter:blur(18px);
-  -webkit-backdrop-filter:blur(18px);
-
-  border-radius:28px;
-  padding:16px;
-
-  box-shadow:
-    0 0 35px #00000099;
-}
-
-.delete-video-btn{
-  background:
-    rgba(239,68,68,.12)!important;
-
-  color:#fca5a5!important;
-
-  border:
-    1px solid rgba(239,68,68,.35)!important;
-
-  border-radius:999px;
-  padding:8px 12px;
-  font-size:12px;
-
-  box-shadow:none!important;
-}
-
-.delete-video-btn:hover{
-  background:
-    rgba(239,68,68,.22)!important;
-}
-
-.tiktok-left{
-  color:white;
-  max-width:70%;
-}
-
-.tiktok-user{
-  font-weight:900;
-  font-size:18px;
-}
-
-.tiktok-title{
-  margin-top:8px;
-  color:#e2e8f0;
-}
-
-.tiktok-actions{
-  display:flex;
-  flex-direction:column;
-  gap:18px;
-  align-items:center;
-}
-
-.tiktok-action-btn{
-  background:none!important;
-  border:none!important;
-  color:white!important;
-  font-size:28px;
-  box-shadow:none!important;
-}
-
-.plus-video-btn{
-  position:fixed!important;
-  bottom:85px!important;
-  left:50%!important;
-  transform:translateX(-50%)!important;
-  width:64px!important;
-  height:64px!important;
-  border-radius:50%!important;
-  font-size:40px!important;
-  z-index:9999!important;
+  z-index:10001!important;
   color:white!important;
   background:rgba(255,255,255,.08)!important;
   border:1px solid rgba(255,255,255,.18)!important;
-  backdrop-filter:blur(16px);
-  -webkit-backdrop-filter:blur(16px);
-  box-shadow:0 0 30px #1455ff55!important;
+  backdrop-filter:blur(18px);
+  -webkit-backdrop-filter:blur(18px);
+  box-shadow:0 0 35px #1455ff55!important;
 }
 
 .video-upload-box{
@@ -931,13 +841,13 @@ background:#000;
   left:12px;
   right:12px;
   bottom:20px;
-  z-index:1000;
-  background:rgba(2,6,23,.82);
+  z-index:10002;
+  background:rgba(2,6,23,.86);
   border:1px solid rgba(255,255,255,.12);
-  backdrop-filter:blur(16px);
-  -webkit-backdrop-filter:blur(16px);
-  border-radius:24px;
-  padding:14px;
+  backdrop-filter:blur(18px);
+  -webkit-backdrop-filter:blur(18px);
+  border-radius:28px;
+  padding:16px;
   box-shadow:0 0 35px #00000099;
 }
 
@@ -951,63 +861,22 @@ background:#000;
   box-shadow:none!important;
 }
 
-.delete-video-btn:hover{
-  background:rgba(239,68,68,.22)!important;
-}
-
 .video-back-btn{
   position:fixed;
   top:18px;
   left:14px;
-  z-index:10000;
-
+  z-index:10003;
   width:46px;
   height:46px;
-
   border-radius:50%;
-
-  background:
-    rgba(0,0,0,.45)!important;
-
+  background:rgba(0,0,0,.45)!important;
   color:white!important;
-
-  border:
-    1px solid rgba(255,255,255,.18)!important;
-
+  border:1px solid rgba(255,255,255,.18)!important;
   backdrop-filter:blur(12px);
-
   font-size:28px;
-
   display:flex;
   align-items:center;
   justify-content:center;
-}
-
-body.video-mode{
-  overflow:hidden!important;
-}
-
-body.video-mode .tiktok-feed{
-  position:fixed!important;
-  inset:0!important;
-  width:100vw!important;
-  height:100vh!important;
-  overflow-y:scroll!important;
-  scroll-snap-type:y mandatory;
-  background:#000;
-  z-index:9998;
-}
-
-body.video-mode .tiktok-video{
-  width:100vw!important;
-  height:100vh!important;
-  scroll-snap-align:start;
-}
-
-body.video-mode .tiktok-video video{
-  width:100vw!important;
-  height:100vh!important;
-  object-fit:cover;
 }
 
 </style>
@@ -1440,12 +1309,12 @@ Phase finale
 </button>
 
 <button
-onclick="
-showPanel('panelHighlights');
-chargerHighlights();
-">
+onclick="ouvrirModeVideos()">
 🎬 Vidéos
 </button>
+
+
+</div>
 
 <button
 onclick="showPanel('panelParametres')">
@@ -1457,8 +1326,68 @@ Paramètres
 </div>
 
 <div
+id="panelHighlights"
+class="panel hidden">
+
+<div
+class="tiktok-feed"
+id="highlightsList">
+</div>
+
+<button
+class="video-back-btn"
+onclick="quitterVideos()">
+‹
+</button>
+
+<button
+class="plus-video-btn"
+onclick="document.getElementById('highlightVideoFile').click()">
++
+</button>
+
+<div
+class="video-upload-box hidden"
+id="videoUploadBox">
+
+<video
+id="videoPreview"
+controls
+playsinline
+style="
+width:100%;
+max-height:420px;
+border-radius:18px;
+object-fit:cover;
+">
+</video>
+
+<input
+type="file"
+id="highlightVideoFile"
+accept="video/mp4"
+class="hidden"
+onchange="prepareVideoUpload()">
+
+<input
+id="highlightTitre"
+placeholder="Titre de la vidéo">
+
+<button
+class="glass-btn"
+onclick="publierHighlight()">
+Publier
+</button>
+
+</div>
+
+</div> <!-- FIN panelHighlights -->
+
+<div
 id="panelTournoi"
 class="panel">
+
+
 
 <div class="tournoi-row">
 
@@ -1736,94 +1665,6 @@ Voir champion
 <div id="bracketProResult"></div>
 
 <div id="phaseFinaleResult"></div>
-
-</div>
-
-</div>
-
-<div
-id="panelHighlights"
-class="panel hidden">
-
-<div
-class="tiktok-feed"
-id="highlightsList">
-</div>
-
-<button
-class="video-back-btn"
-onclick="quitterVideos()">
-
-‹
-
-</button>
-
-<button
-class="plus-video-btn"
-onclick="document.getElementById('highlightVideoFile').click()">
-+
-</button>
-
-<div
-class="video-upload-box hidden"
-id="videoUploadBox">
-
-<video
-id="videoPreview"
-controls
-playsinline
-style="
-width:100%;
-max-height:420px;
-border-radius:18px;
-object-fit:cover;
-">
-</video>
-
-<input
-type="file"
-id="highlightVideoFile"
-accept="video/mp4"
-class="hidden"
-onchange="prepareVideoUpload()">
-
-<input
-id="highlightTitre"
-placeholder="Titre de la vidéo">
-
-<button
-class="glass-btn"
-onclick="publierHighlight()">
-Publier
-</button>
-
-</div>
-
-</div>
-
-<div
-id="panelParametres"
-class="panel hidden">
-
-<div class="card">
-
-<h2>Paramètres</h2>
-
-<button
-class="secondary"
-onclick="nettoyerAffichage()">
-
-Nettoyer affichage
-
-</button>
-
-<button
-class="secondary"
-onclick="checkStatus()">
-
-Recharger page
-
-</button>
 
 </div>
 
@@ -3137,7 +2978,7 @@ async function chargerHighlights(){
             ? `
               <button
               class="delete-video-btn"
-               onclick="toggleVideoSound(this)">
+               onclick="supprimerHighlight(${h.id})"
                 Supprimer
               </button>
             `
@@ -3789,66 +3630,6 @@ function closeVideoUpload(){
   videoUploadBox.classList.add("hidden");
 }
 
-function prepareVideoUpload(){
-
-  const file = highlightVideoFile.files[0];
-
-  if(!file) return;
-
-  videoPreview.src =
-    URL.createObjectURL(file);
-
-  videoUploadBox.classList.remove("hidden");
-}
-
-function initTikTokAutoplay(){
-
-  const videos =
-    document.querySelectorAll(
-      ".tiktok-video video"
-    );
-
-  const observer =
-    new IntersectionObserver(
-
-    entries=>{
-
-      entries.forEach(entry=>{
-
-        const video = entry.target;
-
-        if(entry.isIntersecting){
-
-          videos.forEach(v=>{
-            if(v !== video){
-              v.pause();
-            }
-          });
-
-          video.play();
-
-        }else{
-
-          video.pause();
-
-        }
-
-      });
-
-    },
-
-    {
-      threshold:0.7
-    }
-
-  );
-
-  videos.forEach(video=>{
-    observer.observe(video);
-  });
-
-}
-
 setTimeout(()=>{
   initTikTokAutoplay();
 },300);
@@ -3935,7 +3716,6 @@ async function chargerMesVideos(){
     `).join("");
 
 }
-
 function toggleVideoPause(video){
 
   if(video.paused){
@@ -3948,24 +3728,93 @@ function toggleVideoPause(video){
 
 function quitterVideos(){
 
-  document.body.classList.remove(
-    "video-mode"
-  );
+  document.body.classList.remove("video-mode");
+
+  messageCard.classList.remove("hidden");
 
   showPanel("panelTournoi");
 
 }
 
-function toggleVideoPause(video){
+function prepareVideoUpload(){
 
-  if(video.paused){
-    video.muted = true;
-    video.play();
-  }else{
-    video.pause();
+  const file =
+    document.getElementById("highlightVideoFile").files[0];
+
+  if(!file){
+    return;
   }
 
+  videoPreview.src =
+    URL.createObjectURL(file);
+
+  videoUploadBox.classList.remove("hidden");
+
 }
+
+async function ouvrirModeVideos(){
+
+  showPanel("panelHighlights");
+
+  document.body.classList.add("video-mode");
+
+  messageCard.classList.add("hidden");
+
+  await chargerHighlights();
+
+}
+
+function initTikTokAutoplay(){
+
+  const videos =
+    document.querySelectorAll(
+      ".tiktok-video video"
+    );
+
+  const observer =
+    new IntersectionObserver(
+
+      entries=>{
+
+        entries.forEach(entry=>{
+
+          const video =
+            entry.target;
+
+          if(entry.isIntersecting){
+
+            videos.forEach(v=>{
+
+              if(v !== video){
+                v.pause();
+              }
+
+            });
+
+            video.play();
+
+          }else{
+
+            video.pause();
+
+          }
+
+        });
+
+      },
+
+      {
+        threshold:0.7
+      }
+
+    );
+
+  videos.forEach(video=>{
+    observer.observe(video);
+  });
+
+}
+
 
 checkStatus();
 
