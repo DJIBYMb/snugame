@@ -105,7 +105,9 @@ const upload = multer({
       "image/jpeg",
       "image/png",
       "image/webp",
-      "video/mp4"
+      "video/mp4",
+      "video/quicktime",
+      "video/webm"
     ];
 
     const allowedExt = [
@@ -113,7 +115,10 @@ const upload = multer({
       ".jpeg",
       ".png",
       ".webp",
-      ".mp4"
+      ".mp4",
+      ".mov",
+      ".webm"
+      
     ];
 
     const ext =
