@@ -600,16 +600,25 @@ app.get("/", async (req,res)=>{
 
     const highlights = await all(
       `
-      SELECT
-        h.*,
-        p.prenom
-      FROM highlights h
-      LEFT JOIN participants p
-      ON p.id=h.participant_id
-      ORDER BY h.likes DESC, h.vues DESC, h.id DESC
-      LIMIT 6
+     SELECT
+     h.*,
+     u.username,
+     u.name,
+     u.profile_photo
+     FROM highlights h
+     LEFT JOIN users u
+     ON u.id=h.user_id
+     ORDER BY h.likes DESC, h.vues DESC, h.id DESC
+     LIMIT 6 
       `
     );
+
+    res.json(
+      highlights.map(h=>({
+       ...h,
+       current_user_id:req.session.userId
+     }))
+   );
 
     const cards = highlights.map(h=>`
       <div class="card">
@@ -3576,12 +3585,13 @@ app.get("/highlights", async (req,res)=>{
     const highlights = await all(
       `
       SELECT
-        h.*,
-        p.prenom
-      FROM highlights h
-      LEFT JOIN participants p
-      ON p.id=h.participant_id
-      ORDER BY h.id DESC
+       h.*,
+       u.username,
+       u.name,
+       u.profile_photo
+     FROM highlights h
+     LEFT JOIN users u
+     ON u.id=h.user_id
       `
     );
 
@@ -4869,6 +4879,28 @@ app.get("/my-videos", async (req,res)=>{
 
 });
 
+app.get("/user-videos/:userId", async (req,res)=>{
+
+  try{
+
+    const videos = await all(
+      `
+      SELECT *
+      FROM highlights
+      WHERE user_id=?
+      ORDER BY id DESC
+      `,
+      [req.params.userId]
+    );
+
+    res.json(videos);
+
+  }catch(e){
+    console.log(e);
+    res.json([]);
+  }
+
+});
 
 app.listen(PORT, () => {
 

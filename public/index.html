@@ -879,6 +879,51 @@ body.video-mode .tiktok-feed{
   justify-content:center;
 }
 
+.tiktok-overlay{
+  pointer-events:none;
+}
+
+.tiktok-user,
+.tiktok-actions,
+.tiktok-action-btn,
+.delete-video-btn{
+  pointer-events:auto;
+}
+
+.tiktok-overlay{
+  pointer-events:none;
+}
+
+.tiktok-user,
+.tiktok-actions,
+.tiktok-action-btn,
+.delete-video-btn{
+  pointer-events:auto;
+}
+
+.profile-video-grid{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:6px;
+  margin-top:18px;
+}
+
+.profile-video-item{
+  position:relative;
+  width:100%;
+  aspect-ratio:9/16;
+  background:#000;
+  border-radius:10px;
+  overflow:hidden;
+  cursor:pointer;
+}
+
+.profile-video-item video{
+  width:100%;
+  height:100%;
+  object-fit:cover;
+}
+
 </style>
 
 </head>
@@ -1689,6 +1734,8 @@ id="messageCard">
 
 <script>
 
+let currentUserId = null;
+
 function messageShow(text){
   message.textContent = text;
 
@@ -1828,6 +1875,10 @@ async function abonnement(){
 async function checkStatus(){
 
   const data = await get("/me");
+
+  if(data && data.id){
+  currentUserId = data.id;
+}
 
   if(data && data.connected !== false){
   topProfilePhoto.src =
@@ -2967,9 +3018,14 @@ async function chargerHighlights(){
 
         <div class="tiktok-left">
 
-          <div class="tiktok-user">
-            @${h.username || h.prenom || "joueur"}
-          </div>
+        <div
+        class="tiktok-user"
+       style="cursor:pointer;z-index:99999;position:relative;"
+       onclick="ouvrirProfilDepuisVideo(${h.user_id}); event.stopPropagation();">
+
+       @${h.username || "joueur"}
+
+       </div>
 
           <div class="tiktok-title">
             ${h.titre || ""}
@@ -3532,6 +3588,8 @@ async function ouvrirProfilJoueur(userId){
 
   </div>
 
+  ${await chargerVideosUtilisateur(userId)}
+
   `;
 
   setPage("pagePlayerProfile");
@@ -3817,6 +3875,101 @@ function initTikTokAutoplay(){
 
 }
 
+async function ouvrirProfilDepuisVideo(userId){
+
+  document.body.classList.remove("video-mode");
+
+  messageCard.classList.remove("hidden");
+
+  await ouvrirProfilJoueur(userId);
+
+}
+
+async function chargerVideosUtilisateur(userId){
+
+  const videos =
+    await get("/user-videos/" + userId);
+
+  if(!Array.isArray(videos)){
+    return "";
+  }
+
+  if(videos.length === 0){
+    return `
+      <p class="small">
+        Aucune vidéo publiée.
+      </p>
+    `;
+  }
+
+  return `
+    <h3>🎬 Vidéos</h3>
+
+    <div class="profile-video-grid">
+
+      ${videos.map(v=>`
+
+        <div
+        class="profile-video-item"
+        onclick="ouvrirVideoProfil('${v.media_url}',${v.id},${v.user_id})">
+
+          <video
+          src="${v.media_url}"
+          muted
+          playsinline>
+          </video>
+
+        </div>
+
+      `).join("")}
+
+    </div>
+  `;
+}
+
+function ouvrirVideoProfil(url,id,userId){
+
+  document.body.classList.add("video-mode");
+
+  highlightsList.innerHTML = `
+
+    <div class="tiktok-video">
+
+      <video
+      src="${url}"
+      autoplay
+      muted
+      loop
+      playsinline
+      onclick="toggleVideoPause(this)">
+      </video>
+
+      ${
+        Number(userId) === Number(currentUserId)
+        ? `
+          <button
+          class="delete-video-btn"
+          style="
+          position:fixed;
+          right:16px;
+          bottom:100px;
+          z-index:10004;
+          "
+          onclick="supprimerHighlight(${id})">
+          Supprimer
+          </button>
+        `
+        : ""
+      }
+
+    </div>
+
+  `;
+
+  setPage("pageDashboard");
+  showPanel("panelHighlights");
+
+}
 
 checkStatus();
 
