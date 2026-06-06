@@ -1496,6 +1496,25 @@ type="number"
 value="48"
 placeholder="Nombre équipes">
 
+<h3>Type de tournoi</h3>
+
+<label>
+<input
+type="radio"
+name="tournoiType"
+value="poule"
+checked>
+Tournoi match de poule
+</label>
+
+<label>
+<input
+type="radio"
+name="tournoiType"
+value="rapide">
+Tournoi rapide élimination
+</label>
+
 <input
 id="tournoiGroupLink"
 placeholder="Lien groupe WhatsApp / Telegram / Discord">
@@ -2034,11 +2053,17 @@ async function creerTournoi(){
     return;
   }
 
+  const typeTournoi =
+  document.querySelector(
+    'input[name="tournoiType"]:checked'
+  ).value;
+
   await post("/tournoi",{
-    name:tournoiNom.value,
-    max_teams:maxTeams,
-    group_link:tournoiGroupLink.value
-  });
+  name:tournoiNom.value,
+  max_teams:maxTeams,
+  group_link:tournoiGroupLink.value,
+  type:typeTournoi
+});
 
   tournoiNom.value = "";
 
@@ -2080,6 +2105,23 @@ async function chargerTournois(){
       ID : ${t.id}<br>
       Équipes : ${t.max_teams || 48}<br>
       Statut : ${t.status}<br>
+
+     ${
+        t.champion_name
+        ? `
+        <div style="
+        margin-top:10px;
+        padding:10px;
+        border-radius:14px;
+        background:#78350f;
+        color:#fde68a;
+        font-weight:900;
+        ">
+         🏆 Champion : ${t.champion_name}
+        </div>
+       `
+       : ""
+     }
 
       ${
         t.join_code
@@ -2125,10 +2167,17 @@ async function ajouterParticipant(){
   }
 
   await post("/participant",{
-  tournament_id:tournoiSelect.value,
-  participantUsername:
-    participantUsername.value
-});
+    tournament_id:tournoiSelect.value,
+    participantUsername:
+      participantUsername.value
+  });
+
+  participantUsername.value = "";
+
+  await chargerParticipants();
+  await afficherTiragePoulePro();
+  await afficherClassements();
+  await afficherPhaseFinale();
 
 }
 async function chargerParticipants(){
@@ -2639,6 +2688,10 @@ async function validerScoreDirect(matchId, btn){
 
     await afficherTiragePoulePro();
     await afficherClassements();
+    await afficherPhaseFinale();
+
+    btn.disabled = false;
+    btn.textContent = "✅ Valider score";
 
   }catch(e){
 

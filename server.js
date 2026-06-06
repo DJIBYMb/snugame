@@ -31,6 +31,9 @@ const transporter = nodemailer.createTransport({
   auth:{
     user:process.env.MAIL_USER,
     pass:process.env.MAIL_PASS
+  },
+  tls:{
+    rejectUnauthorized:false
   }
 });
 
@@ -593,6 +596,23 @@ db.run(`
   ALTER TABLE highlights
   ADD COLUMN user_id INTEGER
 `,()=>{});
+db.run(`
+  ALTER TABLE tournaments
+  ADD COLUMN type TEXT DEFAULT 'poule'
+`,()=>{});
+db.run(`
+  ALTER TABLE matches
+  ADD COLUMN leg TEXT DEFAULT ''
+`,()=>{});
+db.run(`
+  CREATE TABLE IF NOT EXISTS rapid_qualifiers(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    tournament_id INTEGER,
+    round TEXT,
+    player_id INTEGER,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  )
+`);
 
 app.get("/", async (req,res)=>{
 
@@ -771,6 +791,7 @@ app.post("/send-code", async (req,res)=>{
         code
       ]
     );
+
 
     await transporter.sendMail({
       from:process.env.MAIL_USER,
@@ -1069,11 +1090,12 @@ app.post("/tournoi", async (req,res)=>{
       return res.send("Utilisateur introuvable");
     }
 
-  const {
-    name,
-    max_teams,
-    group_link
-  } = req.body;
+    const {
+      name,
+      max_teams,
+      group_link,
+      type
+    } = req.body;
 
     if(!name){
       return res.send("Nom tournoi obligatoire");
@@ -1114,37 +1136,33 @@ app.post("/tournoi", async (req,res)=>{
       );
     }
 
+    const joinCode =
+      Math.random()
+      .toString(36)
+      .substring(2,10);
+
     await run(
       `
       INSERT INTO tournaments(
-  user_id,
-  name,
-  max_teams,
-  status,
-  join_code,
-  group_link
-)
-VALUES(?,?,?,?,?,?)
-        
-        
-        
-        
-      
-      
+        user_id,
+        name,
+        max_teams,
+        status,
+        join_code,
+        group_link,
+        type
+      )
+      VALUES(?,?,?,?,?,?,?)
       `,
-  [
-   req.session.userId,
-   name,
-   maxTeams,
-   "draft",
-   generateJoinCode(),
-    group_link || ""
- ]
-        
-        
-        
-        
-      
+      [
+        req.session.userId,
+        name,
+        maxTeams,
+        "open",
+        joinCode,
+        group_link || "",
+        type || "poule"
+      ]
     );
 
     res.send("Tournoi créé");
@@ -1166,10 +1184,14 @@ app.get("/tournois",(req,res)=>{
 
   db.all(
     `
-    SELECT *
-    FROM tournaments
-    WHERE user_id=?
-    ORDER BY id DESC
+    SELECT
+      t.*,
+      p.prenom AS champion_name
+    FROM tournaments t
+    LEFT JOIN participants p
+    ON p.id = t.champion_id
+    WHERE t.user_id=?
+    ORDER BY t.id DESC
     `,
     [req.session.userId],
     (err,rows)=>{
@@ -1803,14 +1825,16 @@ await run(
   [s2, match.player2_id]
 );
 
-    res.send("Score validé");
+  await gererTournoiRapideApresScore(match);
 
-  }catch(e){
+return res.send("Score validé");
 
-    console.log(e);
-    res.send("Erreur validation score : " + e.message);
+}catch(e){
 
-  }
+  console.log(e);
+  res.send("Erreur validation score : " + e.message);
+
+}
 
 });
 
@@ -1954,11 +1978,118 @@ function genererMatchsPoule(equipes){
 
 }
 
+function getRoundNameRapide(nbParticipants){
+
+  if(nbParticipants > 16) return "QUALIF";
+  if(nbParticipants > 8) return "8ES";
+  if(nbParticipants > 4) return "QUARTS";
+  if(nbParticipants > 2) return "DEMIS";
+
+  return "FINALE";
+
+}
+
+function genererMatchsRapide(participants){
+
+  const melange =
+    [...participants]
+    .sort(()=>Math.random() - 0.5);
+
+  const total = melange.length;
+
+  let round = "FINALE";
+  let tailleTableau = 2;
+
+  if(total > 16){
+    round = "QUALIF";
+    tailleTableau = 16;
+  }else if(total > 8){
+    round = "8ES";
+    tailleTableau = 16;
+  }else if(total > 4){
+    round = "QUARTS";
+    tailleTableau = 8;
+  }else if(total > 2){
+    round = "DEMIS";
+    tailleTableau = 4;
+  }
+
+  const nombreByes =
+    tailleTableau - total;
+
+  const nombreJoueursQuiJouent =
+    total - nombreByes;
+
+  const matchs = [];
+
+  const joueursQuiJouent =
+    melange.slice(0,nombreJoueursQuiJouent);
+
+  const joueursQualifiesAuto =
+    melange.slice(nombreJoueursQuiJouent);
+
+  for(let i=0; i<joueursQuiJouent.length; i+=2){
+
+    const joueur1 = joueursQuiJouent[i];
+    const joueur2 = joueursQuiJouent[i + 1];
+
+    if(!joueur1 || !joueur2) continue;
+
+    if(round === "QUALIF"){
+
+      matchs.push({
+        player1:joueur1,
+        player2:joueur2,
+        round,
+        leg:"MATCH SIMPLE"
+      });
+
+    }else{
+
+      matchs.push({
+        player1:joueur1,
+        player2:joueur2,
+        round,
+        leg:"ALLER"
+      });
+
+      matchs.push({
+        player1:joueur1,
+        player2:joueur2,
+        round,
+        leg:"RETOUR"
+      });
+
+    }
+
+  }
+
+  return {
+    round,
+    matchs,
+    byes:joueursQualifiesAuto
+  };
+
+}
+
 app.post("/tirage-automatique-poule-pro", async (req,res)=>{
 
   try{
 
     const { tournament_id } = req.body;
+
+    const tournoi = await get(
+      `
+      SELECT *
+      FROM tournaments
+      WHERE id=?
+      `,
+     [tournament_id]
+   );
+
+    if(!tournoi){
+     return res.send("Tournoi introuvable");
+    }
 
     const participants = await all(
       `
@@ -1976,6 +2107,92 @@ app.post("/tirage-automatique-poule-pro", async (req,res)=>{
     if(participants.length > 100){
       return res.send("Maximum 100 équipes");
     }
+
+    if(tournoi.type === "rapide"){
+
+  const existingRapide = await all(
+    `
+    SELECT *
+    FROM matches
+    WHERE tournament_id=?
+    `,
+    [tournament_id]
+  );
+
+  if(existingRapide.length > 0){
+    return res.send(
+      "Tournoi rapide déjà généré"
+    );
+  }
+
+  const tirageRapide =
+   genererMatchsRapide(participants);
+
+  const matchsRapides =
+    tirageRapide.matchs;
+
+  let ordre = 1;
+
+  for(const m of matchsRapides){
+
+    await run(
+      `
+      INSERT INTO matches(
+        tournament_id,
+        round,
+        match_order,
+        journee,
+        player1_id,
+        player2_id
+      )
+      VALUES(?,?,?,?,?,?)
+      `,
+      [
+        tournament_id,
+        m.round,
+        ordre,
+        m.leg,
+        m.player1.id,
+        m.player2.id
+      ]
+    );
+
+    ordre++;
+  }
+
+  for(const joueur of tirageRapide.byes){
+
+  await run(
+    `
+    INSERT INTO rapid_qualifiers(
+      tournament_id,
+      round,
+      player_id
+    )
+    VALUES(?,?,?)
+    `,
+    [
+      tournament_id,
+      tirageRapide.round,
+      joueur.id
+    ]
+  );
+
+}
+
+  await run(
+    `
+    UPDATE tournaments
+    SET status='active'
+    WHERE id=?
+    `,
+    [tournament_id]
+  );
+
+  return res.send(
+    "✅ Tournoi rapide généré : matchs aller-retour"
+  );
+}
 
     const existingMatches = await all(
       `
@@ -4933,6 +5150,304 @@ app.post("/delete-old-videos", async (req,res)=>{
 
   res.send("Anciennes vidéos supprimées");
 });
+
+function getNextRoundRapide(round){
+
+  if(round === "QUALIF") return "8ES";
+  if(round === "8ES") return "QUARTS";
+  if(round === "QUARTS") return "DEMIS";
+  if(round === "DEMIS") return "FINALE";
+
+  return null;
+
+}
+
+async function gererTournoiRapideApresScore(match){
+
+  const tournoi = await get(
+    `
+    SELECT *
+    FROM tournaments
+    WHERE id=?
+    `,
+    [match.tournament_id]
+  );
+
+  if(!tournoi || tournoi.type !== "rapide"){
+    return;
+  }
+
+  if(match.round === "POULE"){
+    return;
+  }
+
+  const updatedMatch = await get(
+    `
+    SELECT *
+    FROM matches
+    WHERE id=?
+    `,
+    [match.id]
+  );
+
+  if(!updatedMatch || Number(updatedMatch.played) !== 1){
+    return;
+  }
+
+  if(updatedMatch.journee === "MATCH SIMPLE"){
+
+    await qualifierJoueurRapide(
+      updatedMatch.tournament_id,
+      updatedMatch.round,
+      updatedMatch.winner_id
+    );
+
+    return;
+  }
+
+  if(
+    updatedMatch.journee === "ALLER" ||
+    updatedMatch.journee === "RETOUR"
+  ){
+
+    const duel = await all(
+      `
+      SELECT *
+      FROM matches
+      WHERE tournament_id=?
+      AND round=?
+      AND (
+        (player1_id=? AND player2_id=?)
+        OR
+        (player1_id=? AND player2_id=?)
+      )
+      `,
+      [
+        updatedMatch.tournament_id,
+        updatedMatch.round,
+        updatedMatch.player1_id,
+        updatedMatch.player2_id,
+        updatedMatch.player2_id,
+        updatedMatch.player1_id
+      ]
+    );
+
+    const aller =
+      duel.find(m => m.journee === "ALLER");
+
+    const retour =
+      duel.find(m => m.journee === "RETOUR");
+
+    const belle =
+      duel.find(m => m.journee === "BELLE");
+
+    if(!aller || !retour){
+      return;
+    }
+
+    if(
+      Number(aller.played) !== 1 ||
+      Number(retour.played) !== 1
+    ){
+      return;
+    }
+
+    if(aller.winner_id === retour.winner_id){
+
+      await qualifierJoueurRapide(
+        updatedMatch.tournament_id,
+        updatedMatch.round,
+        aller.winner_id
+      );
+
+      return;
+    }
+
+    if(!belle){
+
+      await run(
+        `
+        INSERT INTO matches(
+          tournament_id,
+          round,
+          match_order,
+          journee,
+          player1_id,
+          player2_id
+        )
+        VALUES(?,?,?,?,?,?)
+        `,
+        [
+          updatedMatch.tournament_id,
+          updatedMatch.round,
+          999,
+          "BELLE",
+          updatedMatch.player1_id,
+          updatedMatch.player2_id
+        ]
+      );
+
+      return;
+    }
+
+  }
+
+  if(updatedMatch.journee === "BELLE"){
+
+    await qualifierJoueurRapide(
+      updatedMatch.tournament_id,
+      updatedMatch.round,
+      updatedMatch.winner_id
+    );
+
+  }
+
+}
+
+function getNextRoundRapide(round){
+
+  if(round === "QUALIF") return "8ES";
+  if(round === "8ES") return "QUARTS";
+  if(round === "QUARTS") return "DEMIS";
+  if(round === "DEMIS") return "FINALE";
+
+  return null;
+
+}
+
+async function qualifierJoueurRapide(
+  tournamentId,
+  round,
+  winnerId
+){
+
+  if(!winnerId){
+    return;
+  }
+
+  const nextRound =
+    getNextRoundRapide(round);
+
+  if(!nextRound){
+
+    await run(
+      `
+      UPDATE tournaments
+      SET champion_id=?,
+          status='finished'
+      WHERE id=?
+      `,
+      [
+        winnerId,
+        tournamentId
+      ]
+    );
+
+    return;
+  }
+
+  await run(
+  `
+  INSERT INTO rapid_qualifiers(
+    tournament_id,
+    round,
+    player_id
+  )
+  VALUES(?,?,?)
+  `,
+  [
+    tournamentId,
+    round,
+    winnerId
+  ]
+);
+
+const qualifies = await all(
+  `
+  SELECT *
+  FROM rapid_qualifiers
+  WHERE tournament_id=?
+  AND round=?
+  `,
+  [
+    tournamentId,
+    round
+  ]
+);
+
+if(qualifies.length % 2 !== 0){
+  return;
+}
+
+const alreadyNext = await all(
+  `
+  SELECT *
+  FROM matches
+  WHERE tournament_id=?
+  AND round=?
+  `,
+  [
+    tournamentId,
+    nextRound
+  ]
+);
+
+if(alreadyNext.length > 0){
+  return;
+}
+
+for(let i=0; i<qualifies.length; i+=2){
+
+  const p1 = qualifies[i].player_id;
+  const p2 = qualifies[i + 1].player_id;
+
+  await run(
+    `
+    INSERT INTO matches(
+      tournament_id,
+      round,
+      match_order,
+      journee,
+      player1_id,
+      player2_id
+    )
+    VALUES(?,?,?,?,?,?)
+    `,
+    [
+      tournamentId,
+      nextRound,
+      i + 1,
+      "ALLER",
+      p1,
+      p2
+    ]
+  );
+
+  await run(
+    `
+    INSERT INTO matches(
+      tournament_id,
+      round,
+      match_order,
+      journee,
+      player1_id,
+      player2_id
+    )
+    VALUES(?,?,?,?,?,?)
+    `,
+    [
+      tournamentId,
+      nextRound,
+      i + 2,
+      "RETOUR",
+      p1,
+      p2
+    ]
+  );
+
+}
+
+}
 
 app.listen(PORT, () => {
 
