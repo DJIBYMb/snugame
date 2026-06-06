@@ -754,6 +754,34 @@ body.video-mode .tiktok-feed{
   z-index:9998;
 }
 
+.tiktok-video video{
+  position:absolute;
+  inset:0;
+  z-index:1;
+}
+
+.video-delete-overlay{
+  position:fixed!important;
+  right:16px!important;
+  bottom:100px!important;
+  z-index:999999999!important;
+
+  background:red!important;
+  color:white!important;
+
+  font-size:18px!important;
+  font-weight:900!important;
+
+  padding:14px 18px!important;
+  border-radius:999px!important;
+
+  display:block!important;
+  opacity:1!important;
+  visibility:visible!important;
+
+  text-shadow:0 0 5px black;
+}
+
 .tiktok-video{
   position:relative;
   width:100vw;
@@ -852,13 +880,30 @@ body.video-mode .tiktok-feed{
 }
 
 .delete-video-btn{
-  background:rgba(239,68,68,.12)!important;
-  color:#fca5a5!important;
-  border:1px solid rgba(239,68,68,.35)!important;
-  border-radius:999px;
-  padding:8px 12px;
-  font-size:12px;
-  box-shadow:none!important;
+  width:auto!important;
+  min-width:120px!important;
+  height:44px!important;
+
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+
+  color:white!important;
+  background:rgba(239,68,68,.35)!important;
+
+  font-size:15px!important;
+  font-weight:900!important;
+  line-height:1!important;
+  text-align:center!important;
+
+  border:1px solid rgba(255,255,255,.35)!important;
+  border-radius:999px!important;
+
+  padding:0 16px!important;
+  margin:0!important;
+
+  box-shadow:0 0 18px rgba(239,68,68,.45)!important;
+  opacity:1!important;
 }
 
 .video-back-btn{
@@ -923,6 +968,7 @@ body.video-mode .tiktok-feed{
   height:100%;
   object-fit:cover;
 }
+
 
 </style>
 
@@ -3018,35 +3064,39 @@ async function chargerHighlights(){
       <video
       src="${h.media_url}"
       autoplay
-     loop
-     playsinline
-     onclick="toggleVideoPause(this)">
-     </video>
+      muted
+      loop
+      playsinline
+      onclick="toggleVideoPause(this)">
+      </video>
 
       <div class="tiktok-overlay">
 
         <div class="tiktok-left">
 
-        <div
-        class="tiktok-user"
-       style="cursor:pointer;z-index:99999;position:relative;"
-       onclick="ouvrirProfilDepuisVideo(${h.user_id}); event.stopPropagation();">
+          <div
+          class="tiktok-user"
+          style="cursor:pointer;z-index:99999;position:relative;"
+          onclick="ouvrirProfilDepuisVideo(${h.user_id}); event.stopPropagation();">
 
-       @${h.username || "joueur"}
+            @${h.username || "joueur"}
 
-       </div>
+          </div>
 
           <div class="tiktok-title">
             ${h.titre || ""}
           </div>
 
           ${
-            h.user_id === h.current_user_id
+            Number(h.user_id) === Number(h.current_user_id)
             ? `
               <button
+              type="button"
               class="delete-video-btn"
-               onclick="supprimerHighlight(${h.id})"
+              onclick="event.stopPropagation(); supprimerHighlight(${h.id});">
+
                 Supprimer
+
               </button>
             `
             : ""
@@ -3059,20 +3109,15 @@ async function chargerHighlights(){
           <button
           class="tiktok-action-btn"
           onclick="likeHighlight(${h.id})">
-
             ❤️
-
           </button>
 
           <div style="color:white;">
             ${h.likes || 0}
           </div>
 
-          <button
-          class="tiktok-action-btn">
-
+          <button class="tiktok-action-btn">
             💬
-
           </button>
 
         </div>
@@ -3086,17 +3131,6 @@ async function chargerHighlights(){
   setTimeout(()=>{
     initTikTokAutoplay();
   },300);
-
-}
-
-async function likeHighlight(id){
-
-  await post(
-    "/like-highlight",
-    { id }
-  );
-
-  chargerHighlights();
 
 }
 
@@ -3787,6 +3821,12 @@ async function chargerMesVideos(){
 }
 function toggleVideoPause(video){
 
+  if(video.muted){
+    video.muted = false;
+    video.play();
+    return;
+  }
+
   if(video.paused){
     video.play();
   }else{
@@ -3918,9 +3958,9 @@ async function chargerVideosUtilisateur(userId){
 
       ${videos.map(v=>`
 
-        <div
-        class="profile-video-item"
-        onclick="ouvrirVideoProfil('${v.media_url}',${v.id},${v.user_id})">
+       <div
+      class="profile-video-item"
+      onclick="alert('clic vidéo profil')">
 
           <video
           src="${v.media_url}"
@@ -3938,7 +3978,17 @@ async function chargerVideosUtilisateur(userId){
 
 function ouvrirVideoProfil(url,id,userId){
 
+  setPage("pageDashboard");
+
+  document
+  .querySelectorAll(".panel")
+  .forEach(p=>p.classList.add("hidden"));
+
+  panelHighlights.classList.remove("hidden");
+
   document.body.classList.add("video-mode");
+
+  messageCard.classList.add("hidden");
 
   highlightsList.innerHTML = `
 
@@ -3957,14 +4007,28 @@ function ouvrirVideoProfil(url,id,userId){
         Number(userId) === Number(currentUserId)
         ? `
           <button
-          class="delete-video-btn"
+          type="button"
+          onclick="event.stopPropagation(); supprimerHighlight(${id});"
           style="
-          position:fixed;
-          right:16px;
-          bottom:100px;
-          z-index:10004;
-          "
-          onclick="supprimerHighlight(${id})">
+          position:fixed!important;
+          top:50px!important;
+          left:50px!important;
+          z-index:999999999!important;
+          width:auto!important;
+          min-width:190px!important;
+          height:60px!important;
+          background:#ef4444!important;
+          color:#ffffff!important;
+          font-size:22px!important;
+          font-weight:900!important;
+          padding:12px 20px!important;
+          border:3px solid #ffffff!important;
+          border-radius:999px!important;
+          display:flex!important;
+          align-items:center!important;
+          justify-content:center!important;
+          text-align:center!important;
+          ">
           Supprimer
           </button>
         `
@@ -3975,11 +4039,7 @@ function ouvrirVideoProfil(url,id,userId){
 
   `;
 
-  setPage("pageDashboard");
-  showPanel("panelHighlights");
-
 }
-
 async function fixOldVideos(){
 
   const result =
