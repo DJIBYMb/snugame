@@ -1872,6 +1872,17 @@ async function abonnement(){
   }
 }
 
+async function fixOldVideos(){
+
+  const result =
+    await fetch("/fix-old-videos",{
+      method:"POST"
+    });
+
+  alert(await result.text());
+
+}
+
 async function checkStatus(){
 
   const data = await get("/me");
@@ -2921,8 +2932,6 @@ async function envoyerPreuvePaiement(){
 
 async function publierHighlight(){
 
-  alert("Bouton publier cliqué");
-
   const file =
     highlightVideoFile.files[0];
 
@@ -3970,6 +3979,31 @@ function ouvrirVideoProfil(url,id,userId){
   showPanel("panelHighlights");
 
 }
+
+async function fixOldVideos(){
+
+  const result =
+    await fetch("/fix-old-videos",{
+      method:"POST"
+    });
+
+  alert(await result.text());
+
+}
+
+async function deleteOldVideos(){
+
+  const result =
+    await fetch("/delete-old-videos",{
+      method:"POST"
+    });
+
+  alert(await result.text());
+
+  await chargerHighlights();
+
+}
+
 
 checkStatus();
 

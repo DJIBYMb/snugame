@@ -4902,6 +4902,38 @@ app.get("/user-videos/:userId", async (req,res)=>{
 
 });
 
+app.post("/fix-old-videos", async (req,res)=>{
+
+  if(!req.session.userId){
+    return res.send("Connecte-toi");
+  }
+
+  await run(
+    `
+    UPDATE highlights
+    SET user_id=?
+    WHERE user_id IS NULL
+    `,
+    [req.session.userId]
+  );
+
+  res.send("Anciennes vidéos liées à ton compte");
+});
+
+app.post("/delete-old-videos", async (req,res)=>{
+
+  if(!req.session.userId){
+    return res.send("Connecte-toi");
+  }
+
+  await run(`
+    DELETE FROM highlights
+    WHERE user_id IS NULL
+  `);
+
+  res.send("Anciennes vidéos supprimées");
+});
+
 app.listen(PORT, () => {
 
   console.log(
