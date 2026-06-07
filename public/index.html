@@ -969,6 +969,92 @@ body.video-mode .tiktok-feed{
   object-fit:cover;
 }
 
+.bottom-nav{
+  position:fixed;
+  bottom:0;
+  left:0;
+  right:0;
+  height:70px;
+
+  display:flex;
+  justify-content:space-around;
+  align-items:center;
+
+  background:#111827;
+  border-top:1px solid #374151;
+
+  z-index:99999;
+}
+
+.bottom-nav button{
+  flex:1;
+  height:100%;
+  border:none;
+  background:transparent;
+  color:white;
+  font-size:12px;
+  font-weight:700;
+}
+
+.bottom-nav button:hover{
+  background:rgba(255,255,255,.08);
+}
+
+body{
+  padding-bottom:80px;
+}
+
+.nav{
+  display:none!important;
+}
+
+#messageCard{
+  position:static;
+  margin-top:10px;
+}
+
+#message{
+  position:static;
+}
+
+@media(max-width:768px){
+
+  .desktop-only{
+    display:none!important;
+  }
+
+}
+
+@media(max-width:768px){
+
+  header{
+    padding:10px 12px;
+  }
+
+  header h1{
+    font-size:24px;
+  }
+
+  header p{
+    display:none;
+  }
+
+}
+
+@media(max-width:768px){
+
+  .card{
+    margin:8px 0;
+    padding:12px;
+  }
+
+  h2{
+    font-size:18px;
+    margin-bottom:8px;
+  }
+
+}
+
 
 </style>
 
@@ -1352,8 +1438,7 @@ onclick="fermerNotifications()">
 
 </section>
 <section
-id="pageDashboard"
-class="hidden">
+id="pageDashboard">
 
 <div class="nav">
 
@@ -1377,25 +1462,10 @@ onclick="ouvrirNotifications()">
 🔔 Notifications
 </button>
 
-
-<button
-onclick="showPanel('panelPoulePro')">
-
-Poule Pro
-
-</button>
-
 <button
 onclick="showPanel('panelClassement')">
 
 Classements
-
-</button>
-
-<button
-onclick="showPanel('panelFinale')">
-
-Phase finale
 
 </button>
 
@@ -1408,6 +1478,7 @@ onclick="ouvrirModeVideos()">
 </div>
 
 <button
+class="desktop-only"
 onclick="showPanel('panelParametres')">
 
 Paramètres
@@ -1654,67 +1725,6 @@ onclick="supprimerParticipantsCoches()">
 
 </div>
 
-<div
-id="panelPoulePro"
-class="panel hidden">
-
-<div class="card">
-
-<h2>Poule Pro</h2>
-
-<p class="small">
-
-Le bouton unique génère :
-
-Poules → 16es → 8es →
-Quarts → Demis →
-Finale → Champion
-
-</p>
-
-<button
-class="warning"
-onclick="customAutoDraw()">
-
-1️⃣ Générer / continuer tirage
-
-</button>
-
-<button
-class="secondary"
-onclick="afficherCalendrierPoules()">
-
-📅 Calendrier poules
-
-</button>
-
-<button
-class="secondary"
-onclick="afficherPhaseFinale()">
-
-Afficher phase finale
-
-</button>
-
-<button
-class="secondary"
-onclick="voirChampion()">
-
-Voir champion
-
-</button>
-
-<button
-class="secondary"
-onclick="afficherTiragePoulePro()">
-
-Afficher matchs
-
-</button>
-
-<div id="pouleProResult"></div>
-
-</div>
 
 </div>
 
@@ -1724,57 +1734,58 @@ class="panel hidden">
 
 <div class="card">
 
-<h2>Classements</h2>
+<h2>🏆 Compétition</h2>
 
-<button
-class="secondary"
-onclick="afficherClassements()">
-
-Afficher classements
-
-</button>
-
-<div id="classementsResult"></div>
-
-</div>
-
-</div>
-
-<div
-id="panelFinale"
-class="panel hidden">
-
-<div class="card">
-
-<h2>Phase finale</h2>
-
-<button
-class="secondary"
-onclick="afficherPhaseFinale()">
-
-Afficher phase finale
-
-</button>
-
-<button
+><button
 class="warning"
-onclick="customAutoDraw()">
-
+onclick="afficherBlocCompetition('blocMatchs'); customAutoDraw()">
 1️⃣ Générer / continuer tirage
+</button>
 
+<button
+class="secondary"
+onclick="afficherBlocCompetition('blocMatchs'); afficherTiragePoulePro()">
+⚽ Afficher matchs
+</button>
+
+<button
+class="secondary"
+onclick="afficherBlocCompetition('blocClassements'); afficherClassements()">
+📊 Classements
+</button>
+
+<button
+class="secondary"
+onclick="afficherBlocCompetition('blocFinale'); afficherPhaseFinale()">
+🏆 Phase finale
 </button>
 
 <button
 class="secondary"
 onclick="voirChampion()">
-
-Voir champion
-
+👑 Champion
 </button>
 
-<div id="bracketProResult"></div>
+<div id="blocMatchs" class="competition-bloc hidden">
+  <div id="pouleProResult"></div>
+</div>
 
-<div id="phaseFinaleResult"></div>
+<div id="blocClassements" class="competition-bloc hidden">
+  <div id="classementsResult"></div>
+</div>
+
+<div id="blocFinale" class="competition-bloc hidden">
+  <div id="bracketProResult"></div>
+  <div id="phaseFinaleResult"></div>
+</div>
+
+</div>
+
+</div>
+
+</div>
+
+<div class="card">
 
 </div>
 
@@ -1860,26 +1871,7 @@ function setPage(page){
 
 function showPanel(id){
 
-  document
-  .querySelectorAll(".panel")
-  .forEach(p=>p.classList.add("hidden"));
-
-  document
-  .getElementById(id)
-  .classList.remove("hidden");
-
-  if(id === "panelHighlights"){
-    messageCard.classList.add("hidden");
-  }else{
-    messageCard.classList.remove("hidden");
-  }
-
-  if(id === "panelHighlights"){
-  document.body.classList.add("video-mode");
-  chargerHighlights();
-}else{
-  document.body.classList.remove("video-mode");
-}
+  ouvrirPanel(id);
 
 }
 
@@ -1968,7 +1960,10 @@ async function checkStatus(){
   }
 
   setPage("pageDashboard");
+
   await chargerTournois();
+
+  ouvrirPanel("panelTournoi");
 }
 
 async function ouvrirAbonnement(){
@@ -4117,10 +4112,88 @@ async function deleteOldVideos(){
 
 }
 
+function ouvrirPanel(id){
+
+  document
+    .querySelectorAll(".panel")
+    .forEach(p=>p.classList.add("hidden"));
+
+  const panel =
+    document.getElementById(id);
+
+  if(panel){
+    panel.classList.remove("hidden");
+  }
+
+  if(id === "panelHighlights"){
+    messageCard.classList.add("hidden");
+    document.body.classList.add("video-mode");
+    chargerHighlights();
+  }else{
+    messageCard.classList.remove("hidden");
+    document.body.classList.remove("video-mode");
+  }
+
+  if(id === "panelTournoi"){
+    chargerTournois();
+  }
+
+  if(id === "panelParticipants"){
+    chargerParticipants();
+  }
+
+  if(id === "panelClassement"){
+
+    afficherBlocCompetition("blocMatchs");
+    afficherTiragePoulePro();
+
+ }
+
+}
+
+function afficherBlocCompetition(id){
+
+  document
+    .querySelectorAll(".competition-bloc")
+    .forEach(b=>b.classList.add("hidden"));
+
+  const bloc =
+    document.getElementById(id);
+
+  if(bloc){
+    bloc.classList.remove("hidden");
+  }
+
+}
+
 
 checkStatus();
 
 </script>
+
+<div class="bottom-nav">
+
+  <button onclick="ouvrirPanel('panelTournoi')">
+    🏠<br>Tournoi
+  </button>
+
+  <button onclick="ouvrirPanel('panelParticipants')">
+    👥<br>Participants
+  </button>
+
+  <button onclick="ouvrirPanel('panelClassement')">
+    🏆<br>Classement
+  </button>
+
+  <button onclick="ouvrirPanel('panelHighlights')">
+   🎬<br>Vidéos
+  </button>
+
+  <button onclick="ouvrirPanel('panelParametres')">
+   👤<br>Profil
+  </button>
+
+</div>
 
 </body>
 </html>
