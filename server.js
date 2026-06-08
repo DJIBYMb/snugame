@@ -1752,6 +1752,23 @@ app.post("/update-match-proof", async (req,res)=>{
       ]
     );
 
+    if(match.round === "FINALE" && winner){
+
+  await run(
+    `
+    UPDATE tournaments
+    SET champion_id=?,
+        status='finished'
+    WHERE id=?
+    `,
+    [
+      winner,
+      match.tournament_id
+    ]
+  );
+
+}
+
     if(match.player1_id){
       await ajouterXP(match.player1_id,5);
     }
@@ -5448,6 +5465,42 @@ for(let i=0; i<qualifies.length; i+=2){
 }
 
 }
+
+app.post("/fix-champion/:id", async (req,res)=>{
+
+  const match = await get(
+    `
+    SELECT *
+    FROM matches
+    WHERE tournament_id=?
+    AND round='FINALE'
+    AND played=1
+    ORDER BY id DESC
+    LIMIT 1
+    `,
+    [req.params.id]
+  );
+
+  if(!match || !match.winner_id){
+    return res.send("Aucune finale gagnée trouvée");
+  }
+
+  await run(
+    `
+    UPDATE tournaments
+    SET champion_id=?,
+        status='finished'
+    WHERE id=?
+    `,
+    [
+      match.winner_id,
+      req.params.id
+    ]
+  );
+
+  res.send("Champion corrigé");
+
+});
 
 app.listen(PORT, () => {
 

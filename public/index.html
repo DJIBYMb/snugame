@@ -106,7 +106,7 @@ header p{
     0 0 25px #00000055,
     inset 0 0 20px #ffffff05;
   backdrop-filter:blur(10px);
-  animation:fadeUp .35s ease;
+  animation:none!important;
 }
 
 .card:hover{
@@ -221,6 +221,17 @@ button:hover{
   border-radius:18px;
   margin:10px 0;
   box-shadow:0 0 16px #00000044;
+}
+
+.phase-title{
+  margin-top:20px;
+  margin-bottom:10px;
+  padding:10px;
+  border-radius:10px;
+  text-align:center;
+  font-weight:bold;
+  background:#1e293b;
+  border:1px solid #334155;
 }
 
 .match b{
@@ -1078,6 +1089,54 @@ body{
   transform:scale(1.15);
 }
 
+.final-match-card{
+  background:#020617;
+  border:1px solid #334155;
+  border-radius:16px;
+  padding:12px;
+  margin:10px 0;
+}
+
+.final-match-title{
+  font-size:13px;
+  color:#93c5fd;
+  font-weight:900;
+  margin-bottom:8px;
+}
+
+.final-score-line{
+  display:grid;
+  grid-template-columns:1fr auto 1fr;
+  align-items:center;
+  gap:8px;
+  padding:10px;
+  background:#0f172a;
+  border-radius:12px;
+  margin:6px 0;
+}
+
+.final-player{
+  font-weight:900;
+  color:white;
+  font-size:14px;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+.final-score{
+  font-size:18px;
+  font-weight:900;
+  color:#fde047;
+  white-space:nowrap;
+  min-width:55px;
+  text-align:center;
+}
+
+*{
+  animation:none!important;
+  transition:none!important;
+}
 
 </style>
 
@@ -1623,14 +1682,6 @@ Créer tournoi
 
 </button>
 
-<button
-class="secondary"
-onclick="chargerTournois()">
-
-Afficher tournois
-
-</button>
-
 <select
 id="tournoiSelect"
 onchange="loadAll()">
@@ -1828,9 +1879,13 @@ onclick="afficherBlocCompetition('blocFinale'); afficherPhaseFinale()">
 🏆 Tableau finale
 </button>
 
+<p class="small">
+16èmes → 8èmes → Quarts → Demis → Finale
+</p>
+
 <button
 class="secondary"
-onclick="afficherBlocCompetition('blocChampion'); voirChampion()">
+onclick="voirChampion()">
 👑 Champion
 </button>
 
@@ -1843,8 +1898,11 @@ onclick="afficherBlocCompetition('blocChampion'); voirChampion()">
 </div>
 
 <div id="blocFinale" class="competition-bloc hidden">
-  <div id="bracketProResult"></div>
-  <div id="phaseFinaleResult"></div>
+
+<h3>🏆 Tableau final</h3>
+
+<div id="phaseFinaleResult"></div>
+
 </div>
 
 <div id="blocChampion" class="competition-bloc hidden">
@@ -1934,11 +1992,19 @@ function showRegister(){
 }
 
 function setPage(page){
+
   pageAuth.classList.add("hidden");
   pageAbonnement.classList.add("hidden");
   pageProfil.classList.add("hidden");
   pageDashboard.classList.add("hidden");
-  document.getElementById(page).classList.remove("hidden");
+
+  const target =
+    document.getElementById(page);
+
+  if(target){
+    target.classList.remove("hidden");
+  }
+
 }
 
 function showPanel(id){
@@ -2035,7 +2101,10 @@ async function checkStatus(){
 
   await chargerTournois();
 
-  ouvrirPanel("panelTournoi");
+  const lastPanel =
+   localStorage.getItem("lastPanel") || "panelTournoi";
+
+  ouvrirPanel(lastPanel);
 }
 
 async function ouvrirAbonnement(){
@@ -2221,7 +2290,12 @@ async function chargerTournois(){
     </div>
   `).join("");
 
+  if(
+  !localStorage.getItem("lastPanel") ||
+  localStorage.getItem("lastPanel") === "panelTournoi"
+){
   await loadAll();
+}
 
 }
 
@@ -2403,11 +2477,54 @@ function mediaPreview(url){
 
 }
 
-
 function matchCard(match){
 
   const uid =
     match.round + "_" + match.id;
+
+  const isFinal =
+    match.round !== "POULE";
+
+  if(isFinal && Number(match.played) === 1){
+
+    return `
+      <div class="final-match-card">
+
+        <div class="final-match-title">
+         Match
+        </div>
+
+        <div class="final-score-line">
+
+          <span class="final-player">
+            ${match.player1_name || "Équipe 1"}
+          </span>
+
+          <span class="final-score">
+            ${match.score1} - ${match.score2}
+          </span>
+
+          <span class="final-player">
+            ${match.player2_name || "Équipe 2"}
+          </span>
+
+        </div>
+
+        ${
+          match.proof_photo
+          ? `
+           <div style="margin-top:10px;">
+            <p class="small">📸 Preuve du score</p>
+            ${mediaPreview(match.proof_photo)}
+           </div>
+        `
+        : ""
+      }
+
+      </div>
+    `;
+
+  }
 
   return `
 
@@ -2431,158 +2548,127 @@ function matchCard(match){
       : ""
     }
 
-    <div class="match">
+    <div
+    style="
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:10px;
+      margin-bottom:10px;
+      flex-wrap:wrap;
+    ">
 
-      <div
+      <b
       style="
-        display:flex;
-        justify-content:space-between;
-        align-items:center;
-        gap:10px;
-        margin-bottom:10px;
-        flex-wrap:wrap;
-      ">
+        cursor:pointer;
+        color:#60a5fa;
+        font-size:16px;
+      "
+      onclick="window.open('/player/${match.player1_id}','_blank')">
+        ${match.player1_name || "Équipe 1"}
+      </b>
 
-        <b
-        style="
-          cursor:pointer;
-          color:#60a5fa;
-          font-size:16px;
-        "
-        onclick="
-          window.open(
-            '/player/${match.player1_id}',
-            '_blank'
-          )
-        ">
-          ${match.player1_name || "Équipe 1"}
-        </b>
+      <span style="font-weight:900;color:#f8fafc;">
+        VS
+      </span>
 
-        <span
-        style="
-          font-weight:900;
-          color:#f8fafc;
-        ">
-          VS
-        </span>
-
-        <b
-        style="
-          cursor:pointer;
-          color:#60a5fa;
-          font-size:16px;
-        "
-        onclick="
-          window.open(
-            '/player/${match.player2_id}',
-            '_blank'
-          )
-        ">
-          ${match.player2_name || "Équipe 2"}
-        </b>
-
-      </div>
-
-      <div
+      <b
       style="
-        display:grid;
-        grid-template-columns:1fr 1fr;
-        gap:10px;
-      ">
-
-        <input
-        type="number"
-        id="score1_${uid}"
-        value="${match.score1 ?? ""}"
-        placeholder="Score 1">
-
-        <input
-        type="number"
-        id="score2_${uid}"
-        value="${match.score2 ?? ""}"
-        placeholder="Score 2">
-
-      </div>
-
-      <input
-      type="hidden"
-      id="photo_${uid}"
-      value="${match.proof_photo || ""}">
-
-      <input
-      type="file"
-      accept="image/*,video/mp4"
-      id="file_${uid}">
-
-      ${
-        Number(match.locked) === 1
-        ? `
-          <p
-          style="
-            color:#f87171;
-            font-weight:bold;
-          ">
-            🔒 Score verrouillé
-          </p>
-        `
-        : `
-          <button
-          class="secondary"
-          onclick="
-            validerScoreDirect(
-              ${match.id},
-              this
-            )
-          ">
-            ✅ Valider score
-          </button>
-
-          <button
-          class="danger"
-          onclick="
-            annulerScore(
-              ${match.id}
-            )
-          ">
-            ❌ Annuler score
-          </button>
-        `
-      }
-
-      <div
-      style="
-        margin-top:10px;
-        font-weight:bold;
-        color:#cbd5e1;
-      ">
-
-        ${
-          Number(match.played) === 1
-          ? `
-            Résultat :
-            ${match.score1}
-            -
-            ${match.score2}
-          `
-          : "⏳ Match non joué"
-        }
-
-      </div>
-
-      <div id="preview_${uid}">
-
-        ${
-          match.proof_photo
-          ? mediaPreview(match.proof_photo)
-          : ""
-        }
-
-      </div>
+        cursor:pointer;
+        color:#60a5fa;
+        font-size:16px;
+      "
+      onclick="window.open('/player/${match.player2_id}','_blank')">
+        ${match.player2_name || "Équipe 2"}
+      </b>
 
     </div>
 
+    <div
+    style="
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:10px;
+    ">
+
+      <input
+      type="number"
+      id="score1_${uid}"
+      value="${match.score1 ?? ""}"
+      placeholder="Score 1">
+
+      <input
+      type="number"
+      id="score2_${uid}"
+      value="${match.score2 ?? ""}"
+      placeholder="Score 2">
+
+    </div>
+
+    <input
+    type="hidden"
+    id="photo_${uid}"
+    value="${match.proof_photo || ""}">
+
+    <details>
+
+    <summary>📸 Ajouter preuve</summary>
+
+    <input
+   type="file"
+   accept="image/*"
+   id="file_${uid}">
+
+   </details>
+
+    ${
+      Number(match.locked) === 1
+      ? `
+        <p style="color:#f87171;font-weight:bold;">
+          🔒 Score verrouillé
+        </p>
+      `
+      : `
+        <button
+        class="secondary"
+        onclick="validerScoreDirect(${match.id}, this)">
+          ✅ Valider score
+        </button>
+
+        <button
+        class="danger"
+        onclick="annulerScore(${match.id})">
+          ❌ Annuler score
+        </button>
+      `
+    }
+
+    <div
+    style="
+      margin-top:10px;
+      font-weight:bold;
+      color:#cbd5e1;
+    ">
+      ${
+        Number(match.played) === 1
+        ? `Résultat : ${match.score1} - ${match.score2}`
+        : "⏳ Match non joué"
+      }
+    </div>
+
+    <div id="preview_${uid}">
+      ${
+        match.proof_photo
+        ? mediaPreview(match.proof_photo)
+        : ""
+      }
+    </div>
+
+  </div>
   `;
+
 }
+
 async function afficherTiragePoulePro(){
 
   if(!tournoiSelect.value) return;
@@ -2982,7 +3068,8 @@ async function afficherPhaseFinale(){
 
   if(!Array.isArray(data)) return;
 
-  const finale = data.filter(b=>!b.tour.startsWith("Groupe"));
+  const finale =
+    data.filter(b=>!b.tour.startsWith("Groupe"));
 
   if(finale.length === 0){
     phaseFinaleResult.innerHTML =
@@ -2994,45 +3081,41 @@ async function afficherPhaseFinale(){
     <div class="bracket">
       ${finale.map(bloc=>`
         <div class="card">
-          <h3>${bloc.tour}</h3>
+          <div class="phase-title">
+            🏆 ${bloc.tour}
+          </div>
           ${bloc.matchs.map(matchCard).join("")}
         </div>
       `).join("")}
     </div>
   `;
 
-     phaseFinaleResult.innerHTML = `
-    <div class="bracket">
-      ${finale.map(bloc=>`
-        <div class="card">
-          <h3>${bloc.tour}</h3>
-          ${bloc.matchs.map(matchCard).join("")}
-        </div>
-      `).join("")}
-    </div>
-  `;
-
-  await afficherBracketPro();
+ 
 
 }
 
-
 async function voirChampion(){
 
-  if(!tournoiSelect.value) return;
-
-  const champion = await get("/champion/" + tournoiSelect.value);
-
-  if(!champion){
-    message.textContent = "Aucun champion pour le moment";
+  if(!tournoiSelect.value){
+    message.textContent = "Choisis tournoi";
     return;
   }
 
-  phaseFinaleResult.innerHTML = `
+  afficherBlocCompetition("blocChampion");
+
+  const champion =
+    await get("/champion/" + tournoiSelect.value);
+
+  if(!champion){
+    championResult.innerHTML =
+      "<p>Aucun champion pour le moment</p>";
+    return;
+  }
+
+  championResult.innerHTML = `
     <div class="card">
       <h1>🏆 Champion</h1>
       <h2>${champion.prenom}</h2>
-      <p>${champion.club_logo || ""}</p>
     </div>
   `;
 
@@ -4168,6 +4251,8 @@ async function deleteOldVideos(){
 }
 
 function ouvrirPanel(id){
+
+  localStorage.setItem("lastPanel", id);
 
   document
   .querySelectorAll(".bottom-nav button")
