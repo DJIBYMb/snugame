@@ -1751,14 +1751,6 @@ class="participants-bloc hidden">
 
 </div>
 
-<button
-class="secondary"
-onclick="toggleParticipants()">
-
- Afficher
-
-</button>
-
 <div
 id="blocGestionParticipants"
 class="participants-bloc hidden">
@@ -3399,24 +3391,7 @@ async function banUser(userId){
   showNotif(result);
 
 }
-async function toggleParticipants(){
 
-  if(participants.innerHTML.trim() !== ""){
-
-    participants.innerHTML = "";
-    participantsCheckbox.innerHTML = "";
-    participantsCount.innerHTML = "";
-
-    message.textContent =
-      "Participants cachés";
-
-    return;
-
-  }
-
-  await chargerParticipants();
-
-}
 async function afficherCalendrierPoules(){
 
   if(!tournoiSelect.value){
