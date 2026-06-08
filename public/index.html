@@ -721,49 +721,6 @@ button:disabled{
   z-index:5;
 }
 
-body.video-mode header,
-body.video-mode .nav,
-body.video-mode #messageCard{
-  display:none!important;
-}
-
-body.video-mode .container{
-  max-width:none!important;
-  padding:0!important;
-  margin:0!important;
-}
-
-body.video-mode #panelHighlights{
-  display:block!important;
-}
-
-body.video-mode{
-  overflow:hidden!important;
-}
-
-body.video-mode header,
-body.video-mode .nav,
-body.video-mode #messageCard{
-  display:none!important;
-}
-
-body.video-mode .container{
-  max-width:none!important;
-  padding:0!important;
-  margin:0!important;
-}
-
-body.video-mode .tiktok-feed{
-  position:fixed!important;
-  inset:0!important;
-  width:100vw!important;
-  height:100vh!important;
-  overflow-y:scroll!important;
-  scroll-snap-type:y mandatory;
-  background:#000;
-  z-index:9998;
-}
-
 .tiktok-video video{
   position:absolute;
   inset:0;
@@ -1145,6 +1102,83 @@ body.app-loading #messageCard{
   visibility:hidden!important;
 }
 
+
+
+body.video-mode header,
+body.video-mode .nav,
+body.video-mode #messageCard{
+  display:none!important;
+}
+
+body.video-mode .container{
+  max-width:none!important;
+  padding:0!important;
+  margin:0!important;
+}
+
+.video-tabs{
+  position:fixed;
+  bottom:85px;
+  left:50%;
+  transform:translateX(-50%);
+
+  z-index:10004;
+
+  display:flex;
+  gap:12px;
+}
+
+body.video-mode{
+  overflow-x:hidden!important;
+}
+
+.tiktok-feed{
+  overflow-x:hidden!important;
+}
+
+.tiktok-video{
+  overflow-x:hidden!important;
+}
+
+body.video-mode{
+  overflow-x:hidden!important;
+  overflow-y:auto!important;
+}
+
+body.video-mode .tiktok-feed{
+  overflow-y:scroll!important;
+  overscroll-behavior:none!important;
+}
+
+body.video-mode .tiktok-video{
+  height:100dvh!important;
+  min-height:100dvh!important;
+  max-height:100dvh!important;
+}
+
+body.video-mode .tiktok-video video{
+  height:100dvh!important;
+}
+body.video-mode,
+body.video-mode .tiktok-feed,
+body.video-mode .tiktok-video{
+  overflow-x:hidden!important;
+}
+
+.like-count,
+.comment-count{
+  color:white;
+  font-size:13px;
+  font-weight:700;
+  text-align:center;
+  margin-top:-4px;
+  margin-bottom:6px;
+}
+
+.tiktok-action-btn .fa-heart{
+  color:#ef4444;
+}
+
 </style>
 
 <link
@@ -1426,15 +1460,13 @@ class="hidden">
 
 <div class="card">
 
-<button
-class="back-btn"
-onclick="retourDashboard()">
-‹
-</button>
-
 <div id="profilPhoto"></div>
 
+<h3> Profil joueur</h3>
+
 <h2>Mon profil</h2>
+
+<h3> Mon compte</h3>
 
 <button
 class="secondary"
@@ -1453,6 +1485,8 @@ class="secondary"
 onclick="ouvrirPanel('panelParametres')">
 ⚙️ Paramètres
 </button>
+
+<h3>Informations</h3>
 
 <p id="profilNom"></p>
 
@@ -1474,10 +1508,6 @@ Changer nom utilisateur
 
 <p id="profilExpiration"></p>
 
-<h3>🎬 Mes vidéos</h3>
-
-<div id="myVideosList"></div>
-
 <h3>Photo profil</h3>
 
 <input
@@ -1488,8 +1518,10 @@ accept="image/*">
 <button
 class="secondary"
 onclick="uploadPhotoProfil()">
-📸 Changer photo profil
+ Changer photo profil
 </button>
+
+<h3>Session</h3>
 
 <button
 class="danger"
@@ -1569,9 +1601,6 @@ onclick="ouvrirModeVideos()">
 🎬 Vidéos
 </button>
 
-
-</div>
-
 </div>
 
 <div
@@ -1583,17 +1612,24 @@ class="tiktok-feed"
 id="highlightsList">
 </div>
 
+<div class="video-tabs">
+
 <button
-class="video-back-btn"
-onclick="quitterVideos()">
-‹
+onclick="chargerHighlights()">
+<i class="fa-solid fa-fire"></i>
 </button>
 
 <button
-class="plus-video-btn"
 onclick="document.getElementById('highlightVideoFile').click()">
-+
+<i class="fa-solid fa-plus"></i>
 </button>
+
+<button
+onclick="chargerMesVideos()">
+<i class="fa-solid fa-clapperboard"></i>
+</button>
+
+</div>
 
 <div
 class="video-upload-box hidden"
@@ -1630,7 +1666,7 @@ Publier
 
 </div>
 
-</div> <!-- FIN panelHighlights -->
+</div>
 
 <div
 id="panelTournoi"
@@ -2132,6 +2168,9 @@ async function ouvrirAbonnement(){
 
 async function ouvrirProfilCompte(){
 
+  document.body.classList.remove("video-mode");
+setPage("pageProfil");
+
   const data = await get("/me");
 
   topProfilePhoto.src =
@@ -2180,6 +2219,20 @@ profilExpiration.textContent =
   : "";
 
 await chargerMesVideos();
+
+document
+  .querySelectorAll(".panel")
+  .forEach(p=>p.classList.add("hidden"));
+
+document
+  .querySelectorAll(".bottom-nav button")
+  .forEach(b=>b.classList.remove("active"));
+
+document
+  .getElementById("btnProfil")
+  ?.classList.add("active");
+
+  document.body.classList.remove("video-mode");
 
 setPage("pageProfil");
 }
@@ -3275,7 +3328,6 @@ async function chargerHighlights(){
       <video
       src="${h.media_url}"
       autoplay
-      muted
       loop
       playsinline
       onclick="toggleVideoPause(this)">
@@ -3320,16 +3372,20 @@ async function chargerHighlights(){
           <button
           class="tiktok-action-btn"
           onclick="likeHighlight(${h.id})">
-            ❤️
+          <i class="fa-regular fa-heart"></i>
           </button>
 
-          <div style="color:white;">
-            ${h.likes || 0}
-          </div>
+          <div class="like-count">
+         ${h.likes || 0}
+         </div>
 
           <button class="tiktok-action-btn">
-            💬
+          <i class="fa-regular fa-comment"></i>
           </button>
+
+         <div class="comment-count">
+          ${h.comments || 0}
+          </div>
 
         </div>
 
@@ -3342,6 +3398,16 @@ async function chargerHighlights(){
   setTimeout(()=>{
     initTikTokAutoplay();
   },300);
+
+}
+
+async function likeHighlight(id){
+
+  await post("/like-highlight",{
+    id:id
+  });
+
+  await chargerHighlights();
 
 }
 
@@ -4004,8 +4070,8 @@ async function chargerMesVideos(){
         <b>${v.titre || "Vidéo"}</b><br>
 
         <span class="small">
-          ❤️ ${v.likes || 0}
-          👀 ${v.vues || 0}
+          <i class="fa-solid fa-heart"></i> ${v.likes || 0}
+          <i class="fa-regular fa-eye"></i> ${v.vues || 0}
         </span>
 
       </div>
@@ -4014,12 +4080,6 @@ async function chargerMesVideos(){
 
 }
 function toggleVideoPause(video){
-
-  if(video.muted){
-    video.muted = false;
-    video.play();
-    return;
-  }
 
   if(video.paused){
     video.play();
@@ -4260,11 +4320,15 @@ async function deleteOldVideos(){
 
 function ouvrirPanel(id){
 
+  document.body.classList.remove("video-mode");
+
+  setPage("pageDashboard");
+
   localStorage.setItem("lastPanel", id);
 
   document
-  .querySelectorAll(".bottom-nav button")
-  .forEach(b=>b.classList.remove("active"));
+    .querySelectorAll(".bottom-nav button")
+    .forEach(b=>b.classList.remove("active"));
 
   document
     .querySelectorAll(".panel")
@@ -4278,50 +4342,63 @@ function ouvrirPanel(id){
   }
 
   if(id === "panelHighlights"){
-    messageCard.classList.add("hidden");
-    document.body.classList.add("video-mode");
-    chargerHighlights();
-  }else{
-    messageCard.classList.remove("hidden");
-    document.body.classList.remove("video-mode");
-  }
+  document.body.classList.add("video-mode");
+  chargerHighlights();
+}else{
+  document.body.classList.remove("video-mode");
+}
 
   if(id === "panelTournoi"){
+
     chargerTournois();
+
+    document
+      .getElementById("creationTournoiBox")
+      ?.classList.remove("hidden");
+
+    document
+      .getElementById("gestionTournoiBox")
+      ?.classList.add("hidden");
   }
 
   if(id === "panelParticipants"){
-
-  afficherBlocParticipants("blocAjouterParticipant");
-
-}
+    afficherBlocParticipants(
+      "blocAjouterParticipant"
+    );
+  }
 
   if(id === "panelClassement"){
 
-    afficherBlocCompetition("blocMatchs");
+    afficherBlocCompetition(
+      "blocMatchs"
+    );
+
     afficherTiragePoulePro();
+  }
 
- }
+  if(id === "panelTournoi"){
+    document
+      .getElementById("btnTournoi")
+      ?.classList.add("active");
+  }
 
- if(id === "panelTournoi"){
-  document.getElementById("btnTournoi")?.classList.add("active");
-}
+  if(id === "panelParticipants"){
+    document
+      .getElementById("btnParticipants")
+      ?.classList.add("active");
+  }
 
-if(id === "panelParticipants"){
-  document.getElementById("btnParticipants")?.classList.add("active");
-}
+  if(id === "panelClassement"){
+    document
+      .getElementById("btnClassement")
+      ?.classList.add("active");
+  }
 
-if(id === "panelClassement"){
-  document.getElementById("btnClassement")?.classList.add("active");
-}
-
-if(id === "panelHighlights"){
-  document.getElementById("btnVideos")?.classList.add("active");
-}
-
-if(id === "panelParametres"){
-  document.getElementById("btnProfil")?.classList.add("active");
-}
+  if(id === "panelHighlights"){
+    document
+      .getElementById("btnVideos")
+      ?.classList.add("active");
+  }
 
 }
 
@@ -4371,6 +4448,30 @@ function afficherBlocParticipants(id){
 
 }
 
+function afficherBlocVideos(id){
+
+  document
+    .getElementById("blocHighlights")
+    ?.classList.add("hidden");
+
+  document
+    .getElementById("blocUploadVideo")
+    ?.classList.add("hidden");
+
+  document
+    .getElementById("blocMesVideos")
+    ?.classList.add("hidden");
+
+  document
+    .getElementById(id)
+    ?.classList.remove("hidden");
+
+}
+
+function ouvrirUploadVideo(){
+  videoUploadBox.classList.toggle("hidden");
+}
+
 checkStatus();
 
 </script>
@@ -4393,7 +4494,9 @@ checkStatus();
   <i class="fa-solid fa-video"></i>
 </button>
 
-<button id="btnProfil" onclick="ouvrirProfilCompte()">
+<button
+id="btnProfil"
+onclick="ouvrirProfilCompte()">
   <i class="fa-solid fa-user"></i>
 </button>
 
