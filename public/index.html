@@ -1138,6 +1138,13 @@ body{
   transition:none!important;
 }
 
+body.app-loading .container,
+body.app-loading header,
+body.app-loading .bottom-nav,
+body.app-loading #messageCard{
+  visibility:hidden!important;
+}
+
 </style>
 
 <link
@@ -1146,7 +1153,7 @@ href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
 
 </head>
 
-<body>
+<body class="app-loading">
 
 <header>
 
@@ -1627,8 +1634,7 @@ Publier
 
 <div
 id="panelTournoi"
-class="panel">
-
+class="panel hidden">
 
 
 <div class="tournoi-row">
@@ -1924,16 +1930,12 @@ onclick="voirChampion()">
 </section>
 
 <div
-class="card"
-id="messageCard">
 
-<h2>Message</h2>
+id="messageCard">
 
 <div id="message"></div>
 
 <div id="notifBox"></div>
-
-</div>
 
 </div>
 
@@ -2105,6 +2107,12 @@ async function checkStatus(){
    localStorage.getItem("lastPanel") || "panelTournoi";
 
   ouvrirPanel(lastPanel);
+
+  document.body.classList.remove("app-loading");
+
+  document
+  .getElementById("messageCard")
+  ?.classList.remove("hidden");
 }
 
 async function ouvrirAbonnement(){
