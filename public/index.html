@@ -55,24 +55,23 @@ body{
 
 header{
   background:linear-gradient(135deg,var(--blue),var(--violet));
-  padding:24px 18px;
+  padding:10px 12px;
   text-align:center;
   position:sticky;
   top:0;
   z-index:10;
-  box-shadow:0 0 35px #1455ff88;
+  box-shadow:0 0 25px #1455ff66;
 }
 
 header h1{
   margin:0;
-  font-size:34px;
-  letter-spacing:3px;
-  text-shadow:0 0 18px #ffffffaa;
+  font-size:20px;
+  letter-spacing:2px;
+  text-shadow:0 0 12px #ffffff88;
 }
 
 header p{
-  margin:6px 0 0;
-  color:#e0e7ff;
+  display:none;
 }
 
 .top-actions{
@@ -991,8 +990,8 @@ body.video-mode .tiktok-feed{
   height:100%;
   border:none;
   background:transparent;
-  color:white;
-  font-size:12px;
+  color:rgba(255,255,255,0.6);
+  font-size:26px;
   font-weight:700;
 }
 
@@ -1055,8 +1054,36 @@ body{
 
 }
 
+.bottom-nav button{
+  opacity:.4;
+  transition:.2s;
+}
+
+.bottom-nav button.active{
+  opacity:1;
+  transform:scale(1.15);
+}
+
+.bottom-nav i{
+  font-size:24px;
+  color:white;
+}
+
+.bottom-nav button{
+  opacity:.35;
+}
+
+.bottom-nav button.active{
+  opacity:1;
+  transform:scale(1.15);
+}
+
 
 </style>
+
+<link
+rel="stylesheet"
+href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 
 </head>
 
@@ -1080,7 +1107,7 @@ margin-top:10px;
 <button
 class="glass-btn"
 onclick="toggleSearchUsers()">
- Recherche
+<i class="fa-solid fa-magnifying-glass"></i>
 </button>
 
 </div>
@@ -1115,16 +1142,6 @@ margin-bottom:15px;
 min-height:50px;
 ">
 
-<button
-class="glass-btn"
-onclick="ouvrirAbonnement()"
-style="
-position:absolute;
-left:0;
-top:0;
-">
-⭐ Abonnement
-</button>
 
 <img
 id="topProfilePhoto"
@@ -1353,6 +1370,24 @@ onclick="retourDashboard()">
 
 <h2>Mon profil</h2>
 
+<button
+class="secondary"
+onclick="ouvrirAbonnement()">
+⭐ Abonnement
+</button>
+
+<button
+class="secondary"
+onclick="ouvrirNotifications()">
+🔔 Notifications
+</button>
+
+<button
+class="secondary"
+onclick="ouvrirPanel('panelParametres')">
+⚙️ Paramètres
+</button>
+
 <p id="profilNom"></p>
 
 <p id="profilUsername"></p>
@@ -1457,12 +1492,6 @@ Participants
 </button>
 
 <button
-class="secondary"
-onclick="ouvrirNotifications()">
-🔔 Notifications
-</button>
-
-<button
 onclick="showPanel('panelClassement')">
 
 Classements
@@ -1476,14 +1505,6 @@ onclick="ouvrirModeVideos()">
 
 
 </div>
-
-<button
-class="desktop-only"
-onclick="showPanel('panelParametres')">
-
-Paramètres
-
-</button>
 
 </div>
 
@@ -1555,7 +1576,13 @@ class="panel">
 
 <div class="card">
 
-<h2>Créer tournoi</h2>
+<button
+class="secondary"
+onclick="toggleCreationTournoi()">
+➕ Créer tournoi
+</button>
+
+<div id="creationTournoiBox">
 
 <input
 id="tournoiNom"
@@ -1611,9 +1638,17 @@ onchange="loadAll()">
 
 </div>
 
+</div>
+
 <div class="card">
 
-<h2>Gestion tournoi</h2>
+<button
+class="secondary"
+onclick="toggleGestionTournoi()">
+⚙️ Gestion tournoi
+</button>
+
+<div id="gestionTournoiBox" class="hidden">
 
 <button
 class="danger"
@@ -1652,6 +1687,8 @@ placeholder="Lien public résultats">
 
 </div>
 
+</div>
+
 <div
 id="panelParticipants"
 class="panel hidden">
@@ -1659,6 +1696,32 @@ class="panel hidden">
 <div class="grid">
 
 <div class="card">
+
+<h2>👥 Participants</h2>
+
+<button
+class="secondary"
+onclick="afficherBlocParticipants('blocAjouterParticipant')">
+➕ Ajouter participant
+</button>
+
+<button
+class="secondary"
+onclick="afficherBlocParticipants('blocListeParticipants'); chargerParticipants()">
+📋 Liste participants
+</button>
+
+<button
+class="danger"
+onclick="afficherBlocParticipants('blocGestionParticipants'); chargerParticipants()">
+🗑️ Gestion participants
+</button>
+
+</div>
+
+<div class="card">
+
+<div id="blocAjouterParticipant" class="participants-bloc">
 
 <h2>Ajouter participant</h2>
 
@@ -1675,11 +1738,18 @@ Ajouter participant
 
 </div>
 
+</div>
+
 <div class="card">
+
+<div id="blocListeParticipants"
+class="participants-bloc hidden">
 
 <h2>Participants</h2>
 
 <div id="participantsCount"></div>
+
+</div>
 
 <button
 class="secondary"
@@ -1688,6 +1758,10 @@ onclick="toggleParticipants()">
  Afficher
 
 </button>
+
+<div
+id="blocGestionParticipants"
+class="participants-bloc hidden">
 
 <button
 class="secondary"
@@ -1714,6 +1788,8 @@ onclick="supprimerParticipantsCoches()">
 </button>
 
 <div id="participantsCheckbox"></div>
+
+</div>
 
 <div id="participants"></div>
 
@@ -1745,7 +1821,7 @@ onclick="afficherBlocCompetition('blocMatchs'); customAutoDraw()">
 <button
 class="secondary"
 onclick="afficherBlocCompetition('blocMatchs'); afficherTiragePoulePro()">
-⚽ Afficher matchs
+⚽ matchs de poule
 </button>
 
 <button
@@ -1757,12 +1833,12 @@ onclick="afficherBlocCompetition('blocClassements'); afficherClassements()">
 <button
 class="secondary"
 onclick="afficherBlocCompetition('blocFinale'); afficherPhaseFinale()">
-🏆 Phase finale
+🏆 Tableau finale
 </button>
 
 <button
 class="secondary"
-onclick="voirChampion()">
+onclick="afficherBlocCompetition('blocChampion'); voirChampion()">
 👑 Champion
 </button>
 
@@ -1777,6 +1853,10 @@ onclick="voirChampion()">
 <div id="blocFinale" class="competition-bloc hidden">
   <div id="bracketProResult"></div>
   <div id="phaseFinaleResult"></div>
+</div>
+
+<div id="blocChampion" class="competition-bloc hidden">
+  <div id="championResult"></div>
 </div>
 
 </div>
@@ -4115,6 +4195,10 @@ async function deleteOldVideos(){
 function ouvrirPanel(id){
 
   document
+  .querySelectorAll(".bottom-nav button")
+  .forEach(b=>b.classList.remove("active"));
+
+  document
     .querySelectorAll(".panel")
     .forEach(p=>p.classList.add("hidden"));
 
@@ -4139,8 +4223,10 @@ function ouvrirPanel(id){
   }
 
   if(id === "panelParticipants"){
-    chargerParticipants();
-  }
+
+  afficherBlocParticipants("blocAjouterParticipant");
+
+}
 
   if(id === "panelClassement"){
 
@@ -4148,6 +4234,26 @@ function ouvrirPanel(id){
     afficherTiragePoulePro();
 
  }
+
+ if(id === "panelTournoi"){
+  document.getElementById("btnTournoi")?.classList.add("active");
+}
+
+if(id === "panelParticipants"){
+  document.getElementById("btnParticipants")?.classList.add("active");
+}
+
+if(id === "panelClassement"){
+  document.getElementById("btnClassement")?.classList.add("active");
+}
+
+if(id === "panelHighlights"){
+  document.getElementById("btnVideos")?.classList.add("active");
+}
+
+if(id === "panelParametres"){
+  document.getElementById("btnProfil")?.classList.add("active");
+}
 
 }
 
@@ -4166,6 +4272,36 @@ function afficherBlocCompetition(id){
 
 }
 
+function toggleGestionTournoi(){
+
+  document
+    .getElementById("gestionTournoiBox")
+    .classList.toggle("hidden");
+
+}
+
+function toggleCreationTournoi(){
+
+  document
+    .getElementById("creationTournoiBox")
+    .classList.toggle("hidden");
+
+}
+
+function afficherBlocParticipants(id){
+
+  document
+    .querySelectorAll(".participants-bloc")
+    .forEach(b=>b.classList.add("hidden"));
+
+  const bloc =
+    document.getElementById(id);
+
+  if(bloc){
+    bloc.classList.remove("hidden");
+  }
+
+}
 
 checkStatus();
 
@@ -4173,25 +4309,25 @@ checkStatus();
 
 <div class="bottom-nav">
 
-  <button onclick="ouvrirPanel('panelTournoi')">
-    🏠<br>Tournoi
-  </button>
+  <button id="btnTournoi" onclick="ouvrirPanel('panelTournoi')">
+  <i class="fa-solid fa-house"></i>
+ </button>
 
-  <button onclick="ouvrirPanel('panelParticipants')">
-    👥<br>Participants
-  </button>
+<button id="btnParticipants" onclick="ouvrirPanel('panelParticipants')">
+  <i class="fa-solid fa-users"></i>
+</button>
 
-  <button onclick="ouvrirPanel('panelClassement')">
-    🏆<br>Classement
-  </button>
+<button id="btnClassement" onclick="ouvrirPanel('panelClassement')">
+  <i class="fa-solid fa-trophy"></i>
+</button>
 
-  <button onclick="ouvrirPanel('panelHighlights')">
-   🎬<br>Vidéos
-  </button>
+<button id="btnVideos" onclick="ouvrirPanel('panelHighlights')">
+  <i class="fa-solid fa-video"></i>
+</button>
 
-  <button onclick="ouvrirPanel('panelParametres')">
-   👤<br>Profil
-  </button>
+<button id="btnProfil" onclick="ouvrirProfilCompte()">
+  <i class="fa-solid fa-user"></i>
+</button>
 
 </div>
 
