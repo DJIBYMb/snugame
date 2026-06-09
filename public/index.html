@@ -209,7 +209,7 @@ button:hover{
   background:#020617;
   padding:14px;
   border-radius:16px;
-  min-height:55px;
+  min-height:0;
   border:1px solid #334155;
   color:#dbeafe;
 }
@@ -977,7 +977,7 @@ body{
 
 #messageCard{
   position:static;
-  margin-top:10px;
+  margin-top:0;
 }
 
 #message{
@@ -1177,6 +1177,49 @@ body.video-mode .tiktok-video{
 
 .tiktok-action-btn .fa-heart{
   color:#ef4444;
+}
+
+.fa-solid.fa-heart{
+  color:#ef4444!important;
+}
+
+.fa-regular.fa-heart{
+  color:white!important;
+}
+
+#btnEditProfil{
+  position:absolute;
+  right:0;
+  bottom:0;
+
+  font-size:18px;
+  color:white;
+
+  cursor:pointer;
+  z-index:9999;
+
+  display:block;
+}
+
+.profile-actions{
+  display:flex;
+  gap:12px;
+  justify-content:center;
+  margin:12px 0;
+}
+
+.profile-actions button{
+  width:48px;
+  height:48px;
+  border-radius:50%;
+  padding:0;
+  background:rgba(255,255,255,.08)!important;
+  color:white!important;
+  box-shadow:none!important;
+}
+
+.profile-actions i{
+  font-size:20px;
 }
 
 </style>
@@ -1460,7 +1503,20 @@ class="hidden">
 
 <div class="card">
 
-<div id="profilPhoto"></div>
+<div
+id="profilPhoto"
+style="
+position:relative;
+display:inline-block;
+">
+
+<i
+id="btnEditProfil"
+class="fa-solid fa-pen-to-square"
+onclick="toggleEditProfil()">
+</i>
+
+</div>
 
 <h3> Profil joueur</h3>
 
@@ -1468,29 +1524,38 @@ class="hidden">
 
 <h3> Mon compte</h3>
 
+<div class="profile-actions">
+
 <button
-class="secondary"
 onclick="ouvrirAbonnement()">
-⭐ Abonnement
+<i class="fa-solid fa-star"></i>
 </button>
 
 <button
-class="secondary"
 onclick="ouvrirNotifications()">
-🔔 Notifications
+<i class="fa-solid fa-bell"></i>
 </button>
 
 <button
-class="secondary"
-onclick="ouvrirPanel('panelParametres')">
-⚙️ Paramètres
+onclick="ouvrirParametresProfil()">
+<i class="fa-solid fa-gear"></i>
 </button>
+
+</div>
 
 <h3>Informations</h3>
 
 <p id="profilNom"></p>
 
-<p id="profilUsername"></p>
+<p
+id="profilUsername"
+onclick="toggleUsernameEdit()"
+style="cursor:pointer;">
+</p>
+
+<div
+id="usernameEditBox"
+class="hidden">
 
 <input
 id="newUsername"
@@ -1499,35 +1564,25 @@ placeholder="Nouveau nom utilisateur">
 <button
 class="secondary"
 onclick="updateUsername()">
-Changer nom utilisateur
+Enregistrer
 </button>
+
+</div>
+
+<input
+type="file"
+id="profilePhotoInput"
+accept="image/*"
+class="hidden"
+onchange="uploadPhotoProfil()">
+
+</div>
 
 <p id="profilEmail"></p>
 
 <p id="profilAbonnement"></p>
 
 <p id="profilExpiration"></p>
-
-<h3>Photo profil</h3>
-
-<input
-type="file"
-id="profilePhotoInput"
-accept="image/*">
-
-<button
-class="secondary"
-onclick="uploadPhotoProfil()">
- Changer photo profil
-</button>
-
-<h3>Session</h3>
-
-<button
-class="danger"
-onclick="logout()">
-Déconnexion
-</button>
 
 </div>
 
@@ -1570,6 +1625,31 @@ onclick="fermerNotifications()">
 </div>
 
 </section>
+
+<section
+id="pageParametres"
+class="hidden">
+
+<div class="card">
+
+<button
+class="back-btn"
+onclick="ouvrirProfilCompte()">
+‹
+</button>
+
+<h2>⚙️ Paramètres</h2>
+
+<button
+class="danger"
+onclick="logout()">
+Déconnexion
+</button>
+
+</div>
+
+</section>
+
 <section
 id="pageDashboard">
 
@@ -1897,7 +1977,7 @@ class="panel hidden">
 
 <h2>🏆 Compétition</h2>
 
-><button
+<button
 class="warning"
 onclick="afficherBlocCompetition('blocMatchs'); customAutoDraw()">
 1️⃣ Générer / continuer tirage
@@ -1954,10 +2034,6 @@ onclick="voirChampion()">
 </div>
 
 </div>
-
-</div>
-
-<div class="card">
 
 </div>
 
@@ -2035,13 +2111,12 @@ function setPage(page){
   pageAbonnement.classList.add("hidden");
   pageProfil.classList.add("hidden");
   pageDashboard.classList.add("hidden");
+  pageNotifications.classList.add("hidden");
+  pageParametres.classList.add("hidden");
 
-  const target =
-    document.getElementById(page);
-
-  if(target){
-    target.classList.remove("hidden");
-  }
+  document
+    .getElementById(page)
+    .classList.remove("hidden");
 
 }
 
@@ -2169,73 +2244,86 @@ async function ouvrirAbonnement(){
 async function ouvrirProfilCompte(){
 
   document.body.classList.remove("video-mode");
-setPage("pageProfil");
+
+  document
+    .querySelectorAll(".panel")
+    .forEach(p=>p.classList.add("hidden"));
+
+  document
+    .querySelectorAll(".bottom-nav button")
+    .forEach(b=>b.classList.remove("active"));
+
+  document
+    .getElementById("btnProfil")
+    ?.classList.add("active");
+
+  setPage("pageProfil");
+
+  document
+    .getElementById("btnEditProfil")
+    .style.display = "block";
+
+  document
+    .getElementById("editProfilBox")
+    ?.classList.add("hidden");
 
   const data = await get("/me");
 
-  topProfilePhoto.src =
-  data.profile_photo ||
-  "/default-avatar.png";
-
   if(!data || data.connected === false){
     setPage("pageAuth");
-    message.textContent = "Connecte-toi pour voir ton profil";
+    message.textContent =
+      "Connecte-toi pour voir ton profil";
     return;
   }
 
+  topProfilePhoto.src =
+    data.profile_photo ||
+    "/default-avatar.png";
+
   profilPhoto.innerHTML = `
   <img
-  src="${
-    data.profile_photo ||
-    '/default-avatar.png'
-  }"
+  id="profilPhotoImg"
+  src="${data.profile_photo || "/default-avatar.png"}"
+  onclick="photoProfilClick()"
   style="
     width:120px;
     height:120px;
     border-radius:50%;
     object-fit:cover;
     border:4px solid #1455ff;
+    cursor:pointer;
   ">
+
+  <i
+id="btnEditProfil"
+class="fa-solid fa-pen-to-square"
+onclick="event.stopPropagation(); toggleEditProfil()">
+</i>
 `;
 
-profilNom.textContent =
-  data.name || "";
 
-profilUsername.textContent =
-  "@" + (data.username || "");
 
-profilEmail.textContent =
-  "Email : " + (data.email || "");
+  profilNom.textContent =
+    data.name || "";
 
-profilAbonnement.textContent =
-  data.abonnement === 1
-  ? "Statut : Abonné ⭐"
-  : "Statut : Compte gratuit";
+  profilUsername.textContent =
+    "@" + (data.username || "");
 
-profilExpiration.textContent =
-  data.abonnement_expire_at
-  ? "Expiration : " +
+  profilEmail.textContent =
+    "Email : " + (data.email || "");
+
+  profilAbonnement.textContent =
+    data.abonnement === 1
+    ? "Statut : Abonné ⭐"
+    : "Statut : Compte gratuit";
+
+  profilExpiration.textContent =
     data.abonnement_expire_at
-  : "";
+    ? "Expiration : " + data.abonnement_expire_at
+    : "";
 
-await chargerMesVideos();
-
-document
-  .querySelectorAll(".panel")
-  .forEach(p=>p.classList.add("hidden"));
-
-document
-  .querySelectorAll(".bottom-nav button")
-  .forEach(b=>b.classList.remove("active"));
-
-document
-  .getElementById("btnProfil")
-  ?.classList.add("active");
-
-  document.body.classList.remove("video-mode");
-
-setPage("pageProfil");
 }
+
 async function creerTournoi(){
 
   if(!tournoiNom.value){
@@ -3371,8 +3459,14 @@ async function chargerHighlights(){
 
           <button
           class="tiktok-action-btn"
-          onclick="likeHighlight(${h.id})">
-          <i class="fa-regular fa-heart"></i>
+          onclick="likeHighlight(${h.id}, this)">
+
+          <i class="${
+          h.liked
+          ? 'fa-solid fa-heart'
+          : 'fa-regular fa-heart'
+          }"></i>
+
           </button>
 
           <div class="like-count">
@@ -3401,13 +3495,26 @@ async function chargerHighlights(){
 
 }
 
-async function likeHighlight(id){
+async function likeHighlight(id, btn){
 
-  await post("/like-highlight",{
+  const result = await post("/like-highlight",{
     id:id
   });
 
-  await chargerHighlights();
+  const icon = btn.querySelector("i");
+  const countBox = btn.nextElementSibling;
+
+  let count = Number(countBox.textContent) || 0;
+
+  if(result.includes("ajouté")){
+    icon.className = "fa-solid fa-heart";
+    count++;
+  }else{
+    icon.className = "fa-regular fa-heart";
+    count = Math.max(count - 1, 0);
+  }
+
+  countBox.textContent = count;
 
 }
 
@@ -3812,6 +3919,10 @@ async function suivreJoueur(userId){
 }
 async function ouvrirProfilJoueur(userId){
 
+  document
+  .getElementById("btnEditProfil")
+  .style.display = "none";
+
   const data = await get(
     "/player-profile/" + userId
   );
@@ -3899,38 +4010,11 @@ async function ouvrirProfilJoueur(userId){
 
 }
 
-async function ouvrirNotifications(){
+function ouvrirNotifications(){
 
-  const data =
-    await get("/notifications");
-
-notificationsList.innerHTML =
-  data.map(n=>`
-
-    <div class="notification-card">
-
-      <div class="notification-icon">
-        🔔
-      </div>
-
-      <div class="notification-text">
-
-        <div style="
-          font-weight:bold;
-          color:#f8fafc;
-        ">
-          ${n.message}
-        </div>
-
-        <div class="notification-time">
-          ${n.created_at || ""}
-        </div>
-
-      </div>
-
-    </div>
-
-  `).join("");
+  document
+    .querySelectorAll(".panel")
+    .forEach(p=>p.classList.add("hidden"));
 
   setPage("pageNotifications");
 
@@ -3942,9 +4026,7 @@ function retourDashboard(){
 
 function fermerNotifications(){
 
-  pageNotifications.classList.add("hidden");
-
-  setPage("pageDashboard");
+  ouvrirProfilCompte();
 
 }
 
@@ -4470,6 +4552,67 @@ function afficherBlocVideos(id){
 
 function ouvrirUploadVideo(){
   videoUploadBox.classList.toggle("hidden");
+}
+
+function toggleEditProfil(){
+
+  const box =
+    document.getElementById("usernameEditBox");
+
+  const img =
+    document.getElementById("profilPhotoImg");
+
+  if(!box){
+    alert("usernameEditBox introuvable");
+    return;
+  }
+
+  box.classList.toggle("hidden");
+
+  if(img){
+    img.style.boxShadow =
+      box.classList.contains("hidden")
+      ? "none"
+      : "0 0 25px #22c55e";
+  }
+
+}
+
+function photoProfilClick(){
+
+  const box =
+    document.getElementById("usernameEditBox");
+
+  if(!box){
+    return;
+  }
+
+  if(box.classList.contains("hidden")){
+    return;
+  }
+
+  document
+    .getElementById("profilePhotoInput")
+    .click();
+
+}
+
+function toggleUsernameEdit(){
+
+  document
+    .getElementById("usernameEditBox")
+    ?.classList.toggle("hidden");
+
+}
+
+function ouvrirParametresProfil(){
+
+  document
+    .querySelectorAll(".panel")
+    .forEach(p=>p.classList.add("hidden"));
+
+  setPage("pageParametres");
+
 }
 
 checkStatus();

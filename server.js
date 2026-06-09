@@ -612,7 +612,16 @@ db.run(`
     player_id INTEGER,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   )
+`);db.run(`
+  CREATE TABLE IF NOT EXISTS highlight_likes(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    highlight_id INTEGER,
+    user_id INTEGER,
+    UNIQUE(highlight_id,user_id)
+  )
 `);
+
+
 
 app.get("/", async (req,res)=>{
 
@@ -2089,563 +2098,6 @@ function genererMatchsRapide(participants){
 
 }
 
-app.post("/tirage-automatique-poule-pro", async (req,res)=>{
-
-  try{
-
-    const { tournament_id } = req.body;
-
-    const tournoi = await get(
-      `
-      SELECT *
-      FROM tournaments
-      WHERE id=?
-      `,
-     [tournament_id]
-   );
-
-    if(!tournoi){
-     return res.send("Tournoi introuvable");
-    }
-
-    const participants = await all(
-      `
-      SELECT *
-      FROM participants
-      WHERE tournament_id=?
-      `,
-      [tournament_id]
-    );
-
-    if(participants.length < 6){
-      return res.send("Minimum 6 équipes");
-    }
-
-    if(participants.length > 100){
-      return res.send("Maximum 100 équipes");
-    }
-
-    if(tournoi.type === "rapide"){
-
-  const existingRapide = await all(
-    `
-    SELECT *
-    FROM matches
-    WHERE tournament_id=?
-    `,
-    [tournament_id]
-  );
-
-  if(existingRapide.length > 0){
-    return res.send(
-      "Tournoi rapide déjà généré"
-    );
-  }
-
-  const tirageRapide =
-   genererMatchsRapide(participants);
-
-  const matchsRapides =
-    tirageRapide.matchs;
-
-  let ordre = 1;
-
-  for(const m of matchsRapides){
-
-    await run(
-      `
-      INSERT INTO matches(
-        tournament_id,
-        round,
-        match_order,
-        journee,
-        player1_id,
-        player2_id
-      )
-      VALUES(?,?,?,?,?,?)
-      `,
-      [
-        tournament_id,
-        m.round,
-        ordre,
-        m.leg,
-        m.player1.id,
-        m.player2.id
-      ]
-    );
-
-    ordre++;
-  }
-
-  for(const joueur of tirageRapide.byes){
-
-  await run(
-    `
-    INSERT INTO rapid_qualifiers(
-      tournament_id,
-      round,
-      player_id
-    )
-    VALUES(?,?,?)
-    `,
-    [
-      tournament_id,
-      tirageRapide.round,
-      joueur.id
-    ]
-  );
-
-}
-
-  await run(
-    `
-    UPDATE tournaments
-    SET status='active'
-    WHERE id=?
-    `,
-    [tournament_id]
-  );
-
-  return res.send(
-    "✅ Tournoi rapide généré : matchs aller-retour"
-  );
-}
-
-    const existingMatches = await all(
-      `
-      SELECT *
-      FROM matches
-      WHERE tournament_id=?
-      `,
-      [tournament_id]
-    );
-
-    if(existingMatches.length === 0){
-
-  const groupes = genererGroupesAuto(participants);
-  const lettres = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
-
-  for(let g=0; g<groupes.length; g++){
-
-    const nomGroupe = lettres[g];
-    const equipes = groupes[g];
-
-    for(const equipe of equipes){
-
-      await run(
-        `
-        UPDATE participants
-        SET group_name=?
-        WHERE id=?
-        `,
-        [nomGroupe,equipe.id]
-      );
-
-    }
-
-    const journees = genererMatchsPoule(equipes);
-
-     const matchsJ1 = journees[0];
-
-   let ordreMatch = 1;
-
-   for(const duel of matchsJ1){
-
-    const player1 = duel[0];
-    const player2 = duel[1];
-
-    await run(
-    `
-    INSERT INTO matches(
-      tournament_id,
-      round,
-      group_name,
-      match_order,
-      journee,
-      player1_id,
-      player2_id
-    )
-    VALUES(?,?,?,?,?,?,?)
-    `,
-    [
-      tournament_id,
-      "POULE",
-      nomGroupe,
-      ordreMatch,
-      "J1",
-      player1.id,
-      player2.id
-    ]
-  );
-
-   ordreMatch++;
-  }
-
-}
-
-  await run(
-    `
-    UPDATE tournaments
-    SET status='active'
-    WHERE id=?
-    `,
-    [tournament_id]
-  );
-
-  return res.send("✅ Poules générées automatiquement");
-
-}
-
-    const poules = existingMatches.filter(m => m.round === "POULE");
-
-     if(poules.length > 0){
-
-  const journeesExistantes =
-    [...new Set(
-      poules.map(m => m.journee)
-    )];
-
-  const derniereJournee =
-    journeesExistantes.length;
-
-  const matchsDerniereJournee =
-    poules.filter(
-      m => m.journee === "J" + derniereJournee
-    );
-
-  if(
-    matchsDerniereJournee.some(
-      m => Number(m.played) !== 1
-    )
-  ){
-    return res.send(
-      "Finis tous les scores de J" +
-      derniereJournee
-    );
-  }
-
-} 
-  if(poules.length > 0){
-
-  const groupes =
-    [...new Set(
-      poules.map(m => m.group_name)
-    )];
-
-  const journeesExistantes =
-    [...new Set(
-      poules.map(m => m.journee)
-    )];
-
-  const prochaineJourneeNumero =
-    journeesExistantes.length + 1;
-
-  let nouvelleJourneeCreee = false;
-
-  for(const nomGroupe of groupes){
-
-    const equipes =
-      await all(
-        `
-        SELECT *
-        FROM participants
-        WHERE tournament_id=?
-        AND group_name=?
-        `,
-        [
-          tournament_id,
-          nomGroupe
-        ]
-      );
-
-    const calendrier =
-      genererMatchsPoule(equipes);
-
-    const prochaineJournee =
-      calendrier[
-        prochaineJourneeNumero - 1
-      ];
-
-    if(prochaineJournee){
-
-      let ordreMatch = 1;
-
-      for(const duel of prochaineJournee){
-
-        const player1 = duel[0];
-        const player2 = duel[1];
-
-        await run(
-          `
-          INSERT INTO matches(
-            tournament_id,
-            round,
-            group_name,
-            match_order,
-            journee,
-            player1_id,
-            player2_id
-          )
-          VALUES(?,?,?,?,?,?,?)
-          `,
-          [
-            tournament_id,
-            "POULE",
-            nomGroupe,
-            ordreMatch,
-            "J" + prochaineJourneeNumero,
-            player1.id,
-            player2.id
-          ]
-        );
-
-        ordreMatch++;
-
-      }
-
-      nouvelleJourneeCreee = true;
-
-    }
-
-  }
-
-  if(nouvelleJourneeCreee){
-    return res.send(
-      "J" + prochaineJourneeNumero +
-      " générée automatiquement"
-    );
-  }
-
-}
-
-    const phaseExiste = existingMatches.some(m => m.round !== "POULE");
-
-    if(!phaseExiste){
-
-      const classement = await classementPoules(tournament_id);
-
-      let qualifies = [];
-
-      for(const groupe of Object.keys(classement)){
-
-        if(groupe === "Sans groupe") continue;
-
-        const equipes = classement[groupe];
-
-        if(equipes && equipes[0]) qualifies.push(equipes[0]);
-        if(equipes && equipes[1]) qualifies.push(equipes[1]);
-      }
-
-      qualifies.sort((a,b)=>
-        b.pts - a.pts ||
-        b.diff - a.diff ||
-        b.bp - a.bp
-      );
-
-      const tailles = [64,32,16,8,4,2];
-
-      let taille = 2;
-
-      for(const t of tailles){
-        if(qualifies.length >= t){
-          taille = t;
-          break;
-        }
-      }
-
-      qualifies = qualifies.slice(0,taille);
-
-      if(qualifies.length < 2){
-        return res.send("Pas assez de qualifiés");
-      }
-
-      const roundName =
-        taille === 64 ? "64ES" :
-        taille === 32 ? "32ES" :
-        taille === 16 ? "16ES" :
-        taille === 8 ? "8ES" :
-        taille === 4 ? "DEMIS" :
-        "FINALE";
-
-      for(let i=0;i<qualifies.length;i+=2){
-
-        await run(
-          `
-          INSERT INTO matches(
-            tournament_id,
-            round,
-            match_order,
-            player1_id,
-            player2_id
-          )
-          VALUES(?,?,?,?,?)
-          `,
-          [
-            tournament_id,
-            roundName,
-            (i/2)+1,
-            qualifies[i].id,
-            qualifies[i+1].id
-          ]
-        );
-      }
-
-      await run(
-        `
-        UPDATE matches
-        SET locked=1
-        WHERE tournament_id=?
-        AND round='POULE'
-        `,
-        [tournament_id]
-      );
-
-      return res.send(roundName + " généré automatiquement");
-    }
-
-    const ordre = [
-      "64ES",
-      "32ES",
-      "16ES",
-      "8ES",
-      "QUARTS",
-      "DEMIS",
-      "FINALE"
-    ];
-
-    let tourActuel = null;
-
-    for(const tour of ordre){
-      if(existingMatches.some(m => m.round === tour)){
-        tourActuel = tour;
-      }
-    }
-
-    if(!tourActuel){
-      return res.send("Aucun tour trouvé");
-    }
-
-    const matchsTour = existingMatches.filter(
-      m => m.round === tourActuel
-    );
-
-    if(matchsTour.some(m => Number(m.played) !== 1)){
-      return res.send("Finis tous les matchs du tour " + tourActuel);
-    }
-
-    if(tourActuel === "FINALE"){
-
-      const finale = matchsTour[0];
-
-      const champion =
-        Number(finale.score1) > Number(finale.score2)
-        ? finale.player1_id
-        : finale.player2_id;
-      await run(
-       `
-     UPDATE users
-      SET world_points = world_points + 20,
-      world_titles = world_titles + 1
-      WHERE email = (
-      SELECT email
-      FROM participants
-      WHERE id=?
-     )
-    `,
-      [champion]
-   );
-
-      await run(
-        `
-        UPDATE tournaments
-        SET status='finished',
-            champion_id=?
-        WHERE id=?
-        `,
-        [champion,tournament_id]
-      );
-
-      await run(
-        `
-        UPDATE matches
-        SET locked=1
-        WHERE tournament_id=?
-        `,
-        [tournament_id]
-      );
-
-      await donnerBadge(champion,"🏆 Champion");
-
-      return res.send("Champion validé 🏆");
-    }
-
-    const prochain = {
-      "64ES":"32ES",
-      "32ES":"16ES",
-      "16ES":"8ES",
-      "8ES":"QUARTS",
-      "QUARTS":"DEMIS",
-      "DEMIS":"FINALE"
-    };
-
-    const gagnants = [];
-
-    for(const m of matchsTour){
-
-      if(Number(m.score1) > Number(m.score2)){
-        gagnants.push(m.player1_id);
-      }else{
-        gagnants.push(m.player2_id);
-      }
-    }
-
-    await run(
-      `
-      UPDATE matches
-      SET locked=1
-      WHERE tournament_id=?
-      AND round=?
-      `,
-      [tournament_id,tourActuel]
-    );
-
-    for(let i=0;i<gagnants.length;i+=2){
-
-      if(!gagnants[i+1]) continue;
-
-      await run(
-        `
-        INSERT INTO matches(
-          tournament_id,
-          round,
-          match_order,
-          player1_id,
-          player2_id
-        )
-        VALUES(?,?,?,?,?)
-        `,
-        [
-          tournament_id,
-          prochain[tourActuel],
-          (i/2)+1,
-          gagnants[i],
-          gagnants[i+1]
-        ]
-      );
-    }
-
-    return res.send(
-      prochain[tourActuel] + " généré automatiquement"
-    );
-
-  }catch(e){
-
-    console.log(e);
-    res.send("Erreur tirage automatique poule pro");
-
-  }
-
-});
 
 app.get("/tirage/:id",(req,res)=>{
 
@@ -3819,28 +3271,33 @@ app.get("/highlights", async (req,res)=>{
     const highlights = await all(
       `
       SELECT
-       h.*,
-       u.username,
-       u.name,
-       u.profile_photo
-     FROM highlights h
-     LEFT JOIN users u
-     ON u.id=h.user_id
-      `
+        h.*,
+        u.username,
+        u.name,
+        u.profile_photo,
+        CASE
+          WHEN hl.id IS NULL THEN 0
+          ELSE 1
+        END AS liked
+      FROM highlights h
+      LEFT JOIN users u
+        ON u.id=h.user_id
+      LEFT JOIN highlight_likes hl
+        ON hl.highlight_id=h.id
+        AND hl.user_id=?
+      ORDER BY h.id DESC
+      `,
+      [
+        req.session.userId || 0
+      ]
     );
 
     res.json(
-
-  highlights.map(h=>({
-
-    ...h,
-
-    current_user_id:
-      req.session.userId
-
-  }))
-
-);
+      highlights.map(h=>({
+        ...h,
+        current_user_id:req.session.userId
+      }))
+    );
 
   }catch(e){
 
@@ -3855,7 +3312,64 @@ app.post("/like-highlight", async (req,res)=>{
 
   try{
 
+    if(!connected(req)){
+      return res.send("Connecte-toi");
+    }
+
     const { id } = req.body;
+
+    const dejaLike = await get(
+      `
+      SELECT *
+      FROM highlight_likes
+      WHERE highlight_id=?
+      AND user_id=?
+      `,
+      [
+        id,
+        req.session.userId
+      ]
+    );
+
+    if(dejaLike){
+
+      await run(
+        `
+        DELETE FROM highlight_likes
+        WHERE highlight_id=?
+        AND user_id=?
+        `,
+        [
+          id,
+          req.session.userId
+        ]
+      );
+
+      await run(
+        `
+        UPDATE highlights
+        SET likes = MAX(likes - 1, 0)
+        WHERE id=?
+        `,
+        [id]
+      );
+
+      return res.send("Like retiré");
+    }
+
+    await run(
+      `
+      INSERT INTO highlight_likes(
+        highlight_id,
+        user_id
+      )
+      VALUES(?,?)
+      `,
+      [
+        id,
+        req.session.userId
+      ]
+    );
 
     await run(
       `
