@@ -1116,55 +1116,36 @@ body.video-mode .container{
   margin:0!important;
 }
 
-.video-tabs{
-  position:fixed;
-  bottom:85px;
-  left:50%;
-  transform:translateX(-50%);
-
-  z-index:10004;
-
-  display:flex;
-  gap:12px;
-}
-
 body.video-mode{
   overflow:hidden!important;
 }
 
 body.video-mode .tiktok-feed{
+  position:fixed!important;
+  inset:0!important;
+  width:100%!important;
+  height:100dvh!important;
   overflow-y:auto!important;
+  overflow-x:hidden!important;
+  scroll-snap-type:y mandatory;
   -webkit-overflow-scrolling:touch!important;
-}
-
-.tiktok-feed{
-  overflow-x:hidden!important;
-}
-
-.tiktok-video{
-  overflow-x:hidden!important;
-}
-
-body.video-mode .tiktok-feed{
-  overflow-y:scroll!important;
-  overscroll-behavior:none!important;
+  overscroll-behavior-y:contain;
+  background:#000;
 }
 
 body.video-mode .tiktok-video{
+  width:100%!important;
   height:100dvh!important;
   min-height:100dvh!important;
-  max-height:100dvh!important;
+  scroll-snap-align:start;
+  overflow:hidden!important;
 }
 
 body.video-mode .tiktok-video video{
-  height:100dvh!important;
+  width:100%!important;
+  height:100%!important;
+  object-fit:cover!important;
 }
-body.video-mode,
-body.video-mode .tiktok-feed,
-body.video-mode .tiktok-video{
-  overflow-x:hidden!important;
-}
-
 .like-count,
 .comment-count{
   color:white;
