@@ -1203,6 +1203,42 @@ body.video-mode .tiktok-video video{
   font-size:20px;
 }
 
+.profile-header{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  margin-bottom:15px;
+}
+
+.profile-actions{
+  display:flex;
+  gap:10px;
+  margin:0;
+}
+
+#pageProfil #messageCard{
+  display:none!important;
+}
+
+.video-tabs{
+  position:fixed!important;
+  bottom:85px!important;
+  left:50%!important;
+  transform:translateX(-50%)!important;
+  z-index:999999!important;
+  display:flex!important;
+  gap:12px!important;
+}
+
+.video-tabs button{
+  width:46px!important;
+  height:46px!important;
+  border-radius:50%!important;
+  background:rgba(0,0,0,.55)!important;
+  color:white!important;
+  border:1px solid rgba(255,255,255,.25)!important;
+}
+
 </style>
 
 <link
@@ -1422,7 +1458,7 @@ class="hidden">
 
 <button
 class="back-btn"
-onclick="setPage('pageDashboard')">
+onclick="ouvrirProfilCompte()">
 ‹
 </button>
 
@@ -1484,6 +1520,8 @@ class="hidden">
 
 <div class="card">
 
+<div class="profile-header">
+
 <div
 id="profilPhoto"
 style="
@@ -1498,12 +1536,6 @@ onclick="toggleEditProfil()">
 </i>
 
 </div>
-
-<h3> Profil joueur</h3>
-
-<h2>Mon profil</h2>
-
-<h3> Mon compte</h3>
 
 <div class="profile-actions">
 
@@ -1524,7 +1556,7 @@ onclick="ouvrirParametresProfil()">
 
 </div>
 
-<h3>Informations</h3>
+</div>
 
 <p id="profilNom"></p>
 
@@ -1560,8 +1592,6 @@ onchange="uploadPhotoProfil()">
 </div>
 
 <p id="profilEmail"></p>
-
-<p id="profilAbonnement"></p>
 
 <p id="profilExpiration"></p>
 
@@ -1632,6 +1662,47 @@ Déconnexion
 </section>
 
 <section
+id="pagePublierVideo"
+class="hidden">
+
+<div class="card">
+
+<button
+class="back-btn"
+onclick="ouvrirModeVideos()">
+‹
+</button>
+
+<h2> Publier une vidéo</h2>
+
+
+<video
+id="videoPreview"
+controls
+playsinline
+style="
+width:100%;
+max-height:420px;
+border-radius:18px;
+object-fit:cover;
+">
+</video>
+
+<input
+id="highlightTitre"
+placeholder="Titre de la vidéo">
+
+<button
+class="glass-btn"
+onclick="publierHighlight()">
+Publier
+</button>
+
+</div>
+
+</section>
+
+<section
 id="pageDashboard">
 
 <div class="nav">
@@ -1676,54 +1747,11 @@ id="highlightsList">
 <div class="video-tabs">
 
 <button
-onclick="chargerHighlights()">
-<i class="fa-solid fa-fire"></i>
-</button>
-
-<button
-onclick="document.getElementById('highlightVideoFile').click()">
+onclick="ouvrirChoixVideo()">
 <i class="fa-solid fa-plus"></i>
 </button>
 
-<button
-onclick="chargerMesVideos()">
-<i class="fa-solid fa-clapperboard"></i>
-</button>
-
 </div>
-
-<div
-class="video-upload-box hidden"
-id="videoUploadBox">
-
-<video
-id="videoPreview"
-controls
-playsinline
-style="
-width:100%;
-max-height:420px;
-border-radius:18px;
-object-fit:cover;
-">
-</video>
-
-<input
-type="file"
-id="highlightVideoFile"
-accept="video/*"
-class="hidden"
-onchange="prepareVideoUpload()">
-
-<input
-id="highlightTitre"
-placeholder="Titre de la vidéo">
-
-<button
-class="glass-btn"
-onclick="publierHighlight()">
-Publier
-</button>
 
 </div>
 
@@ -2094,6 +2122,8 @@ function setPage(page){
   pageDashboard.classList.add("hidden");
   pageNotifications.classList.add("hidden");
   pageParametres.classList.add("hidden");
+  pagePublierVideo.classList.add("hidden");
+  pagePublierVideo.classList.add("hidden");
 
   document
     .getElementById(page)
@@ -2224,6 +2254,10 @@ async function ouvrirAbonnement(){
 
 async function ouvrirProfilCompte(){
 
+  document
+  .getElementById("messageCard")
+  .classList.add("hidden");
+
   document.body.classList.remove("video-mode");
 
   document
@@ -2293,10 +2327,7 @@ onclick="event.stopPropagation(); toggleEditProfil()">
   profilEmail.textContent =
     "Email : " + (data.email || "");
 
-  profilAbonnement.textContent =
-    data.abonnement === 1
-    ? "Statut : Abonné ⭐"
-    : "Statut : Compte gratuit";
+  profilAbonnement.textContent = "";
 
   profilExpiration.textContent =
     data.abonnement_expire_at
@@ -3312,7 +3343,7 @@ async function envoyerPreuvePaiement(){
 async function publierHighlight(){
 
   const file =
-    highlightVideoFile.files[0];
+  selectedHighlightFile;
 
   if(!highlightTitre.value){
     message.textContent =
@@ -3375,11 +3406,13 @@ async function publierHighlight(){
   message.textContent = result;
 
   highlightTitre.value = "";
-  highlightVideoFile.value = "";
+  selectedHighlightFile = null;
   videoPreview.src = "";
-  videoUploadBox.classList.add("hidden");
 
   await chargerHighlights();
+
+  setPage("pageDashboard");
+  ouvrirModeVideos();
 
 }
 
@@ -4002,7 +4035,13 @@ function ouvrirNotifications(){
 }
 
 function retourDashboard(){
+
+  document
+    .getElementById("messageCard")
+    .classList.remove("hidden");
+
   setPage("pageDashboard");
+
 }
 
 function fermerNotifications(){
@@ -4062,22 +4101,29 @@ setTimeout(()=>{
 
 function prepareVideoUpload(){
 
-  const file =
-    highlightVideoFile.files[0];
+  alert("vidéo choisie");
+
+  const input =
+    document.getElementById("highlightVideoFile");
+
+  const file = input.files[0];
 
   if(!file){
+    alert("aucune vidéo");
     return;
   }
 
-  videoPreview.src =
+  setPage("pagePublierVideo");
+
+  const preview =
+    document.getElementById("videoPreview");
+
+  preview.src =
     URL.createObjectURL(file);
 
-  videoUploadBox.classList.remove(
-    "hidden"
-  );
+  preview.load();
 
 }
-
 async function supprimerHighlight(id){
 
   if(!confirm("Supprimer cette vidéo ?")){
@@ -4593,6 +4639,41 @@ function ouvrirParametresProfil(){
     .forEach(p=>p.classList.add("hidden"));
 
   setPage("pageParametres");
+
+}
+
+let selectedHighlightFile = null;
+
+function ouvrirChoixVideo(){
+
+  const input =
+    document.createElement("input");
+
+  input.type = "file";
+  input.accept = "video/*";
+
+  input.onchange = function(){
+
+    selectedHighlightFile =
+      input.files[0];
+
+    if(!selectedHighlightFile){
+      return;
+    }
+
+    setPage("pagePublierVideo");
+
+    const preview =
+      document.getElementById("videoPreview");
+
+    preview.src =
+      URL.createObjectURL(selectedHighlightFile);
+
+    preview.load();
+
+  };
+
+  input.click();
 
 }
 
