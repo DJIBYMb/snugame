@@ -846,27 +846,21 @@ app.post("/register", async (req,res)=>{
 
   try{
 
-    console.log("JOIN BODY:", req.body);
-
-    const {
-      name,
-      email,
-      password,
-      code
-    } = req.body;
-    if(
-     containsBadWords(name) ||
-     containsBadWords(email)
-  ){
-     return res.send(
-     "Contenu interdit détecté"
-    );
-  }
+    const { name,email,password,code } = req.body;
 
     if(!name || !email || !password || !code){
-      return res.send(
-        "Tous les champs sont obligatoires"
-      );
+      return res.send("Tous les champs sont obligatoires");
+    }
+
+    if(password.length < 8){
+      return res.send("Mot de passe minimum 8 caractères");
+    }
+
+    if(
+      containsBadWords(name) ||
+      containsBadWords(email)
+    ){
+      return res.send("Contenu interdit détecté");
     }
 
     const cleanEmail =
@@ -880,10 +874,7 @@ app.post("/register", async (req,res)=>{
       AND code=?
       ORDER BY id DESC
       `,
-      [
-        cleanEmail,
-        code.trim()
-      ]
+      [cleanEmail, code.trim()]
     );
 
     if(!verification){
@@ -907,16 +898,21 @@ app.post("/register", async (req,res)=>{
         cleanEmail,
         hash
       ],
-      function(err){
+      async function(err){
 
         if(err){
-          return res.send(
-            "Email déjà utilisé"
-          );
+          return res.send("Email déjà utilisé");
         }
 
-        req.session.userId =
-          this.lastID;
+        await run(
+          `
+          DELETE FROM email_codes
+          WHERE email=?
+          `,
+          [cleanEmail]
+        );
+
+        req.session.userId = this.lastID;
 
         res.send("Compte créé");
 
@@ -937,9 +933,7 @@ app.post("/login", loginLimiter, (req,res)=>{
   const { email,password } = req.body;
 
   if(!email || !password){
-    return res.send(
-      "Email et mot de passe obligatoires"
-    );
+    return res.send("Email et mot de passe obligatoires");
   }
 
   db.get(
@@ -956,7 +950,7 @@ app.post("/login", loginLimiter, (req,res)=>{
       }
 
       if(Number(user.banned) === 1){
-       return res.send("Compte banni. Contacte l’admin.");
+        return res.send("Compte banni. Contacte l’admin.");
       }
 
       const ok =
@@ -969,9 +963,17 @@ app.post("/login", loginLimiter, (req,res)=>{
         return res.send("Mot de passe incorrect");
       }
 
-      req.session.userId = user.id;
+      req.session.regenerate(err=>{
 
-      res.send("Connexion réussie");
+        if(err){
+          return res.send("Erreur session");
+        }
+
+        req.session.userId = user.id;
+
+        res.send("Connexion réussie");
+
+      });
 
     }
   );

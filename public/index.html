@@ -1129,7 +1129,12 @@ body.video-mode .container{
 }
 
 body.video-mode{
-  overflow-x:hidden!important;
+  overflow:hidden!important;
+}
+
+body.video-mode .tiktok-feed{
+  overflow-y:auto!important;
+  -webkit-overflow-scrolling:touch!important;
 }
 
 .tiktok-feed{
@@ -1138,11 +1143,6 @@ body.video-mode{
 
 .tiktok-video{
   overflow-x:hidden!important;
-}
-
-body.video-mode{
-  overflow-x:hidden!important;
-  overflow-y:auto!important;
 }
 
 body.video-mode .tiktok-feed{
