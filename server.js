@@ -2542,7 +2542,7 @@ console.log("FILE SIZE:", req.file.size);
       );
 
       const url =
-        `https://${process.env.R2_BUCKET}.${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com/${fileName}`;
+      `${process.env.R2_PUBLIC_URL}/${fileName}`;
 
       res.json({
         ok:true,
