@@ -11,6 +11,20 @@ const multer = require("multer");
 const rateLimit = require("express-rate-limit");
 const nodemailer = require("nodemailer");
 const compression = require("compression");
+const {
+  S3Client,
+  PutObjectCommand
+} = require("@aws-sdk/client-s3");
+
+const r2 = new S3Client({
+  region:"auto",
+  endpoint:
+    `https://${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,
+  credentials:{
+    accessKeyId:process.env.R2_ACCESS_KEY_ID,
+    secretAccessKey:process.env.R2_SECRET_ACCESS_KEY
+  }
+});
 
 const app = express();
 app.use(compression());
@@ -69,29 +83,7 @@ if(!fs.existsSync(uploadDir)){
 
 app.use("/uploads", express.static(uploadDir));
 
-const storage = multer.diskStorage({
-
-  destination:(req,file,cb)=>{
-    cb(null,uploadDir);
-  },
-
-  filename:(req,file,cb)=>{
-
-    const ext =
-      path.extname(file.originalname)
-      .toLowerCase();
-
-    cb(
-      null,
-      Date.now() +
-      "-" +
-      Math.random().toString(36).slice(2) +
-      ext
-    );
-
-  }
-
-});
+const storage = multer.memoryStorage();
 
 const upload = multer({
 
@@ -2508,40 +2500,66 @@ setTimeout(()=>{
 
 app.post("/upload-image",(req,res)=>{
 
-  upload.single("image")(req,res,(err)=>{
+  upload.single("image")(req,res,async (err)=>{
 
-    if(err){
+    try{
 
-      console.log(
-        "ERREUR UPLOAD EXACTE :",
-        err.message,
-        err.code
+      if(err){
+        return res.status(400).json({
+          ok:false,
+          message:err.message || "Erreur upload"
+        });
+      }
+
+      if(!req.file){
+        return res.status(400).json({
+          ok:false,
+          message:"Aucun fichier reçu"
+        });
+      }
+
+      const ext =
+        path.extname(req.file.originalname)
+        .toLowerCase();
+
+      const fileName =
+        Date.now() +
+        "-" +
+        Math.random().toString(36).slice(2) +
+        ext;
+
+      await r2.send(
+        new PutObjectCommand({
+          Bucket:process.env.R2_BUCKET,
+          Key:fileName,
+          Body:req.file.buffer,
+          ContentType:req.file.mimetype
+        })
       );
 
-      return res.status(400).json({
+      const url =
+        `https://${process.env.R2_BUCKET}.${process.env.R2_ACCOUNT_ID}.r2.cloudflarestorage.com/${fileName}`;
+
+      res.json({
+        ok:true,
+        url
+      });
+
+    }catch(e){
+
+      console.log(e);
+
+      res.status(500).json({
         ok:false,
-        message:err.message || "Erreur upload"
+        message:"Erreur upload R2"
       });
 
     }
-
-    if(!req.file){
-
-      return res.status(400).json({
-        ok:false,
-        message:"Aucun fichier reçu"
-      });
-
-    }
-
-    res.json({
-      ok:true,
-      url:"/uploads/" + req.file.filename
-    });
 
   });
 
 });
+
 app.get("/player/:id", async (req,res)=>{
 
   try{
