@@ -2528,6 +2528,10 @@ app.post("/upload-image",(req,res)=>{
         Math.random().toString(36).slice(2) +
         ext;
 
+        console.log("UPLOAD R2 FILE:", fileName);
+console.log("BUCKET:", process.env.R2_BUCKET);
+console.log("FILE SIZE:", req.file.size);
+
       await r2.send(
         new PutObjectCommand({
           Bucket:process.env.R2_BUCKET,
