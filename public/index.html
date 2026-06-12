@@ -4542,10 +4542,21 @@ async function chargerMesVideos(){
 }
 function toggleVideoPause(video){
 
+  if(video.muted){
+
+    video.muted = false;
+    return;
+
+  }
+
   if(video.paused){
+
     video.play();
+
   }else{
+
     video.pause();
+
   }
 
 }
