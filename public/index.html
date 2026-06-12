@@ -1278,6 +1278,28 @@ body.video-mode .tiktok-video video{
   margin-top:12px!important;
 }
 
+.participant-card{
+  margin-bottom:16px;
+  padding-bottom:16px;
+  border-bottom:1px solid rgba(255,255,255,.15);
+}
+
+.secondary{
+  background:transparent;
+  border:none;
+  box-shadow:none;
+  color:white;
+  text-align:left;
+}
+
+.danger{
+  background:transparent;
+  border:none;
+  box-shadow:none;
+  color:#ef4444;
+  font-weight:700;
+  text-align:left;
+}
 
 </style>
 
@@ -1600,11 +1622,7 @@ onclick="ouvrirParametresProfil()">
 
 <p id="profilNom"></p>
 
-<p
-id="profilUsername"
-onclick="toggleUsernameEdit()"
-style="cursor:pointer;">
-</p>
+<p id="profilUsername"></p>
 
 <div
 id="usernameEditBox"
@@ -1692,9 +1710,147 @@ onclick="ouvrirProfilCompte()">
 <h2>⚙️ Paramètres</h2>
 
 <button
+class="secondary"
+onclick="setPage('pageInfosPersonnelles')">
+
+<i class="fa-solid fa-circle-user"></i>
+Informations personnelles
+
+</button>
+
+<button
+class="secondary"
+onclick="setPage('pageSecurite')">
+
+<i class="fa-solid fa-lock"></i>
+Sécurité
+
+</button>
+
+<button
 class="danger"
 onclick="logout()">
 Déconnexion
+</button>
+
+</div>
+
+</section>
+
+<section
+id="pageInfosPersonnelles"
+class="hidden">
+
+<div class="card">
+
+<button
+class="back-btn"
+onclick="setPage('pageParametres')">
+‹
+</button>
+
+<h2>
+<i class="fa-solid fa-circle-user"></i>
+Informations personnelles
+</h2>
+
+<p>
+<b>Email :</b>
+<span id="infosEmail"></span>
+</p>
+
+</div>
+
+</section>
+
+<section
+id="pageModifierProfil"
+class="hidden">
+
+<div class="card">
+
+<button
+class="back-btn"
+onclick="ouvrirProfilCompte()">
+‹
+</button>
+
+<h2>Modifier le profil</h2>
+
+<div id="modifierProfilPhoto"></div>
+
+<button
+class="secondary"
+onclick="document.getElementById('profilePhotoInput').click()">
+Changer la photo
+</button>
+
+<button
+class="secondary"
+onclick="setPage('pageChangerNom')">
+Changer le nom
+</button>
+
+<button
+class="secondary"
+onclick="setPage('pageChangerUsername')">
+Changer le nom d'utilisateur
+</button>
+
+</div>
+
+</section>
+
+<section
+id="pageChangerNom"
+class="hidden">
+
+<div class="card">
+
+<button
+class="back-btn"
+onclick="setPage('pageModifierProfil')">
+‹
+</button>
+
+<h2>Changer le nom</h2>
+
+<input
+id="newName"
+placeholder="Nouveau nom">
+
+<button
+class="secondary"
+onclick="updateName()">
+Enregistrer
+</button>
+
+</div>
+
+</section>
+
+<section
+id="pageChangerUsername"
+class="hidden">
+
+<div class="card">
+
+<button
+class="back-btn"
+onclick="setPage('pageModifierProfil')">
+‹
+</button>
+
+<h2>Changer le nom d'utilisateur</h2>
+
+<input
+id="newUsername"
+placeholder="Nouveau nom d'utilisateur">
+
+<button
+class="secondary"
+onclick="updateUsername()">
+Enregistrer
 </button>
 
 </div>
@@ -1821,7 +1977,7 @@ placeholder="Nom du tournoi">
 <input
 id="tournoiMax"
 type="number"
-value="48"
+value="6"
 placeholder="Nombre équipes">
 
 <h3>Type de tournoi</h3>
@@ -2163,7 +2319,10 @@ function setPage(page){
   pageNotifications.classList.add("hidden");
   pageParametres.classList.add("hidden");
   pagePublierVideo.classList.add("hidden");
-  pagePublierVideo.classList.add("hidden");
+  pageInfosPersonnelles.classList.add("hidden");
+  pageModifierProfil.classList.add("hidden");
+  pageChangerNom.classList.add("hidden");
+  pageChangerUsername.classList.add("hidden");
 
   document
     .getElementById(page)
@@ -2315,6 +2474,10 @@ async function ouvrirProfilCompte(){
   setPage("pageProfil");
 
   document
+  .getElementById("usernameEditBox")
+  ?.classList.add("hidden");
+
+  document
     .getElementById("btnEditProfil")
     .style.display = "block";
 
@@ -2356,16 +2519,28 @@ onclick="event.stopPropagation(); toggleEditProfil()">
 </i>
 `;
 
-
-
-  profilNom.textContent =
+modifierProfilPhoto.innerHTML = `
+  <img
+  src="${data.profile_photo || "/default-avatar.png"}"
+  style="
+    width:120px;
+    height:120px;
+    border-radius:50%;
+    object-fit:cover;
+    border:4px solid #1455ff;
+  ">
+`;
+ profilNom.textContent =
     data.name || "";
 
   profilUsername.textContent =
     "@" + (data.username || "");
 
-  profilEmail.textContent =
-    "Email : " + (data.email || "");
+  profilEmail.textContent = "";
+
+   document
+  .getElementById("infosEmail")
+  .textContent = data.email || "";
 
   profilAbonnement.textContent = "";
 
@@ -2522,6 +2697,7 @@ async function ajouterParticipant(){
   await afficherPhaseFinale();
 
 }
+
 async function chargerParticipants(){
 
   if(!tournoiSelect.value) return;
@@ -2560,38 +2736,102 @@ async function chargerParticipants(){
 
   participants.innerHTML = data.map(p=>`
 
-  <div class="match">
+  <div class="match participant-card">
 
-    <b>ID joueur : ${p.id}</b><br>
+    <div
+    style="
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      gap:6px;
+    ">
 
-    <b
-    style="cursor:pointer;color:#60a5fa;"
-    onclick="ouvrirProfilJoueur(${p.user_id})">
-      ${p.prenom}
-    </b><br>
+      <div
+      style="
+        position:relative;
+        width:70px;
+        height:70px;
+      ">
 
-    ${
-  p.user_id
-  ? `
-    <button
-    class="secondary"
-    onclick="suivreJoueur(${Number(p.user_id)})">
-      ➕ Suivre
-    </button><br>
-  `
-  : ""
-}
+        <img
+        src="${p.profile_photo || '/default-avatar.png'}"
+        onclick="ouvrirProfilJoueur(${p.user_id})"
+        style="
+          width:70px;
+          height:70px;
+          border-radius:50%;
+          object-fit:cover;
+          cursor:pointer;
+          border:2px solid #60a5fa;
+        ">
 
-    ${p.club_logo || ""}<br>
+        ${
+          p.user_id
+          ? `
+            <button
+            onclick="event.stopPropagation(); suivreJoueur(${Number(p.user_id)})"
+            style="
+              position:absolute;
+              bottom:-25px;
+              right:0;
+              border:none;
+              background:none;
+              color:white;
+              font-size:28px;
+              font-weight:900;
+              cursor:pointer;
+              padding:0;
+            ">
+              +
+            </button>
+          `
+          : ""
+        }
 
-    Groupe :
-    ${p.group_name || "Aucun"}<br>
+      </div>
+
+      <div
+      onclick="ouvrirProfilJoueur(${p.user_id})"
+      style="
+        cursor:pointer;
+        font-weight:700;
+        color:#60a5fa;
+        margin-top:16px;
+        text-align:center;
+      ">
+        ${p.prenom}
+      </div>
+
+      <div class="small">
+        Groupe : ${p.group_name || "Aucun"}
+      </div>
+
+    </div>
 
   </div>
 
-`).join("");
-
+ `).join("");
 }
+function cocherTous(etat){
+  document.querySelectorAll(".participantCheck").forEach(c=>c.checked=etat);
+}
+
+async function supprimerParticipantsCoches(){
+  const ids = Array.from(
+    document.querySelectorAll(".participantCheck:checked")
+  ).map(i=>i.value);
+
+  if(!ids.length){
+    message.textContent = "Aucun participant sélectionné";
+    return;
+  }
+
+  if(!confirm("Supprimer participants ?")) return;
+
+  await post("/supprimer-participants-selection",{ids});
+  await chargerParticipants();
+}
+
 function cocherTous(etat){
   document.querySelectorAll(".participantCheck").forEach(c=>c.checked=etat);
 }
@@ -4621,25 +4861,7 @@ function ouvrirUploadVideo(){
 
 function toggleEditProfil(){
 
-  const box =
-    document.getElementById("usernameEditBox");
-
-  const img =
-    document.getElementById("profilPhotoImg");
-
-  if(!box){
-    alert("usernameEditBox introuvable");
-    return;
-  }
-
-  box.classList.toggle("hidden");
-
-  if(img){
-    img.style.boxShadow =
-      box.classList.contains("hidden")
-      ? "none"
-      : "0 0 25px #22c55e";
-  }
+  setPage("pageModifierProfil");
 
 }
 
@@ -4712,6 +4934,32 @@ function ouvrirChoixVideo(){
   };
 
   input.click();
+
+}
+
+async function updateName(){
+
+  const name =
+    document
+    .getElementById("newName")
+    .value
+    .trim();
+
+  if(!name){
+
+    message.textContent =
+      "Nom obligatoire";
+
+    return;
+
+  }
+
+  await post(
+    "/update-name",
+    { name }
+  );
+
+  await ouvrirProfilCompte();
 
 }
 

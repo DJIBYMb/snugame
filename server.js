@@ -5040,6 +5040,47 @@ app.post("/fix-champion/:id", async (req,res)=>{
 
 });
 
+app.post("/update-name", async (req,res)=>{
+
+  try{
+
+    if(!connected(req)){
+      return res.send("Connecte-toi d'abord");
+    }
+
+    const { name } = req.body;
+
+    if(!name || !name.trim()){
+      return res.send("Nom obligatoire");
+    }
+
+    if(containsBadWords(name)){
+      return res.send("Contenu interdit détecté");
+    }
+
+    await run(
+      `
+      UPDATE users
+      SET name=?
+      WHERE id=?
+      `,
+      [
+        name.trim(),
+        req.session.userId
+      ]
+    );
+
+    res.send("Nom modifié");
+
+  }catch(e){
+
+    console.log(e);
+    res.send("Erreur modification nom");
+
+  }
+
+});
+
 app.listen(PORT, () => {
 
   console.log(
