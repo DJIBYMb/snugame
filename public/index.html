@@ -4645,7 +4645,15 @@ function initTikTokAutoplay(){
 
             });
 
-            video.play();
+            if(window.videoSoundEnabled){
+              video.muted = false;
+            }else{
+              video.muted = true;
+            }
+
+            video
+              .play()
+              .catch(()=>{});
 
           }else{
 
@@ -5170,7 +5178,12 @@ checkStatus();
   <i class="fa-solid fa-trophy"></i>
 </button>
 
-<button id="btnVideos" onclick="ouvrirPanel('panelHighlights')">
+<button
+id="btnVideos"
+onclick="
+window.videoSoundEnabled=true;
+ouvrirPanel('panelHighlights');
+">
   <i class="fa-solid fa-video"></i>
 </button>
 
