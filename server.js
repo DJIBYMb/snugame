@@ -5081,6 +5081,76 @@ app.post("/update-name", async (req,res)=>{
 
 });
 
+app.post("/change-password", async (req,res)=>{
+
+  try{
+
+    if(!connected(req)){
+      return res.send("Connecte-toi d'abord");
+    }
+
+    const {
+      oldPassword,
+      newPassword
+    } = req.body;
+
+    if(!oldPassword || !newPassword){
+      return res.send("Tous les champs sont obligatoires");
+    }
+
+    if(newPassword.length < 8){
+      return res.send("Mot de passe minimum 8 caractères");
+    }
+
+    const user = await get(
+      `
+      SELECT *
+      FROM users
+      WHERE id=?
+      `,
+      [req.session.userId]
+    );
+
+    if(!user){
+      return res.send("Compte introuvable");
+    }
+
+    const ok =
+      await bcrypt.compare(
+        oldPassword,
+        user.password
+      );
+
+    if(!ok){
+      return res.send("Ancien mot de passe incorrect");
+    }
+
+    const hash =
+      await bcrypt.hash(newPassword,10);
+
+    await run(
+      `
+      UPDATE users
+      SET password=?
+      WHERE id=?
+      `,
+      [
+        hash,
+        req.session.userId
+      ]
+    );
+
+    res.send("Mot de passe changé");
+
+  }catch(e){
+
+    console.log(e);
+    res.send("Erreur changement mot de passe");
+
+  }
+
+});
+
 app.listen(PORT, () => {
 
   console.log(

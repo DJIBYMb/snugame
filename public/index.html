@@ -1367,7 +1367,7 @@ min-height:50px;
 
 <img
 id="topProfilePhoto"
-src="/default-avatar.png"
+src="/default-lo.jpeg"
 onclick="ouvrirProfilCompte()"
 style="
 position:absolute;
@@ -1758,6 +1758,78 @@ Informations personnelles
 <b>Email :</b>
 <span id="infosEmail"></span>
 </p>
+
+</div>
+
+</section>
+
+<section
+id="pageSecurite"
+class="hidden">
+
+<div class="card">
+
+<button
+class="back-btn"
+onclick="setPage('pageParametres')">
+‹
+</button>
+
+<h2>
+<i class="fa-solid fa-lock"></i>
+Sécurité
+</h2>
+
+<button
+class="secondary"
+onclick="setPage('pageChangerMotDePasse')">
+Changer mot de passe
+</button>
+
+<button
+class="secondary"
+onclick="setPage('pageChangerEmail')">
+Changer adresse email
+</button>
+
+</div>
+
+</section>
+
+<section
+id="pageChangerMotDePasse"
+class="hidden">
+
+<div class="card">
+
+<button
+class="back-btn"
+onclick="setPage('pageSecurite')">
+‹
+</button>
+
+<h2>Changer mot de passe</h2>
+
+<input
+id="oldPassword"
+type="password"
+placeholder="Ancien mot de passe">
+
+<input
+id="newSecurePassword"
+type="password"
+placeholder="Nouveau mot de passe">
+
+<input
+id="confirmSecurePassword"
+type="password"
+placeholder="Confirmer nouveau mot de passe">
+
+<button
+class="secondary"
+onclick="changerMotDePasse()">
+Enregistrer
+</button>
 
 </div>
 
@@ -2323,6 +2395,8 @@ function setPage(page){
   pageModifierProfil.classList.add("hidden");
   pageChangerNom.classList.add("hidden");
   pageChangerUsername.classList.add("hidden");
+  pageSecurite.classList.add("hidden");
+  pageChangerMotDePasse.classList.add("hidden");
 
   document
     .getElementById(page)
@@ -2541,8 +2615,6 @@ modifierProfilPhoto.innerHTML = `
    document
   .getElementById("infosEmail")
   .textContent = data.email || "";
-
-  profilAbonnement.textContent = "";
 
   profilExpiration.textContent =
     data.abonnement_expire_at
@@ -4960,6 +5032,64 @@ async function updateName(){
   );
 
   await ouvrirProfilCompte();
+
+}
+
+async function changerMotDePasse(){
+
+  const oldPass =
+    oldPassword.value.trim();
+
+  const newPass =
+    newSecurePassword.value.trim();
+
+  const confirmPass =
+    confirmSecurePassword.value.trim();
+
+  if(!oldPass || !newPass || !confirmPass){
+    message.textContent =
+      "Tous les champs sont obligatoires";
+    return;
+  }
+
+  if(newPass.length < 8){
+    message.textContent =
+      "Le nouveau mot de passe doit faire au moins 8 caractères";
+    return;
+  }
+
+  if(newPass !== confirmPass){
+    message.textContent =
+      "Les mots de passe ne correspondent pas";
+    return;
+  }
+
+  try{
+
+  const result =
+    await post("/change-password",{
+      oldPassword:oldPass,
+      newPassword:newPass
+    });
+
+  alert(JSON.stringify(result));
+
+}catch(e){
+
+  console.log(e);
+  alert("ERREUR : " + e);
+
+}
+
+  console.log(result);
+  alert(JSON.stringify(result));
+
+  if(result === "Mot de passe changé"){
+    oldPassword.value = "";
+    newSecurePassword.value = "";
+    confirmSecurePassword.value = "";
+    setPage("pageSecurite");
+  }
 
 }
 
