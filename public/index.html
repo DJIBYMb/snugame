@@ -4600,7 +4600,7 @@ async function ouvrirModeVideos(){
 
   await chargerHighlights();
 
-  setTimeout(()=>{
+setTimeout(()=>{
 
   const firstVideo =
     document.querySelector(".tiktok-video video");
@@ -4608,12 +4608,14 @@ async function ouvrirModeVideos(){
   if(firstVideo){
 
     firstVideo.muted = false;
-    firstVideo.play().catch(()=>{});
+
+    firstVideo
+      .play()
+      .catch(()=>{});
 
   }
 
- },500);
-
+},500);
 }
 
 function initTikTokAutoplay(){
@@ -5122,6 +5124,33 @@ async function changerMotDePasse(){
   }
 
 }
+
+async function ouvrirAccueilDemarrage(){
+
+  const data = await get("/me");
+
+  if(!data || data.connected === false){
+    setPage("pageAuth");
+    return;
+  }
+
+  const dejaOuvert =
+    sessionStorage.getItem("appDejaOuverte");
+
+  if(!dejaOuvert){
+
+    sessionStorage.setItem("appDejaOuverte","oui");
+
+    setPage("pageDashboard");
+    showPanel("panelTournoi");
+
+    creationTournoiBox.classList.remove("hidden");
+
+  }
+
+}
+
+ouvrirAccueilDemarrage();
 
 checkStatus();
 
