@@ -4597,6 +4597,20 @@ async function ouvrirModeVideos(){
 
   await chargerHighlights();
 
+  setTimeout(()=>{
+
+  const firstVideo =
+    document.querySelector(".tiktok-video video");
+
+  if(firstVideo){
+
+    firstVideo.muted = false;
+    firstVideo.play().catch(()=>{});
+
+  }
+
+ },500);
+
 }
 
 function initTikTokAutoplay(){
