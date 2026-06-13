@@ -1304,6 +1304,21 @@ body.video-mode .tiktok-video video{
   text-align:left;
 }
 
+.form-message{
+  margin:0 0 10px;
+  font-size:13px;
+  font-weight:700;
+  min-height:18px;
+}
+
+.form-message.success{
+  color:#22c55e;
+}
+
+.form-message.error{
+  color:#ef4444;
+}
+
 </style>
 
 <link
@@ -1859,6 +1874,11 @@ onclick="envoyerCodeAncienEmail()">
 Envoyer code à mon email actuel
 </button>
 
+<p
+id="msgOldEmailCode"
+class="form-message">
+</p>
+
 <input
 id="codeAncienEmail"
 placeholder="Code reçu sur l'ancien email">
@@ -1868,6 +1888,11 @@ class="secondary"
 onclick="verifierCodeAncienEmail()">
 Valider le code
 </button>
+
+<p
+id="msgVerifyOldCode"
+class="form-message">
+</p>
 
 <div
 id="newEmailBox"
@@ -1883,6 +1908,11 @@ onclick="envoyerCodeNouvelEmail()">
 Envoyer code au nouvel email
 </button>
 
+<p
+id="msgNewEmailCode"
+class="form-message">
+</p>
+
 <input
 id="codeNouvelEmail"
 placeholder="Code reçu sur le nouvel email">
@@ -1892,6 +1922,11 @@ class="secondary"
 onclick="validerNouvelEmail()">
 Enregistrer nouvelle adresse
 </button>
+
+<p
+id="msgConfirmNewEmail"
+class="form-message">
+</p>
 
 </div>
 
@@ -2510,14 +2545,27 @@ async function login(){
   });
 
   if(result.includes("Connexion")){
-    setPage("pageDashboard");
-    await chargerTournois();
-  }
+
+  setPage("pageDashboard");
+
+  await chargerTournois();
+
+  showPanel("panelTournoi");
+
+  creationTournoiBox
+    .classList.remove("hidden");
+
+ }
 }
 
 async function logout(){
+
   await post("/logout",{});
+
+  sessionStorage.clear();
+
   setPage("pageAuth");
+
 }
 
 async function abonnement(){
@@ -5226,7 +5274,23 @@ async function envoyerCodeAncienEmail(){
   const result =
     await post("/send-old-email-code");
 
-  message.textContent = result;
+  if(result.includes("envoyé")){
+
+  setFormMessage(
+    "msgOldEmailCode",
+    result,
+    "success"
+  );
+
+}else{
+
+  setFormMessage(
+    "msgOldEmailCode",
+    result,
+    "error"
+  );
+
+ }
 
 }
 
@@ -5244,7 +5308,23 @@ async function verifierCodeAncienEmail(){
       { code }
     );
 
-  message.textContent = result;
+  if(result === "Code valide"){
+
+  setFormMessage(
+    "msgVerifyOldCode",
+    result,
+    "success"
+  );
+
+}else{
+
+  setFormMessage(
+    "msgVerifyOldCode",
+    result,
+    "error"
+  );
+
+}
 
   if(result === "Code valide"){
 
@@ -5270,7 +5350,23 @@ async function envoyerCodeNouvelEmail(){
       { email }
     );
 
-  message.textContent = result;
+  if(result.includes("envoyé")){
+
+  setFormMessage(
+    "msgNewEmailCode",
+    result,
+    "success"
+  );
+
+}else{
+
+  setFormMessage(
+    "msgNewEmailCode",
+    result,
+    "error"
+  );
+
+}
 
 }
 
@@ -5297,9 +5393,70 @@ async function validerNouvelEmail(){
       }
     );
 
-  message.textContent = result;
+  if(result === "Nouvelle adresse enregistrée"){
+
+  setFormMessage(
+    "msgConfirmNewEmail",
+    result,
+    "success"
+  );
+
+  await ouvrirProfilCompte();
+  setPage("pageInfosPersonnelles");
+
+}else{
+
+  setFormMessage(
+    "msgConfirmNewEmail",
+    result,
+    "error"
+  );
 
 }
+
+}
+
+function setFormMessage(id, text, type){
+
+  const el =
+    document.getElementById(id);
+
+  if(!el){
+    return;
+  }
+
+  el.textContent = text;
+
+  el.classList.remove(
+    "success",
+    "error"
+  );
+
+  if(type){
+    el.classList.add(type);
+  }
+
+}
+
+async function demarrerApplication(){
+
+  const data =
+    await get("/me");
+
+  if(!data || data.connected === false){
+
+    setPage("pageAuth");
+    return;
+
+  }
+
+  setPage("pageDashboard");
+  showPanel("panelTournoi");
+
+  creationTournoiBox.classList.remove("hidden");
+
+}
+demarrerApplication();
 
 checkStatus();
 
