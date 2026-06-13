@@ -5267,7 +5267,37 @@ async function ouvrirAccueilDemarrage(){
 
 }
 
-ouvrirAccueilDemarrage();
+demarrerApplication();
+
+async function demarrerApplication(){
+
+  try{
+
+    const data =
+      await get("/me");
+
+    if(!data || data.connected === false){
+      setPage("pageAuth");
+      return;
+    }
+
+    setPage("pageDashboard");
+
+    await chargerTournois();
+
+    showPanel("panelTournoi");
+
+    creationTournoiBox
+      ?.classList.remove("hidden");
+
+  }catch(e){
+
+    console.log(e);
+    setPage("pageAuth");
+
+  }
+
+}
 
 async function envoyerCodeAncienEmail(){
 
