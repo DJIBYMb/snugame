@@ -612,6 +612,51 @@ db.run(`
     UNIQUE(highlight_id,user_id)
   )
 `);
+db.run(`
+  CREATE TABLE IF NOT EXISTS user_player_stats(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER,
+    season_year INTEGER,
+    matchs INTEGER DEFAULT 0,
+    victoires INTEGER DEFAULT 0,
+    nuls INTEGER DEFAULT 0,
+    defaites INTEGER DEFAULT 0,
+    buts_marques INTEGER DEFAULT 0,
+    buts_encaisses INTEGER DEFAULT 0,
+    xp INTEGER DEFAULT 0,
+    niveau INTEGER DEFAULT 1,
+    coupes INTEGER DEFAULT 0,
+    tournois_participes INTEGER DEFAULT 0,
+    tournois_gagnes INTEGER DEFAULT 0,
+    UNIQUE(user_id, season_year)
+  )
+`);
+db.run(`
+  CREATE TABLE IF NOT EXISTS user_trophies(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER,
+    tournament_id INTEGER,
+    tournament_name TEXT,
+    trophy TEXT,
+    won_at TEXT DEFAULT CURRENT_TIMESTAMP
+  )
+`);
+db.run(`
+  ALTER TABLE user_player_stats
+  ADD COLUMN tournois_participes INTEGER DEFAULT 0
+`,()=>{});
+
+db.run(`
+  ALTER TABLE user_player_stats
+  ADD COLUMN tournois_gagnes INTEGER DEFAULT 0
+`,()=>{});
+db.run(`
+CREATE TABLE IF NOT EXISTS counted_tournaments(
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  tournament_id INTEGER UNIQUE,
+  counted_at TEXT DEFAULT CURRENT_TIMESTAMP
+)
+`);
 
 
 
@@ -1674,6 +1719,147 @@ async (req,res)=>{
   }
 
 });
+async function assurerStatsJoueur(user_id){
+
+  const currentYear =
+    new Date().getFullYear();
+
+  await run(
+    `
+    INSERT OR IGNORE INTO user_player_stats(
+      user_id,
+      season_year
+    )
+    VALUES(?,?)
+    `,
+    [
+      user_id,
+      currentYear
+    ]
+  );
+
+}
+async function mettreAJourStatsMatch(user_id, butsPour, butsContre, resultat){
+
+  const currentYear =
+    new Date().getFullYear();
+
+  await assurerStatsJoueur(user_id);
+
+  let xpChange = 5;
+
+  if(resultat === "victoire"){
+    xpChange = 15;
+  }
+  else if(resultat === "nul"){
+    xpChange = 7;
+  }
+  else if(resultat === "defaite"){
+    xpChange = -3;
+  }
+
+  await run(
+    `
+    UPDATE user_player_stats
+    SET matchs = matchs + 1,
+        victoires = victoires + CASE WHEN ?='victoire' THEN 1 ELSE 0 END,
+        nuls = nuls + CASE WHEN ?='nul' THEN 1 ELSE 0 END,
+        defaites = defaites + CASE WHEN ?='defaite' THEN 1 ELSE 0 END,
+        buts_marques = buts_marques + ?,
+        buts_encaisses = buts_encaisses + ?,
+        xp = MAX(xp + ?, 0),
+        niveau = MAX(1, CAST((MAX(xp + ?, 0) / 100) AS INTEGER) + 1)
+    WHERE user_id=?
+    AND season_year=?
+    `,
+    [
+      resultat,
+      resultat,
+      resultat,
+      butsPour,
+      butsContre,
+      xpChange,
+      xpChange,
+      user_id,
+      currentYear
+    ]
+  );
+
+}
+async function compterTournoiTermine(tournament_id){
+
+  const dejaCompte = await get(
+    `
+    SELECT id
+    FROM counted_tournaments
+    WHERE tournament_id=?
+    `,
+    [tournament_id]
+  );
+
+  if(dejaCompte){
+    return;
+  }
+
+  const officiel =
+    await tournoiOfficiel(tournament_id);
+
+  if(!officiel){
+    return;
+  }
+
+  const participants = await all(
+    `
+    SELECT DISTINCT user_id
+    FROM participants
+    WHERE tournament_id=?
+    AND user_id IS NOT NULL
+    `,
+    [tournament_id]
+  );
+
+  for(const p of participants){
+
+    await assurerStatsJoueur(p.user_id);
+
+    await run(
+      `
+      UPDATE user_player_stats
+      SET tournois_participes = tournois_participes + 1
+      WHERE user_id=?
+      AND season_year=?
+      `,
+      [
+        p.user_id,
+        new Date().getFullYear()
+      ]
+    );
+
+  }
+
+  await run(
+    `
+    INSERT INTO counted_tournaments(tournament_id)
+    VALUES(?)
+    `,
+    [tournament_id]
+  );
+
+}
+async function tournoiOfficiel(tournament_id){
+
+  const count = await get(
+    `
+    SELECT COUNT(*) AS total
+    FROM participants
+    WHERE tournament_id=?
+    `,
+    [tournament_id]
+  );
+
+  return Number(count.total || 0) >= 15;
+
+}
 app.post("/update-match-proof", async (req,res)=>{
 
   try{
@@ -1705,6 +1891,10 @@ app.post("/update-match-proof", async (req,res)=>{
     if(Number(match.locked) === 1){
       return res.send("Score verrouillé");
     }
+
+    if(Number(match.played) === 1){
+     return res.send("Ce match est déjà validé");
+   }
 
     const s1 = Number(score1);
     const s2 = Number(score2);
@@ -1754,6 +1944,48 @@ app.post("/update-match-proof", async (req,res)=>{
         match_id
       ]
     );
+    const officiel =
+  await tournoiOfficiel(match.tournament_id);
+
+if(officiel){
+
+  const joueur1 = await get(
+    `
+    SELECT user_id
+    FROM participants
+    WHERE id=?
+    `,
+    [match.player1_id]
+  );
+
+  const joueur2 = await get(
+    `
+    SELECT user_id
+    FROM participants
+    WHERE id=?
+    `,
+    [match.player2_id]
+  );
+
+  if(joueur1 && joueur1.user_id){
+    await mettreAJourStatsMatch(
+      joueur1.user_id,
+      s1,
+      s2,
+      s1 > s2 ? "victoire" : s1 === s2 ? "nul" : "defaite"
+    );
+  }
+
+  if(joueur2 && joueur2.user_id){
+    await mettreAJourStatsMatch(
+      joueur2.user_id,
+      s2,
+      s1,
+      s2 > s1 ? "victoire" : s1 === s2 ? "nul" : "defaite"
+    );
+  }
+
+}
 
     if(match.round === "FINALE" && winner){
 
@@ -1769,6 +2001,72 @@ app.post("/update-match-proof", async (req,res)=>{
       match.tournament_id
     ]
   );
+  await compterTournoiTermine(match.tournament_id);
+  
+  const officiel =
+  await tournoiOfficiel(match.tournament_id);
+
+if(officiel){
+
+  const championUser = await get(
+    `
+    SELECT user_id
+    FROM participants
+    WHERE id=?
+    `,
+    [winner]
+  );
+
+  const tournoi = await get(
+    `
+    SELECT name
+    FROM tournaments
+    WHERE id=?
+    `,
+    [match.tournament_id]
+  );
+
+  if(championUser && championUser.user_id){
+
+    await assurerStatsJoueur(championUser.user_id);
+
+    await run(
+      `
+      UPDATE user_player_stats
+      SET coupes = coupes + 1,
+          tournois_gagnes = tournois_gagnes + 1,
+          xp = xp + 100,
+          niveau = CAST((xp + 100) / 100 AS INTEGER) + 1
+      WHERE user_id=?
+      AND season_year=?
+      `,
+      [
+        championUser.user_id,
+        new Date().getFullYear()
+      ]
+    );
+
+    await run(
+      `
+      INSERT INTO user_trophies(
+        user_id,
+        tournament_id,
+        tournament_name,
+        trophy
+      )
+      VALUES(?,?,?,?)
+      `,
+      [
+        championUser.user_id,
+        match.tournament_id,
+        tournoi ? tournoi.name : "Tournoi",
+        "🏆 Champion"
+      ]
+    );
+
+  }
+
+}
 
 }
 
@@ -5387,6 +5685,82 @@ app.post("/confirm-new-email", async (req,res)=>{
 
     console.log(e);
     res.send("Erreur changement email");
+
+  }
+
+});
+
+app.get("/my-player-stats", async (req,res)=>{
+
+  try{
+
+    if(!connected(req)){
+      return res.json(null);
+    }
+
+    const currentYear =
+      new Date().getFullYear();
+
+    const stats = await get(
+      `
+      SELECT *
+      FROM user_player_stats
+      WHERE user_id=?
+      AND season_year=?
+      `,
+      [
+        req.session.userId,
+        currentYear
+      ]
+    );
+
+    res.json(
+      stats || {
+        matchs:0,
+        victoires:0,
+        defaites:0,
+        nuls:0,
+        buts_marques:0,
+        buts_encaisses:0,
+        xp:0,
+        niveau:1,
+        coupes:0
+      }
+    );
+
+  }catch(e){
+
+    console.log(e);
+
+    res.json(null);
+
+  }
+
+});
+app.get("/my-trophies", async (req,res)=>{
+
+  try{
+
+    if(!connected(req)){
+      return res.json([]);
+    }
+
+    const trophies = await all(
+      `
+      SELECT *
+      FROM user_trophies
+      WHERE user_id=?
+      ORDER BY id DESC
+      `,
+      [req.session.userId]
+    );
+
+    res.json(trophies);
+
+  }catch(e){
+
+    console.log(e);
+    res.json([]);
 
   }
 

@@ -1635,6 +1635,10 @@ onclick="ouvrirParametresProfil()">
 <i class="fa-solid fa-gear"></i>
 </button>
 
+<button onclick="ouvrirMaCarteJoueur()">
+  <i class="fa-solid fa-id-card"></i>
+</button>
+
 </div>
 
 </div>
@@ -1673,6 +1677,26 @@ onchange="uploadPhotoProfil()">
 <p id="profilExpiration"></p>
 
 </div>
+
+</section>
+
+<section id="pageCarteJoueur" class="hidden">
+
+  <div class="card">
+
+    <button
+    class="back-btn"
+    onclick="ouvrirProfilCompte()">
+      ‹
+    </button>
+
+    <h2>🎴 Profil joueur</h2>
+
+    <div id="maCarteJoueurContent">
+      <p>Carte joueur en préparation...</p>
+    </div>
+
+  </div>
 
 </section>
 
@@ -2497,6 +2521,7 @@ function setPage(page){
   pageSecurite.classList.add("hidden");
   pageChangerMotDePasse.classList.add("hidden");
   pageChangerEmail.classList.add("hidden");
+  pageCarteJoueur.classList.add("hidden");
 
   document
     .getElementById(page)
@@ -5490,6 +5515,142 @@ async function demarrerApplication(){
 
   creationTournoiBox
     ?.classList.remove("hidden");
+
+}
+
+async function ouvrirMaCarteJoueur(){
+
+  setPage("pageCarteJoueur");
+
+  const data = await get("/me");
+
+  const stats = await get("/my-player-stats");
+
+  const trophies = await get("/my-trophies");
+
+  let statut = "🟡 Standard";
+
+if((stats.victoires || 0) >= ((stats.defaites || 0) * 3 + 5)){
+  statut = "🟢 Inébranlable";
+}
+else if((stats.defaites || 0) > (stats.victoires || 0)){
+  statut = "🔴 Inconstant";
+}
+
+  if(!data || data.connected === false){
+    maCarteJoueurContent.innerHTML =
+      "<p>Connecte-toi pour voir ta carte joueur.</p>";
+    return;
+  }
+
+  maCarteJoueurContent.innerHTML = `
+
+<div class="player-profile-hero">
+
+  <div class="player-profile-cover"></div>
+
+  <img
+  class="player-profile-avatar"
+  src="${data.profile_photo || "/default-avatar.png"}">
+
+  <div class="player-profile-name">
+    ${data.name || "Joueur"}
+  </div>
+
+  <div class="player-profile-username">
+    @${data.username || ""}
+  </div>
+
+  <div
+  style="
+  margin-top:10px;
+  font-size:18px;
+  font-weight:900;
+  color:#fde047;
+  ">
+    ${statut}
+  </div>
+
+</div>
+
+<div class="player-stats">
+
+  <div class="player-stat">
+    <h3>${stats.matchs || 0}</h3>
+    <p>Matchs</p>
+  </div>
+
+  <div class="player-stat">
+    <h3>${stats.victoires || 0}</h3>
+    <p>Victoires</p>
+  </div>
+
+  <div class="player-stat">
+    <h3>${stats.defaites || 0}</h3>
+    <p>Défaites</p>
+  </div>
+
+  <div class="player-stat">
+    <h3>${stats.coupes || 0}</h3>
+    <p>Coupes</p>
+  </div>
+
+  <div class="player-stat">
+    <h3>${stats.nuls || 0}</h3>
+    <p>Nuls</p>
+  </div>
+
+  <div class="player-stat">
+    <h3>${stats.buts_marques || 0}</h3>
+    <p>Buts marqués</p>
+  </div>
+
+  <div class="player-stat">
+    <h3>${stats.buts_encaisses || 0}</h3>
+    <p>Buts encaissés</p>
+  </div>
+
+  <div class="player-stat">
+    <h3>${stats.niveau || 1}</h3>
+    <p>Niveau</p>
+  </div>
+
+  <div class="player-stat">
+    <h3>${stats.xp || 0}</h3>
+    <p>XP</p>
+  </div>
+
+  <div class="player-stat">
+    <h3>${stats.tournois_participes || 0}</h3>
+    <p>Tournois joués</p>
+  </div>
+
+  <div class="player-stat">
+    <h3>${stats.tournois_gagnes || 0}</h3>
+    <p>Tournois gagnés</p>
+  </div>
+
+</div>
+
+<div class="card">
+
+  <h3>🏆 Palmarès</h3>
+
+  ${
+    trophies && trophies.length
+    ? trophies.map(t=>`
+      <div class="match">
+        <b>${t.trophy}</b><br>
+        ${t.tournament_name}<br>
+        <span class="small">${t.won_at}</span>
+      </div>
+    `).join("")
+    : "<p>Aucune médaille pour le moment.</p>"
+  }
+
+</div>
+
+`;
 
 }
 
