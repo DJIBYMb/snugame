@@ -5267,7 +5267,7 @@ async function ouvrirAccueilDemarrage(){
 
 }
 
-demarrerApplication();
+setPage("pageAuth");
 
 async function demarrerApplication(){
 
@@ -5470,25 +5470,30 @@ function setFormMessage(id, text, type){
 
 async function demarrerApplication(){
 
+  document.body.classList.remove("app-loading");
+
   const data =
     await get("/me");
 
   if(!data || data.connected === false){
-
     setPage("pageAuth");
     return;
-
   }
 
+  currentUserId = data.id;
+
   setPage("pageDashboard");
+
+  await chargerTournois();
+
   showPanel("panelTournoi");
 
-  creationTournoiBox.classList.remove("hidden");
+  creationTournoiBox
+    ?.classList.remove("hidden");
 
 }
-demarrerApplication();
 
-checkStatus();
+demarrerApplication();
 
 </script>
 
