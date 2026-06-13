@@ -1840,6 +1840,66 @@ Enregistrer
 </section>
 
 <section
+id="pageChangerEmail"
+class="hidden">
+
+<div class="card">
+
+<button
+class="back-btn"
+onclick="setPage('pageSecurite')">
+‹
+</button>
+
+<h2>Changer adresse email</h2>
+
+<button
+class="secondary"
+onclick="envoyerCodeAncienEmail()">
+Envoyer code à mon email actuel
+</button>
+
+<input
+id="codeAncienEmail"
+placeholder="Code reçu sur l'ancien email">
+
+<button
+class="secondary"
+onclick="verifierCodeAncienEmail()">
+Valider le code
+</button>
+
+<div
+id="newEmailBox"
+class="hidden">
+
+<input
+id="newEmailAdresse"
+placeholder="Nouvelle adresse email">
+
+<button
+class="secondary"
+onclick="envoyerCodeNouvelEmail()">
+Envoyer code au nouvel email
+</button>
+
+<input
+id="codeNouvelEmail"
+placeholder="Code reçu sur le nouvel email">
+
+<button
+class="secondary"
+onclick="validerNouvelEmail()">
+Enregistrer nouvelle adresse
+</button>
+
+</div>
+
+</div>
+
+</section>
+
+<section
 id="pageModifierProfil"
 class="hidden">
 
@@ -2401,6 +2461,7 @@ function setPage(page){
   pageChangerUsername.classList.add("hidden");
   pageSecurite.classList.add("hidden");
   pageChangerMotDePasse.classList.add("hidden");
+  pageChangerEmail.classList.add("hidden");
 
   document
     .getElementById(page)
@@ -5159,6 +5220,86 @@ async function ouvrirAccueilDemarrage(){
 }
 
 ouvrirAccueilDemarrage();
+
+async function envoyerCodeAncienEmail(){
+
+  const result =
+    await post("/send-old-email-code");
+
+  message.textContent = result;
+
+}
+
+async function verifierCodeAncienEmail(){
+
+  const code =
+    document
+    .getElementById("codeAncienEmail")
+    .value
+    .trim();
+
+  const result =
+    await post(
+      "/verify-old-email-code",
+      { code }
+    );
+
+  message.textContent = result;
+
+  if(result === "Code valide"){
+
+    document
+      .getElementById("newEmailBox")
+      .classList.remove("hidden");
+
+  }
+
+}
+
+async function envoyerCodeNouvelEmail(){
+
+  const email =
+    document
+    .getElementById("newEmailAdresse")
+    .value
+    .trim();
+
+  const result =
+    await post(
+      "/send-new-email-code",
+      { email }
+    );
+
+  message.textContent = result;
+
+}
+
+async function validerNouvelEmail(){
+
+  const email =
+    document
+    .getElementById("newEmailAdresse")
+    .value
+    .trim();
+
+  const code =
+    document
+    .getElementById("codeNouvelEmail")
+    .value
+    .trim();
+
+  const result =
+    await post(
+      "/confirm-new-email",
+      {
+        email,
+        code
+      }
+    );
+
+  message.textContent = result;
+
+}
 
 checkStatus();
 

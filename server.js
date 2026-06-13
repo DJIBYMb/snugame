@@ -5151,6 +5151,247 @@ app.post("/change-password", async (req,res)=>{
 
 });
 
+app.post("/send-old-email-code", async (req,res)=>{
+
+  try{
+
+    if(!connected(req)){
+      return res.send("Connecte-toi d'abord");
+    }
+
+    const user = await get(
+      `
+      SELECT email
+      FROM users
+      WHERE id=?
+      `,
+      [req.session.userId]
+    );
+
+    if(!user){
+      return res.send("Compte introuvable");
+    }
+
+    const code =
+      Math.floor(100000 + Math.random() * 900000)
+      .toString();
+
+    await run(
+      `
+      INSERT INTO email_codes(email,code)
+      VALUES(?,?)
+      `,
+      [
+        user.email,
+        code
+      ]
+    );
+
+    await transporter.sendMail({
+     from:process.env.MAIL_USER,
+     to:user.email,
+     subject:"Code vérification email SNUGAME",
+     text:"Votre code est : " + code
+   });
+
+    res.send("Code envoyé à ton email actuel");
+
+  }catch(e){
+
+    console.log(e);
+    res.send("Erreur envoi code ancien email");
+
+  }
+
+});
+app.post("/verify-old-email-code", async (req,res)=>{
+
+  try{
+
+    if(!connected(req)){
+      return res.send("Connecte-toi d'abord");
+    }
+
+    const { code } = req.body;
+
+    if(!code){
+      return res.send("Code obligatoire");
+    }
+
+    const user = await get(
+      `
+      SELECT email
+      FROM users
+      WHERE id=?
+      `,
+      [req.session.userId]
+    );
+
+    if(!user){
+      return res.send("Compte introuvable");
+    }
+
+    const verification = await get(
+      `
+      SELECT *
+      FROM email_codes
+      WHERE email=?
+      AND code=?
+      ORDER BY id DESC
+      `,
+      [
+        user.email,
+        code.trim()
+      ]
+    );
+
+    if(!verification){
+      return res.send("Code invalide");
+    }
+
+    res.send("Code valide");
+
+  }catch(e){
+
+    console.log(e);
+    res.send("Erreur vérification code");
+
+  }
+
+});
+app.post("/send-new-email-code", async (req,res)=>{
+
+  try{
+
+    if(!connected(req)){
+      return res.send("Connecte-toi d'abord");
+    }
+
+    const { email } = req.body;
+
+    if(!email){
+      return res.send("Nouvel email obligatoire");
+    }
+
+    const cleanEmail =
+      email.trim().toLowerCase();
+
+    const existing = await get(
+      `
+      SELECT id
+      FROM users
+      WHERE email=?
+      `,
+      [cleanEmail]
+    );
+
+    if(existing){
+      return res.send("Email déjà utilisé");
+    }
+
+    const code =
+      Math.floor(100000 + Math.random() * 900000)
+      .toString();
+
+    await run(
+      `
+      INSERT INTO email_codes(email,code)
+      VALUES(?,?)
+      `,
+      [
+        cleanEmail,
+        code
+      ]
+    );
+
+    await transporter.sendMail({
+     from:process.env.MAIL_USER,
+     to:cleanEmail,
+     subject:"Code nouvel email SNUGAME",
+     text:"Votre code est : " + code
+    });
+
+    res.send("Code envoyé au nouvel email");
+
+  }catch(e){
+
+    console.log(e);
+    res.send("Erreur envoi code nouvel email");
+
+  }
+
+});
+app.post("/confirm-new-email", async (req,res)=>{
+
+  try{
+
+    if(!connected(req)){
+      return res.send("Connecte-toi d'abord");
+    }
+
+    const { email, code } = req.body;
+
+    if(!email || !code){
+      return res.send("Email et code obligatoires");
+    }
+
+    const cleanEmail =
+      email.trim().toLowerCase();
+
+    const verification = await get(
+      `
+      SELECT *
+      FROM email_codes
+      WHERE email=?
+      AND code=?
+      ORDER BY id DESC
+      `,
+      [
+        cleanEmail,
+        code.trim()
+      ]
+    );
+
+    if(!verification){
+      return res.send("Code invalide");
+    }
+
+    const existing = await get(
+      `
+      SELECT id
+      FROM users
+      WHERE email=?
+      `,
+      [cleanEmail]
+    );
+
+    if(existing){
+      return res.send("Email déjà utilisé");
+    }
+
+    await run(
+      `
+      UPDATE users
+      SET email=?
+      WHERE id=?
+      `,
+      [
+        cleanEmail,
+        req.session.userId
+      ]
+    );
+
+    res.send("Nouvelle adresse enregistrée");
+
+  }catch(e){
+
+    console.log(e);
+    res.send("Erreur changement email");
+
+  }
+
+});
+
 app.listen(PORT, () => {
 
   console.log(
