@@ -657,6 +657,10 @@ CREATE TABLE IF NOT EXISTS counted_tournaments(
   counted_at TEXT DEFAULT CURRENT_TIMESTAMP
 )
 `);
+db.run(`
+  CREATE UNIQUE INDEX IF NOT EXISTS idx_user_trophy_unique
+  ON user_trophies(user_id, tournament_id, trophy)
+`);
 
 
 
@@ -1846,6 +1850,93 @@ async function compterTournoiTermine(tournament_id){
   );
 
 }
+async function recompenserChampion(tournament_id, champion_participant_id){
+
+  const officiel =
+    await tournoiOfficiel(tournament_id);
+
+  if(!officiel){
+    return;
+  }
+
+  const champion = await get(
+    `
+    SELECT user_id
+    FROM participants
+    WHERE id=?
+    `,
+    [champion_participant_id]
+  );
+
+  if(!champion || !champion.user_id){
+    return;
+  }
+
+  const tournoi = await get(
+    `
+    SELECT name
+    FROM tournaments
+    WHERE id=?
+    `,
+    [tournament_id]
+  );
+
+  await assurerStatsJoueur(champion.user_id);
+
+  const dejaRecompense = await get(
+  `
+  SELECT id
+  FROM user_trophies
+  WHERE user_id=?
+  AND tournament_id=?
+  AND trophy=?
+  `,
+  [
+    champion.user_id,
+    tournament_id,
+    "🏆 Champion"
+  ]
+);
+
+if(dejaRecompense){
+  return;
+}
+
+  await run(
+    `
+    UPDATE user_player_stats
+    SET tournois_gagnes = tournois_gagnes + 1,
+        coupes = coupes + 1,
+        xp = xp + 100,
+        niveau = CAST((xp + 100) / 100 AS INTEGER) + 1
+    WHERE user_id=?
+    AND season_year=?
+    `,
+    [
+      champion.user_id,
+      new Date().getFullYear()
+    ]
+  );
+
+  await run(
+    `
+    INSERT OR IGNORE INTO user_trophies(
+      user_id,
+      tournament_id,
+      tournament_name,
+      trophy
+    )
+    VALUES(?,?,?,?)
+    `,
+    [
+      champion.user_id,
+      tournament_id,
+      tournoi ? tournoi.name : "Tournoi",
+      "🏆 Champion"
+    ]
+  );
+
+}
 async function tournoiOfficiel(tournament_id){
 
   const count = await get(
@@ -2002,7 +2093,13 @@ if(officiel){
     ]
   );
   await compterTournoiTermine(match.tournament_id);
-  
+
+  await recompenserChampion(
+  match.tournament_id,
+  winner
+ );
+  await compterTournoiTermine(match.tournament_id);
+
   const officiel =
   await tournoiOfficiel(match.tournament_id);
 
