@@ -3924,77 +3924,121 @@ async function envoyerPreuvePaiement(){
 
 async function publierHighlight(){
 
-  const file =
-  selectedHighlightFile;
+  const btn =
+    document.querySelector(
+      '#pagePublierVideo button[onclick="publierHighlight()"]'
+    );
 
-  if(!highlightTitre.value){
+  try{
+
+    const file =
+      selectedHighlightFile;
+
+    if(!highlightTitre.value){
+      message.textContent =
+        "Titre obligatoire";
+      return;
+    }
+
+    if(!file){
+      message.textContent =
+        "Choisis une vidéo";
+      return;
+    }
+
+    if(file.size > 50 * 1024 * 1024){
+      message.textContent =
+        "Vidéo maximum 50 MB";
+      return;
+    }
+
+    if(btn){
+      btn.disabled = true;
+      btn.textContent = "Publication...";
+    }
+
     message.textContent =
-      "Titre obligatoire";
-    return;
-  }
+      "Vérification de la vidéo...";
 
-  if(!file){
+    const ok =
+      await verifierVideoDuration(file);
+
+    if(!ok){
+      message.textContent =
+        "Vidéo maximum 1 minute";
+
+      if(btn){
+        btn.disabled = false;
+        btn.textContent = "Publier";
+      }
+
+      return;
+    }
+
+    const formData =
+      new FormData();
+
+    formData.append("image", file);
+
     message.textContent =
-      "Choisis une vidéo";
-    return;
-  }
+      "Upload vidéo en cours... Ne ferme pas la page.";
 
-  if(file.size > 50 * 1024 * 1024){
+    const uploadRes =
+      await fetch("/upload-image",{
+        method:"POST",
+        body:formData
+      });
+
+    const uploadData =
+      await uploadRes.json();
+
+    if(!uploadData.ok){
+      message.textContent =
+        uploadData.message ||
+        "Erreur upload vidéo";
+
+      if(btn){
+        btn.disabled = false;
+        btn.textContent = "Publier";
+      }
+
+      return;
+    }
+
     message.textContent =
-      "Vidéo maximum 50 MB";
-    return;
-  }
+      "Vidéo uploadée. Publication...";
 
-  const ok =
-    await verifierVideoDuration(file);
+    const result =
+      await post("/highlight",{
+        titre:highlightTitre.value,
+        description:"",
+        media_url:uploadData.url
+      });
 
-  if(!ok){
+    message.textContent = result;
+
+    highlightTitre.value = "";
+    selectedHighlightFile = null;
+    videoPreview.src = "";
+
+    await chargerHighlights();
+
+    setPage("pageDashboard");
+    ouvrirModeVideos();
+
+  }catch(e){
+
     message.textContent =
-      "Vidéo maximum 1 minute";
-    return;
+      "Erreur publication : " + e.message;
+
+  }finally{
+
+    if(btn){
+      btn.disabled = false;
+      btn.textContent = "Publier";
+    }
+
   }
-
-  const formData =
-    new FormData();
-
-  formData.append("image", file);
-
-  message.textContent =
-    "Upload vidéo...";
-
-  const uploadRes =
-    await fetch("/upload-image",{
-      method:"POST",
-      body:formData
-    });
-
-  const uploadData =
-    await uploadRes.json();
-
-  if(!uploadData.ok){
-    message.textContent =
-      uploadData.message ||
-      "Erreur upload vidéo";
-    return;
-  }
-
-  const result =
-    await post("/highlight",{
-      titre:highlightTitre.value,
-      description:"",
-      media_url:uploadData.url
-    });
-
-  message.textContent = result;
-
-  highlightTitre.value = "";
-  selectedHighlightFile = null;
-  videoPreview.src = "";
-
-  await chargerHighlights();
-
-  setPage("pageDashboard");
-  ouvrirModeVideos();
 
 }
 
@@ -4007,7 +4051,9 @@ async function chargerHighlights(){
   highlightsList.innerHTML =
     data.map(h=>`
 
-    <div class="tiktok-video">
+    <div
+    class="tiktok-video"
+    data-id="${h.id}">
 
       <video
       src="${h.media_url}"
@@ -5771,13 +5817,23 @@ async function ouvrirVideoDepuisProfil(videoId){
       );
 
     if(videoCard){
+
       videoCard.scrollIntoView({
-        behavior:"smooth",
+        behavior:"auto",
         block:"start"
       });
+
+      const video =
+        videoCard.querySelector("video");
+
+      if(video){
+        video.muted = false;
+        video.play().catch(()=>{});
+      }
+
     }
 
-  },500);
+  },700);
 
 }
 
