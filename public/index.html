@@ -4885,15 +4885,15 @@ async function ouvrirModeVideos(options = {}){
 
     if(firstVideo){
 
-      firstVideo.muted = false;
+      firstVideo.muted =
+        !window.videoSoundEnabled;
 
-      firstVideo
-        .play()
-        .catch(()=>{});
+      firstVideo.play().catch(()=>{});
 
     }
 
-  },500);
+  },300);
+
 }
 
 function initTikTokAutoplay(){
@@ -5851,6 +5851,14 @@ async function ouvrirVideoDepuisProfil(videoId){
 
 }
 
+async function ouvrirModeVideosAvecSon(){
+
+  window.videoSoundEnabled = true;
+
+  await ouvrirModeVideos();
+
+}
+
 demarrerApplication();
 
 </script>
@@ -5871,10 +5879,7 @@ demarrerApplication();
 
 <button
 id="btnVideos"
-onclick="
-window.videoSoundEnabled=true;
-ouvrirPanel('panelHighlights');
-">
+onclick="ouvrirModeVideosAvecSon()">
   <i class="fa-solid fa-video"></i>
 </button>
 
