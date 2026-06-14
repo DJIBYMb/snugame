@@ -4057,10 +4057,10 @@ async function chargerHighlights(){
 
       <video
       src="${h.media_url}"
-      autoplay
       muted
       loop
       playsinline
+      preload="metadata"
       onclick="toggleVideoPause(this)">
       </video>
 
@@ -4132,11 +4132,13 @@ async function chargerHighlights(){
 
    `).join("");
 
+  if(!window.openingProfileVideo){
   setTimeout(()=>{
     initTikTokAutoplay();
   },300);
-
+ }
 }
+
 
 async function likeHighlight(id, btn){
 
