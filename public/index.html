@@ -4862,7 +4862,7 @@ function prepareVideoUpload(){
 
 }
 
-async function ouvrirModeVideos(){
+async function ouvrirModeVideos(options = {}){
 
   showPanel("panelHighlights");
 
@@ -4872,22 +4872,26 @@ async function ouvrirModeVideos(){
 
   await chargerHighlights();
 
-setTimeout(()=>{
-
-  const firstVideo =
-    document.querySelector(".tiktok-video video");
-
-  if(firstVideo){
-
-    firstVideo.muted = false;
-
-    firstVideo
-      .play()
-      .catch(()=>{});
-
+  if(options.skipFirstPlay){
+    return;
   }
 
-},500);
+  setTimeout(()=>{
+
+    const firstVideo =
+      document.querySelector(".tiktok-video video");
+
+    if(firstVideo){
+
+      firstVideo.muted = false;
+
+      firstVideo
+        .play()
+        .catch(()=>{});
+
+    }
+
+  },500);
 }
 
 function initTikTokAutoplay(){
@@ -5807,33 +5811,31 @@ font-weight:700;
 
 async function ouvrirVideoDepuisProfil(videoId){
 
-  ouvrirModeVideos();
+  await ouvrirModeVideos({
+    skipFirstPlay:true
+  });
 
-  setTimeout(()=>{
+  const videoCard =
+    document.querySelector(
+      `.tiktok-video[data-id="${videoId}"]`
+    );
 
-    const videoCard =
-      document.querySelector(
-        `.tiktok-video[data-id="${videoId}"]`
-      );
+  if(videoCard){
 
-    if(videoCard){
+    videoCard.scrollIntoView({
+      behavior:"auto",
+      block:"start"
+    });
 
-      videoCard.scrollIntoView({
-        behavior:"auto",
-        block:"start"
-      });
+    const video =
+      videoCard.querySelector("video");
 
-      const video =
-        videoCard.querySelector("video");
-
-      if(video){
-        video.muted = false;
-        video.play().catch(()=>{});
-      }
-
+    if(video){
+      video.muted = false;
+      video.play().catch(()=>{});
     }
 
-  },700);
+  }
 
 }
 
