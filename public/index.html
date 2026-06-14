@@ -2717,6 +2717,15 @@ async function ouvrirProfilCompte(){
   document.body.classList.remove("video-mode");
 
   document
+  .querySelectorAll(".tiktok-video video")
+  .forEach(v=>{
+    v.pause();
+    v.currentTime = 0;
+  });
+
+window.openingProfileVideo = false;
+
+  document
     .querySelectorAll(".panel")
     .forEach(p=>p.classList.add("hidden"));
 
@@ -4866,13 +4875,11 @@ function prepareVideoUpload(){
 
 async function ouvrirModeVideos(options = {}){
 
-  showPanel("panelHighlights");
+  ouvrirPanel("panelHighlights");
 
   document.body.classList.add("video-mode");
 
   messageCard.classList.add("hidden");
-
-  await chargerHighlights();
 
   if(options.skipFirstPlay){
     return;
