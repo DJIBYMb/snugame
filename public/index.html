@@ -5813,6 +5813,8 @@ font-weight:700;
 
 async function ouvrirVideoDepuisProfil(videoId){
 
+  window.openingProfileVideo = true;
+
   await ouvrirModeVideos({
     skipFirstPlay:true
   });
@@ -5838,6 +5840,14 @@ async function ouvrirVideoDepuisProfil(videoId){
     }
 
   }
+
+  setTimeout(()=>{
+
+    window.openingProfileVideo = false;
+
+    initTikTokAutoplay();
+
+  },1000);
 
 }
 
