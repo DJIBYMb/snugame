@@ -1319,6 +1319,30 @@ body.video-mode .tiktok-video video{
   color:#ef4444;
 }
 
+.profile-mini-stats{
+  display:flex;
+  justify-content:center;
+  gap:25px;
+  margin-top:10px;
+}
+
+.mini-stat{
+  text-align:center;
+}
+
+.mini-stat span{
+  display:block;
+  font-size:11px;
+  color:#94a3b8;
+}
+
+.mini-stat b{
+  display:block;
+  font-size:18px;
+  color:white;
+  margin-top:2px;
+}
+
 </style>
 
 <link
@@ -1646,6 +1670,27 @@ onclick="ouvrirParametresProfil()">
 <p id="profilNom"></p>
 
 <p id="profilUsername"></p>
+
+<div class="profile-mini-stats">
+
+  <div class="mini-stat">
+    <span>Suiveurs</span>
+    <b id="followersCount">0</b>
+  </div>
+
+  <div class="mini-stat">
+    <span>Follow</span>
+    <b id="followingCount">0</b>
+  </div>
+
+  <div class="mini-stat">
+    <span>Likes</span>
+    <b id="likesCount">0</b>
+  </div>
+
+</div>
+
+<div id="profileVideosGrid" class="profile-video-grid"></div>
 
 <div
 id="usernameEditBox"
@@ -2747,6 +2792,53 @@ modifierProfilPhoto.innerHTML = `
 
   profilUsername.textContent =
     "@" + (data.username || "");
+
+  const socialStats = await get("/my-social-stats");
+
+followersCount.textContent =
+  socialStats.followers || 0;
+
+followingCount.textContent =
+  socialStats.following || 0;
+
+likesCount.textContent =
+  socialStats.likes || 0;
+
+const profileVideos =
+  await get("/my-profile-videos");
+
+profileVideosGrid.innerHTML =
+  profileVideos && profileVideos.length
+  ? profileVideos.map(v=>`
+      <div
+      class="profile-video-item"
+      onclick="ouvrirVideoDepuisProfil(${v.id})">
+
+        <video
+        src="${v.media_url}"
+        muted
+        playsinline>
+        </video>
+
+        <div
+        style="
+          position:absolute;
+          left:5px;
+          bottom:5px;
+          right:5px;
+          font-size:11px;
+          color:white;
+          background:rgba(0,0,0,.45);
+          padding:4px;
+          border-radius:6px;
+          text-align:center;
+        ">
+          👀 ${v.vues || 0} vues
+        </div>
+
+      </div>
+    `).join("")
+  : "<p class='small'>Aucune vidéo publiée.</p>";
 
   profilEmail.textContent = "";
 
@@ -5526,6 +5618,9 @@ async function ouvrirMaCarteJoueur(){
 
   const stats = await get("/my-player-stats");
 
+  const saisonActuelle =
+  new Date().getFullYear();
+
   const trophies = await get("/my-trophies");
 
   let statut = "🟡 Standard";
@@ -5560,6 +5655,16 @@ else if((stats.defaites || 0) > (stats.victoires || 0)){
   <div class="player-profile-username">
     @${data.username || ""}
   </div>
+
+  <div
+style="
+margin-top:8px;
+font-size:15px;
+color:#93c5fd;
+font-weight:700;
+">
+📅 Saison actuelle : ${saisonActuelle}
+</div>
 
   <div
   style="
@@ -5651,6 +5756,28 @@ else if((stats.defaites || 0) > (stats.victoires || 0)){
 </div>
 
 `;
+
+}
+
+async function ouvrirVideoDepuisProfil(videoId){
+
+  ouvrirModeVideos();
+
+  setTimeout(()=>{
+
+    const videoCard =
+      document.querySelector(
+        `.tiktok-video[data-id="${videoId}"]`
+      );
+
+    if(videoCard){
+      videoCard.scrollIntoView({
+        behavior:"smooth",
+        block:"start"
+      });
+    }
+
+  },500);
 
 }
 

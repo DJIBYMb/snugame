@@ -1409,14 +1409,18 @@ app.get("/participants/:id", async (req,res)=>{
 
   try{
 
-    const rows = await all(
-      `
-      SELECT *
-      FROM participants
-      WHERE tournament_id=?
-      ORDER BY id
-      `,
-      [req.params.id]
+   const rows = await all(
+     `
+     SELECT
+     p.*,
+     u.profile_photo
+     FROM participants p
+     LEFT JOIN users u
+      ON u.id = p.user_id
+     WHERE p.tournament_id=?
+     ORDER BY p.id
+     `,
+     [req.params.id]
     );
 
     res.json(rows);
@@ -5795,6 +5799,8 @@ app.get("/my-player-stats", async (req,res)=>{
       return res.json(null);
     }
 
+    await assurerStatsJoueur(req.session.userId);
+
     const currentYear =
       new Date().getFullYear();
 
@@ -5853,6 +5859,93 @@ app.get("/my-trophies", async (req,res)=>{
     );
 
     res.json(trophies);
+
+  }catch(e){
+
+    console.log(e);
+    res.json([]);
+
+  }
+
+});
+app.get("/my-social-stats", async (req,res)=>{
+
+  try{
+
+    if(!connected(req)){
+      return res.json({
+        followers:0,
+        following:0,
+        likes:0
+      });
+    }
+
+    const followers = await get(
+      `
+      SELECT COUNT(*) AS total
+      FROM followers
+      WHERE following_id=?
+      `,
+      [req.session.userId]
+    );
+
+    const following = await get(
+      `
+      SELECT COUNT(*) AS total
+      FROM followers
+      WHERE follower_id=?
+      `,
+      [req.session.userId]
+    );
+
+    const likes = await get(
+      `
+      SELECT COALESCE(SUM(likes),0) AS total
+      FROM highlights
+      WHERE user_id=?
+      `,
+      [req.session.userId]
+    );
+
+    res.json({
+      followers: followers?.total || 0,
+      following: following?.total || 0,
+      likes: likes?.total || 0
+    });
+
+  }catch(e){
+
+    console.log(e);
+
+    res.json({
+      followers:0,
+      following:0,
+      likes:0
+    });
+
+  }
+
+});
+
+app.get("/my-profile-videos", async (req,res)=>{
+
+  try{
+
+    if(!connected(req)){
+      return res.json([]);
+    }
+
+    const videos = await all(
+      `
+      SELECT *
+      FROM highlights
+      WHERE user_id=?
+      ORDER BY id DESC
+      `,
+      [req.session.userId]
+    );
+
+    res.json(videos);
 
   }catch(e){
 
