@@ -5956,6 +5956,61 @@ app.get("/my-profile-videos", async (req,res)=>{
 
 });
 
+app.post("/reset-password", async (req,res)=>{
+
+  try{
+
+    const { email, code, password } = req.body;
+
+    if(!email || !code || !password){
+      return res.send("Tous les champs sont obligatoires");
+    }
+
+    if(password.length < 6){
+      return res.send("Mot de passe trop court");
+    }
+
+    const user = await get(
+      `
+      SELECT *
+      FROM users
+      WHERE email=?
+      `,
+      [email]
+    );
+
+    if(!user){
+      return res.send("Email introuvable");
+    }
+
+    if(String(user.reset_code) !== String(code)){
+      return res.send("Code incorrect");
+    }
+
+    await run(
+      `
+      UPDATE users
+      SET password=?,
+          reset_code=NULL
+      WHERE email=?
+      `,
+      [
+        password,
+        email
+      ]
+    );
+
+    res.send("Mot de passe réinitialisé");
+
+  }catch(e){
+
+    console.log(e);
+    res.send("Erreur reset password");
+
+  }
+
+});
+
 app.listen(PORT, () => {
 
   console.log(
