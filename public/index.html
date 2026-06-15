@@ -1522,8 +1522,6 @@ cursor:pointer;
 
 </div>
 
-</div>
-
 </header>
 
 <div class="container">
@@ -1824,13 +1822,28 @@ onchange="uploadPhotoProfil()">
 
 <section id="pagePublicProfil" class="hidden">
 
-  <div class="card">
+  <div
+  style="
+  width:100%;
+  min-height:100vh;
+  background:#0f172a;
+  ">
 
-    <button
-    class="back-btn"
-    onclick="setPage('pageDashboard')">
-      ‹
-    </button>
+   <div
+   onclick="retourProfilPublic()"
+   style="
+   position:fixed;
+   top:15px;
+   left:15px;
+   z-index:99999;
+   font-size:24px;
+   font-weight:900;
+   cursor:pointer;
+   color:white;
+   ">
+   ←
+  </div>
+
 
     <div id="publicProfilContent"></div>
 
@@ -1848,7 +1861,7 @@ onchange="uploadPhotoProfil()">
       ‹
     </button>
 
-    <h2>🎴 Profil joueur</h2>
+    <h2> Profil joueur</h2>
 
     <div id="maCarteJoueurContent">
       <p>Carte joueur en préparation...</p>
@@ -2310,8 +2323,6 @@ onclick="ouvrirChoixVideo()">
 
 </div>
 
-</div>
-
 <div
 id="panelTournoi"
 class="panel hidden">
@@ -2530,9 +2541,6 @@ onclick="supprimerParticipantsCoches()">
 
 </div>
 
-
-</div>
-
 <div
 id="panelClassement"
 class="panel hidden">
@@ -2593,6 +2601,7 @@ onclick="voirChampion()">
 
 <div id="blocChampion" class="competition-bloc hidden">
   <div id="championResult"></div>
+
 </div>
 
 </div>
@@ -2718,7 +2727,11 @@ async function get(url){
 }
 
 function showRegister(){
+
+  forgotBox.classList.add("hidden");
+
   registerBox.classList.toggle("hidden");
+
 }
 
 function setPage(page){
@@ -2790,11 +2803,19 @@ async function register(){
   });
 
   if(result.includes("Compte")){
-    await checkStatus();
-  }
+
+  registerBox.classList.add("hidden");
+
+  await checkStatus();
+
+}
+
 }
 
 async function login(){
+
+  registerBox.classList.add("hidden");
+forgotBox.classList.add("hidden");
 
   msgLoginEmail.textContent = "";
   msgLoginPassword.textContent = "";
@@ -4458,6 +4479,8 @@ async function customAutoDraw(){
 
 function ouvrirMotDePasseOublie(){
 
+  registerBox.classList.add("hidden");
+
   forgotBox.classList.toggle("hidden");
 
 }
@@ -4515,6 +4538,17 @@ async function banUser(userId){
   message.textContent = result;
 
   showNotif(result);
+
+  if(result === "Mot de passe changé"){
+  forgotBox.classList.add("hidden");
+
+  forgotEmail.value = "";
+  forgotCode.value = "";
+  newPassword.value = "";
+
+  message.textContent =
+    "Mot de passe changé. Connecte-toi maintenant.";
+}
 
 }
 
@@ -6387,6 +6421,9 @@ async function ouvrirProfilPublic(userId){
 
   setPage("pagePublicProfil");
 
+  publicProfilContent.innerHTML =
+    "Chargement...";
+
   const data =
     await get("/public-profile/" + userId);
 
@@ -6395,125 +6432,122 @@ async function ouvrirProfilPublic(userId){
     return;
   }
 
-  publicProfilContent.innerHTML = `
+  document.querySelector("header")?.classList.add("hidden");
+  document.querySelector(".bottom-nav")?.classList.add("hidden");
+  messageCard.classList.add("hidden");
 
-    <div style="text-align:center;">
 
-      <img
-      src="${
-        data.profile_photo ||
-        '/default-lo.jpeg'
-      }"
-      style="
-      width:110px;
-      height:110px;
-      border-radius:50%;
-      object-fit:cover;
-      ">
+publicProfilContent.innerHTML = `
 
-      <h2>
-        ${data.name || ""}
-      </h2>
+  <div class="player-profile-hero">
 
-      <div>
-        @${data.username || ""}
-      </div>
+    <div class="player-profile-cover"></div>
 
-      <br>
+    <img
+    class="player-profile-avatar"
+    src="${data.profile_photo || "/default-avatar.png"}">
 
-      <div
-      style="
-      display:flex;
-      justify-content:center;
-      gap:20px;
-      ">
-
-        <div>
-          <b>${data.followers}</b><br>
-          Suiveurs
-        </div>
-
-        <div>
-          <b>${data.following}</b><br>
-          Follow
-        </div>
-
-        <div>
-          <b>${data.likes}</b><br>
-          Likes
-        </div>
-
-      </div>
-
-      <br>
-
-      <button
-      onclick="ouvrirCarteJoueurPublic(${userId})">
-        Profil joueur
-      </button>
-
+    <div class="player-profile-name">
+      ${data.name || "Joueur"}
     </div>
 
-    <h3 style="margin-top:20px;">
-  Vidéos
-</h3>
-
-<div
-style="
-display:grid;
-grid-template-columns:repeat(3,1fr);
-gap:8px;
-margin-top:10px;
-">
-
-  ${data.videos.map(v=>`
-
-    <div
-    onclick="ouvrirVideoPublique(${v.id}, ${userId})"
-    style="
-    position:relative;
-    aspect-ratio:9/16;
-    border-radius:10px;
-    overflow:hidden;
-    cursor:pointer;
-    ">
-
-      <video
-      src="${v.media_url}"
-      muted
-      style="
-      width:100%;
-      height:100%;
-      object-fit:cover;
-      ">
-      </video>
-
-      <div
-      style="
-      position:absolute;
-      left:4px;
-      right:4px;
-      bottom:4px;
-      font-size:11px;
-      color:white;
-      background:rgba(0,0,0,.45);
-      padding:3px;
-      border-radius:6px;
-      text-align:center;
-      ">
-         ${v.vues || 0}
-      </div>
-
+    <div class="player-profile-username">
+      @${data.username || ""}
     </div>
 
-  `).join("")}
+  </div>
 
-</div>
+  <div class="profile-mini-stats">
 
-  `;
+    <div class="mini-stat">
+      <span>Suiveurs</span>
+      <b>${data.followers || 0}</b>
+    </div>
 
+    <div class="mini-stat">
+      <span>Follow</span>
+      <b>${data.following || 0}</b>
+    </div>
+
+    <div class="mini-stat">
+      <span>Likes</span>
+      <b>${data.likes || 0}</b>
+    </div>
+
+  </div>
+
+  <div class="profile-actions">
+
+    <button onclick="suivreJoueur(${userId})">
+      <i class="fa-solid fa-user-plus"></i>
+    </button>
+
+    <button onclick="ouvrirCarteJoueurPublic(${userId})">
+      <i class="fa-solid fa-id-card"></i>
+    </button>
+
+  </div>
+
+  <h3 style="margin-top:20px;">
+    Vidéos
+  </h3>
+
+  <div class="profile-video-grid">
+
+    ${
+      data.videos && data.videos.length
+      ? data.videos.map(v=>`
+
+        <div
+        class="profile-video-item"
+        onclick="ouvrirVideoPublique(${v.id}, ${userId})">
+
+          <video
+          src="${v.media_url}"
+          muted
+          playsinline>
+          </video>
+
+          <div
+          style="
+          position:absolute;
+          left:5px;
+          bottom:5px;
+          right:5px;
+          font-size:11px;
+          color:white;
+          background:rgba(0,0,0,.45);
+          padding:4px;
+          border-radius:6px;
+          text-align:center;
+          ">
+             ${v.vues || 0} vues
+          </div>
+
+        </div>
+
+      `).join("")
+      : "<p class='small'>Aucune vidéo publiée.</p>"
+    }
+
+  </div>
+
+`;
 }
 
+function retourProfilPublic(){
+
+  document
+    .querySelector("header")
+    ?.classList.remove("hidden");
+
+  document
+    .querySelector(".bottom-nav")
+    ?.classList.remove("hidden");
+
+  setPage("pageDashboard");
+
+}
 
 </script>
 
