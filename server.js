@@ -5963,7 +5963,14 @@ app.post("/reset-password", async (req,res)=>{
 
   try{
 
-    const { email, code, password } = req.body;
+    const email =
+      req.body.email.trim().toLowerCase();
+
+    const code =
+      String(req.body.code || "").trim();
+
+    const password =
+      String(req.body.password || "").trim();
 
     if(!email || !code || !password){
       return res.send("Tous les champs sont obligatoires");
@@ -5986,21 +5993,40 @@ app.post("/reset-password", async (req,res)=>{
       return res.send("Email introuvable");
     }
 
-    if(String(user.reset_code) !== String(code)){
+    const codeRow = await get(
+      `
+      SELECT *
+      FROM email_codes
+      WHERE email=?
+      AND code=?
+      ORDER BY id DESC
+      LIMIT 1
+      `,
+      [email, code]
+    );
+
+    if(!codeRow){
       return res.send("Code incorrect");
     }
 
     await run(
       `
       UPDATE users
-      SET password=?,
-          reset_code=NULL
+      SET password=?
       WHERE email=?
       `,
       [
         password,
         email
       ]
+    );
+
+    await run(
+      `
+      DELETE FROM email_codes
+      WHERE email=?
+      `,
+      [email]
     );
 
     res.send("Mot de passe réinitialisé");
