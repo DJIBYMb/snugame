@@ -664,6 +664,14 @@ db.run(`
   CREATE UNIQUE INDEX IF NOT EXISTS idx_user_trophy_unique
   ON user_trophies(user_id, tournament_id, trophy)
 `);
+db.run(`
+  ALTER TABLE highlight_comments
+  ADD COLUMN user_id INTEGER
+`, err=>{
+  if(err && !err.message.includes("duplicate column")){
+    console.log(err);
+  }
+});
 
 
 
@@ -3704,7 +3712,14 @@ app.get("/highlights", async (req,res)=>{
         CASE
           WHEN hl.id IS NULL THEN 0
           ELSE 1
-        END AS liked
+        END AS liked,
+
+      (
+        SELECT COUNT(*)
+        FROM highlight_comments hc
+        WHERE hc.highlight_id = h.id
+      ) AS comments
+
       FROM highlights h
       LEFT JOIN users u
         ON u.id=h.user_id
@@ -6038,6 +6053,76 @@ await run(
 
     console.log(e);
     res.send("Erreur reset password");
+
+  }
+
+});
+
+app.post("/add-highlight-comment", async (req,res)=>{
+
+  try{
+
+    if(!req.session.userId){
+      return res.send("Connecte-toi pour commenter");
+    }
+
+    const { highlight_id, comment } = req.body;
+
+    if(!highlight_id || !comment){
+      return res.send("Commentaire obligatoire");
+    }
+
+    await run(
+      `
+      INSERT INTO highlight_comments(
+        highlight_id,
+        user_id,
+        comment
+      )
+      VALUES(?,?,?)
+      `,
+      [
+        highlight_id,
+        req.session.userId,
+        comment.trim()
+      ]
+    );
+
+    res.send("Commentaire ajouté");
+
+  }catch(e){
+
+    console.log(e);
+    res.send("Erreur commentaire");
+
+  }
+
+});
+app.get("/highlight-comments/:id", async (req,res)=>{
+
+  try{
+
+    const rows = await all(
+      `
+      SELECT
+        highlight_comments.*,
+        users.username,
+        users.profile_photo
+      FROM highlight_comments
+      LEFT JOIN users
+      ON users.id = highlight_comments.user_id
+      WHERE highlight_comments.highlight_id=?
+      ORDER BY highlight_comments.id DESC
+      `,
+      [req.params.id]
+    );
+
+    res.json(rows);
+
+  }catch(e){
+
+    console.log(e);
+    res.json([]);
 
   }
 

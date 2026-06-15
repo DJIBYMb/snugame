@@ -728,6 +728,7 @@ button:disabled{
   position:absolute;
   inset:0;
   z-index:1;
+  pointer-events:none;
 }
 
 .video-delete-overlay{
@@ -1363,6 +1364,51 @@ body.video-profil-mode #pageVideoProfil{
   z-index:999999;
 }
 
+.profile-video-actions{
+  position:fixed!important;
+  right:16px!important;
+  bottom:230px!important;
+  z-index:999999999!important;
+  display:flex!important;
+  flex-direction:column!important;
+  align-items:center!important;
+  gap:6px!important;
+}
+
+.profile-video-actions button{
+  width:50px!important;
+  height:50px!important;
+  background:transparent!important;
+  border:none!important;
+  box-shadow:none!important;
+  color:white!important;
+  font-size:32px!important;
+  padding:0!important;
+  margin:0!important;
+}
+
+.profile-video-actions .fa-heart{
+  color:#ef4444!important;
+}
+
+.profile-video-actions .profile-count{
+  color:white!important;
+  font-size:14px!important;
+  font-weight:900!important;
+  text-align:center!important;
+}
+
+.profile-video-actions{
+  border:3px solid red !important;
+}
+
+#pageVideoProfil .tiktok-actions{
+  position:fixed !important;
+  right:16px !important;
+  bottom:300px !important;
+  z-index:999999999 !important;
+}
+
 
 </style>
 
@@ -1949,17 +1995,7 @@ Enregistrer
 
 <section id="pageVideoProfil" class="hidden">
 
-  <div class="card">
-
-    <button
-    class="back-btn"
-    onclick="retourProfilDepuisVideo()">
-      ‹
-    </button>
-
-    <div id="videoProfilContent"></div>
-
-  </div>
+  <div id="videoProfilContent"></div>
 
 </section>
 
@@ -2527,6 +2563,28 @@ onclick="voirChampion()">
 </section>
 
 <div
+style="
+display:flex;
+justify-content:space-between;
+align-items:center;
+padding:12px;
+border-bottom:1px solid #334155;
+">
+
+  <b>Commentaires</b>
+
+  <span
+  onclick="fermerCommentaires()"
+  style="
+  font-size:24px;
+  cursor:pointer;
+  ">
+    ✕
+  </span>
+
+</div>
+
+<div
 
 id="messageCard">
 
@@ -2536,8 +2594,61 @@ id="messageCard">
 
 </div>
 
+<div
+id="commentsSheet"
+class="hidden"
+style="
+position:fixed;
+left:0;
+right:0;
+bottom:0;
+height:50vh;
+background:#111827;
+z-index:999999999;
+border-top-left-radius:20px;
+border-top-right-radius:20px;
+display:flex;
+flex-direction:column;
+">
+
+  <div
+  style="
+  display:flex;
+  gap:8px;
+  padding:12px;
+  border-bottom:1px solid #334155;
+  ">
+
+    <input
+    id="commentInput"
+    placeholder="Écrire un commentaire"
+    style="flex:1;">
+
+    <button
+    onclick="envoyerCommentaire()"
+    style="
+    width:auto;
+    min-width:100px;
+    ">
+      Envoyer
+    </button>
+
+  </div>
+
+  <div
+  id="commentsList"
+  style="
+  flex:1;
+  overflow-y:auto;
+  padding:12px;
+  ">
+  </div>
+
+</div>
 
 <script>
+
+let currentCommentVideoId = null;
 
 let currentUserId = null;
 
@@ -2906,7 +3017,7 @@ profileVideosGrid.innerHTML =
           border-radius:6px;
           text-align:center;
         ">
-          👀 ${v.vues || 0} vues
+           ${v.vues || 0} vues
         </div>
 
       </div>
@@ -4191,7 +4302,7 @@ async function chargerHighlights(){
 
           <button
           class="tiktok-action-btn"
-          onclick="ouvrirCommentaires(${video.id})">
+           onclick="ouvrirCommentaires(${h.id})">
            <i class="fa-regular fa-comment"></i>
           </button>
 
@@ -5866,6 +5977,8 @@ font-weight:700;
   const video =
     videos.find(v => Number(v.id) === Number(videoId));
 
+    console.log(video);
+
   if(!video){
     message.textContent = "Vidéo introuvable";
     return;
@@ -5877,7 +5990,13 @@ document.querySelector(".bottom-nav")?.classList.add("hidden");
 document.body.classList.add("video-profil-mode");
 
 
-setPage("pageVideoProfil");
+ setPage("pageVideoProfil");
+
+setTimeout(()=>{
+  document.body.appendChild(
+    document.querySelector(".profile-video-actions")
+  );
+},100);
 
   videoProfilContent.innerHTML = `
 
@@ -5903,19 +6022,95 @@ setPage("pageVideoProfil");
   playsinline
   style="
     position:fixed;
-    top:0;
-    left:0;
-    width:100vw;
-    height:100vh;
-    background:black;
-    object-fit:contain;
+top:0;
+left:0;
+width:100vw;
+height:100vh;
+background:black;
+object-fit:contain;
+z-index:1;
   ">
-  </video>
+  
+</video>
 
+<div class="tiktok-actions">
 
+  <button
+  class="tiktok-action-btn"
+  onclick="likeHighlight(${video.id}, this)">
+    <i class="fa-solid fa-heart"></i>
+  </button>
+
+  <div class="like-count">
+    ${video.likes || 0}
+  </div>
+
+  <button
+  class="tiktok-action-btn"
+  onclick="ouvrirCommentaires(${video.id})">
+    <i class="fa-regular fa-comment"></i>
+  </button>
+
+  <div class="comment-count">
+    0
+  </div>
+
+</div>
 `;
 
 } 
+
+async function ouvrirCommentaires(videoId){
+
+  console.log("ouverture commentaires");
+
+  currentCommentVideoId = videoId;
+
+  commentsSheet.classList.remove("hidden");
+
+  const commentaires =
+    await get("/highlight-comments/" + videoId);
+
+  commentsList.innerHTML =
+  commentaires.map(c=>`
+
+    <div
+    style="
+    display:flex;
+    gap:10px;
+    padding:10px 0;
+    border-bottom:1px solid #334155;
+    ">
+
+      <img
+      src="${
+        c.profile_photo ||
+        '/default-lo.jpeg'
+      }"
+      style="
+      width:40px;
+      height:40px;
+      border-radius:50%;
+      object-fit:cover;
+      ">
+
+      <div>
+
+        <b>
+          @${c.username || "joueur"}
+        </b>
+
+        <div>
+          ${c.comment}
+        </div>
+
+      </div>
+
+    </div>
+
+  `).join("");
+
+}
 
 function retourProfilDepuisVideo(){
 
@@ -5947,6 +6142,69 @@ function stopAllVideos(){
     });
 
 }
+
+async function envoyerCommentaire(){
+
+  console.log("envoyer commentaire");
+
+  const texte =
+    commentInput.value.trim();
+
+  if(!texte){
+    return;
+  }
+
+  const result =
+    await post("/add-highlight-comment",{
+      highlight_id:currentCommentVideoId,
+      comment:texte
+    });
+
+  if(result !== "Commentaire ajouté"){
+    message.textContent = result;
+    return;
+  }
+
+  commentInput.value = "";
+
+  await ouvrirCommentaires(
+    currentCommentVideoId
+  );
+
+}
+
+function fermerCommentaires(){
+
+  commentsSheet.classList.add("hidden");
+
+}
+
+let startY = 0;
+
+commentsSheet.addEventListener(
+  "touchstart",
+  e=>{
+    startY =
+      e.touches[0].clientY;
+  }
+);
+
+commentsSheet.addEventListener(
+  "touchmove",
+  e=>{
+
+    const deltaY =
+      e.touches[0].clientY - startY;
+
+    if(deltaY > 120){
+
+      fermerCommentaires();
+
+    }
+
+  }
+);
+
 
 </script>
 
