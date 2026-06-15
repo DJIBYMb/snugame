@@ -536,13 +536,6 @@ db.run(`
   ADD COLUMN profile_photo TEXT
 `,()=>{});
 db.run(`
-CREATE TABLE IF NOT EXISTS followers(
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  follower_id INTEGER,
-  following_id INTEGER
-)
-`);
-db.run(`
   ALTER TABLE participants
   ADD COLUMN user_id INTEGER
 `,()=>{});
@@ -6206,6 +6199,76 @@ app.post("/view-highlight", async (req,res)=>{
 
     console.log(e);
     res.send("erreur");
+
+  }
+
+});
+
+app.get("/public-profile/:id", async (req,res)=>{
+
+  try{
+
+    const userId = req.params.id;
+
+    const user = await get(
+      `
+      SELECT
+        id,
+        name,
+        username,
+        profile_photo
+      FROM users
+      WHERE id=?
+      `,
+      [userId]
+    );
+
+    if(!user){
+      return res.json({
+        error:"Profil introuvable"
+      });
+    }
+
+    const stats = await get(
+      `
+    SELECT
+       (SELECT COUNT(*) FROM followers WHERE following_id=?) AS followers,
+       (SELECT COUNT(*) FROM followers WHERE follower_id=?) AS following,
+       (SELECT COALESCE(SUM(likes),0) FROM highlights WHERE user_id=?) AS likes
+      `,
+      [userId, userId, userId]
+    );
+
+    const videos = await all(
+      `
+      SELECT
+        h.*,
+        (
+          SELECT COUNT(*)
+          FROM highlight_comments hc
+          WHERE hc.highlight_id = h.id
+        ) AS comments
+      FROM highlights h
+      WHERE h.user_id=?
+      ORDER BY h.id DESC
+      `,
+      [userId]
+    );
+
+    res.json({
+      ...user,
+      followers:stats.followers || 0,
+      following:stats.following || 0,
+      likes:stats.likes || 0,
+      videos
+    });
+
+  }catch(e){
+
+    console.log(e);
+    res.json({
+      error:"Erreur profil public"
+    });
 
   }
 
