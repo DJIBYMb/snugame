@@ -27,6 +27,9 @@ const r2 = new S3Client({
 });
 
 const app = express();
+
+app.set("trust proxy", 1);
+
 app.use(compression());
 
 const DATA_DIR =
