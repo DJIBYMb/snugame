@@ -2779,6 +2779,15 @@ async function ouvrirAbonnement(){
 
 async function ouvrirProfilCompte(){
 
+  const data = await get("/me");
+
+if(!data || data.connected === false){
+  setPage("pageAuth");
+  message.textContent =
+    "Connecte-toi pour voir ton profil";
+  return;
+}
+
   document
   .getElementById("messageCard")
   .classList.add("hidden");
@@ -2814,15 +2823,6 @@ async function ouvrirProfilCompte(){
   document
     .getElementById("editProfilBox")
     ?.classList.add("hidden");
-
-  const data = await get("/me");
-
-  if(!data || data.connected === false){
-    setPage("pageAuth");
-    message.textContent =
-      "Connecte-toi pour voir ton profil";
-    return;
-  }
 
   topProfilePhoto.src =
     data.profile_photo ||
