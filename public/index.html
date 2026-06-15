@@ -4189,8 +4189,10 @@ async function chargerHighlights(){
          ${h.likes || 0}
          </div>
 
-          <button class="tiktok-action-btn">
-          <i class="fa-regular fa-comment"></i>
+          <button
+          class="tiktok-action-btn"
+          onclick="ouvrirCommentaires(${video.id})">
+           <i class="fa-regular fa-comment"></i>
           </button>
 
          <div class="comment-count">
@@ -5909,6 +5911,7 @@ setPage("pageVideoProfil");
     object-fit:contain;
   ">
   </video>
+
 
 `;
 
