@@ -1426,6 +1426,16 @@ body.video-profil-mode #pageVideoProfil{
   padding-bottom: env(safe-area-inset-bottom);
 }
 
+.comment-send-btn{
+  background:none!important;
+  border:none!important;
+  box-shadow:none!important;
+  color:#3b82f6!important;
+  font-weight:900!important;
+  padding:0!important;
+  width:auto!important;
+}
+
 
 </style>
 
@@ -2618,15 +2628,12 @@ flex-direction:column;
     id="commentInput"
     autocomplete="off"
      placeholder="Écrire un commentaire">
-    <button
 
-    onclick="envoyerCommentaire()"
-    style="
-    width:auto;
-    min-width:100px;
-    ">
-      Envoyer
-    </button>
+    <button
+    class="comment-send-btn"
+   onclick="envoyerCommentaire()">
+  Envoyer
+  </button>
 
   </div>
 
@@ -4249,6 +4256,7 @@ async function chargerHighlights(){
       loop
       playsinline
       preload="metadata"
+      onplay="compterVue(${h.id})"
       onclick="toggleVideoPause(this)">
       </video>
 
@@ -5988,6 +5996,13 @@ font-weight:700;
     return;
   }
 
+  await post("/view-highlight",{
+  highlight_id:videoId
+});
+
+video.vues =
+  (video.vues || 0) + 1;
+
 
   document.querySelector("header")?.classList.add("hidden");
 document.querySelector(".bottom-nav")?.classList.add("hidden");
@@ -6056,8 +6071,8 @@ z-index:1;
   </button>
 
   <div class="comment-count">
-    0
-  </div>
+  ${video.comments || 0}
+</div>
 
 </div>
 `;
@@ -6078,12 +6093,36 @@ async function ouvrirCommentaires(videoId){
   commentsList.innerHTML =
   commentaires.map(c=>`
 
+  ${
+  Number(c.user_id) === Number(currentUserId)
+  ? `
+    <button
+id="deleteComment_${c.id}"
+onclick="supprimerCommentaire(${c.id})"
+class="hidden"
+style="
+background:none;
+border:none;
+box-shadow:none;
+padding:0;
+margin-top:6px;
+color:#ef4444;
+font-weight:700;
+">
+  Supprimer
+</button>
+  `
+  : ""
+}
+
     <div
+    onclick="toggleDeleteComment(${c.id})"
     style="
     display:flex;
     gap:10px;
     padding:10px 0;
     border-bottom:1px solid #334155;
+    cursor:pointer;
     ">
 
       <img
@@ -6177,6 +6216,14 @@ async function envoyerCommentaire(){
 
 }
 
+async function compterVue(videoId){
+
+  await post("/view-highlight",{
+    highlight_id:videoId
+  });
+
+}
+
 function fermerCommentaires(){
 
   document
@@ -6207,6 +6254,39 @@ commentsSheet.addEventListener("touchend", e=>{
   }
 
 });
+
+async function supprimerCommentaire(commentId){
+
+  const ok =
+    confirm("Supprimer ce commentaire ?");
+
+  if(!ok){
+    return;
+  }
+
+  const result =
+    await post("/delete-highlight-comment",{
+      comment_id:commentId
+    });
+
+  message.textContent = result;
+
+  await ouvrirCommentaires(currentCommentVideoId);
+
+}
+
+function toggleDeleteComment(commentId){
+
+  const btn =
+    document.getElementById(
+      "deleteComment_" + commentId
+    );
+
+  if(btn){
+    btn.classList.toggle("hidden");
+  }
+
+}
 
 
 </script>

@@ -5955,10 +5955,18 @@ app.get("/my-profile-videos", async (req,res)=>{
 
     const videos = await all(
       `
-      SELECT *
-      FROM highlights
-      WHERE user_id=?
-      ORDER BY id DESC
+      SELECT
+        h.*,
+
+        (
+          SELECT COUNT(*)
+          FROM highlight_comments hc
+          WHERE hc.highlight_id = h.id
+        ) AS comments
+
+      FROM highlights h
+      WHERE h.user_id=?
+      ORDER BY h.id DESC
       `,
       [req.session.userId]
     );
@@ -6106,6 +6114,7 @@ app.get("/highlight-comments/:id", async (req,res)=>{
       `
       SELECT
         highlight_comments.*,
+        highlight_comments.user_id,
         users.username,
         users.profile_photo
       FROM highlight_comments
@@ -6123,6 +6132,80 @@ app.get("/highlight-comments/:id", async (req,res)=>{
 
     console.log(e);
     res.json([]);
+
+  }
+
+});
+app.post("/delete-highlight-comment", async (req,res)=>{
+
+  try{
+
+    if(!req.session.userId){
+      return res.send("Connecte-toi");
+    }
+
+    const { comment_id } = req.body;
+
+    if(!comment_id){
+      return res.send("Commentaire introuvable");
+    }
+
+    const comment = await get(
+      `
+      SELECT *
+      FROM highlight_comments
+      WHERE id=?
+      `,
+      [comment_id]
+    );
+
+    if(!comment){
+      return res.send("Commentaire introuvable");
+    }
+
+    if(Number(comment.user_id) !== Number(req.session.userId)){
+      return res.send("Tu ne peux supprimer que ton commentaire");
+    }
+
+    await run(
+      `
+      DELETE FROM highlight_comments
+      WHERE id=?
+      `,
+      [comment_id]
+    );
+
+    res.send("Commentaire supprimé");
+
+  }catch(e){
+
+    console.log(e);
+    res.send("Erreur suppression commentaire");
+
+  }
+
+});
+app.post("/view-highlight", async (req,res)=>{
+
+  try{
+
+    const { highlight_id } = req.body;
+
+    await run(
+      `
+      UPDATE highlights
+      SET vues = COALESCE(vues,0) + 1
+      WHERE id=?
+      `,
+      [highlight_id]
+    );
+
+    res.send("ok");
+
+  }catch(e){
+
+    console.log(e);
+    res.send("erreur");
 
   }
 
