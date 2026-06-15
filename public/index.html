@@ -1102,7 +1102,7 @@ body.app-loading .container,
 body.app-loading header,
 body.app-loading .bottom-nav,
 body.app-loading #messageCard{
-  visibility:hidden!important;
+  display:none !important;
 }
 
 
@@ -1342,6 +1342,27 @@ body.video-mode .tiktok-video video{
   color:white;
   margin-top:2px;
 }
+
+body.video-profil-mode header{
+  display:none !important;
+}
+
+body.video-profil-mode .bottom-nav{
+  display:none !important;
+}
+
+body.video-profil-mode #pageVideoProfil{
+  position:fixed;
+  inset:0;
+  top:0 !important;
+  margin:0 !important;
+  padding:0 !important;
+  width:100vw;
+  height:100vh;
+  background:#000;
+  z-index:999999;
+}
+
 
 </style>
 
@@ -1920,6 +1941,22 @@ Enregistrer
 </button>
 
 </div>
+
+</section>
+
+<section id="pageVideoProfil" class="hidden">
+
+  <div class="card">
+
+    <button
+    class="back-btn"
+    onclick="retourProfilDepuisVideo()">
+      ‹
+    </button>
+
+    <div id="videoProfilContent"></div>
+
+  </div>
 
 </section>
 
@@ -2552,6 +2589,10 @@ function showRegister(){
 
 function setPage(page){
 
+  if(page !== "pageAuth"){
+  localStorage.setItem("lastPage", page);
+}
+
   pageAuth.classList.add("hidden");
   pageAbonnement.classList.add("hidden");
   pageProfil.classList.add("hidden");
@@ -2567,6 +2608,7 @@ function setPage(page){
   pageChangerMotDePasse.classList.add("hidden");
   pageChangerEmail.classList.add("hidden");
   pageCarteJoueur.classList.add("hidden");
+  pageVideoProfil.classList.add("hidden");
 
   document
     .getElementById(page)
@@ -2620,7 +2662,12 @@ async function login(){
 
   await chargerTournois();
 
-  showPanel("panelTournoi");
+  const lastPanel =
+  localStorage.getItem("lastPanel") || "panelTournoi";
+
+if(lastPage === "pageDashboard"){
+  ouvrirPanel(lastPanel);
+}
 
   creationTournoiBox
     .classList.remove("hidden");
@@ -2657,7 +2704,6 @@ async function fixOldVideos(){
   alert(await result.text());
 
 }
-
 async function checkStatus(){
 
   const data = await get("/me");
@@ -2716,14 +2762,9 @@ async function ouvrirProfilCompte(){
 
   document.body.classList.remove("video-mode");
 
-  document
-  .querySelectorAll(".tiktok-video video")
-  .forEach(v=>{
-    v.pause();
-    v.currentTime = 0;
-  });
+  stopAllVideos();
 
-window.openingProfileVideo = false;
+ window.openingProfileVideo = false;
 
   document
     .querySelectorAll(".panel")
@@ -4735,9 +4776,6 @@ function closeVideoUpload(){
   videoUploadBox.classList.add("hidden");
 }
 
-setTimeout(()=>{
-  initTikTokAutoplay();
-},300);
 
 function prepareVideoUpload(){
 
@@ -4826,26 +4864,6 @@ async function chargerMesVideos(){
     `).join("");
 
 }
-function toggleVideoPause(video){
-
-  if(video.muted){
-
-    video.muted = false;
-    return;
-
-  }
-
-  if(video.paused){
-
-    video.play();
-
-  }else{
-
-    video.pause();
-
-  }
-
-}
 
 function quitterVideos(){
 
@@ -4875,6 +4893,8 @@ function prepareVideoUpload(){
 
 async function ouvrirModeVideos(options = {}){
 
+  window.openingProfileVideo = !!options.fromProfile;
+
   ouvrirPanel("panelHighlights");
 
   document.body.classList.add("video-mode");
@@ -4891,27 +4911,29 @@ async function ouvrirModeVideos(options = {}){
       document.querySelector(".tiktok-video video");
 
     if(firstVideo){
-
-      firstVideo.muted =
-        !window.videoSoundEnabled;
-
+      firstVideo.muted = !window.videoSoundEnabled;
       firstVideo.play().catch(()=>{});
-
     }
 
   },300);
 
 }
 
+let tiktokObserver = null;
+
 function initTikTokAutoplay(){
+
+  if(tiktokObserver){
+  tiktokObserver.disconnect();
+}
 
   const videos =
     document.querySelectorAll(
       ".tiktok-video video"
     );
 
-  const observer =
-    new IntersectionObserver(
+  tiktokObserver =
+   new IntersectionObserver(
 
       entries=>{
 
@@ -4957,7 +4979,7 @@ function initTikTokAutoplay(){
     );
 
   videos.forEach(video=>{
-    observer.observe(video);
+    tiktokObserver.observe(video);
   });
 
 }
@@ -5104,6 +5126,8 @@ async function deleteOldVideos(){
 
 function ouvrirPanel(id){
 
+  stopAllVideos();
+
   document.body.classList.remove("video-mode");
 
   setPage("pageDashboard");
@@ -5127,9 +5151,14 @@ function ouvrirPanel(id){
 
   if(id === "panelHighlights"){
   document.body.classList.add("video-mode");
-  chargerHighlights();
+
+  if(!window.openingProfileVideo){
+    chargerHighlights();
+  }
+
 }else{
   document.body.classList.remove("video-mode");
+  stopAllVideos();
 }
 
   if(id === "panelTournoi"){
@@ -5443,35 +5472,42 @@ async function ouvrirAccueilDemarrage(){
 
 }
 
-setPage("pageAuth");
-
 async function demarrerApplication(){
 
-  try{
+  const data = await get("/me");
 
-    const data =
-      await get("/me");
-
-    if(!data || data.connected === false){
-      setPage("pageAuth");
-      return;
-    }
-
-    setPage("pageDashboard");
-
-    await chargerTournois();
-
-    showPanel("panelTournoi");
-
-    creationTournoiBox
-      ?.classList.remove("hidden");
-
-  }catch(e){
-
-    console.log(e);
+  if(!data || data.connected === false){
     setPage("pageAuth");
-
+    document.body.classList.remove("app-loading");
+    return;
   }
+
+  currentUserId = data.id;
+
+  await chargerTournois();
+
+  const lastPage =
+    localStorage.getItem("lastPage") || "pageDashboard";
+
+  const lastPanel =
+    localStorage.getItem("lastPanel") || "panelTournoi";
+
+  if(lastPage === "pageProfil"){
+    await ouvrirProfilCompte();
+    document.body.classList.remove("app-loading");
+    return;
+  }
+
+  if(lastPage === "pageDashboard"){
+    setPage("pageDashboard");
+    ouvrirPanel(lastPanel);
+    document.body.classList.remove("app-loading");
+    return;
+  }
+
+  setPage(lastPage);
+
+  document.body.classList.remove("app-loading");
 
 }
 
@@ -5644,30 +5680,6 @@ function setFormMessage(id, text, type){
 
 }
 
-async function demarrerApplication(){
-
-  document.body.classList.remove("app-loading");
-
-  const data =
-    await get("/me");
-
-  if(!data || data.connected === false){
-    setPage("pageAuth");
-    return;
-  }
-
-  currentUserId = data.id;
-
-  setPage("pageDashboard");
-
-  await chargerTournois();
-
-  showPanel("panelTournoi");
-
-  creationTournoiBox
-    ?.classList.remove("hidden");
-
-}
 
 async function ouvrirMaCarteJoueur(){
 
@@ -5818,43 +5830,76 @@ font-weight:700;
 
 }
 
-async function ouvrirVideoDepuisProfil(videoId){
 
-  window.openingProfileVideo = true;
+ async function ouvrirVideoDepuisProfil(videoId){
 
-  await ouvrirModeVideos({
-    skipFirstPlay:true
-  });
+  stopAllVideos();
 
-  const videoCard =
-    document.querySelector(
-      `.tiktok-video[data-id="${videoId}"]`
-    );
+  const videos =
+    await get("/my-profile-videos");
 
-  if(videoCard){
+  const video =
+    videos.find(v => Number(v.id) === Number(videoId));
 
-    videoCard.scrollIntoView({
-      behavior:"auto",
-      block:"start"
-    });
-
-    const video =
-      videoCard.querySelector("video");
-
-    if(video){
-      video.muted = false;
-      video.play().catch(()=>{});
-    }
-
+  if(!video){
+    message.textContent = "Vidéo introuvable";
+    return;
   }
 
-  setTimeout(()=>{
 
-    window.openingProfileVideo = false;
+  document.querySelector("header")?.classList.add("hidden");
+document.querySelector(".bottom-nav")?.classList.add("hidden");
+document.body.classList.add("video-profil-mode");
 
-    initTikTokAutoplay();
 
-  },1000);
+setPage("pageVideoProfil");
+
+  videoProfilContent.innerHTML = `
+
+  <div
+  onclick="retourProfilDepuisVideo()"
+  style="
+    position:fixed;
+    top:20px;
+    left:20px;
+    z-index:100000;
+    color:white;
+    font-size:18px;
+    font-weight:700;
+    cursor:pointer;
+  ">
+    Retour
+  </div>
+
+  <video
+  src="${video.media_url}"
+  controls
+  autoplay
+  playsinline
+  style="
+    position:fixed;
+    top:0;
+    left:0;
+    width:100vw;
+    height:100vh;
+    background:black;
+    object-fit:contain;
+  ">
+  </video>
+
+`;
+
+} 
+
+function retourProfilDepuisVideo(){
+
+  document.querySelector("header")?.classList.remove("hidden");
+document.querySelector(".bottom-nav")?.classList.remove("hidden");
+document.body.classList.remove("video-profil-mode");
+
+  videoProfilContent.innerHTML = "";
+
+  ouvrirProfilCompte();
 
 }
 
@@ -5866,7 +5911,16 @@ async function ouvrirModeVideosAvecSon(){
 
 }
 
-demarrerApplication();
+function stopAllVideos(){
+
+  document
+    .querySelectorAll(".tiktok-video video")
+    .forEach(v=>{
+      v.pause();
+      v.muted = true;
+    });
+
+}
 
 </script>
 
@@ -5897,6 +5951,12 @@ onclick="ouvrirProfilCompte()">
 </button>
 
 </div>
+
+<script>
+
+demarrerApplication();
+
+</script>
 
 </body>
 </html>
