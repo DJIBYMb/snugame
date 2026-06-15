@@ -1464,11 +1464,13 @@ cursor:pointer;
 <input
 id="loginEmail"
 placeholder="Adresse email">
+<div id="msgLoginEmail" class="form-message"></div>
 
 <input
 id="loginPassword"
 type="password"
 placeholder="Mot de passe">
+<div id="msgLoginPassword" class="form-message"></div>
 
 <div
 style="
@@ -1480,6 +1482,7 @@ flex-wrap:wrap;
 <button onclick="login()">
 Connexion
 </button>
+<div id="msgLoginGeneral" class="form-message"></div>
 
 <button
 class="secondary"
@@ -2651,6 +2654,26 @@ async function register(){
 }
 
 async function login(){
+
+  msgLoginEmail.textContent = "";
+  msgLoginPassword.textContent = "";
+  msgLoginGeneral.textContent = "";
+
+  const email =
+  loginEmail.value.trim();
+
+if(
+  !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+){
+  msgLoginEmail.textContent =
+    "Adresse email incorrecte";
+
+  msgLoginEmail.className =
+    "form-message error";
+
+  return;
+}
+
   const result = await post("/login",{
     email:loginEmail.value,
     password:loginPassword.value
