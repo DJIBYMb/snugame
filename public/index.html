@@ -1409,6 +1409,23 @@ body.video-profil-mode #pageVideoProfil{
   z-index:999999999 !important;
 }
 
+#commentsSheet{
+  position:fixed;
+  left:0;
+  right:0;
+  bottom:0;
+  height:50vh;
+  background:#111827;
+  border-top-left-radius:20px;
+  border-top-right-radius:20px;
+  z-index:999999999;
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
 
 </style>
 
@@ -2563,28 +2580,6 @@ onclick="voirChampion()">
 </section>
 
 <div
-style="
-display:flex;
-justify-content:space-between;
-align-items:center;
-padding:12px;
-border-bottom:1px solid #334155;
-">
-
-  <b>Commentaires</b>
-
-  <span
-  onclick="fermerCommentaires()"
-  style="
-  font-size:24px;
-  cursor:pointer;
-  ">
-    ✕
-  </span>
-
-</div>
-
-<div
 
 id="messageCard">
 
@@ -2621,10 +2616,10 @@ flex-direction:column;
 
     <input
     id="commentInput"
-    placeholder="Écrire un commentaire"
-    style="flex:1;">
-
+    autocomplete="off"
+     placeholder="Écrire un commentaire">
     <button
+
     onclick="envoyerCommentaire()"
     style="
     width:auto;
@@ -2703,9 +2698,18 @@ function showRegister(){
 
 function setPage(page){
 
+    if(
+    typeof fermerCommentaires === "function" &&
+    page !== "pageVideoProfil"
+  ){
+    fermerCommentaires();
+  }
+
+
   if(page !== "pageAuth"){
   localStorage.setItem("lastPage", page);
 }
+
 
   pageAuth.classList.add("hidden");
   pageAbonnement.classList.add("hidden");
@@ -6175,7 +6179,9 @@ async function envoyerCommentaire(){
 
 function fermerCommentaires(){
 
-  commentInput.blur();
+  document
+    .getElementById("commentInput")
+    ?.blur();
 
   if(document.activeElement){
     document.activeElement.blur();
