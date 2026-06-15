@@ -6009,17 +6009,20 @@ app.post("/reset-password", async (req,res)=>{
       return res.send("Code incorrect");
     }
 
-    await run(
-      `
-      UPDATE users
-      SET password=?
-      WHERE email=?
-      `,
-      [
-        password,
-        email
-      ]
-    );
+    const hashedPassword =
+  await bcrypt.hash(password, 10);
+
+await run(
+  `
+  UPDATE users
+  SET password=?
+  WHERE email=?
+  `,
+  [
+    hashedPassword,
+    email
+  ]
+);
 
     await run(
       `
@@ -6029,7 +6032,7 @@ app.post("/reset-password", async (req,res)=>{
       [email]
     );
 
-    res.send("Mot de passe réinitialisé");
+    res.send("Mot de passe changé");
 
   }catch(e){
 
