@@ -5336,6 +5336,18 @@ function ouvrirPanel(id){
 
   stopAllVideos();
 
+  if(
+  !isPanelBack &&
+  currentPanelName &&
+  currentPanelName !== id
+){
+  panelHistory.push(currentPanelName);
+}
+
+currentPanelName = id;
+
+isPanelBack = false;
+
   document.body.classList.remove("video-mode");
 
   setPage("pageDashboard");
@@ -6560,6 +6572,8 @@ let swipeStartY = 0;
 
 let pageHistory = [];
 let currentPageName = null;
+let panelHistory = [];
+let currentPanelName = null;
 
 document.addEventListener("touchstart", e=>{
 
@@ -6595,9 +6609,29 @@ function retourGeneral(){
     return;
   }
 
+  if(!pageDashboard.classList.contains("hidden")){
+
+    if(panelHistory.length > 0){
+
+      const previousPanel =
+        panelHistory.pop();
+
+      isPanelBack = true;
+
+      ouvrirPanel(previousPanel);
+
+      return;
+    }
+
+  }
+
   if(pageHistory.length > 0){
-    const previousPage = pageHistory.pop();
+
+    const previousPage =
+      pageHistory.pop();
+
     setPage(previousPage);
+
     return;
   }
 
