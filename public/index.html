@@ -2675,12 +2675,6 @@ flex-direction:column;
 
 <script>
 
-let currentCommentVideoId = null;
-
-let currentUserId = null;
-
-let currentPublicUserId = null;
-
 function messageShow(text){
   message.textContent = text;
 
@@ -6548,6 +6542,83 @@ function retourProfilPublic(){
   setPage("pageDashboard");
 
 }
+
+let currentCommentVideoId = null;
+
+let currentUserId = null;
+
+let currentPublicUserId = null;
+
+let swipeStartX = 0;
+let swipeStartY = 0;
+
+document.addEventListener(
+  "touchstart",
+  e=>{
+
+    swipeStartX =
+      e.touches[0].clientX;
+
+    swipeStartY =
+      e.touches[0].clientY;
+
+  }
+);
+
+document.addEventListener(
+  "touchend",
+  e=>{
+
+    const endX =
+      e.changedTouches[0].clientX;
+
+    const endY =
+      e.changedTouches[0].clientY;
+
+    const diffX =
+      endX - swipeStartX;
+
+    const diffY =
+      endY - swipeStartY;
+
+    if(Math.abs(diffY) > 50){
+      return;
+    }
+
+    if(Math.abs(diffX) > 120){
+      retourGeneral();
+    }
+
+  }
+);
+
+function retourGeneral(){
+
+  console.log("SWIPE RETOUR");
+
+  if(
+    !commentsSheet.classList.contains("hidden")
+  ){
+    fermerCommentaires();
+    return;
+  }
+
+  if(
+    !pagePublicProfil.classList.contains("hidden")
+  ){
+    retourProfilPublic();
+    return;
+  }
+
+  if(
+    !pageVideoProfil.classList.contains("hidden")
+  ){
+    retourProfilDepuisVideo();
+    return;
+  }
+
+}
+
 
 </script>
 
