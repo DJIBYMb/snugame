@@ -5337,7 +5337,6 @@ function ouvrirPanel(id){
   stopAllVideos();
 
   currentPanelName = id;
-  isPanelBack = false;
 
   document.body.classList.remove("video-mode");
 
@@ -6600,14 +6599,13 @@ function retourGeneral(){
     return;
   }
 
+  if(!pagePublicProfil.classList.contains("hidden")){
+    retourProfilPublic();
+    return;
+  }
 
-  if(pageHistory.length > 0){
-
-    const previousPage =
-      pageHistory.pop();
-
-    setPage(previousPage);
-
+  if(!pageVideoProfil.classList.contains("hidden")){
+    retourProfilDepuisVideo();
     return;
   }
 
