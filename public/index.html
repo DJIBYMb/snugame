@@ -2730,6 +2730,12 @@ function showRegister(){
 
 function setPage(page){
 
+  if(currentPageName && currentPageName !== page){
+  pageHistory.push(currentPageName);
+ }
+
+   currentPageName = page;
+
     if(
     typeof fermerCommentaires === "function" &&
     page !== "pageVideoProfil"
@@ -2740,7 +2746,7 @@ function setPage(page){
 
   if(page !== "pageAuth"){
   localStorage.setItem("lastPage", page);
-}
+ }
 
 
   pageAuth.classList.add("hidden");
@@ -6552,6 +6558,9 @@ let currentPublicUserId = null;
 let swipeStartX = 0;
 let swipeStartY = 0;
 
+let pageHistory = [];
+let currentPageName = null;
+
 document.addEventListener("touchstart", e=>{
 
   swipeStartX = e.touches[0].clientX;
@@ -6586,15 +6595,13 @@ function retourGeneral(){
     return;
   }
 
-  if(!pagePublicProfil.classList.contains("hidden")){
-    retourProfilPublic();
+  if(pageHistory.length > 0){
+    const previousPage = pageHistory.pop();
+    setPage(previousPage);
     return;
   }
 
-  if(!pageVideoProfil.classList.contains("hidden")){
-    retourProfilDepuisVideo();
-    return;
-  }
+  setPage("pageDashboard");
 
 }
 
