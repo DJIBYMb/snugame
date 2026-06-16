@@ -5336,17 +5336,8 @@ function ouvrirPanel(id){
 
   stopAllVideos();
 
-  if(
-  !isPanelBack &&
-  currentPanelName &&
-  currentPanelName !== id
-){
-  panelHistory.push(currentPanelName);
-}
-
-currentPanelName = id;
-
-isPanelBack = false;
+  currentPanelName = id;
+  isPanelBack = false;
 
   document.body.classList.remove("video-mode");
 
@@ -6609,21 +6600,6 @@ function retourGeneral(){
     return;
   }
 
-  if(!pageDashboard.classList.contains("hidden")){
-
-    if(panelHistory.length > 0){
-
-      const previousPanel =
-        panelHistory.pop();
-
-      isPanelBack = true;
-
-      ouvrirPanel(previousPanel);
-
-      return;
-    }
-
-  }
 
   if(pageHistory.length > 0){
 
