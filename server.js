@@ -6393,6 +6393,84 @@ Cette politique de confidentialité peut être modifiée à tout moment.
   `);
 
 });
+app.get("/delete-account", (req,res)=>{
+
+  res.send(`
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Suppression de compte - SunuGame</title>
+<style>
+body{
+  font-family: Arial, sans-serif;
+  max-width: 900px;
+  margin: auto;
+  padding: 25px;
+  line-height: 1.6;
+}
+h1,h2{
+  color:#111827;
+}
+</style>
+</head>
+<body>
+
+<h1>Suppression de compte SunuGame</h1>
+
+<p>
+Les utilisateurs de SunuGame peuvent demander la suppression de leur compte et des données associées.
+</p>
+
+<h2>Comment demander la suppression ?</h2>
+
+<p>
+Envoyez un e-mail à :
+</p>
+
+<p>
+<strong>sunugame054@gmail.com</strong>
+</p>
+
+<p>
+Objet de l'e-mail :
+</p>
+
+<p>
+<strong>Suppression de compte SunuGame</strong>
+</p>
+
+<h2>Données supprimées</h2>
+
+<ul>
+<li>Compte utilisateur</li>
+<li>Nom</li>
+<li>Nom d'utilisateur</li>
+<li>Adresse e-mail</li>
+<li>Photo de profil</li>
+<li>Commentaires</li>
+<li>Statistiques associées au compte</li>
+</ul>
+
+<h2>Délai de traitement</h2>
+
+<p>
+Après réception de la demande et vérification de l'identité du demandeur, la suppression du compte sera traitée dans un délai raisonnable.
+</p>
+
+<h2>Contact</h2>
+
+<p>
+Pour toute question, contactez-nous à :
+<br>
+<strong>sunugame054@gmail.com</strong>
+</p>
+
+</body>
+</html>
+  `);
+
+});
 
 app.listen(PORT, () => {
 
