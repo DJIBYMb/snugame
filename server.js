@@ -3945,19 +3945,33 @@ app.get("/comments-highlight/:id", async (req,res)=>{
       return res.send("Tu ne peux pas te suivre toi-même");
     }
 
-    const exist = await get(
-      `
-      SELECT id
-      FROM followers
-      WHERE follower_id=?
-      AND following_id=?
-      `,
-      [req.session.userId, player_user_id]
-    );
 
-    if(exist){
-      return res.send("Déjà abonné");
-    }
+const existing = await get(
+  `
+  SELECT id
+  FROM followers
+  WHERE follower_id=?
+  AND following_id=?
+  `,
+  [
+    req.session.userId,
+    player_user_id
+  ]
+);
+
+if(existing){
+
+  await run(
+    `
+    DELETE FROM followers
+    WHERE id=?
+    `,
+    [existing.id]
+  );
+
+  return res.send("Unfollow");
+
+}
 
     await run(
       `
@@ -6239,6 +6253,25 @@ app.get("/public-profile/:id", async (req,res)=>{
       [userId, userId, userId]
     );
 
+    let isFollowing = 0;
+
+if(req.session.userId){
+  const follow = await get(
+    `
+    SELECT id
+    FROM followers
+    WHERE follower_id=?
+    AND following_id=?
+    `,
+    [
+      req.session.userId,
+      userId
+    ]
+  );
+
+  isFollowing = follow ? 1 : 0;
+}
+
     const videos = await all(
       `
       SELECT
@@ -6260,6 +6293,7 @@ app.get("/public-profile/:id", async (req,res)=>{
       followers:stats.followers || 0,
       following:stats.following || 0,
       likes:stats.likes || 0,
+      isFollowing,
       videos
     });
 

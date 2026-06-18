@@ -1942,6 +1942,28 @@ Sécurité
 </button>
 
 <button
+class="secondary"
+onclick="
+setPage('pagePolitiqueConfidentialite');
+chargerPolitiqueConfidentialite();
+">
+
+ Politique de confidentialité
+
+</button>
+
+<button
+class="secondary"
+onclick="
+setPage('pageConditionsUtilisation');
+chargerConditionsUtilisation();
+">
+
+ Conditions d'utilisation
+
+</button>
+
+<button
 class="danger"
 onclick="logout()">
 Déconnexion
@@ -2005,6 +2027,52 @@ class="secondary"
 onclick="setPage('pageChangerEmail')">
 Changer adresse email
 </button>
+
+</div>
+
+</section>
+
+<section
+id="pagePolitiqueConfidentialite"
+class="hidden">
+
+<div class="card">
+
+<button
+class="back-btn"
+onclick="setPage('pageParametres')">
+‹
+</button>
+
+<h2>
+ Politique de confidentialité
+</h2>
+
+<div id="politiqueContent">
+
+</div>
+
+</div>
+
+</section>
+
+<section
+id="pageConditionsUtilisation"
+class="hidden">
+
+<div class="card">
+
+<button
+class="back-btn"
+onclick="setPage('pageParametres')">
+‹
+</button>
+
+<h2>
+ Conditions d'utilisation
+</h2>
+
+<div id="conditionsContent"></div>
 
 </div>
 
@@ -2766,6 +2834,8 @@ function setPage(page){
   pageCarteJoueur.classList.add("hidden");
   pageVideoProfil.classList.add("hidden");
   pagePublicProfil.classList.add("hidden");
+  pagePolitiqueConfidentialite.classList.add("hidden");
+  pageConditionsUtilisation.classList.add("hidden");
 
   document
     .getElementById(page)
@@ -5890,6 +5960,63 @@ function setFormMessage(id, text, type){
 
 }
 
+function chargerConditionsUtilisation(){
+
+  conditionsContent.innerHTML = `
+
+  <p>
+  Bienvenue sur SNUGAME.
+  </p>
+
+  <h3>Utilisation de la plateforme</h3>
+
+  <p>
+  En utilisant SNUGAME, vous acceptez de respecter les règles de la communauté et les lois applicables.
+  </p>
+
+  <h3>Comptes utilisateurs</h3>
+
+  <p>
+  Chaque utilisateur est responsable des informations associées à son compte et de la confidentialité de son mot de passe.
+  </p>
+
+  <h3>Contenus publiés</h3>
+
+  <p>
+  Les utilisateurs sont responsables des vidéos, commentaires, photos et informations qu'ils publient.
+  </p>
+
+  <h3>Comportements interdits</h3>
+
+  <ul>
+    <li>Usurpation d'identité</li>
+    <li>Contenu offensant ou illégal</li>
+    <li>Fraude ou triche</li>
+    <li>Harcèlement d'autres utilisateurs</li>
+  </ul>
+
+  <h3>Suspension de compte</h3>
+
+  <p>
+  SNUGAME peut suspendre ou supprimer un compte en cas de non-respect des règles.
+  </p>
+
+  <h3>Abonnements</h3>
+
+  <p>
+  Les fonctionnalités premium sont accessibles selon les conditions d'abonnement en vigueur.
+  </p>
+
+  <h3>Modification du service</h3>
+
+  <p>
+  SNUGAME peut modifier ou améliorer certaines fonctionnalités à tout moment afin d'améliorer le service.
+  </p>
+
+  `;
+
+}
+
 
 async function ouvrirMaCarteJoueur(){
 
@@ -6409,6 +6536,71 @@ function toggleDeleteComment(commentId){
 
 }
 
+function chargerPolitiqueConfidentialite(){
+
+  politiqueContent.innerHTML = `
+
+  <h2>Politique de confidentialité - SunuGame</h2>
+
+  <p>
+  SunuGame respecte la vie privée de ses utilisateurs et s'engage à protéger leurs données personnelles.
+  </p>
+
+  <h3>Données collectées</h3>
+
+  <ul>
+    <li>Nom</li>
+    <li>Nom d'utilisateur</li>
+    <li>Adresse e-mail</li>
+    <li>Photo de profil</li>
+    <li>Vidéos publiées</li>
+    <li>Commentaires</li>
+    <li>Statistiques de jeu</li>
+  </ul>
+
+  <h3>Utilisation des données</h3>
+
+  <ul>
+    <li>Créer et gérer les comptes utilisateurs</li>
+    <li>Organiser les tournois sportifs</li>
+    <li>Afficher les profils et contenus publiés</li>
+    <li>Améliorer les services de SunuGame</li>
+    <li>Assurer la sécurité de la plateforme</li>
+  </ul>
+
+  <h3>Partage des données</h3>
+
+  <p>
+  SunuGame ne vend pas les données personnelles des utilisateurs à des tiers.
+  </p>
+
+  <h3>Sécurité</h3>
+
+  <p>
+  Des mesures raisonnables sont mises en œuvre pour protéger les données des utilisateurs.
+  </p>
+
+  <h3>Contenus publiés</h3>
+
+  <p>
+  Les vidéos, commentaires et profils publiés peuvent être visibles par les autres utilisateurs.
+  </p>
+
+  <h3>Contact</h3>
+
+  <p>
+  Email : sunugame054@gmail.com
+  </p>
+
+  <h3>Mises à jour</h3>
+
+  <p>
+  Cette politique de confidentialité peut être modifiée à tout moment.
+  </p>
+
+  `;
+}
+
 async function ouvrirVideoPublique(videoId, userId){
 
   currentPublicUserId = userId;
@@ -6480,6 +6672,23 @@ publicProfilContent.innerHTML = `
 
   <div class="profile-actions">
 
+    <button
+onclick="suivreDepuisProfilPublic(${userId})"
+style="
+background:${
+  data.isFollowing
+  ? 'rgba(255,255,255,.08)'
+  : '#22c55e'
+}!important;
+color:white!important;
+">
+  ${
+    data.isFollowing
+    ? '<i class="fa-solid fa-user-check"></i>'
+    : '<i class="fa-solid fa-user-plus"></i>'
+  }
+</button>
+
     <button onclick="suivreJoueur(${userId})">
       <i class="fa-solid fa-user-plus"></i>
     </button>
@@ -6535,6 +6744,21 @@ publicProfilContent.innerHTML = `
   </div>
 
 `;
+}
+
+async function suivreDepuisProfilPublic(userId){
+
+  const result = await post(
+    "/follow-player",
+    {
+      player_user_id:userId
+    }
+  );
+
+  showNotif(result);
+
+  ouvrirProfilPublic(userId);
+
 }
 
 function retourProfilPublic(){
