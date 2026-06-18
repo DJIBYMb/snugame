@@ -2885,26 +2885,26 @@ async function register(){
 async function login(){
 
   registerBox.classList.add("hidden");
-forgotBox.classList.add("hidden");
+  forgotBox.classList.add("hidden");
 
   msgLoginEmail.textContent = "";
   msgLoginPassword.textContent = "";
   msgLoginGeneral.textContent = "";
 
   const email =
-  loginEmail.value.trim();
+    loginEmail.value.trim();
 
-if(
-  !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
-){
-  msgLoginEmail.textContent =
-    "Adresse email incorrecte";
+  if(
+    !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+  ){
+    msgLoginEmail.textContent =
+      "Adresse email incorrecte";
 
-  msgLoginEmail.className =
-    "form-message error";
+    msgLoginEmail.className =
+      "form-message error";
 
-  return;
-}
+    return;
+  }
 
   const result = await post("/login",{
     email:loginEmail.value,
@@ -2913,21 +2913,24 @@ if(
 
   if(result.includes("Connexion")){
 
-  setPage("pageDashboard");
+    const lastPanel =
+      localStorage.getItem("lastPanel") || "panelTournoi";
 
-  await chargerTournois();
+    ouvrirPanel(lastPanel);
 
-  const lastPanel =
-  localStorage.getItem("lastPanel") || "panelTournoi";
+    await chargerTournois();
 
-if(lastPage === "pageDashboard"){
-  ouvrirPanel(lastPanel);
-}
+    creationTournoiBox
+      ?.classList.remove("hidden");
 
-  creationTournoiBox
-    .classList.remove("hidden");
+    showNotif("Connexion réussie ✅");
 
- }
+    return;
+  }
+
+  msgLoginGeneral.textContent = result;
+  msgLoginGeneral.className = "form-message error";
+
 }
 
 async function logout(){
