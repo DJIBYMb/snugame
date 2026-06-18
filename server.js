@@ -6307,6 +6307,92 @@ if(req.session.userId){
   }
 
 });
+app.get("/politique-confidentialite", (req,res)=>{
+
+  res.send(`
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<title>Politique de confidentialité - SunuGame</title>
+<style>
+body{
+  font-family: Arial, sans-serif;
+  max-width: 900px;
+  margin: auto;
+  padding: 25px;
+  line-height: 1.6;
+}
+h1,h2{
+  color:#111827;
+}
+</style>
+</head>
+<body>
+
+<h1>Politique de confidentialité - SunuGame</h1>
+
+<p>
+SunuGame respecte la vie privée de ses utilisateurs et s'engage à protéger leurs données personnelles.
+</p>
+
+<h2>Données collectées</h2>
+
+<ul>
+<li>Nom</li>
+<li>Nom d'utilisateur</li>
+<li>Adresse e-mail</li>
+<li>Photo de profil</li>
+<li>Vidéos publiées</li>
+<li>Commentaires</li>
+<li>Statistiques de jeu</li>
+</ul>
+
+<h2>Utilisation des données</h2>
+
+<ul>
+<li>Créer et gérer les comptes utilisateurs</li>
+<li>Organiser les tournois sportifs</li>
+<li>Afficher les profils et contenus publiés</li>
+<li>Améliorer les services de SunuGame</li>
+<li>Assurer la sécurité de la plateforme</li>
+</ul>
+
+<h2>Partage des données</h2>
+
+<p>
+SunuGame ne vend pas les données personnelles des utilisateurs à des tiers.
+</p>
+
+<h2>Sécurité</h2>
+
+<p>
+Des mesures raisonnables sont mises en œuvre pour protéger les données des utilisateurs.
+</p>
+
+<h2>Contenus publiés</h2>
+
+<p>
+Les vidéos, commentaires et profils publiés peuvent être visibles par les autres utilisateurs.
+</p>
+
+<h2>Contact</h2>
+
+<p>
+Email : sunugame054@gmail.com
+</p>
+
+<h2>Mises à jour</h2>
+
+<p>
+Cette politique de confidentialité peut être modifiée à tout moment.
+</p>
+
+</body>
+</html>
+  `);
+
+});
 
 app.listen(PORT, () => {
 
