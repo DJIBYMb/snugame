@@ -1482,6 +1482,18 @@ video{
   cursor:pointer;
 }
 
+.tiktok-video .highlight-video{
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  background:#000;
+  display:block;
+  z-index:1;
+  pointer-events:auto;
+}
+
 
 </style>
 
@@ -4423,6 +4435,14 @@ async function publierHighlight(){
 
 async function chargerHighlights(){
 
+    if(
+    highlightsList.innerHTML.trim() !== ""
+  ){
+    initTikTokAutoplay();
+    return;
+  }
+
+
   const data =
     await fetch("/highlights")
     .then(r=>r.json());
@@ -4435,14 +4455,14 @@ async function chargerHighlights(){
     data-id="${h.id}">
 
   <video
-    src="${h.media_url}"
-    autoplay
-    muted
-    loop
-    playsinline
-    preload="metadata"
-    onclick="toggleVideoPause(this)">
-  </video>
+  src="${h.media_url}"
+  class="highlight-video"
+  muted
+  loop
+  playsinline
+  preload="auto"
+  onclick="toggleVideoPause(this)">
+</video>
 
         <div class="tiktok-left">
 
@@ -4515,10 +4535,9 @@ async function chargerHighlights(){
   if(!window.openingProfileVideo){
   setTimeout(()=>{
     initTikTokAutoplay();
-  },300);
+  },800);
  }
 }
-
 
 async function likeHighlight(id, btn){
 
