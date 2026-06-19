@@ -3680,6 +3680,9 @@ if(!thumbnailUrl && media_url.includes("cloudinary.com")){
     .replace(/\.(mp4|mov|webm)$/i, ".jpg");
 }
 
+console.log("VIDEO =", media_url);
+console.log("THUMB =", thumbnailUrl);
+
     await run(
       `
       INSERT INTO highlights(
