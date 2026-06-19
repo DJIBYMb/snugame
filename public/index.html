@@ -3215,12 +3215,10 @@ profileVideosGrid.innerHTML =
       class="profile-video-item"
       onclick="ouvrirVideoDepuisProfil(${v.id})">
 
-        <video
-  src="${v.media_url}#t=5"
-  muted
-  playsinline
-  preload="metadata">
-</video>
+        <img
+         src="${v.thumbnail_url || '/default-video-cover.png'}"
+         class="profile-video-cover">
+
         <div
         style="
           position:absolute;
@@ -5459,11 +5457,11 @@ function ouvrirVideoProfil(url,id,userId){
       <video
         src="${url}"
         class="highlight-video"
+        autoplay
         muted
         loop
         playsinline
         preload="auto"
-        onloadedmetadata="this.currentTime=5"
         onclick="toggleVideoPause(this)">
       </video>
 
