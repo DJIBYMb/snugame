@@ -585,6 +585,14 @@ db.run(`
   ADD COLUMN user_id INTEGER
 `,()=>{});
 db.run(`
+  ALTER TABLE highlights
+  ADD COLUMN thumbnail_url TEXT
+`, err=>{
+  if(err && !err.message.includes("duplicate column")){
+    console.log(err);
+  }
+});
+db.run(`
   ALTER TABLE tournaments
   ADD COLUMN type TEXT DEFAULT 'poule'
 `,()=>{});
@@ -665,10 +673,6 @@ db.run(`
     console.log(err);
   }
 });
-await run(`
-  ALTER TABLE highlights
-  ADD COLUMN thumbnail_url TEXT
-`).catch(()=>{});
 
 
 
