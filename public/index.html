@@ -5459,12 +5459,11 @@ function ouvrirVideoProfil(url,id,userId){
       <video
         src="${url}"
         class="highlight-video"
-        autoplay
         muted
         loop
         playsinline
         preload="auto"
-        onloadedmetadata="this.currentTime=3"
+        onloadedmetadata="this.currentTime=5"
         onclick="toggleVideoPause(this)">
       </video>
 
@@ -5514,7 +5513,7 @@ function ouvrirVideoProfil(url,id,userId){
       "loadedmetadata",
       ()=>{
 
-        video.currentTime = 3;
+        video.currentTime = 5;
 
         video.muted =
           !window.videoSoundEnabled;
