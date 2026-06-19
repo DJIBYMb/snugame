@@ -3215,10 +3215,12 @@ profileVideosGrid.innerHTML =
       class="profile-video-item"
       onclick="ouvrirVideoDepuisProfil(${v.id})">
 
-        <img
-         src="${v.thumbnail_url || '/default-video-cover.png'}"
-         class="profile-video-cover">
-
+        <video
+  src="${v.media_url}#t=5"
+  muted
+  playsinline
+  preload="metadata">
+</video>
         <div
         style="
           position:absolute;
@@ -5455,7 +5457,7 @@ function ouvrirVideoProfil(url,id,userId){
     <div class="tiktok-video">
 
       <video
-        src="${url}#t=2"
+        src="${url}"
         class="highlight-video"
         autoplay
         muted
@@ -5502,15 +5504,21 @@ function ouvrirVideoProfil(url,id,userId){
 
   setTimeout(()=>{
 
-    const video =
-      highlightsList.querySelector("video");
+  const video =
+    highlightsList.querySelector("video");
 
-    if(video){
-      video.muted = !window.videoSoundEnabled;
-      video.play().catch(()=>{});
-    }
+  if(video){
 
-  },300);
+    video.currentTime = 5;
+
+    video.muted =
+      !window.videoSoundEnabled;
+
+    video.play().catch(()=>{});
+
+  }
+
+ },300);
 }
 async function fixOldVideos(){
 
