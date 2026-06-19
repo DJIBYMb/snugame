@@ -5288,12 +5288,18 @@ async function ouvrirModeVideos(options = {}){
 
   setTimeout(()=>{
 
-    const firstVideo =
-      document.querySelector(".tiktok-video video");
+   const firstVideo =
+   getCurrentVisibleVideo();
 
     if(firstVideo){
-      firstVideo.muted = !window.videoSoundEnabled;
+
+      stopAllVideosExcept(firstVideo);
+
+      firstVideo.muted =
+        !window.videoSoundEnabled;
+
       firstVideo.play().catch(()=>{});
+
     }
 
   },300);
@@ -7149,12 +7155,61 @@ async function updateUsername(){
   },1500);
 }
 
+function stopAllVideosExcept(currentVideo){
+
+  document
+    .querySelectorAll(".tiktok-video video")
+    .forEach(video=>{
+
+      if(video !== currentVideo){
+        video.pause();
+        video.currentTime = video.currentTime;
+      }
+
+    });
+
+}
+
 function toggleVideoPause(video){
+
   if(video.paused){
+
+    stopAllVideosExcept(video);
     video.play();
+
   }else{
+
     video.pause();
+
   }
+
+}
+
+function getCurrentVisibleVideo(){
+
+  const videos =
+    document.querySelectorAll(".tiktok-video video");
+
+  let currentVideo = null;
+  let bestVisible = 0;
+
+  videos.forEach(video=>{
+
+    const rect =
+      video.getBoundingClientRect();
+
+    const visibleHeight =
+      Math.min(rect.bottom, window.innerHeight) -
+      Math.max(rect.top, 0);
+
+    if(visibleHeight > bestVisible){
+      bestVisible = visibleHeight;
+      currentVideo = video;
+    }
+
+  });
+
+  return currentVideo;
 }
 
 </script>
