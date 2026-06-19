@@ -4810,8 +4810,14 @@ app.post("/update-username", async (req,res)=>{
         (now - last) / (1000 * 60 * 60 * 24);
 
       if(diffDays < 30){
-        return res.send("Tu peux changer le nom utilisateur une fois par mois");
-      }
+
+  const joursRestants =
+    Math.ceil(30 - diffDays);
+
+  return res.send(
+    `ATTENDRE_30_JOURS:${joursRestants}`
+  );
+}
 
     }
 

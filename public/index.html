@@ -1436,6 +1436,31 @@ body.video-profil-mode #pageVideoProfil{
   width:auto!important;
 }
 
+.form-message{
+  margin-top:10px;
+  font-size:14px;
+}
+
+.form-message.info{
+  color:#777;
+}
+
+.form-message.error{
+  color:red;
+}
+
+.form-message.success{
+  color:green;
+}
+
+.logo-title{
+  text-align:center;
+  margin:12px 0;
+  font-size:30px;
+  font-weight:900;
+  letter-spacing:3px;
+  text-transform:uppercase;
+}
 
 </style>
 
@@ -1448,8 +1473,6 @@ href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
 <body class="app-loading">
 
 <header>
-
-<h1>SNUGAME</h1>
 
 <p>
 Tournoi
@@ -1470,6 +1493,10 @@ onclick="toggleSearchUsers()">
 
 </div>
 
+<h1 class="logo-title">
+  SUNUGAME
+</h1>
+
 <div
 class="card hidden"
 id="searchUsersBox"
@@ -1485,6 +1512,8 @@ placeholder="Rechercher joueur..."
 oninput="rechercherUtilisateurs()">
 
 </div>
+
+<h1>SUNUGAME</h1>
 
 <div id="searchUsersResult"></div>
 
@@ -2284,8 +2313,10 @@ onclick="setPage('pageModifierProfil')">
 <h2>Changer le nom d'utilisateur</h2>
 
 <input
-id="newUsername"
-placeholder="Nouveau nom d'utilisateur">
+id="newUsernameInput"
+type="text"
+placeholder="Nouveau nom d'utilisateur"
+autocomplete="off">
 
 <button
 class="secondary"
@@ -2293,7 +2324,13 @@ onclick="updateUsername()">
 Enregistrer
 </button>
 
+<p id="msgUsername" class="form-message info">
+Le nom d'utilisateur doit être unique et peut être modifié une fois tous les 30 jours.
+</p>
+
 </div>
+
+</section>
 
 </section>
 
@@ -2743,10 +2780,15 @@ flex-direction:column;
 
 <script>
 
-function messageShow(text){
+function messageShow(text, type = "info"){
+
   message.textContent = text;
 
+  message.className =
+    "form-message " + type;
+
 }
+
 function showNotif(text){
 
   const div =
@@ -2932,6 +2974,7 @@ async function login(){
   msgLoginGeneral.className = "form-message error";
 
 }
+
 
 async function logout(){
 
@@ -4752,7 +4795,6 @@ async function uploadPhotoProfil(){
 
 }
 async function suivreJoueur(userId){
-
   const result = await post(
     "/follow-player",
     {
@@ -4765,30 +4807,43 @@ async function suivreJoueur(userId){
   showNotif(result);
 
 }
-async function updateUsername(){
+ async function updateUsername(){
+
+  const input =
+    document.getElementById("newUsernameInput");
 
   const username =
-    newUsername.value.trim();
+    input.value.trim();
 
   if(!username){
-    message.textContent =
-      "Entre un nom utilisateur";
+    usernameMessage("❌ Entre ton nom d'utilisateur.", "error");
     return;
   }
 
-  const result = await post(
-    "/update-username",
-    {
-      username
-    }
-  );
+  const result = await post("/update-username", { username });
 
-  message.textContent = result;
+  if(result.startsWith("ATTENDRE_30_JOURS")){
+    const joursRestants = result.split(":")[1];
 
-  showNotif(result);
+    usernameMessage(
+      `❌ Vous pourrez modifier votre nom d'utilisateur dans ${joursRestants} jour(s).`,
+      "error"
+    );
+    return;
+  }
+
+  if(!result.includes("✅")){
+    usernameMessage("❌ " + result, "error");
+    return;
+  }
+
+  usernameMessage("✅ Nom d'utilisateur modifié avec succès.", "success");
 
   await ouvrirProfilCompte();
 
+  setTimeout(()=>{
+    setPage("pageModifierProfil");
+  },1500);
 }
 
 async function rechercherUtilisateurs(){
@@ -5650,26 +5705,62 @@ async function updateName(){
 
   const name =
     document
-    .getElementById("newName")
-    .value
-    .trim();
+      .getElementById("newName")
+      .value
+      .trim();
+
+  message.className = "form-message info";
+  message.textContent =
+    "Le nom affiché sera visible par les autres utilisateurs.";
 
   if(!name){
-
+    message.className = "form-message error";
     message.textContent =
-      "Nom obligatoire";
-
+      "❌ Entre ton nom.";
     return;
-
   }
 
-  await post(
+  if(name.length < 2){
+    message.className = "form-message error";
+    message.textContent =
+      "❌ Le nom est trop court. Minimum 2 caractères.";
+    return;
+  }
+
+  if(name.length > 30){
+    message.className = "form-message error";
+    message.textContent =
+      "❌ Le nom est trop long. Maximum 30 caractères.";
+    return;
+  }
+
+  message.className = "form-message info";
+  message.textContent =
+    "Modification du nom en cours...";
+
+  const result = await post(
     "/update-name",
     { name }
   );
 
+  message.className = "form-message success";
+  message.textContent =
+    " Nom modifié avec succès.";
+
+  showNotif("Nom modifié avec succès ");
+
   await ouvrirProfilCompte();
 
+  setTimeout(()=>{
+    const box =
+      document.getElementById("changeNameBox") ||
+      document.getElementById("changerNomBox") ||
+      document.getElementById("nameBox");
+
+    if(box){
+      box.classList.add("hidden");
+    }
+  },1500);
 }
 
 async function changerMotDePasse(){
@@ -6838,6 +6929,178 @@ function retourGeneral(){
 
   setPage("pageDashboard");
 
+}
+
+function usernameMessage(text, type = "info"){
+
+  const msg =
+    document.getElementById("msgUsername");
+
+  if(!msg) return;
+
+  msg.textContent = text;
+  msg.className =
+    "form-message " + type;
+}
+
+async function updateUsername(){
+
+  try{
+
+    const input =
+      document.getElementById(
+        "newUsernameInput"
+      );
+
+    if(!input){
+      usernameMessage(
+        "❌ Champ introuvable.",
+        "error"
+      );
+      return;
+    }
+
+    const username =
+      input.value.trim();
+
+    if(!username){
+      usernameMessage(
+        "❌ Entre ton nom d'utilisateur.",
+        "error"
+      );
+      return;
+    }
+
+    if(username.length < 3){
+      usernameMessage(
+        "❌ Minimum 3 caractères.",
+        "error"
+      );
+      return;
+    }
+
+    usernameMessage(
+      "⏳ Vérification...",
+      "info"
+    );
+
+    const result =
+      await post(
+        "/update-username",
+        { username }
+      );
+
+    if(
+      result.startsWith(
+        "ATTENDRE_30_JOURS"
+      )
+    ){
+
+      const joursRestants =
+        result.split(":")[1];
+
+      usernameMessage(
+     ` Vous avez déjà modifié votre nom d'utilisateur récemment. Vous pourrez le modifier à nouveau dans ${joursRestants} jour(s).`,
+     "error"
+     );
+
+      return;
+    }
+
+    if(
+      result.includes(
+        "déjà pris"
+      )
+    ){
+
+      usernameMessage(
+        "❌ Ce nom d'utilisateur est déjà utilisé.",
+        "error"
+      );
+
+      return;
+    }
+
+    if(
+      result.includes("✅")
+    ){
+
+      usernameMessage(
+        "✅ Nom d'utilisateur modifié avec succès.",
+        "success"
+      );
+
+      showNotif(
+        "Nom d'utilisateur modifié avec succès ✅"
+      );
+
+      await ouvrirProfilCompte();
+
+      setTimeout(()=>{
+
+        setPage(
+          "pageModifierProfil"
+        );
+
+      },1500);
+
+      return;
+    }
+
+    usernameMessage(
+      result,
+      "error"
+    );
+
+  }catch(e){
+
+    console.error(e);
+
+    usernameMessage(
+      "❌ Une erreur est survenue.",
+      "error"
+    );
+
+  }
+}
+
+async function updateUsername(){
+
+  const input =
+    document.getElementById("newUsernameInput");
+
+  const username =
+    input.value.trim();
+
+  if(!username){
+    usernameMessage("❌ Entre ton nom d'utilisateur.", "error");
+    return;
+  }
+
+  const result = await post("/update-username", { username });
+
+  if(result.startsWith("ATTENDRE_30_JOURS")){
+    const joursRestants = result.split(":")[1];
+
+    usernameMessage(
+      `❌ Vous pourrez modifier votre nom d'utilisateur dans ${joursRestants} jour(s).`,
+      "error"
+    );
+    return;
+  }
+
+  if(!result.includes("✅")){
+    usernameMessage("❌ " + result, "error");
+    return;
+  }
+
+  usernameMessage("✅ Nom d'utilisateur modifié avec succès.", "success");
+
+  await ouvrirProfilCompte();
+
+  setTimeout(()=>{
+    setPage("pageModifierProfil");
+  },1500);
 }
 
 </script>
