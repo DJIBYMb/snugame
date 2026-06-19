@@ -1494,6 +1494,13 @@ video{
   pointer-events:auto;
 }
 
+.profile-video-item video{
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  background:#000;
+}
+
 
 </style>
 
@@ -5428,8 +5435,8 @@ function ouvrirVideoProfil(url,id,userId){
   setPage("pageDashboard");
 
   document
-  .querySelectorAll(".panel")
-  .forEach(p=>p.classList.add("hidden"));
+    .querySelectorAll(".panel")
+    .forEach(p=>p.classList.add("hidden"));
 
   panelHighlights.classList.remove("hidden");
 
@@ -5442,42 +5449,40 @@ function ouvrirVideoProfil(url,id,userId){
     <div class="tiktok-video">
 
       <video
-      src="${url}"
-      muted
-      loop
+      src="${h.media_url}"
+       muted
       playsinline
       preload="metadata"
-      controls
-      onclick="toggleVideoPause(this)">
+      onclick="ouvrirVideoProfil('${h.media_url}', ${h.id}, ${h.user_id})">
       </video>
 
       ${
         Number(userId) === Number(currentUserId)
         ? `
           <button
-          type="button"
-          onclick="event.stopPropagation(); supprimerHighlight(${id});"
-          style="
-          position:fixed!important;
-          top:50px!important;
-          left:50px!important;
-          z-index:999999999!important;
-          width:auto!important;
-          min-width:190px!important;
-          height:60px!important;
-          background:#ef4444!important;
-          color:#ffffff!important;
-          font-size:22px!important;
-          font-weight:900!important;
-          padding:12px 20px!important;
-          border:3px solid #ffffff!important;
-          border-radius:999px!important;
-          display:flex!important;
-          align-items:center!important;
-          justify-content:center!important;
-          text-align:center!important;
-          ">
-          Supprimer
+            type="button"
+            onclick="event.stopPropagation(); supprimerHighlight(${id});"
+            style="
+              position:fixed!important;
+              top:50px!important;
+              left:50px!important;
+              z-index:999999999!important;
+              width:auto!important;
+              min-width:190px!important;
+              height:60px!important;
+              background:#ef4444!important;
+              color:#ffffff!important;
+              font-size:22px!important;
+              font-weight:900!important;
+              padding:12px 20px!important;
+              border:3px solid #ffffff!important;
+              border-radius:999px!important;
+              display:flex!important;
+              align-items:center!important;
+              justify-content:center!important;
+              text-align:center!important;
+            ">
+            Supprimer
           </button>
         `
         : ""
@@ -5487,6 +5492,17 @@ function ouvrirVideoProfil(url,id,userId){
 
   `;
 
+  setTimeout(()=>{
+
+    const video =
+      highlightsList.querySelector("video");
+
+    if(video){
+      video.muted = !window.videoSoundEnabled;
+      video.play().catch(()=>{});
+    }
+
+  },300);
 }
 async function fixOldVideos(){
 
