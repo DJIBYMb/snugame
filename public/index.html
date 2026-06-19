@@ -3215,11 +3215,9 @@ profileVideosGrid.innerHTML =
       class="profile-video-item"
       onclick="ouvrirVideoDepuisProfil(${v.id})">
 
-        <video
-        src="${v.media_url}"
-        muted
-        playsinline>
-        </video>
+        <img
+         src="${v.thumbnail_url || '/default-video-cover.png'}"
+         class="profile-video-cover">
 
         <div
         style="
@@ -5456,10 +5454,16 @@ function ouvrirVideoProfil(url,id,userId){
 
     <div class="tiktok-video">
 
-      <img
-  src="${h.thumbnail_url || '/default-video-cover.png'}"
-  class="profile-video-cover"
-  onclick="ouvrirVideoProfil('${h.media_url}', ${h.id}, ${h.user_id})">
+      <video
+        src="${url}"
+        class="highlight-video"
+        autoplay
+        muted
+        loop
+        playsinline
+        preload="auto"
+        onclick="toggleVideoPause(this)">
+      </video>
 
       ${
         Number(userId) === Number(currentUserId)
@@ -5494,7 +5498,6 @@ function ouvrirVideoProfil(url,id,userId){
       }
 
     </div>
-
   `;
 
   setTimeout(()=>{
