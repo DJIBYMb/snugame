@@ -3673,7 +3673,10 @@ app.post("/highlight", async (req,res)=>{
 
 if(!thumbnailUrl && media_url.includes("cloudinary.com")){
   thumbnailUrl = media_url
-    .replace("/video/upload/", "/video/upload/so_1/")
+    .replace(
+      "/video/upload/",
+      "/video/upload/so_2,f_jpg/"
+    )
     .replace(/\.(mp4|mov|webm)$/i, ".jpg");
 }
 
