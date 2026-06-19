@@ -4436,12 +4436,11 @@ async function chargerHighlights(){
 
   <video
     src="${h.media_url}"
-    class="sunu-video"
+    autoplay
     muted
     loop
     playsinline
-    preload="auto"
-    onloadeddata="videoReady(this)"
+    preload="metadata"
     onclick="toggleVideoPause(this)">
   </video>
 
@@ -7130,7 +7129,6 @@ async function updateUsername(){
     setPage("pageModifierProfil");
   },1500);
 }
-
 
 function toggleVideoPause(video){
   if(video.paused){
