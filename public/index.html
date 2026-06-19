@@ -728,7 +728,7 @@ button:disabled{
   position:absolute;
   inset:0;
   z-index:1;
-  pointer-events:none;
+  pointer-events:auto;
 }
 
 .video-delete-overlay{
@@ -1462,6 +1462,27 @@ body.video-profil-mode #pageVideoProfil{
   text-transform:uppercase;
 }
 
+body{
+  margin:0;
+  padding:0;
+}
+
+header{
+  padding-top:37px;
+}
+
+.proof{
+  width:100%;
+  max-height:500px;
+  object-fit:cover;
+  border-radius:12px;
+}
+
+video{
+  cursor:pointer;
+}
+
+
 </style>
 
 <link
@@ -1501,7 +1522,9 @@ onclick="toggleSearchUsers()">
 class="card hidden"
 id="searchUsersBox"
 style="
-margin-top:10px;
+margin-top:25px;
+margin-left:20px;
+margin-right:20px;
 ">
 
 <div class="search-modern">
@@ -3560,12 +3583,17 @@ function mediaPreview(url){
   const clean = String(url).split("?")[0].toLowerCase();
 
   if(clean.endsWith(".mp4")){
-    return `
-      <video class="proof" controls>
-        <source src="${url}" type="video/mp4">
-      </video>
-    `;
-  }
+  return `
+    <video
+      class="proof"
+      controls
+      preload="metadata">
+      <source
+        src="${url}"
+        type="video/mp4">
+    </video>
+  `;
+}
 
   return `<img class="proof" src="${url}">`;
 
@@ -4406,17 +4434,16 @@ async function chargerHighlights(){
     class="tiktok-video"
     data-id="${h.id}">
 
-      <video
-      src="${h.media_url}"
-      muted
-      loop
-      playsinline
-      preload="metadata"
-      onplay="compterVue(${h.id})"
-      onclick="toggleVideoPause(this)">
-      </video>
-
-      <div class="tiktok-overlay">
+  <video
+    src="${h.media_url}"
+    class="sunu-video"
+    muted
+    loop
+    playsinline
+    preload="auto"
+    onloadeddata="videoReady(this)"
+    onclick="toggleVideoPause(this)">
+  </video>
 
         <div class="tiktok-left">
 
@@ -5392,10 +5419,11 @@ function ouvrirVideoProfil(url,id,userId){
 
       <video
       src="${url}"
-      autoplay
       muted
       loop
       playsinline
+      preload="metadata"
+      controls
       onclick="toggleVideoPause(this)">
       </video>
 
@@ -7101,6 +7129,15 @@ async function updateUsername(){
   setTimeout(()=>{
     setPage("pageModifierProfil");
   },1500);
+}
+
+
+function toggleVideoPause(video){
+  if(video.paused){
+    video.play();
+  }else{
+    video.pause();
+  }
 }
 
 </script>
