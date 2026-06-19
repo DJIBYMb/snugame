@@ -665,6 +665,10 @@ db.run(`
     console.log(err);
   }
 });
+await run(`
+  ALTER TABLE highlights
+  ADD COLUMN thumbnail_url TEXT
+`).catch(()=>{});
 
 
 
@@ -3653,14 +3657,21 @@ app.post("/highlight", async (req,res)=>{
     const {
       titre,
       description,
-      media_url
+      media_url,
+      thumbnail_url
     } = req.body;
 
     if(!titre || !media_url){
-      return res.send(
-        "Titre et média obligatoires"
-      );
+      return res.send("Titre et média obligatoires");
     }
+
+    let thumbnailUrl = thumbnail_url || "";
+
+if(!thumbnailUrl && media_url.includes("cloudinary.com")){
+  thumbnailUrl = media_url
+    .replace("/video/upload/", "/video/upload/so_1/")
+    .replace(/\.(mp4|mov|webm)$/i, ".jpg");
+}
 
     await run(
       `
@@ -3668,15 +3679,17 @@ app.post("/highlight", async (req,res)=>{
         user_id,
         titre,
         description,
-        media_url
+        media_url,
+        thumbnail_url
       )
-      VALUES(?,?,?,?)
+      VALUES(?,?,?,?,?)
       `,
       [
         req.session.userId,
         titre,
         description || "",
-        media_url
+        media_url,
+        thumbnailUrl
       ]
     );
 

@@ -1501,6 +1501,14 @@ video{
   background:#000;
 }
 
+.profile-video-cover{
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  display:block;
+  background:#000;
+}
+
 
 </style>
 
@@ -5448,13 +5456,10 @@ function ouvrirVideoProfil(url,id,userId){
 
     <div class="tiktok-video">
 
-      <video
-      src="${h.media_url}"
-       muted
-      playsinline
-      preload="metadata"
-      onclick="ouvrirVideoProfil('${h.media_url}', ${h.id}, ${h.user_id})">
-      </video>
+      <img
+  src="${h.thumbnail_url || '/default-video-cover.png'}"
+  class="profile-video-cover"
+  onclick="ouvrirVideoProfil('${h.media_url}', ${h.id}, ${h.user_id})">
 
       ${
         Number(userId) === Number(currentUserId)
