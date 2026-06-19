@@ -5509,16 +5509,24 @@ function ouvrirVideoProfil(url,id,userId){
 
   if(video){
 
-    video.currentTime = 5;
+    video.addEventListener(
+      "loadedmetadata",
+      ()=>{
 
-    video.muted =
-      !window.videoSoundEnabled;
+        video.currentTime = 3;
 
-    video.play().catch(()=>{});
+        video.muted =
+          !window.videoSoundEnabled;
+
+        video.play().catch(()=>{});
+
+      },
+      { once:true }
+    );
 
   }
 
- },300);
+},300);
 }
 async function fixOldVideos(){
 
