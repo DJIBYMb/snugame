@@ -8,9 +8,26 @@ const sqlite3 = require("sqlite3").verbose();
 const path = require("path");
 const fs = require("fs");
 const multer = require("multer");
+
+const fs = require("fs");
+const os = require("os");
+const { execFile } = require("child_process");
+
 const rateLimit = require("express-rate-limit");
 const nodemailer = require("nodemailer");
 const compression = require("compression");
+
+exec("ffmpeg -version",(err,stdout,stderr)=>{
+
+  console.log("FFMPEG TEST");
+  console.log(stdout);
+
+  if(err){
+    console.log("FFMPEG ERROR", err);
+  }
+
+});
+
 const {
   S3Client,
   PutObjectCommand
@@ -2955,9 +2972,64 @@ console.log("FILE SIZE:", req.file.size);
       const url =
       `${process.env.R2_PUBLIC_URL}/${fileName}`;
 
+      let thumbnail_url = "";
+
+if(req.file.mimetype.startsWith("video/")){
+
+  const tempVideo =
+    path.join(os.tmpdir(), fileName);
+
+  const thumbName =
+    fileName.replace(/\.[^/.]+$/, "") + ".jpg";
+
+  const tempThumb =
+    path.join(os.tmpdir(), thumbName);
+
+  fs.writeFileSync(tempVideo, req.file.buffer);
+
+  await new Promise((resolve)=>{
+    execFile(
+      "ffmpeg",
+      [
+        "-y",
+        "-ss","5",
+        "-i",tempVideo,
+        "-frames:v","1",
+        "-q:v","2",
+        tempThumb
+      ],
+      ()=>{
+        resolve();
+      }
+    );
+  });
+
+  if(fs.existsSync(tempThumb)){
+
+    const thumbBuffer =
+      fs.readFileSync(tempThumb);
+
+    await r2.send(
+      new PutObjectCommand({
+        Bucket:process.env.R2_BUCKET,
+        Key:thumbName,
+        Body:thumbBuffer,
+        ContentType:"image/jpeg"
+      })
+    );
+
+    thumbnail_url =
+      `${process.env.R2_PUBLIC_URL}/${thumbName}`;
+  }
+
+  fs.existsSync(tempVideo) && fs.unlinkSync(tempVideo);
+  fs.existsSync(tempThumb) && fs.unlinkSync(tempThumb);
+}
+
       res.json({
         ok:true,
-        url
+        url,
+       thumbnail_url
       });
 
     }catch(e){
