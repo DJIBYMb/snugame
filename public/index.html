@@ -4468,8 +4468,8 @@ async function chargerHighlights(){
     class="tiktok-video"
     data-id="${h.id}">
 
-  <video
-  src="${h.media_url}"
+    <video
+  src="${url}"
   class="highlight-video"
   muted
   loop
@@ -5508,20 +5508,16 @@ function ouvrirVideoProfil(url,id,userId){
 
   if(video){
 
-    video.addEventListener(
-      "loadedmetadata",
-      ()=>{
+    video.addEventListener("loadedmetadata",()=>{
 
-        video.currentTime = 5;
+      video.currentTime = 5;
 
-        video.muted =
-          !window.videoSoundEnabled;
-
+      setTimeout(()=>{
+        video.muted = !window.videoSoundEnabled;
         video.play().catch(()=>{});
+      },200);
 
-      },
-      { once:true }
-    );
+    },{ once:true });
 
   }
 
