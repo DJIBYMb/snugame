@@ -4413,11 +4413,12 @@ async function publierHighlight(){
       "Vidéo uploadée. Publication...";
 
     const result =
-      await post("/highlight",{
-        titre:highlightTitre.value,
-        description:"",
-        media_url:uploadData.url
-      });
+  await post("/highlight",{
+    titre:highlightTitre.value,
+    description:"",
+    media_url:uploadData.url,
+    thumbnail_url:uploadData.thumbnail_url || ""
+  });
 
     message.textContent = result;
 

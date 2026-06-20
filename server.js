@@ -17,16 +17,6 @@ const rateLimit = require("express-rate-limit");
 const nodemailer = require("nodemailer");
 const compression = require("compression");
 
-exec("ffmpeg -version",(err,stdout,stderr)=>{
-
-  console.log("FFMPEG TEST");
-  console.log(stdout);
-
-  if(err){
-    console.log("FFMPEG ERROR", err);
-  }
-
-});
 
 const {
   S3Client,
@@ -2957,8 +2947,8 @@ app.post("/upload-image",(req,res)=>{
         ext;
 
         console.log("UPLOAD R2 FILE:", fileName);
-console.log("BUCKET:", process.env.R2_BUCKET);
-console.log("FILE SIZE:", req.file.size);
+       console.log("BUCKET:", process.env.R2_BUCKET);
+      console.log("FILE SIZE:", req.file.size);
 
       await r2.send(
         new PutObjectCommand({
@@ -2971,6 +2961,63 @@ console.log("FILE SIZE:", req.file.size);
 
       const url =
       `${process.env.R2_PUBLIC_URL}/${fileName}`;
+
+if(req.file.mimetype.startsWith("video/")){
+
+  const tempVideo =
+    path.join(os.tmpdir(), fileName);
+
+  const thumbName =
+    fileName.replace(/\.[^/.]+$/, "") + ".jpg";
+
+  const tempThumb =
+    path.join(os.tmpdir(), thumbName);
+
+  fs.writeFileSync(tempVideo, req.file.buffer);
+
+  await new Promise((resolve)=>{
+    execFile(
+      "ffmpeg",
+      [
+        "-y",
+        "-ss","5",
+        "-i",tempVideo,
+        "-frames:v","1",
+        "-q:v","2",
+        tempThumb
+      ],
+      ()=>{
+        resolve();
+      }
+    );
+  });
+
+  if(fs.existsSync(tempThumb)){
+
+    const thumbBuffer =
+      fs.readFileSync(tempThumb);
+
+    await r2.send(
+      new PutObjectCommand({
+        Bucket:process.env.R2_BUCKET,
+        Key:thumbName,
+        Body:thumbBuffer,
+        ContentType:"image/jpeg"
+      })
+    );
+
+    thumbnail_url =
+      `${process.env.R2_PUBLIC_URL}/${thumbName}`;
+  }
+
+  if(fs.existsSync(tempVideo)){
+    fs.unlinkSync(tempVideo);
+  }
+
+  if(fs.existsSync(tempThumb)){
+    fs.unlinkSync(tempThumb);
+  }
+}
 
       let thumbnail_url = "";
 
@@ -3741,19 +3788,8 @@ app.post("/highlight", async (req,res)=>{
       return res.send("Titre et média obligatoires");
     }
 
-    let thumbnailUrl = thumbnail_url || "";
-
-if(!thumbnailUrl && media_url.includes("cloudinary.com")){
-  thumbnailUrl = media_url
-    .replace(
-      "/video/upload/",
-      "/video/upload/so_5,f_jpg/"
-    )
-    .replace(/\.(mp4|mov|webm)$/i, ".jpg");
-}
-
-console.log("VIDEO =", media_url);
-console.log("THUMB =", thumbnailUrl);
+    console.log("VIDEO =", media_url);
+    console.log("THUMB =", thumbnail_url);
 
     await run(
       `
@@ -3771,7 +3807,7 @@ console.log("THUMB =", thumbnailUrl);
         titre,
         description || "",
         media_url,
-        thumbnailUrl
+        thumbnail_url || ""
       ]
     );
 
@@ -4354,7 +4390,7 @@ Créer compte et participer
 <script>
 async function post(url,data){
 
-  message.textContent =
+  msg.textContent =
     "⏳ Chargement...";
 
   try{
@@ -4370,14 +4406,14 @@ async function post(url,data){
     const text =
       await res.text();
 
-    message.textContent =
+    msg.textContent =
       text;
 
     return text;
 
   }catch(e){
 
-    message.textContent =
+    msg.textContent =
       "Erreur réseau. Réessaie.";
 
     return "";
