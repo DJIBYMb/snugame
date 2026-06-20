@@ -4469,7 +4469,7 @@ async function chargerHighlights(){
     data-id="${h.id}">
 
     <video
-  src="${url}"
+  src="${h.media_url}"
   class="highlight-video"
   muted
   loop
@@ -4477,7 +4477,6 @@ async function chargerHighlights(){
   preload="auto"
   onclick="toggleVideoPause(this)">
 </video>
-
         <div class="tiktok-left">
 
           <div
@@ -4545,6 +4544,19 @@ async function chargerHighlights(){
     </div>
 
    `).join("");
+
+   const firstVideo =
+  document.querySelector(
+    "#panelHighlights .tiktok-video video"
+  );
+
+if(firstVideo){
+
+  firstVideo.preload = "auto";
+
+  firstVideo.load();
+
+}
 
   if(!window.openingProfileVideo){
   setTimeout(()=>{
@@ -5300,23 +5312,29 @@ async function ouvrirModeVideos(options = {}){
     return;
   }
 
-  setTimeout(()=>{
+  requestAnimationFrame(()=>{
 
-   const firstVideo =
-   getCurrentVisibleVideo();
+    setTimeout(()=>{
 
-    if(firstVideo){
+      const firstVideo =
+        document.querySelector(
+          "#panelHighlights .tiktok-video video"
+        );
 
-      stopAllVideosExcept(firstVideo);
+      if(firstVideo){
 
-      firstVideo.muted =
-        !window.videoSoundEnabled;
+        stopAllVideosExcept(firstVideo);
 
-      firstVideo.play().catch(()=>{});
+        firstVideo.muted =
+          !window.videoSoundEnabled;
 
-    }
+        firstVideo.play().catch(()=>{});
 
-  },300);
+      }
+
+    },150);
+
+  });
 
 }
 
@@ -5439,6 +5457,8 @@ async function chargerVideosUtilisateur(userId){
 
 function ouvrirVideoProfil(url,id,userId){
 
+  setPage("pageDashboard");
+
   document.body.classList.add("video-mode");
 
   document
@@ -5452,7 +5472,6 @@ function ouvrirVideoProfil(url,id,userId){
   }
 
   highlightsList.innerHTML = `
-
     <div class="tiktok-video">
 
       <video
@@ -5466,7 +5485,7 @@ function ouvrirVideoProfil(url,id,userId){
         onclick="toggleVideoPause(this)">
       </video>
 
-      ${
+            ${
         Number(userId) === Number(currentUserId)
         ? `
           <button
@@ -5498,31 +5517,33 @@ function ouvrirVideoProfil(url,id,userId){
         : ""
       }
 
+    
+
+
     </div>
   `;
 
   const video =
-    highlightsList.querySelector("video");
+  highlightsList.querySelector("video");
 
-  if(video){
-    video.muted = !window.videoSoundEnabled;
+if(video){
 
-    video.play().catch(()=>{
-      video.addEventListener("canplay",()=>{
+  video.muted =
+    !window.videoSoundEnabled;
+
+  video.play().catch(()=>{
+
+    video.addEventListener(
+      "canplay",
+      ()=>{
         video.play().catch(()=>{});
-      },{ once:true });
-    });
-  }
+      },
+      { once:true }
+    );
+
+  });
+
 }
-async function fixOldVideos(){
-
-  const result =
-    await fetch("/fix-old-videos",{
-      method:"POST"
-    });
-
-  alert(await result.text());
-
 }
 
 async function deleteOldVideos(){
