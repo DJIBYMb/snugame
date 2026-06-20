@@ -4545,10 +4545,25 @@ async function chargerHighlights(){
 
    `).join("");
 
+   prepareFirstPanelVideo();
+
    const firstVideo =
   document.querySelector(
     "#panelHighlights .tiktok-video video"
   );
+
+  const videos =
+  document.querySelectorAll(
+    "#panelHighlights .tiktok-video video"
+  );
+
+if(videos[1]){
+
+  videos[1].preload = "auto";
+
+  videos[1].load();
+
+}
 
 if(firstVideo){
 
@@ -5314,25 +5329,23 @@ async function ouvrirModeVideos(options = {}){
 
   requestAnimationFrame(()=>{
 
-    setTimeout(()=>{
+    const firstVideo =
+  document.querySelector(
+    "#panelHighlights .tiktok-video video"
+  );
 
-      const firstVideo =
-        document.querySelector(
-          "#panelHighlights .tiktok-video video"
-        );
+if(firstVideo){
 
-      if(firstVideo){
+  stopAllVideosExcept(firstVideo);
 
-        stopAllVideosExcept(firstVideo);
+  firstVideo.muted =
+    !window.videoSoundEnabled;
 
-        firstVideo.muted =
-          !window.videoSoundEnabled;
+  firstVideo.play().catch(()=>{});
 
-        firstVideo.play().catch(()=>{});
+  preloadNextVideo(video);
 
-      }
-
-    },150);
+}
 
   });
 
@@ -7257,6 +7270,41 @@ function getCurrentVisibleVideo(){
   });
 
   return currentVideo;
+}
+
+function preloadNextVideo(currentVideo){
+
+  const nextVideo =
+    currentVideo
+      ?.closest(".tiktok-video")
+      ?.nextElementSibling
+      ?.querySelector("video");
+
+  if(nextVideo){
+
+    nextVideo.preload = "auto";
+
+    try{
+      nextVideo.load();
+    }catch(e){}
+  }
+
+}
+
+function prepareFirstPanelVideo(){
+
+  const firstVideo =
+    document.querySelector(
+      "#panelHighlights .tiktok-video video"
+    );
+
+  if(!firstVideo) return;
+
+  firstVideo.preload = "auto";
+  firstVideo.muted = true;
+
+  firstVideo.load();
+
 }
 
 </script>
