@@ -11,6 +11,7 @@ const multer = require("multer");
 
 const os = require("os");
 const { execFile } = require("child_process");
+const { exec } = require("child_process");
 
 const rateLimit = require("express-rate-limit");
 const nodemailer = require("nodemailer");
