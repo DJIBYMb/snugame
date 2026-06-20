@@ -3216,10 +3216,10 @@ profileVideosGrid.innerHTML =
       onclick="ouvrirVideoDepuisProfil(${v.id})">
 
         <img
-         src="${v.thumbnail_url || '/default-video-cover.png'}"
-         class="profile-video-cover">
+      src="${v.thumbnail_url || '/default-video-cover.png'}"
+      class="profile-video-cover">
 
-        <div
+      <div
         style="
           position:absolute;
           left:5px;
@@ -5439,7 +5439,7 @@ async function chargerVideosUtilisateur(userId){
 
 function ouvrirVideoProfil(url,id,userId){
 
-  setPage("pageDashboard");
+  document.body.classList.add("video-mode");
 
   document
     .querySelectorAll(".panel")
@@ -5447,9 +5447,9 @@ function ouvrirVideoProfil(url,id,userId){
 
   panelHighlights.classList.remove("hidden");
 
-  document.body.classList.add("video-mode");
-
-  messageCard.classList.add("hidden");
+  if(messageCard){
+    messageCard.classList.add("hidden");
+  }
 
   highlightsList.innerHTML = `
 
@@ -5501,27 +5501,18 @@ function ouvrirVideoProfil(url,id,userId){
     </div>
   `;
 
-  setTimeout(()=>{
-
   const video =
     highlightsList.querySelector("video");
 
   if(video){
+    video.muted = !window.videoSoundEnabled;
 
-    video.addEventListener("loadedmetadata",()=>{
-
-      video.currentTime = 5;
-
-      setTimeout(()=>{
-        video.muted = !window.videoSoundEnabled;
+    video.play().catch(()=>{
+      video.addEventListener("canplay",()=>{
         video.play().catch(()=>{});
-      },200);
-
-    },{ once:true });
-
+      },{ once:true });
+    });
   }
-
-},300);
 }
 async function fixOldVideos(){
 
