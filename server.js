@@ -2937,8 +2937,7 @@ app.post("/upload-image",(req,res)=>{
       }
 
       const ext =
-        path.extname(req.file.originalname)
-        .toLowerCase();
+        path.extname(req.file.originalname).toLowerCase();
 
       const fileName =
         Date.now() +
@@ -2946,8 +2945,8 @@ app.post("/upload-image",(req,res)=>{
         Math.random().toString(36).slice(2) +
         ext;
 
-        console.log("UPLOAD R2 FILE:", fileName);
-       console.log("BUCKET:", process.env.R2_BUCKET);
+      console.log("UPLOAD R2 FILE:", fileName);
+      console.log("BUCKET:", process.env.R2_BUCKET);
       console.log("FILE SIZE:", req.file.size);
 
       await r2.send(
@@ -2960,123 +2959,74 @@ app.post("/upload-image",(req,res)=>{
       );
 
       const url =
-      `${process.env.R2_PUBLIC_URL}/${fileName}`;
-
-if(req.file.mimetype.startsWith("video/")){
-
-  const tempVideo =
-    path.join(os.tmpdir(), fileName);
-
-  const thumbName =
-    fileName.replace(/\.[^/.]+$/, "") + ".jpg";
-
-  const tempThumb =
-    path.join(os.tmpdir(), thumbName);
-
-  fs.writeFileSync(tempVideo, req.file.buffer);
-
-  await new Promise((resolve)=>{
-    execFile(
-      "ffmpeg",
-      [
-        "-y",
-        "-ss","5",
-        "-i",tempVideo,
-        "-frames:v","1",
-        "-q:v","2",
-        tempThumb
-      ],
-      ()=>{
-        resolve();
-      }
-    );
-  });
-
-  if(fs.existsSync(tempThumb)){
-
-    const thumbBuffer =
-      fs.readFileSync(tempThumb);
-
-    await r2.send(
-      new PutObjectCommand({
-        Bucket:process.env.R2_BUCKET,
-        Key:thumbName,
-        Body:thumbBuffer,
-        ContentType:"image/jpeg"
-      })
-    );
-
-    thumbnail_url =
-      `${process.env.R2_PUBLIC_URL}/${thumbName}`;
-  }
-
-  if(fs.existsSync(tempVideo)){
-    fs.unlinkSync(tempVideo);
-  }
-
-  if(fs.existsSync(tempThumb)){
-    fs.unlinkSync(tempThumb);
-  }
-}
+        `${process.env.R2_PUBLIC_URL}/${fileName}`;
 
       let thumbnail_url = "";
 
-if(req.file.mimetype.startsWith("video/")){
+      if(req.file.mimetype.startsWith("video/")){
 
-  const tempVideo =
-    path.join(os.tmpdir(), fileName);
+        const tempVideo =
+          path.join(os.tmpdir(), fileName);
 
-  const thumbName =
-    fileName.replace(/\.[^/.]+$/, "") + ".jpg";
+        const thumbName =
+          fileName.replace(/\.[^/.]+$/, "") + ".jpg";
 
-  const tempThumb =
-    path.join(os.tmpdir(), thumbName);
+        const tempThumb =
+          path.join(os.tmpdir(), thumbName);
 
-  fs.writeFileSync(tempVideo, req.file.buffer);
+        fs.writeFileSync(tempVideo, req.file.buffer);
 
-  await new Promise((resolve)=>{
-    execFile(
-      "ffmpeg",
-      [
-        "-y",
-        "-ss","5",
-        "-i",tempVideo,
-        "-frames:v","1",
-        "-q:v","2",
-        tempThumb
-      ],
-      ()=>{
-        resolve();
+        await new Promise((resolve)=>{
+          execFile(
+            "ffmpeg",
+            [
+              "-y",
+              "-ss","5",
+              "-i",tempVideo,
+              "-frames:v","1",
+              "-q:v","2",
+              tempThumb
+            ],
+            ()=>{
+              resolve();
+            }
+          );
+        });
+
+        if(fs.existsSync(tempThumb)){
+
+          const thumbBuffer =
+            fs.readFileSync(tempThumb);
+
+          await r2.send(
+            new PutObjectCommand({
+              Bucket:process.env.R2_BUCKET,
+              Key:thumbName,
+              Body:thumbBuffer,
+              ContentType:"image/jpeg"
+            })
+          );
+
+          thumbnail_url =
+            `${process.env.R2_PUBLIC_URL}/${thumbName}`;
+        }
+
+        if(fs.existsSync(tempVideo)){
+          fs.unlinkSync(tempVideo);
+        }
+
+        if(fs.existsSync(tempThumb)){
+          fs.unlinkSync(tempThumb);
+        }
       }
-    );
-  });
 
-  if(fs.existsSync(tempThumb)){
-
-    const thumbBuffer =
-      fs.readFileSync(tempThumb);
-
-    await r2.send(
-      new PutObjectCommand({
-        Bucket:process.env.R2_BUCKET,
-        Key:thumbName,
-        Body:thumbBuffer,
-        ContentType:"image/jpeg"
-      })
-    );
-
-    thumbnail_url =
-      `${process.env.R2_PUBLIC_URL}/${thumbName}`;
-  }
-
-  fs.existsSync(tempVideo) && fs.unlinkSync(tempVideo);
-  fs.existsSync(tempThumb) && fs.unlinkSync(tempThumb);
-}
+      console.log("UPLOAD URL =", url);
+      console.log("UPLOAD THUMB =", thumbnail_url);
 
       res.json({
         ok:true,
         url,
-       thumbnail_url
+        thumbnail_url
       });
 
     }catch(e){
