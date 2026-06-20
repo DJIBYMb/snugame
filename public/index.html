@@ -1501,14 +1501,6 @@ video{
   background:#000;
 }
 
-.profile-video-cover{
-  width:100%;
-  height:100%;
-  object-fit:cover;
-  display:block;
-  background:#000;
-}
-
 
 </style>
 
@@ -5334,7 +5326,7 @@ async function ouvrirModeVideos(options = {}){
     "#panelHighlights .tiktok-video video"
   );
 
-if(firstVideo){
+ if(firstVideo){
 
   stopAllVideosExcept(firstVideo);
 
@@ -5345,7 +5337,7 @@ if(firstVideo){
 
   preloadNextVideo(video);
 
-}
+ }
 
   });
 
@@ -5468,7 +5460,9 @@ async function chargerVideosUtilisateur(userId){
   `;
 }
 
-function ouvrirVideoProfil(url,id,userId){
+function ouvrirVideoProfil(url,id,userId,thumbnailUrl){
+
+  console.log("thumbnail reçu =", thumbnailUrl);
 
   setPage("pageDashboard");
 
@@ -5485,18 +5479,23 @@ function ouvrirVideoProfil(url,id,userId){
   }
 
   highlightsList.innerHTML = `
-    <div class="tiktok-video">
+  <div class="tiktok-video">
 
-      <video
-        src="${url}"
-        class="highlight-video"
-        autoplay
-        muted
-        loop
-        playsinline
-        preload="auto"
-        onclick="toggleVideoPause(this)">
-      </video>
+   <img
+  src="${thumbnailUrl || '/default-video-cover.png'}"
+  class="video-start-cover"
+  onerror="this.style.display='none'">
+
+    <video
+      src="${url}"
+      class="highlight-video"
+      muted
+      loop
+      playsinline
+      preload="auto"
+      onclick="toggleVideoPause(this)">
+    </video>
+
 
             ${
         Number(userId) === Number(currentUserId)
@@ -5539,23 +5538,25 @@ function ouvrirVideoProfil(url,id,userId){
   const video =
   highlightsList.querySelector("video");
 
+const cover =
+  highlightsList.querySelector(".video-start-cover");
+
 if(video){
 
-  video.muted =
-    !window.videoSoundEnabled;
+  video.addEventListener("loadeddata",()=>{
 
-  video.play().catch(()=>{
+    video.muted =
+      !window.videoSoundEnabled;
 
-    video.addEventListener(
-      "canplay",
-      ()=>{
-        video.play().catch(()=>{});
-      },
-      { once:true }
-    );
+    video.play().catch(()=>{});
 
-  });
+    if(cover){
+      cover.style.display = "none";
+    }
 
+  },{ once:true });
+
+  video.load();
 }
 }
 
@@ -6489,12 +6490,13 @@ setTimeout(()=>{
   </div>
 
   <video
-  src="${video.media_url}"
-  controls
-  autoplay
-  playsinline
-  style="
-    position:fixed;
+src="${video.media_url}"
+controls
+autoplay
+playsinline
+preload="auto"
+style="
+position:fixed;
 top:0;
 left:0;
 width:100vw;
@@ -6502,8 +6504,7 @@ height:100vh;
 background:black;
 object-fit:contain;
 z-index:1;
-  ">
-  
+">
 </video>
 
 <div class="tiktok-actions">
