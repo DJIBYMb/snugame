@@ -2981,7 +2981,6 @@ app.post("/upload-image",(req,res)=>{
             "ffmpeg",
             [
               "-y",
-              "-ss","5",
               "-i",tempVideo,
               "-frames:v","1",
               "-q:v","2",
