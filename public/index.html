@@ -1501,19 +1501,6 @@ video{
   object-fit:cover;
   background:#000;
 }
-.video-start-cover{
-  position:absolute;
-  inset:0;
-  width:100%;
-  height:100%;
-  object-fit:cover;
-  z-index:2;
-  transition:opacity .15s;
-}
-.hide-video{
-  visibility:hidden;
-}
-
 .video-panel-cover{
   position:absolute;
   inset:0;
@@ -1521,7 +1508,8 @@ video{
   height:100%;
   object-fit:cover;
   background:#000;
-  z-index:2;
+  z-index:3;
+  pointer-events:none;
 }
 
 .highlight-video{
@@ -1530,6 +1518,7 @@ video{
   width:100%;
   height:100%;
   object-fit:cover;
+  background:#000;
   z-index:1;
 }
 
@@ -4497,12 +4486,12 @@ async function chargerHighlights(){
 
 <video
   src="${h.media_url}"
-  class="highlight-video hide-video"
+  class="highlight-video"
   muted
   loop
   playsinline
   preload="auto"
-  oncanplay="showReadyVideo(this)"
+  onplaying="hideVideoCover(this)"
   onclick="toggleVideoPause(this)">
 </video>
 
@@ -5358,25 +5347,36 @@ async function ouvrirModeVideos(options = {}){
 
   requestAnimationFrame(()=>{
 
-    const firstVideo =
+   const firstVideo =
   document.querySelector(
     "#panelHighlights .tiktok-video video"
   );
 
- if(firstVideo){
+   if(firstVideo){
 
   stopAllVideosExcept(firstVideo);
 
-  firstVideo.muted =
-    !window.videoSoundEnabled;
+  firstVideo.muted = true;
+  firstVideo.playsInline = true;
 
-  firstVideo.play().catch(()=>{});
+  firstVideo.style.opacity = "0";
 
-  preloadNextVideo(video);
+  firstVideo.play().then(()=>{
 
- }
+    firstVideo.style.opacity = "1";
+
+    firstVideo.muted =
+      !window.videoSoundEnabled;
+
+  }).catch(()=>{
+
+    firstVideo.style.opacity = "1";
 
   });
+
+}
+
+  }); 
 
 }
 
@@ -7336,18 +7336,16 @@ function prepareFirstPanelVideo(){
 
 }
 
-function showReadyVideo(video){
+function hideVideoCover(video){
 
   const cover =
     video.previousElementSibling;
 
-  video.classList.remove("hide-video");
-
   if(cover){
     cover.style.display = "none";
   }
-}
 
+}
 </script>
 
 <div class="bottom-nav">
