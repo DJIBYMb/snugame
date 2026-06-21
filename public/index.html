@@ -1521,6 +1521,16 @@ video{
   background:#000;
   z-index:1;
 }
+.video-open-cover{
+  position:fixed;
+  top:0;
+  left:0;
+  width:100vw;
+  height:100vh;
+  object-fit:contain;
+  background:#000;
+  z-index:2;
+}
 
 </style>
 
@@ -6517,23 +6527,17 @@ setTimeout(()=>{
     Retour
   </div>
 
-  <video
-src="${video.media_url}"
-controls
-autoplay
-playsinline
-preload="auto"
-style="
-position:fixed;
-top:0;
-left:0;
-width:100vw;
-height:100vh;
-background:black;
-object-fit:contain;
-z-index:1;
-">
-</video>
+  <img
+  src="${video.thumbnail_url || '/default-video-cover.png'}"
+  class="video-open-cover">
+
+<video
+  src="${video.media_url}"
+  autoplay
+  muted
+  playsinline
+  preload="auto"
+  onplaying="this.previousElementSibling.style.display='none';"
 
 <div class="tiktok-actions">
 
