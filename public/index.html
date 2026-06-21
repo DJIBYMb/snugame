@@ -1510,9 +1510,18 @@ video{
   z-index:2;
   transition:opacity .15s;
 }
+.video-panel-cover{
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  background:#000;
+  z-index:2;
+}
+
 .highlight-video{
   opacity:0;
-  transition:opacity .12s linear;
 }
 
 .highlight-video.video-ready{
@@ -4477,14 +4486,18 @@ async function chargerHighlights(){
     class="tiktok-video"
     data-id="${h.id}">
 
-    <video
+    <img
+  src="${h.thumbnail_url || '/default-video-cover.png'}"
+  class="video-panel-cover">
+
+<video
   src="${h.media_url}"
   class="highlight-video"
   muted
   loop
   playsinline
   preload="auto"
-  onloadeddata="this.classList.add('video-ready')"
+  onloadeddata="this.previousElementSibling.style.display='none'; this.classList.add('video-ready')"
   onclick="toggleVideoPause(this)">
 </video>
 
