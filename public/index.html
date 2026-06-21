@@ -1510,6 +1510,14 @@ video{
   z-index:2;
   transition:opacity .15s;
 }
+.highlight-video{
+  opacity:0;
+  transition:opacity .12s linear;
+}
+
+.highlight-video.video-ready{
+  opacity:1;
+}
 
 </style>
 
@@ -4476,8 +4484,10 @@ async function chargerHighlights(){
   loop
   playsinline
   preload="auto"
+  onloadeddata="this.classList.add('video-ready')"
   onclick="toggleVideoPause(this)">
 </video>
+
         <div class="tiktok-left">
 
           <div
