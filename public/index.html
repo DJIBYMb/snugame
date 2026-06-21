@@ -1535,6 +1535,54 @@ video{
   z-index:1;
 }
 
+.fullscreen-register{
+  position:fixed;
+  inset:0;
+  width:100vw;
+  height:100vh;
+  z-index:999999;
+  background:#07111f;
+  overflow-y:auto;
+
+  padding-top:100px;
+  padding-left:20px;
+  padding-right:20px;
+  padding-bottom:30px;
+
+  border-radius:0 !important;
+  margin:0 !important;
+}
+
+.fullscreen-forgot{
+  position:fixed;
+  inset:0;
+  width:100vw;
+  height:100vh;
+  z-index:999999;
+  background:#07111f;
+  overflow-y:auto;
+
+  padding:20px;
+
+  display:flex;
+  flex-direction:column;
+  justify-content:flex-start;
+
+  border-radius:0 !important;
+  margin:0 !important;
+}
+
+.fullscreen-register,
+.fullscreen-forgot{
+
+  padding-top:120px !important;
+
+}
+
+.texte-rouge{
+  color:red !important;
+}
+
 </style>
 
 <link
@@ -1662,9 +1710,7 @@ Connexion
 <button
 class="secondary"
 onclick="ouvrirMotDePasseOublie()">
-
 Mot de passe oublié
-
 </button>
 
 </div>
@@ -1672,18 +1718,22 @@ Mot de passe oublié
 <button
 class="secondary"
 onclick="showRegister()">
-
 Créer un compte
-
 </button>
+
+</div>
 
 <div
 class="card hidden"
 id="forgotBox">
 
-<h2>
-Mot de passe oublié
-</h2>
+<button
+class="secondary"
+onclick="closeForgotPassword()">
+← Retour connexion
+</button>
+
+<h2>Mot de passe oublié</h2>
 
 <input
 id="forgotEmail"
@@ -1692,9 +1742,7 @@ placeholder="Ton email">
 <button
 class="secondary"
 onclick="envoyerCodeReset()">
-
 Envoyer code
-
 </button>
 
 <input
@@ -1706,20 +1754,21 @@ id="newPassword"
 type="password"
 placeholder="Nouveau mot de passe">
 
-<button
-onclick="resetPassword()">
-
+<button onclick="resetPassword()">
 Changer mot de passe
-
 </button>
-
-</div>
 
 </div>
 
 <div
 class="card hidden"
 id="registerBox">
+
+<button
+class="secondary"
+onclick="closeRegister()">
+← Retour connexion
+</button>
 
 <h2>Créer compte</h2>
 
@@ -1737,7 +1786,7 @@ type="password"
 placeholder="Mot de passe">
 
 <button
-class="secondary"
+class="secondary texte-rouge"
 onclick="envoyerCode()">
 Envoyer code email
 </button>
@@ -2907,9 +2956,29 @@ async function get(url){
 
 function showRegister(){
 
-  forgotBox.classList.add("hidden");
+  document
+    .querySelector("#pageAuth > .card")
+    .classList.add("hidden");
 
-  registerBox.classList.toggle("hidden");
+  registerBox.classList.remove("hidden");
+
+  registerBox.classList.add(
+    "fullscreen-register"
+  );
+
+}
+
+function closeRegister(){
+
+  registerBox.classList.add("hidden");
+
+  registerBox.classList.remove(
+    "fullscreen-register"
+  );
+
+  document
+    .querySelector("#pageAuth > .card")
+    .classList.remove("hidden");
 
 }
 
@@ -4714,7 +4783,25 @@ function ouvrirMotDePasseOublie(){
 
   registerBox.classList.add("hidden");
 
-  forgotBox.classList.toggle("hidden");
+  forgotBox.classList.remove("hidden");
+
+  forgotBox.classList.add(
+    "fullscreen-forgot"
+  );
+
+}
+
+function closeForgotPassword(){
+
+  forgotBox.classList.add("hidden");
+
+  forgotBox.classList.remove(
+    "fullscreen-forgot"
+  );
+
+  document
+    .querySelector("#pageAuth > .card")
+    .classList.remove("hidden");
 
 }
 
