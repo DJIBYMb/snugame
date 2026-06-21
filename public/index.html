@@ -1510,6 +1510,10 @@ video{
   z-index:2;
   transition:opacity .15s;
 }
+.hide-video{
+  visibility:hidden;
+}
+
 .video-panel-cover{
   position:absolute;
   inset:0;
@@ -1521,11 +1525,12 @@ video{
 }
 
 .highlight-video{
-  opacity:0;
-}
-
-.highlight-video.video-ready{
-  opacity:1;
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  z-index:1;
 }
 
 </style>
@@ -4492,12 +4497,12 @@ async function chargerHighlights(){
 
 <video
   src="${h.media_url}"
-  class="highlight-video"
+  class="highlight-video hide-video"
   muted
   loop
   playsinline
   preload="auto"
-  onloadeddata="this.previousElementSibling.style.display='none'; this.classList.add('video-ready')"
+  oncanplay="showReadyVideo(this)"
   onclick="toggleVideoPause(this)">
 </video>
 
@@ -7329,6 +7334,18 @@ function prepareFirstPanelVideo(){
 
   firstVideo.load();
 
+}
+
+function showReadyVideo(video){
+
+  const cover =
+    video.previousElementSibling;
+
+  video.classList.remove("hide-video");
+
+  if(cover){
+    cover.style.display = "none";
+  }
 }
 
 </script>
