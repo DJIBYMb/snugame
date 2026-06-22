@@ -7192,17 +7192,18 @@ function retourDepuisVideoPublique(){
 
   stopAllVideos();
 
-  highlightsList.innerHTML = "";
+  document.body.classList.remove("video-mode");
 
   panelHighlights.classList.add("hidden");
 
-  document.body.classList.remove("video-mode");
+  highlightsList.innerHTML = "";
 
   pagePublicProfil.classList.remove("hidden");
 
-  publicProfilContent.classList.remove("hidden");
+  publicProfilContent.style.display = "block";
 
-  setPage("pagePublicProfil");
+  document.querySelector("header")?.classList.add("hidden");
+  document.querySelector(".bottom-nav")?.classList.add("hidden");
 
 }
 
