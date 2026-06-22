@@ -7021,10 +7021,6 @@ color:white!important;
   }
 </button>
 
-    <button onclick="suivreJoueur(${userId})">
-      <i class="fa-solid fa-user-plus"></i>
-    </button>
-
     <button onclick="ouvrirCarteJoueurPublic(${userId})">
       <i class="fa-solid fa-id-card"></i>
     </button>
@@ -7045,11 +7041,9 @@ color:white!important;
         class="profile-video-item"
         onclick="ouvrirVideoPublique(${v.id}, ${userId})">
 
-          <video
-          src="${v.media_url}"
-          muted
-          playsinline>
-          </video>
+          <img
+           src="${v.thumbnail_url || '/default-video-cover.png'}"
+           class="profile-video-cover">
 
           <div
           style="
