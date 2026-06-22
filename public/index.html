@@ -6950,13 +6950,101 @@ async function ouvrirVideoPublique(videoId, userId){
     return;
   }
 
-  ouvrirVideoProfil(
-    video.media_url,
-    video.id,
-    video.user_id,
-    video.thumbnail_url || "/default-video-cover.png"
-  );
+  setPage("pageDashboard");
 
+  document
+    .querySelectorAll(".panel")
+    .forEach(p=>p.classList.add("hidden"));
+
+  panelHighlights.classList.remove("hidden");
+  document.body.classList.add("video-mode");
+  messageCard.classList.add("hidden");
+
+  highlightsList.innerHTML = `
+
+    <div class="tiktok-video">
+
+      <button
+      onclick="ouvrirProfilPublic(${userId})"
+      style="
+        position:fixed;
+        top:45px;
+        left:20px;
+        z-index:999999;
+        background:rgba(0,0,0,.45);
+        color:white;
+        border:none;
+        border-radius:999px;
+        padding:10px 14px;
+        font-weight:900;
+      ">
+        ← Profil
+      </button>
+
+      <img
+      src="${video.thumbnail_url || '/default-video-cover.png'}"
+      class="video-panel-cover">
+
+      <video
+      src="${video.media_url}"
+      class="highlight-video"
+      muted
+      loop
+      playsinline
+      preload="auto"
+      onplaying="hideVideoCover(this)"
+      onclick="toggleVideoPause(this)">
+      </video>
+
+      <div class="tiktok-overlay">
+
+        <div class="tiktok-left">
+
+          <div class="tiktok-user">
+            @${data.username || ""}
+          </div>
+
+          <div class="tiktok-title">
+            ${video.titre || ""}
+          </div>
+
+        </div>
+
+        <div class="tiktok-actions">
+
+          <button
+          class="tiktok-action-btn"
+          onclick="likeHighlight(${video.id}, this)">
+            <i class="fa-regular fa-heart"></i>
+          </button>
+
+          <div class="like-count">
+            ${video.likes || 0}
+          </div>
+
+          <button
+          class="tiktok-action-btn"
+          onclick="ouvrirCommentaires(${video.id})">
+            <i class="fa-regular fa-comment"></i>
+          </button>
+
+          <div class="comment-count">
+            ${video.comments || 0}
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+  `;
+
+  const videoEl =
+    highlightsList.querySelector("video");
+
+  if(videoEl){
+    videoEl.play().catch(()=>{});
+  }
 }
 
 async function ouvrirProfilPublic(userId){
