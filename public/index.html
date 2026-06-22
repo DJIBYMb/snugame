@@ -2545,6 +2545,7 @@ id="highlightsList">
 <div class="video-tabs">
 
 <button
+id="btnAddVideo"
 onclick="ouvrirChoixVideo()">
 <i class="fa-solid fa-plus"></i>
 </button>
@@ -6960,7 +6961,7 @@ async function ouvrirVideoPublique(videoId, userId){
 
   document
   .getElementById("btnAddVideo")
-  ?.classList.add("hidden");
+  ?.style.setProperty("display","none","important");
 
   document.body.classList.add("video-mode");
   messageCard.classList.add("hidden");
