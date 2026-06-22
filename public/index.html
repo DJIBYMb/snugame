@@ -6940,6 +6940,8 @@ function chargerPolitiqueConfidentialite(){
 
 async function ouvrirVideoPublique(videoId, userId){
 
+  window.fromPublicProfileVideo = true;
+
   currentPublicUserId = userId;
 
   const data =
@@ -6975,7 +6977,7 @@ async function ouvrirVideoPublique(videoId, userId){
     <div class="tiktok-video">
 
       <div
-      onclick="ouvrirProfilPublic(${userId})"
+      onclick="retourDepuisVideoPublique(${userId})"
       style="
        position:fixed;
        top:45px;
@@ -7184,6 +7186,18 @@ color:white!important;
   </div>
 
 `;
+}
+
+function retourDepuisVideoPublique(userId){
+
+  stopAllVideos();
+
+  window.fromPublicProfileVideo = false;
+
+  document.body.classList.remove("video-mode");
+
+  ouvrirProfilPublic(userId);
+
 }
 
 async function suivreDepuisProfilPublic(userId){
