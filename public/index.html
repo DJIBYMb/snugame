@@ -6964,22 +6964,20 @@ async function ouvrirVideoPublique(videoId, userId){
 
     <div class="tiktok-video">
 
-      <button
+      <div
       onclick="ouvrirProfilPublic(${userId})"
       style="
-        position:fixed;
-        top:45px;
-        left:20px;
-        z-index:999999;
-        background:rgba(0,0,0,.45);
-        color:white;
-        border:none;
-        border-radius:999px;
-        padding:10px 14px;
-        font-weight:900;
+       position:fixed;
+       top:45px;
+       left:20px;
+       z-index:999999;
+       color:white;
+       font-size:18px;
+       font-weight:700;
+       cursor:pointer;
       ">
-        ← Profil
-      </button>
+      ← Retour
+      </div>
 
       <img
       src="${video.thumbnail_url || '/default-video-cover.png'}"
