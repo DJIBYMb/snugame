@@ -7229,7 +7229,6 @@ function retourProfilPublic(){
   document.body.classList.remove("video-mode");
 
   panelHighlights.classList.add("hidden");
-
   highlightsList.innerHTML = "";
 
   document
@@ -7246,6 +7245,11 @@ function retourProfilPublic(){
 
   setPage("pageDashboard");
 
+  ouvrirPanel("panelHighlights");
+
+  setTimeout(()=>{
+    initTikTokAutoplay();
+  },300);
 }
 
 let currentCommentVideoId = null;
