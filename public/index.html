@@ -7591,19 +7591,14 @@ function hideVideoCover(video){
 
 window.addEventListener("load", ()=>{
 
+  document.body.classList.remove("app-loading");
   document.body.classList.remove("video-mode");
 
-  document
-    .querySelector("header")
-    ?.classList.remove("hidden");
-
-  document
-    .querySelector(".bottom-nav")
-    ?.classList.remove("hidden");
+  document.querySelector("header")?.classList.remove("hidden");
 
   setPage("pageDashboard");
 
-  ouvrirPanel("panelTournois");
+  showPanel("panelTournoi");
 
 });
 
