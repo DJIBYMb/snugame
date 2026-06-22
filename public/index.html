@@ -6937,7 +6937,25 @@ async function ouvrirVideoPublique(videoId, userId){
 
   currentPublicUserId = userId;
 
-  await ouvrirVideoDepuisProfil(videoId);
+  const data =
+    await get("/public-profile/" + userId);
+
+  const video =
+    data.videos.find(
+      v => Number(v.id) === Number(videoId)
+    );
+
+  if(!video){
+    message.textContent = "Vidéo introuvable";
+    return;
+  }
+
+  ouvrirVideoProfil(
+    video.media_url,
+    video.id,
+    video.user_id,
+    video.thumbnail_url || "/default-video-cover.png"
+  );
 
 }
 
