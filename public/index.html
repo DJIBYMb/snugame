@@ -6957,6 +6957,11 @@ async function ouvrirVideoPublique(videoId, userId){
     .forEach(p=>p.classList.add("hidden"));
 
   panelHighlights.classList.remove("hidden");
+
+  document
+  .getElementById("btnAddVideo")
+  ?.classList.add("hidden");
+
   document.body.classList.add("video-mode");
   messageCard.classList.add("hidden");
 
