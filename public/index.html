@@ -7196,19 +7196,10 @@ function retourDepuisVideoPublique(userId){
 
   panelHighlights.classList.add("hidden");
 
-  highlightsList.innerHTML = "";
-
-  document
-    .querySelector("header")
-    ?.classList.add("hidden");
-
-  document
-    .querySelector(".bottom-nav")
-    ?.classList.add("hidden");
-
   setPage("pagePublicProfil");
 
   ouvrirProfilPublic(userId);
+
 }
 
 async function suivreDepuisProfilPublic(userId){
