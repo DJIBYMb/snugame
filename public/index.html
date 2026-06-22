@@ -7224,6 +7224,18 @@ async function suivreDepuisProfilPublic(userId){
 
 function retourProfilPublic(){
 
+  stopAllVideos();
+
+  document.body.classList.remove("video-mode");
+
+  panelHighlights.classList.add("hidden");
+
+  highlightsList.innerHTML = "";
+
+  document
+    .getElementById("btnAddVideo")
+    ?.style.removeProperty("display");
+
   document
     .querySelector("header")
     ?.classList.remove("hidden");
