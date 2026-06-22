@@ -5439,6 +5439,10 @@ async function ouvrirModeVideos(options = {}){
 
   ouvrirPanel("panelHighlights");
 
+  document
+  .getElementById("btnAddVideo")
+  ?.style.removeProperty("display");
+
   document.body.classList.add("video-mode");
 
   messageCard.classList.add("hidden");
