@@ -6977,7 +6977,7 @@ async function ouvrirVideoPublique(videoId, userId){
     <div class="tiktok-video">
 
       <div
-      onclick="retourDepuisVideoPublique(${userId})"
+      onclick="retourDepuisVideoPublique()"
       style="
        position:fixed;
        top:45px;
@@ -7188,7 +7188,7 @@ color:white!important;
 `;
 }
 
-function retourDepuisVideoPublique(userId){
+function retourDepuisVideoPublique(){
 
   stopAllVideos();
 
@@ -7198,7 +7198,10 @@ function retourDepuisVideoPublique(userId){
 
   setPage("pagePublicProfil");
 
-  ouvrirProfilPublic(userId);
+  publicProfilContent.classList.remove("hidden");
+
+  document.querySelector("header")?.classList.add("hidden");
+  document.querySelector(".bottom-nav")?.classList.add("hidden");
 
 }
 
