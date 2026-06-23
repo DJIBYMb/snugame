@@ -1583,6 +1583,24 @@ video{
 .texte-rouge{
   color:red !important;
 }
+.profile-video-tabs{
+  display:flex;
+  gap:10px;
+  margin:15px 0;
+}
+
+.profile-video-tabs button{
+  flex:1;
+  padding:12px;
+  border:none;
+  border-radius:12px;
+  font-weight:700;
+}
+
+.active-tab{
+  background:#1455ff !important;
+  color:white !important;
+}
 
 </style>
 
@@ -1938,6 +1956,8 @@ onclick="ouvrirParametresProfil()">
   </div>
 
 </div>
+
+<div id="profileVideoTabs"></div>
 
 <div id="profileVideosGrid" class="profile-video-grid"></div>
 
@@ -3304,6 +3324,21 @@ likesCount.textContent =
 const profileVideos =
   await get("/my-profile-videos");
 
+document.getElementById("profileVideoTabs").innerHTML = `
+  <div class="profile-video-tabs">
+
+    <button class="active-tab">
+      Mes vidéos
+    </button>
+
+    <button onclick="chargerMesFavoris()">
+      <i class="fa-regular fa-bookmark"></i>
+      Favoris
+    </button>
+
+  </div>
+`;
+
 profileVideosGrid.innerHTML =
   profileVideos && profileVideos.length
   ? profileVideos.map(v=>`
@@ -3345,6 +3380,61 @@ profileVideosGrid.innerHTML =
     data.abonnement_expire_at
     ? "Expiration : " + data.abonnement_expire_at
     : "";
+
+}
+
+async function chargerMesFavoris(){
+
+  document.getElementById("profileVideoTabs").innerHTML = `
+  <div class="profile-video-tabs">
+
+    <button onclick="ouvrirProfilCompte()">
+      Mes vidéos
+    </button>
+
+    <button class="active-tab">
+      <i class="fa-solid fa-bookmark"></i>
+      Favoris
+    </button>
+
+  </div>
+`;
+
+  const videos =
+    await get("/my-favorite-videos");
+
+  profileVideosGrid.innerHTML =
+    videos && videos.length
+    ? videos.map(v=>`
+
+      <div
+      class="profile-video-item"
+      onclick="ouvrirVideoDepuisProfil(${v.id})">
+
+        <img
+        src="${v.thumbnail_url || '/default-video-cover.png'}"
+        class="profile-video-cover">
+
+        <div
+        style="
+          position:absolute;
+          left:5px;
+          bottom:5px;
+          right:5px;
+          font-size:11px;
+          color:white;
+          background:rgba(0,0,0,.45);
+          padding:4px;
+          border-radius:6px;
+          text-align:center;
+        ">
+          🔖 ${v.favorites || 0}
+        </div>
+
+      </div>
+
+    `).join("")
+    : "<p class='small'>Aucune vidéo en favori.</p>";
 
 }
 
@@ -4639,6 +4729,20 @@ async function chargerHighlights(){
           ${h.comments || 0}
           </div>
 
+          <button
+          class="tiktok-action-btn"
+          onclick="toggleFavoriVideo(${h.id}, this)">
+           <i class="${
+           h.favorited
+           ? 'fa-solid fa-bookmark'
+           : 'fa-regular fa-bookmark'
+           }"></i>
+          </button>
+
+          <div class="favorite-count">
+           ${h.favorites || 0}
+          </div>
+
         </div>
 
       </div>
@@ -4703,6 +4807,46 @@ async function likeHighlight(id, btn){
 
   countBox.textContent = count;
 
+}
+
+async function toggleFavoriVideo(id, btn){
+
+  const result =
+    await post("/favorite-video",{
+      highlight_id:id
+    });
+
+  const icon =
+    btn.querySelector("i");
+
+  const countBox =
+    btn.nextElementSibling;
+
+  let count =
+    Number(countBox?.textContent) || 0;
+
+  if(result.includes("ajouté")){
+
+    icon.className =
+      "fa-solid fa-bookmark";
+
+    if(countBox){
+      countBox.textContent = count + 1;
+    }
+
+  }else{
+
+    icon.className =
+      "fa-regular fa-bookmark";
+
+    if(countBox){
+      countBox.textContent =
+        Math.max(count - 1, 0);
+    }
+
+  }
+
+  showNotif(result);
 }
 
 async function voirHighlight(id,url){
@@ -6980,7 +7124,7 @@ async function ouvrirVideoPublique(videoId, userId){
       onclick="retourDepuisVideoPublique()"
       style="
        position:fixed;
-       top:45px;
+       top:67px;
        left:20px;
        z-index:999999;
        color:white;
@@ -7059,6 +7203,8 @@ async function ouvrirVideoPublique(videoId, userId){
 
 async function ouvrirProfilPublic(userId){
 
+  publicProfilContent.style.opacity = "1";
+
   currentPublicUserId = userId;
 
   setPage("pagePublicProfil");
@@ -7121,7 +7267,7 @@ publicProfilContent.innerHTML = `
   <div class="profile-actions">
 
     <button
-onclick="suivreDepuisProfilPublic(${userId})"
+onclick="suivreDepuisProfilPublic(${userId}, event)"
 style="
 background:${
   data.isFollowing
@@ -7207,7 +7353,9 @@ function retourDepuisVideoPublique(){
 
 }
 
-async function suivreDepuisProfilPublic(userId){
+async function suivreDepuisProfilPublic(userId, event){
+
+  const btn = event.currentTarget;
 
   const result = await post(
     "/follow-player",
@@ -7218,8 +7366,41 @@ async function suivreDepuisProfilPublic(userId){
 
   showNotif(result);
 
-  ouvrirProfilPublic(userId);
+  const followersBox =
+    document.querySelector(
+      ".profile-mini-stats .mini-stat:first-child b"
+    );
 
+  let followers =
+    Number(followersBox?.textContent) || 0;
+
+  if(result === "Unfollow"){
+
+    btn.innerHTML =
+      '<i class="fa-solid fa-user-plus"></i>';
+
+    btn.style.background =
+      "#22c55e";
+
+    if(followersBox){
+      followersBox.textContent =
+        Math.max(followers - 1, 0);
+    }
+
+  }else if(result.includes("Abonnement réussi")){
+
+    btn.innerHTML =
+      '<i class="fa-solid fa-user-check"></i>';
+
+    btn.style.background =
+      "rgba(255,255,255,.08)";
+
+    if(followersBox){
+      followersBox.textContent =
+        followers + 1;
+    }
+
+  }
 }
 
 function retourProfilPublic(){

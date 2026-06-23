@@ -680,6 +680,15 @@ db.run(`
     console.log(err);
   }
 });
+db.run(`
+  CREATE TABLE IF NOT EXISTS video_favorites(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER,
+    highlight_id INTEGER,
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(user_id, highlight_id)
+  )
+`);
 
 
 
@@ -3775,6 +3784,9 @@ app.get("/highlights", async (req,res)=>{
 
   try{
 
+    const userId =
+      req.session.userId || 0;
+
     const highlights = await all(
       `
       SELECT
@@ -3782,27 +3794,48 @@ app.get("/highlights", async (req,res)=>{
         u.username,
         u.name,
         u.profile_photo,
+
         CASE
           WHEN hl.id IS NULL THEN 0
           ELSE 1
         END AS liked,
 
-      (
+        CASE
+          WHEN vf.id IS NULL THEN 0
+          ELSE 1
+        END AS favorited,
+
+        (
+          SELECT COUNT(*)
+          FROM highlight_comments hc
+          WHERE hc.highlight_id = h.id
+        ) AS comments
+
+        ,
+       (
         SELECT COUNT(*)
-        FROM highlight_comments hc
-        WHERE hc.highlight_id = h.id
-      ) AS comments
+        FROM video_favorites vf2
+        WHERE vf2.highlight_id = h.id
+       ) AS favorites
 
       FROM highlights h
+
       LEFT JOIN users u
-        ON u.id=h.user_id
+        ON u.id = h.user_id
+
       LEFT JOIN highlight_likes hl
-        ON hl.highlight_id=h.id
-        AND hl.user_id=?
+        ON hl.highlight_id = h.id
+        AND hl.user_id = ?
+
+      LEFT JOIN video_favorites vf
+        ON vf.highlight_id = h.id
+        AND vf.user_id = ?
+
       ORDER BY h.id DESC
       `,
       [
-        req.session.userId || 0
+        userId,
+        userId
       ]
     );
 
@@ -6555,6 +6588,116 @@ Pour toute question, contactez-nous à :
 </body>
 </html>
   `);
+
+});
+app.post("/favorite-video", async (req,res)=>{
+
+  try{
+
+    if(!req.session.userId){
+      return res.send("Connecte-toi");
+    }
+
+    const { highlight_id } = req.body;
+
+    if(!highlight_id){
+      return res.send("Vidéo manquante");
+    }
+
+    const existing = await get(
+      `
+      SELECT id
+      FROM video_favorites
+      WHERE user_id=?
+      AND highlight_id=?
+      `,
+      [req.session.userId, highlight_id]
+    );
+
+    if(existing){
+
+      await run(
+        `
+        DELETE FROM video_favorites
+        WHERE id=?
+        `,
+        [existing.id]
+      );
+
+      return res.send("Favori retiré");
+    }
+
+    await run(
+      `
+      INSERT INTO video_favorites(
+        user_id,
+        highlight_id
+      )
+      VALUES(?,?)
+      `,
+      [req.session.userId, highlight_id]
+    );
+
+    res.send("Favori ajouté");
+
+  }catch(e){
+
+    console.log(e);
+    res.send("Erreur favori");
+
+  }
+
+});
+app.get("/my-favorite-videos", async (req,res)=>{
+
+  try{
+
+    if(!req.session.userId){
+      return res.json([]);
+    }
+
+    const videos = await all(
+      `
+      SELECT
+        h.*,
+        u.username,
+        u.name,
+        u.profile_photo,
+        1 AS favorited,
+
+        (
+          SELECT COUNT(*)
+          FROM video_favorites vf2
+          WHERE vf2.highlight_id = h.id
+        ) AS favorites,
+
+        (
+          SELECT COUNT(*)
+          FROM highlight_comments hc
+          WHERE hc.highlight_id = h.id
+        ) AS comments
+
+      FROM video_favorites vf
+      JOIN highlights h
+        ON h.id = vf.highlight_id
+      LEFT JOIN users u
+        ON u.id = h.user_id
+
+      WHERE vf.user_id=?
+
+      ORDER BY vf.id DESC
+      `,
+      [req.session.userId]
+    );
+
+    res.json(videos);
+
+  }catch(e){
+
+    console.log(e);
+    res.json([]);
+
+  }
 
 });
 
