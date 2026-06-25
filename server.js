@@ -6844,6 +6844,67 @@ app.get("/my-favorite-videos", async (req,res)=>{
 
 });
 
+app.get("/notifications-unread-count", async (req,res)=>{
+
+  try{
+
+    if(!req.session.userId){
+      return res.json({count:0});
+    }
+
+    const result = await get(
+      `
+      SELECT COUNT(*) AS total
+      FROM notifications
+      WHERE user_id=?
+      AND seen=0
+      `,
+      [req.session.userId]
+    );
+
+    res.json({
+      count: result.total || 0
+    });
+
+  }catch(e){
+
+    console.log(e);
+
+    res.json({
+      count:0
+    });
+
+  }
+
+});
+app.post("/notifications-read", async (req,res)=>{
+
+  try{
+
+    if(!req.session.userId){
+      return res.send("Non connecté");
+    }
+
+    await run(
+      `
+      UPDATE notifications
+      SET seen=1
+      WHERE user_id=?
+      `,
+      [req.session.userId]
+    );
+
+    res.send("OK");
+
+  }catch(e){
+
+    console.log(e);
+    res.send("Erreur notifications");
+
+  }
+
+});
+
 app.listen(PORT, () => {
 
   console.log(

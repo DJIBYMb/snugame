@@ -1680,6 +1680,24 @@ video{
   background:linear-gradient(180deg,#020617,#0f172a);
 }
 
+.notif-badge{
+  position:absolute;
+  top:-5px;
+  right:-5px;
+  min-width:18px;
+  height:18px;
+  padding:0 4px;
+  border-radius:50%;
+  background:#ef4444;
+  color:#fff;
+  font-size:11px;
+  font-weight:700;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  line-height:1;
+}
+
 </style>
 
 <link
@@ -2013,8 +2031,17 @@ onclick="ouvrirAbonnement()">
 </button>
 
 <button
-onclick="ouvrirNotifications()">
-<i class="fa-solid fa-bell"></i>
+onclick="ouvrirNotifications()"
+style="position:relative;">
+
+  <i class="fa-solid fa-bell"></i>
+
+  <span
+  id="notifBadge"
+  class="notif-badge hidden">
+    0
+  </span>
+
 </button>
 
 <button
@@ -3524,6 +3551,8 @@ profileVideosGrid.innerHTML =
     ? "Expiration : " + data.abonnement_expire_at
     : "";
 
+    await chargerBadgeNotifications();
+
 }
 
 let followListFrom = "profile";
@@ -3592,6 +3621,24 @@ function retourDepuisFollowList(){
 
   setPage("pageProfil");
   ouvrirProfilCompte();
+
+}
+
+async function chargerBadgeNotifications(){
+
+  const data =
+    await get("/notifications-unread-count");
+
+  if(data.count > 0){
+
+    notifBadge.textContent = data.count;
+    notifBadge.classList.remove("hidden");
+
+  }else{
+
+    notifBadge.classList.add("hidden");
+
+  }
 
 }
 
@@ -5704,7 +5751,7 @@ async function chargerNotifications(){
     : "<p class='small'>Aucune notification.</p>";
 }
 
-function ouvrirNotifications(){
+async function ouvrirNotifications(){
 
   document
     .querySelectorAll(".panel")
@@ -5712,7 +5759,11 @@ function ouvrirNotifications(){
 
   setPage("pageNotifications");
 
-  chargerNotifications();
+  await chargerNotifications();
+
+  await post("/notifications-read");
+
+  await chargerBadgeNotifications();
 
 }
 
