@@ -1,3 +1,12 @@
+const {
+  initializeApp,
+  cert,
+  getApps
+} = require("firebase-admin/app");
+
+const {
+  getMessaging
+} = require("firebase-admin/messaging");
 require("dotenv").config();
 
 const express = require("express");
@@ -17,17 +26,16 @@ const rateLimit = require("express-rate-limit");
 const nodemailer = require("nodemailer");
 const compression = require("compression");
 
-const firebaseAdmin = require("firebase-admin");
-
 if(process.env.FIREBASE_SERVICE_ACCOUNT){
 
   const serviceAccount =
     JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
 
-  firebaseAdmin.initializeApp({
-    credential:
-      firebaseAdmin.credential.cert(serviceAccount)
-  });
+  if(!getApps().length){
+    initializeApp({
+      credential: cert(serviceAccount)
+    });
+  }
 
 }
 
@@ -219,7 +227,7 @@ async function envoyerNotificationPush(token, titre, message){
 
   try{
 
-    await firebaseAdmin.messaging().send({
+    await getMessaging().send({
       token,
       notification:{
         title:titre,
