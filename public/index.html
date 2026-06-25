@@ -1602,6 +1602,84 @@ video{
   color:white !important;
 }
 
+.video-menu-btn{
+  position:absolute;
+  top:8px;
+  right:8px;
+  width:32px;
+  height:32px;
+  border:none;
+  border-radius:50%;
+  background:rgba(0,0,0,.55);
+  color:white;
+  cursor:pointer;
+  z-index:5;
+}
+
+.video-profile-menu{
+  position:fixed;
+  left:50%;
+  bottom:20px;
+  transform:translateX(-50%);
+  width:90%;
+  max-width:320px;
+  background:#111827;
+  border-radius:16px;
+  padding:10px;
+  z-index:999999;
+  box-shadow:0 0 25px rgba(0,0,0,.5);
+}
+
+.video-profile-menu button{
+  width:100%;
+  margin:5px 0;
+}
+
+.video-profile-menu button:first-child{
+  color:#ef4444;
+}
+
+.profile-favorite-badge{
+  position:absolute;
+  top:8px;
+  left:8px;
+  width:32px;
+  height:32px;
+  border-radius:50%;
+  background:rgba(0,0,0,.55);
+  color:white;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  z-index:5;
+}
+
+.player-card-badge{
+  margin-top:10px;
+  display:inline-block;
+  padding:8px 14px;
+  border-radius:999px;
+  background:rgba(0,0,0,.25);
+  color:#fde047;
+  font-weight:900;
+  font-size:15px;
+}
+
+.player-card-season{
+  margin-top:8px;
+  color:#bfdbfe;
+  font-size:14px;
+  font-weight:700;
+}
+
+.player-stats{
+  margin-top:22px;
+}
+
+.player-stat{
+  background:linear-gradient(180deg,#020617,#0f172a);
+}
+
 </style>
 
 <link
@@ -1822,6 +1900,24 @@ Créer compte
 
 </section>
 
+<section id="pageFollowList" class="hidden">
+
+  <div class="card">
+
+    <button
+    class="back-btn"
+    onclick="retourDepuisFollowList()">
+      ‹
+    </button>
+
+    <h2 id="followListTitle">Liste</h2>
+
+    <div id="followListContent"></div>
+
+  </div>
+
+</section>
+
 <section
 id="pageAbonnement"
 class="hidden">
@@ -1940,22 +2036,37 @@ onclick="ouvrirParametresProfil()">
 
 <div class="profile-mini-stats">
 
-  <div class="mini-stat">
-    <span>Suiveurs</span>
-    <b id="followersCount">0</b>
+  <div
+    class="mini-stat"
+    onclick="ouvrirListeFollow('followers', currentUserId)"
+
+    style="cursor:pointer;">
+
+    <span>Abonnés</span>
+    <b id="profilFollowers">0</b>
+
+  </div>
+
+  <div
+    class="mini-stat"
+    onclick="ouvrirListeFollow('following', currentUserId)"
+
+    style="cursor:pointer;">
+
+    <span>Suivis</span>
+    <b id="profilFollowing">0</b>
+
   </div>
 
   <div class="mini-stat">
-    <span>Follow</span>
-    <b id="followingCount">0</b>
-  </div>
 
-  <div class="mini-stat">
     <span>Likes</span>
-    <b id="likesCount">0</b>
+    <b id="profilLikes">0</b>
+
   </div>
 
 </div>
+
 
 <div id="profileVideoTabs"></div>
 
@@ -2031,7 +2142,7 @@ onchange="uploadPhotoProfil()">
 
     <button
     class="back-btn"
-    onclick="ouvrirProfilCompte()">
+    onclick="retourCarteJoueur()">
       ‹
     </button>
 
@@ -2924,6 +3035,21 @@ flex-direction:column;
 
 </div>
 
+<div
+id="videoProfileMenu"
+class="hidden video-profile-menu">
+
+  <button onclick="confirmerSuppressionVideoProfil()">
+    <i class="fa-solid fa-trash"></i>
+    Supprimer la vidéo
+  </button>
+
+  <button onclick="fermerMenuVideoProfil()">
+    Annuler
+  </button>
+
+</div>
+
 <script>
 
 function messageShow(text, type = "info"){
@@ -3321,6 +3447,10 @@ followingCount.textContent =
 likesCount.textContent =
   socialStats.likes || 0;
 
+  profilFollowers.textContent = data.followers || 0;
+profilFollowing.textContent = data.following || 0;
+profilLikes.textContent = data.likes || 0;
+
 const profileVideos =
   await get("/my-profile-videos");
 
@@ -3350,6 +3480,24 @@ profileVideosGrid.innerHTML =
       src="${v.thumbnail_url || '/default-video-cover.png'}"
       class="profile-video-cover">
 
+      <button
+      class="profile-favorite-badge"
+     onclick="event.stopPropagation(); toggleFavoriVideo(${v.id}, this)">
+
+    <i class="${
+   v.favorited
+    ? 'fa-solid fa-bookmark'
+    : 'fa-regular fa-bookmark'
+    }"></i>
+
+    </button>
+
+      <button
+      class="video-menu-btn"
+      onclick="event.stopPropagation(); ouvrirMenuVideoProfil(${v.id})">
+     <i class="fa-solid fa-ellipsis-vertical"></i>
+      </button>
+
       <div
         style="
           position:absolute;
@@ -3369,7 +3517,6 @@ profileVideosGrid.innerHTML =
       </div>
     `).join("")
   : "<p class='small'>Aucune vidéo publiée.</p>";
-
   profilEmail.textContent = "";
 
    document
@@ -3380,6 +3527,114 @@ profileVideosGrid.innerHTML =
     data.abonnement_expire_at
     ? "Expiration : " + data.abonnement_expire_at
     : "";
+
+}
+
+let followListFrom = "profile";
+let followListOwnerId = null;
+
+async function ouvrirListeFollow(type, userId, from = "profile"){
+
+  followListFrom = from;
+  followListOwnerId = userId;
+
+  setPage("pageFollowList");
+
+  followListTitle.textContent =
+    type === "followers"
+    ? "Abonnés"
+    : "Suivis";
+
+  followListContent.innerHTML =
+    "Chargement...";
+
+  const url =
+    type === "followers"
+    ? "/user-followers/" + userId
+    : "/user-following/" + userId;
+
+  const users = await get(url);
+
+  followListContent.innerHTML =
+    users && users.length
+    ? users.map(u=>`
+      <div class="match" style="display:flex;align-items:center;gap:10px;">
+
+        <img
+        src="${u.profile_photo || '/default-avatar.png'}"
+        onclick="ouvrirProfilPublic(${u.id})"
+        style="
+          width:45px;
+          height:45px;
+          border-radius:50%;
+          object-fit:cover;
+          cursor:pointer;
+        ">
+
+        <div
+        onclick="ouvrirProfilPublic(${u.id})"
+        style="flex:1;cursor:pointer;">
+          <b>${u.name || ""}</b><br>
+          <span style="color:#60a5fa;">@${u.username || ""}</span>
+        </div>
+
+      </div>
+    `).join("")
+    : "<p class='small'>Aucun utilisateur.</p>";
+}
+function retourDepuisFollowList(){
+
+  pageFollowList.classList.add("hidden");
+
+  if(followListFrom === "public" && followListOwnerId){
+
+    setPage("pagePublicProfil");
+    ouvrirProfilPublic(followListOwnerId);
+    return;
+
+  }
+
+  setPage("pageProfil");
+  ouvrirProfilCompte();
+
+}
+
+function ouvrirMenuVideoProfil(videoId){
+
+  selectedVideoToDelete = videoId;
+
+  document
+    .getElementById("videoProfileMenu")
+    .classList.remove("hidden");
+
+}
+
+function fermerMenuVideoProfil(){
+
+  document
+    .getElementById("videoProfileMenu")
+    .classList.add("hidden");
+
+  selectedVideoToDelete = null;
+
+}
+function confirmerSuppressionVideoProfil(){
+
+  if(!selectedVideoToDelete){
+    return;
+  }
+
+  if(!confirm(
+    "Supprimer cette vidéo ?"
+  )){
+    return;
+  }
+
+  supprimerHighlight(
+    selectedVideoToDelete
+  );
+
+  fermerMenuVideoProfil();
 
 }
 
@@ -3415,21 +3670,13 @@ async function chargerMesFavoris(){
         src="${v.thumbnail_url || '/default-video-cover.png'}"
         class="profile-video-cover">
 
-        <div
-        style="
-          position:absolute;
-          left:5px;
-          bottom:5px;
-          right:5px;
-          font-size:11px;
-          color:white;
-          background:rgba(0,0,0,.45);
-          padding:4px;
-          border-radius:6px;
-          text-align:center;
-        ">
-          🔖 ${v.favorites || 0}
-        </div>
+        <button
+       class="profile-favorite-badge"
+       onclick="event.stopPropagation(); toggleFavoriVideo(${v.id}, this)">
+
+      <i class="fa-solid fa-bookmark"></i>
+
+      </button>
 
       </div>
 
@@ -4684,21 +4931,6 @@ async function chargerHighlights(){
             ${h.titre || ""}
           </div>
 
-          ${
-            Number(h.user_id) === Number(h.current_user_id)
-            ? `
-              <button
-              type="button"
-              class="delete-video-btn"
-              onclick="event.stopPropagation(); supprimerHighlight(${h.id});">
-
-                Supprimer
-
-              </button>
-            `
-            : ""
-          }
-
         </div>
 
         <div class="tiktok-actions">
@@ -4819,27 +5051,46 @@ async function toggleFavoriVideo(id, btn){
   const icon =
     btn.querySelector("i");
 
-  const countBox =
-    btn.nextElementSibling;
-
-  let count =
-    Number(countBox?.textContent) || 0;
-
   if(result.includes("ajouté")){
 
     icon.className =
       "fa-solid fa-bookmark";
-
-    if(countBox){
-      countBox.textContent = count + 1;
-    }
 
   }else{
 
     icon.className =
       "fa-regular fa-bookmark";
 
-    if(countBox){
+    const isFavorisPage =
+      document
+        .querySelector("#profileVideoTabs .active-tab")
+        ?.textContent
+        .includes("Favoris");
+
+    if(isFavorisPage){
+
+      const item =
+        btn.closest(".profile-video-item");
+
+      if(item){
+        item.remove();
+      }
+
+    }
+
+  }
+
+  const countBox =
+    btn.parentElement.querySelector(".favorite-count");
+
+  if(countBox){
+
+    let count =
+      Number(countBox.textContent) || 0;
+
+    if(result.includes("ajouté")){
+      countBox.textContent = count + 1;
+    }else{
       countBox.textContent =
         Math.max(count - 1, 0);
     }
@@ -4847,6 +5098,11 @@ async function toggleFavoriVideo(id, btn){
   }
 
   showNotif(result);
+
+/* Forcer les listes à se mettre à jour */
+window.favorisChanged = true;
+
+  
 }
 
 async function voirHighlight(id,url){
@@ -5255,13 +5511,36 @@ async function rechercherUtilisateurs(){
 
       <button
       class="secondary"
-      onclick="event.stopPropagation(); suivreJoueur(${u.id})">
-        ➕ Suivre
+      onclick="event.stopPropagation(); suivreDepuisRecherche(${u.id}, event)">
+      ➕ Suivre
       </button>
 
     </div>
 
   `).join("");
+
+}
+
+
+
+async function suivreDepuisRecherche(userId, event){
+
+  const btn = event.currentTarget;
+
+  const result = await post(
+    "/follow-player",
+    {
+      player_user_id:userId
+    }
+  );
+
+  showNotif(result);
+
+  if(result === "Unfollow"){
+    btn.innerHTML = "➕ Suivre";
+  }else if(result.includes("Abonnement réussi")){
+    btn.innerHTML = "✅ Suivi";
+  }
 
 }
 
@@ -5391,6 +5670,44 @@ async function ouvrirProfilJoueur(userId){
 
 }
 
+async function chargerNotifications(){
+
+  const data =
+    await get("/notifications");
+
+  notificationsList.innerHTML =
+    data && data.length
+    ? data.map(n=>{
+
+      const parts =
+        (n.message || "").split("|");
+
+      const text = parts[0];
+      const action = parts[1] || "";
+
+      let onclick = "";
+
+      if(action.startsWith("profile:")){
+        const userId =
+          action.replace("profile:","");
+
+        onclick =
+          `onclick="ouvrirProfilPublic(${userId})"`;
+      }
+
+      return `
+        <div
+        class="match"
+        ${onclick}
+        style="cursor:pointer;">
+          ${text}
+        </div>
+      `;
+
+    }).join("")
+    : "<p class='small'>Aucune notification.</p>";
+}
+
 function ouvrirNotifications(){
 
   document
@@ -5398,6 +5715,8 @@ function ouvrirNotifications(){
     .forEach(p=>p.classList.add("hidden"));
 
   setPage("pageNotifications");
+
+  chargerNotifications();
 
 }
 
@@ -5488,10 +5807,6 @@ function prepareVideoUpload(){
 }
 async function supprimerHighlight(id){
 
-  if(!confirm("Supprimer cette vidéo ?")){
-    return;
-  }
-
   const result = await post(
     "/delete-highlight",
     { id }
@@ -5499,10 +5814,26 @@ async function supprimerHighlight(id){
 
   message.textContent = result;
 
-  await chargerHighlights();
+  document
+    .querySelectorAll(`.profile-video-item`)
+    .forEach(item=>{
+
+      const btn =
+        item.querySelector(
+          `.video-menu-btn[onclick*="${id}"]`
+        );
+
+      if(btn){
+        item.remove();
+      }
+
+    });
+
+  document
+    .querySelectorAll(`.tiktok-video[data-id="${id}"]`)
+    .forEach(v=>v.remove());
 
 }
-
 async function chargerMesVideos(){
 
   const videos =
@@ -5578,6 +5909,11 @@ function prepareVideoUpload(){
 }
 
 async function ouvrirModeVideos(options = {}){
+
+  if(window.favorisChanged){
+  highlightsList.innerHTML = "";
+  window.favorisChanged = false;
+}
 
   window.openingProfileVideo = !!options.fromProfile;
 
@@ -6502,8 +6838,10 @@ function chargerConditionsUtilisation(){
 
 }
 
-
 async function ouvrirMaCarteJoueur(){
+
+  lastPlayerCardFrom = "myProfile";
+currentPublicUserId = null;
 
   setPage("pageCarteJoueur");
 
@@ -6549,25 +6887,13 @@ else if((stats.defaites || 0) > (stats.victoires || 0)){
     @${data.username || ""}
   </div>
 
-  <div
-style="
-margin-top:8px;
-font-size:15px;
-color:#93c5fd;
-font-weight:700;
-">
-📅 Saison actuelle : ${saisonActuelle}
+  <div class="player-card-season">
+  📅 Saison actuelle : ${saisonActuelle}
 </div>
 
-  <div
-  style="
-  margin-top:10px;
-  font-size:18px;
-  font-weight:900;
-  color:#fde047;
-  ">
-    ${statut}
-  </div>
+<div class="player-card-badge">
+  ${statut}
+</div>
 
 </div>
 
@@ -6652,7 +6978,21 @@ font-weight:700;
 
 }
 
+function retourCarteJoueur(){
+
+  if(lastPlayerCardFrom === "publicProfile" && currentPublicUserId){
+    ouvrirProfilPublic(currentPublicUserId);
+    return;
+  }
+
+  ouvrirProfilCompte();
+
+}
+
 async function ouvrirCarteJoueurPublic(userId){
+
+  lastPlayerCardFrom = "publicProfile";
+currentPublicUserId = userId;
 
   setPage("pageCarteJoueur");
 
@@ -6686,29 +7026,32 @@ async function ouvrirCarteJoueurPublic(userId){
         @${data.username || ""}
       </div>
 
+      <div class="player-card-season">
+        📅 Saison actuelle : ${new Date().getFullYear()}
+      </div>
+
+      <div class="player-card-badge">
+        🟡 Standard
+      </div>
+
     </div>
 
     <div class="player-stats">
 
-      <div class="player-stat">
-        <h3>${data.followers || 0}</h3>
-        <p>Suiveurs</p>
-      </div>
-
-      <div class="player-stat">
-        <h3>${data.following || 0}</h3>
-        <p>Follow</p>
-      </div>
-
-      <div class="player-stat">
-        <h3>${data.matchs || 0}</h3>
-        <p>Matchs</p>
-      </div>
+      <div class="player-stat"><h3>${data.matchs || 0}</h3><p>Matchs</p></div>
+      <div class="player-stat"><h3>${data.victoires || 0}</h3><p>Victoires</p></div>
+      <div class="player-stat"><h3>${data.defaites || 0}</h3><p>Défaites</p></div>
+      <div class="player-stat"><h3>${data.coupes || 0}</h3><p>Coupes</p></div>
+      <div class="player-stat"><h3>${data.nuls || 0}</h3><p>Nuls</p></div>
+      <div class="player-stat"><h3>${data.buts_marques || 0}</h3><p>Buts marqués</p></div>
+      <div class="player-stat"><h3>${data.buts_encaisses || 0}</h3><p>Buts encaissés</p></div>
+      <div class="player-stat"><h3>${data.niveau || 1}</h3><p>Niveau</p></div>
+      <div class="player-stat"><h3>${data.xp || 0}</h3><p>XP</p></div>
+      <div class="player-stat"><h3>${data.tournois_participes || 0}</h3><p>Tournois joués</p></div>
+      <div class="player-stat"><h3>${data.tournois_gagnes || 0}</h3><p>Tournois gagnés</p></div>
 
     </div>
-
   `;
-
 }
 
 
@@ -7247,15 +7590,25 @@ publicProfilContent.innerHTML = `
 
   <div class="profile-mini-stats">
 
-    <div class="mini-stat">
-      <span>Suiveurs</span>
-      <b>${data.followers || 0}</b>
-    </div>
+    <div
+class="mini-stat"
+onclick="ouvrirListeFollow('followers', ${userId}, 'public')"
+style="cursor:pointer;">
 
-    <div class="mini-stat">
-      <span>Follow</span>
-      <b>${data.following || 0}</b>
-    </div>
+  <span>Abonnés</span>
+  <b>${data.followers || 0}</b>
+
+</div>
+
+<div
+class="mini-stat"
+onclick="ouvrirListeFollow('following', ${userId}, 'public')"
+style="cursor:pointer;">
+
+  <span>Suivis</span>
+  <b>${data.following || 0}</b>
+
+</div>
 
     <div class="mini-stat">
       <span>Likes</span>
@@ -7306,6 +7659,18 @@ color:white!important;
           <img
            src="${v.thumbnail_url || '/default-video-cover.png'}"
            class="profile-video-cover">
+
+           <button
+           class="profile-favorite-badge"
+           onclick="event.stopPropagation(); toggleFavoriVideo(${v.id}, this)">
+
+          <i class="${
+          v.favorited
+          ? 'fa-solid fa-bookmark'
+          : 'fa-regular fa-bookmark'
+          }"></i>
+
+         </button>
 
           <div
           style="

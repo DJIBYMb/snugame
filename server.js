@@ -4097,6 +4097,29 @@ if(existing){
       [req.session.userId, player_user_id]
     );
 
+    const me = await get(
+  `
+  SELECT username, name
+  FROM users
+  WHERE id=?
+  `,
+  [req.session.userId]
+);
+
+await run(
+  `
+  INSERT INTO notifications(
+    user_id,
+    message
+  )
+  VALUES(?,?)
+  `,
+  [
+    player_user_id,
+    `${me?.username || me?.name || "Un joueur"} s'est abonné à toi|profile:${req.session.userId}`
+  ]
+);
+
     res.send("Abonnement réussi ✅");
 
   }catch(e){
@@ -4135,6 +4158,63 @@ app.get("/followers/:id", async (req,res)=>{
   }
 
 });
+app.get("/user-followers/:id", async (req,res)=>{
+
+  try{
+
+    const users = await all(
+      `
+      SELECT
+        u.id,
+        u.name,
+        u.username,
+        u.profile_photo
+      FROM followers f
+      JOIN users u
+        ON u.id = f.follower_id
+      WHERE f.following_id=?
+      ORDER BY f.id DESC
+      `,
+      [req.params.id]
+    );
+
+    res.json(users);
+
+  }catch(e){
+    console.log(e);
+    res.json([]);
+  }
+
+});
+app.get("/user-following/:id", async (req,res)=>{
+
+  try{
+
+    const users = await all(
+      `
+      SELECT
+        u.id,
+        u.name,
+        u.username,
+        u.profile_photo
+      FROM followers f
+      JOIN users u
+        ON u.id = f.following_id
+      WHERE f.follower_id=?
+      ORDER BY f.id DESC
+      `,
+      [req.params.id]
+    );
+
+    res.json(users);
+
+  }catch(e){
+    console.log(e);
+    res.json([]);
+  }
+
+});
+
 app.post("/generer-phase-finale", async (req,res)=>{
   req.url = "/tirage-automatique-poule-pro";
   return app._router.handle(req,res);
@@ -5052,15 +5132,13 @@ app.get("/player-profile/:id", async (req,res)=>{
       [user.id]
     );
 
-    const matchs = await get(
+    const stats = await get(
       `
-      SELECT COUNT(*) AS total
-      FROM player_stats
-      WHERE participant_id IN (
-        SELECT id
-        FROM participants
-        WHERE user_id=?
-      )
+      SELECT *
+      FROM user_player_stats
+      WHERE user_id=?
+      ORDER BY season_year DESC
+      LIMIT 1
       `,
       [user.id]
     );
@@ -5069,7 +5147,18 @@ app.get("/player-profile/:id", async (req,res)=>{
       ...user,
       followers:followers.total || 0,
       following:following.total || 0,
-      matchs:matchs.total || 0
+
+      matchs:stats?.matchs || 0,
+      victoires:stats?.victoires || 0,
+      defaites:stats?.defaites || 0,
+      coupes:stats?.coupes || 0,
+      nuls:stats?.nuls || 0,
+      buts_marques:stats?.buts_marques || 0,
+      buts_encaisses:stats?.buts_encaisses || 0,
+      niveau:stats?.niveau || 1,
+      xp:stats?.xp || 0,
+      tournois_participes:stats?.tournois_participes || 0,
+      tournois_gagnes:stats?.tournois_gagnes || 0
     });
 
   }catch(e){
@@ -5087,6 +5176,13 @@ app.get("/player-profile/:id", async (req,res)=>{
 app.get("/notifications", async (req,res)=>{
 
   try{
+
+    await run(
+      `
+      DELETE FROM notifications
+      WHERE created_at < datetime('now','-30 days')
+      `
+    );
 
     if(!req.session.userId){
       return res.json([]);
@@ -5113,6 +5209,7 @@ app.get("/notifications", async (req,res)=>{
   }
 
 });
+
 app.post("/delete-highlight", async (req,res)=>{
 
   try{
@@ -6084,6 +6181,17 @@ app.get("/my-profile-videos", async (req,res)=>{
       SELECT
         h.*,
 
+        CASE
+          WHEN vf.id IS NULL THEN 0
+          ELSE 1
+        END AS favorited,
+
+        (
+          SELECT COUNT(*)
+          FROM video_favorites vf2
+          WHERE vf2.highlight_id = h.id
+        ) AS favorites,
+
         (
           SELECT COUNT(*)
           FROM highlight_comments hc
@@ -6091,10 +6199,19 @@ app.get("/my-profile-videos", async (req,res)=>{
         ) AS comments
 
       FROM highlights h
+
+      LEFT JOIN video_favorites vf
+        ON vf.highlight_id = h.id
+        AND vf.user_id = ?
+
       WHERE h.user_id=?
+
       ORDER BY h.id DESC
       `,
-      [req.session.userId]
+      [
+        req.session.userId,
+        req.session.userId
+      ]
     );
 
     res.json(videos);
@@ -6337,7 +6454,7 @@ app.post("/view-highlight", async (req,res)=>{
 
 });
 
-app.get("/public-profile/:id", async (req,res)=>{
+ app.get("/public-profile/:id", async (req,res)=>{
 
   try{
 
@@ -6391,21 +6508,46 @@ if(req.session.userId){
   isFollowing = follow ? 1 : 0;
 }
 
-    const videos = await all(
-      `
-      SELECT
-        h.*,
-        (
-          SELECT COUNT(*)
-          FROM highlight_comments hc
-          WHERE hc.highlight_id = h.id
-        ) AS comments
-      FROM highlights h
-      WHERE h.user_id=?
-      ORDER BY h.id DESC
-      `,
-      [userId]
-    );
+    const viewerId =
+  req.session.userId || 0;
+
+const videos = await all(
+  `
+  SELECT
+    h.*,
+
+    CASE
+      WHEN vf.id IS NULL THEN 0
+      ELSE 1
+    END AS favorited,
+
+    (
+      SELECT COUNT(*)
+      FROM video_favorites vf2
+      WHERE vf2.highlight_id = h.id
+    ) AS favorites,
+
+    (
+      SELECT COUNT(*)
+      FROM highlight_comments hc
+      WHERE hc.highlight_id = h.id
+    ) AS comments
+
+  FROM highlights h
+
+  LEFT JOIN video_favorites vf
+    ON vf.highlight_id = h.id
+    AND vf.user_id = ?
+
+  WHERE h.user_id=?
+
+  ORDER BY h.id DESC
+  `,
+  [
+    viewerId,
+    userId
+  ]
+);
 
     res.json({
       ...user,
@@ -6426,6 +6568,7 @@ if(req.session.userId){
   }
 
 });
+
 app.get("/politique-confidentialite", (req,res)=>{
 
   res.send(`
