@@ -17,15 +17,16 @@ const rateLimit = require("express-rate-limit");
 const nodemailer = require("nodemailer");
 const compression = require("compression");
 
-const admin = require("firebase-admin");
+const firebaseAdmin = require("firebase-admin");
 
 if(process.env.FIREBASE_SERVICE_ACCOUNT){
 
   const serviceAccount =
     JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
 
-  admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount)
+  firebaseAdmin.initializeApp({
+    credential:
+      firebaseAdmin.credential.cert(serviceAccount)
   });
 
 }
@@ -218,7 +219,7 @@ async function envoyerNotificationPush(token, titre, message){
 
   try{
 
-    await admin.messaging().send({
+    await firebaseAdmin.messaging().send({
       token,
       notification:{
         title:titre,
