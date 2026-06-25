@@ -17,6 +17,19 @@ const rateLimit = require("express-rate-limit");
 const nodemailer = require("nodemailer");
 const compression = require("compression");
 
+const admin = require("firebase-admin");
+
+if(process.env.FIREBASE_SERVICE_ACCOUNT){
+
+  const serviceAccount =
+    JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT);
+
+  admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount)
+  });
+
+}
+
 
 const {
   S3Client,
@@ -198,6 +211,32 @@ function run(sql,params=[]){
     });
 
   });
+
+}
+
+async function envoyerNotificationPush(token, titre, message){
+
+  try{
+
+    await admin.messaging().send({
+      token,
+      notification:{
+        title:titre,
+        body:message
+      },
+      android:{
+        priority:"high",
+        notification:{
+          sound:"default"
+        }
+      }
+    });
+
+  }catch(e){
+
+    console.log("Erreur FCM :", e);
+
+  }
 
 }
 
@@ -688,6 +727,14 @@ db.run(`
     created_at TEXT DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(user_id, highlight_id)
   )
+`);
+db.run(`
+CREATE TABLE IF NOT EXISTS fcm_tokens(
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER,
+  token TEXT UNIQUE,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP
+)
 `);
 
 
@@ -4120,6 +4167,25 @@ await run(
   ]
 );
 
+const tokenRow = await get(
+  `
+  SELECT token
+  FROM fcm_tokens
+  WHERE user_id=?
+  ORDER BY id DESC
+  LIMIT 1
+  `,
+  [player_user_id]
+);
+
+if(tokenRow && tokenRow.token){
+  await envoyerNotificationPush(
+    tokenRow.token,
+    "Nouvel abonné",
+    `${me?.username || me?.name || "Un joueur"} s'est abonné à toi`
+  );
+}
+
     res.send("Abonnement réussi ✅");
 
   }catch(e){
@@ -6900,6 +6966,44 @@ app.post("/notifications-read", async (req,res)=>{
 
     console.log(e);
     res.send("Erreur notifications");
+
+  }
+
+});
+app.post("/save-fcm-token", async (req,res)=>{
+
+  try{
+
+    if(!req.session.userId){
+      return res.send("Non connecté");
+    }
+
+    const { token } = req.body;
+
+    if(!token){
+      return res.send("Token manquant");
+    }
+
+    await run(
+      `
+      INSERT OR REPLACE INTO fcm_tokens(
+        user_id,
+        token
+      )
+      VALUES(?,?)
+      `,
+      [
+        req.session.userId,
+        token
+      ]
+    );
+
+    res.send("Token enregistré");
+
+  }catch(e){
+
+    console.log(e);
+    res.send("Erreur token FCM");
 
   }
 

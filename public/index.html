@@ -3284,13 +3284,32 @@ async function login(){
     creationTournoiBox
       ?.classList.remove("hidden");
 
-    showNotif("Connexion réussie ✅");
+    showNotif("Connexion réussie ");
+
+    const token =
+  localStorage.getItem("fcmToken");
+
+    if(token){
+   await saveFcmToken(token);
+ }
 
     return;
   }
 
   msgLoginGeneral.textContent = result;
   msgLoginGeneral.className = "form-message error";
+
+}
+
+async function saveFcmToken(token){
+
+  if(!token){
+    return;
+  }
+
+  await post("/save-fcm-token",{
+    token
+  });
 
 }
 
