@@ -3438,21 +3438,17 @@ modifierProfilPhoto.innerHTML = `
 
   const socialStats = await get("/my-social-stats");
 
-followersCount.textContent =
-  socialStats.followers || 0;
+  profilFollowers.textContent = socialStats.followers || 0;
+profilFollowing.textContent = socialStats.following || 0;
+profilLikes.textContent = socialStats.likes || 0;
 
-followingCount.textContent =
-  socialStats.following || 0;
 
-likesCount.textContent =
-  socialStats.likes || 0;
-
-  profilFollowers.textContent = data.followers || 0;
-profilFollowing.textContent = data.following || 0;
-profilLikes.textContent = data.likes || 0;
+console.log("PROFILE TABS EXIST =", document.getElementById("profileVideoTabs"));
 
 const profileVideos =
   await get("/my-profile-videos");
+
+
 
 document.getElementById("profileVideoTabs").innerHTML = `
   <div class="profile-video-tabs">
