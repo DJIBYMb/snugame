@@ -745,6 +745,15 @@ CREATE TABLE IF NOT EXISTS fcm_tokens(
   created_at TEXT DEFAULT CURRENT_TIMESTAMP
 )
 `);
+db.run(`
+CREATE TABLE IF NOT EXISTS rewards(
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER,
+  reward TEXT,
+  sender_id INTEGER,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP
+)
+`);
 
 
 
@@ -1462,20 +1471,12 @@ app.post("/participant", async (req,res)=>{
       [result.lastID]
     );
 
-    await run(
-      `
-      INSERT INTO notifications(
-        user_id,
-        message
-      )
-      VALUES(?,?)
-      `,
-      [
-        user.id,
-        "Vous avez été ajouté au tournoi : " +
-        (tournoi.name || "")
-      ]
-    );
+    await notifierUtilisateur(
+  user.id,
+  "📢 Invitation tournoi",
+  "Tu as été ajouté au tournoi : " + (tournoi.name || ""),
+  "tournament:" + tournament_id
+);
 
     res.send("Participant ajouté");
 
@@ -2123,6 +2124,46 @@ app.post("/update-match-proof", async (req,res)=>{
         match_id
       ]
     );
+
+    const matchPlayers = await all(
+  `
+  SELECT
+    id,
+    user_id,
+    prenom
+  FROM participants
+  WHERE id IN (?,?)
+  `,
+  [
+    match.player1_id,
+    match.player2_id
+  ]
+);
+
+const tournoiScore = await get(
+  `
+  SELECT name
+  FROM tournaments
+  WHERE id=?
+  `,
+  [match.tournament_id]
+);
+
+for(const p of matchPlayers){
+
+  if(!p.user_id){
+    continue;
+  }
+
+  await notifierUtilisateur(
+    p.user_id,
+    "⚽ Résultat validé",
+    `Score validé : ${s1} - ${s2} dans ${tournoiScore?.name || "le tournoi"}`,
+    `tournament:${match.tournament_id}`
+  );
+
+}
+
     const officiel =
   await tournoiOfficiel(match.tournament_id);
 
@@ -2249,6 +2290,12 @@ if(officiel){
       ]
     );
 
+    await notifierUtilisateur(
+  championUser.user_id,
+  "👑 Félicitations !",
+  `Tu as remporté le tournoi "${tournoi.name}". Bravo Champion ! 🏆`,
+  `tournament:${match.tournament_id}`
+);
   }
 
 }
@@ -2481,6 +2528,7 @@ function genererMatchsPoule(equipes){
 
 }
 
+
 function getRoundNameRapide(nbParticipants){
 
   if(nbParticipants > 16) return "QUALIF";
@@ -2641,6 +2689,8 @@ app.get("/tirage/:id",(req,res)=>{
   );
 
 });
+
+
 
 app.get("/champion/:id",(req,res)=>{
 
@@ -3982,6 +4032,38 @@ app.post("/like-highlight", async (req,res)=>{
       `,
       [id]
     );
+    
+    const video = await get(
+  `
+  SELECT
+    h.user_id,
+    h.titre,
+    u.username,
+    u.name
+  FROM highlights h
+  LEFT JOIN users u
+    ON u.id=?
+  WHERE h.id=?
+  `,
+  [
+    req.session.userId,
+    id
+  ]
+);
+
+if(
+  video &&
+  Number(video.user_id) !== Number(req.session.userId)
+){
+
+  await notifierUtilisateur(
+    video.user_id,
+    "❤️ Nouveau like",
+    `${video.username || video.name || "Un joueur"} a aimé ta vidéo`,
+    `video:${id}`
+  );
+
+}
 
     res.send("Like ajouté");
 
@@ -4055,6 +4137,37 @@ app.post("/comment-highlight", async (req,res)=>{
         comment
       ]
     );
+
+    const video = await get(
+  `
+  SELECT
+    h.user_id,
+    h.titre,
+    p.prenom
+  FROM highlights h
+  LEFT JOIN participants p
+    ON p.id=?
+  WHERE h.id=?
+  `,
+  [
+    participant_id,
+    highlight_id
+  ]
+);
+
+if(
+  video &&
+  Number(video.user_id) !== Number(req.session.userId)
+){
+
+  await notifierUtilisateur(
+    video.user_id,
+    "💬 Nouveau commentaire",
+    `${video.prenom || "Un joueur"} a commenté ta vidéo`,
+    `video:${highlight_id}`
+  );
+
+}
 
     res.send("Commentaire ajouté");
 
@@ -4162,38 +4275,12 @@ if(existing){
   [req.session.userId]
 );
 
-await run(
-  `
-  INSERT INTO notifications(
-    user_id,
-    message
-  )
-  VALUES(?,?)
-  `,
-  [
-    player_user_id,
-    `${me?.username || me?.name || "Un joueur"} s'est abonné à toi|profile:${req.session.userId}`
-  ]
+await notifierUtilisateur(
+  player_user_id,
+  "🔔 Nouvel abonné",
+  `${me?.username || me?.name || "Un joueur"} s'est abonné à toi`,
+  `profile:${req.session.userId}`
 );
-
-const tokenRow = await get(
-  `
-  SELECT token
-  FROM fcm_tokens
-  WHERE user_id=?
-  ORDER BY id DESC
-  LIMIT 1
-  `,
-  [player_user_id]
-);
-
-if(tokenRow && tokenRow.token){
-  await envoyerNotificationPush(
-    tokenRow.token,
-    "Nouvel abonné",
-    `${me?.username || me?.name || "Un joueur"} s'est abonné à toi`
-  );
-}
 
     res.send("Abonnement réussi ✅");
 
@@ -4286,6 +4373,156 @@ app.get("/user-following/:id", async (req,res)=>{
   }catch(e){
     console.log(e);
     res.json([]);
+  }
+
+});
+app.post("/tirage-automatique-poule-pro", async (req,res)=>{
+
+  try{
+
+    if(!connected(req)){
+      return res.send("Connecte-toi");
+    }
+
+    const { tournament_id } = req.body;
+
+    if(!tournament_id){
+      return res.send("Tournoi obligatoire");
+    }
+
+    const tournoi = await get(
+      `
+      SELECT *
+      FROM tournaments
+      WHERE id=?
+      `,
+      [tournament_id]
+    );
+
+    if(!tournoi){
+      return res.send("Tournoi introuvable");
+    }
+
+    const participants = await all(
+      `
+      SELECT *
+      FROM participants
+      WHERE tournament_id=?
+      ORDER BY id
+      `,
+      [tournament_id]
+    );
+
+    if(participants.length < 2){
+      return res.send("Il faut au moins 2 participants");
+    }
+
+    const dejaMatchs = await get(
+      `
+      SELECT COUNT(*) AS total
+      FROM matches
+      WHERE tournament_id=?
+      `,
+      [tournament_id]
+    );
+
+    if(Number(dejaMatchs.total || 0) === 0){
+
+      const groupes =
+        genererGroupesAuto(participants);
+
+      let matchOrder = 1;
+
+      for(let g=0; g<groupes.length; g++){
+
+        const groupName =
+          String.fromCharCode(65 + g);
+
+        for(const p of groupes[g]){
+
+          await run(
+            `
+            UPDATE participants
+            SET group_name=?
+            WHERE id=?
+            `,
+            [
+              groupName,
+              p.id
+            ]
+          );
+
+        }
+
+        const rounds =
+          genererMatchsPoule(groupes[g]);
+
+        for(const journee of rounds){
+
+          for(const m of journee){
+
+            await run(
+              `
+              INSERT INTO matches(
+                tournament_id,
+                round,
+                group_name,
+                match_order,
+                player1_id,
+                player2_id
+              )
+              VALUES(?,?,?,?,?,?)
+              `,
+              [
+                tournament_id,
+                "POULE",
+                groupName,
+                matchOrder++,
+                m[0].id,
+                m[1].id
+              ]
+            );
+
+          }
+
+        }
+
+      }
+
+      await run(
+        `
+        UPDATE tournaments
+        SET status='started'
+        WHERE id=?
+        `,
+        [tournament_id]
+      );
+
+      for(const p of participants){
+
+        if(!p.user_id){
+          continue;
+        }
+
+        await notifierUtilisateur(
+          p.user_id,
+          "🏆 Début du tournoi",
+          `Le tournoi "${tournoi.name}" vient de commencer.`,
+          `tournament:${tournament_id}`
+        );
+
+      }
+
+      return res.send("Tirage poules généré");
+    }
+
+    return res.send("Tirage déjà généré");
+
+  }catch(e){
+
+    console.log(e);
+    res.send("Erreur tirage : " + e.message);
+
   }
 
 });
@@ -6952,6 +7189,53 @@ app.get("/notifications-unread-count", async (req,res)=>{
   }
 
 });
+async function notifierUtilisateur(userId, titre, message, action = ""){
+
+  try{
+
+    await run(
+      `
+      INSERT INTO notifications(
+        user_id,
+        message,
+        created_at
+      )
+      VALUES(?,?,datetime('now'))
+      `,
+      [
+        userId,
+        action
+          ? `${message}|${action}`
+          : message
+      ]
+    );
+
+    const tokenRow = await get(
+      `
+      SELECT token
+      FROM fcm_tokens
+      WHERE user_id=?
+      ORDER BY id DESC
+      LIMIT 1
+      `,
+      [userId]
+    );
+
+    if(tokenRow && tokenRow.token){
+      await envoyerNotificationPush(
+        tokenRow.token,
+        titre,
+        message
+      );
+    }
+
+  }catch(e){
+
+    console.log("Erreur notifierUtilisateur :", e);
+
+  }
+
+}
 app.post("/notifications-read", async (req,res)=>{
 
   console.log("FCM enregistré :", token);
@@ -7017,6 +7301,81 @@ app.post("/save-fcm-token", async (req,res)=>{
 
     console.log(e);
     res.send("Erreur token FCM");
+
+  }
+
+});
+app.post("/send-reward", async (req,res)=>{
+
+  try{
+
+    if(!connected(req)){
+      return res.send("Connecte-toi");
+    }
+
+    const { user_id, reward } = req.body;
+
+    if(!user_id || !reward){
+      return res.send("Joueur et récompense obligatoires");
+    }
+
+    await run(
+      `
+      INSERT INTO rewards(
+        user_id,
+        reward,
+        sender_id
+      )
+      VALUES(?,?,?)
+      `,
+      [
+        user_id,
+        reward,
+        req.session.userId
+      ]
+    );
+
+    await notifierUtilisateur(
+      user_id,
+      "🎁 Récompense reçue",
+      "Tu as reçu : " + reward,
+      "reward"
+    );
+
+    res.send("Récompense envoyée");
+
+  }catch(e){
+
+    console.log(e);
+    res.send("Erreur récompense");
+
+  }
+
+});
+app.get("/my-rewards", async (req,res)=>{
+
+  try{
+
+    if(!connected(req)){
+      return res.json([]);
+    }
+
+    const rewards = await all(
+      `
+      SELECT *
+      FROM rewards
+      WHERE user_id=?
+      ORDER BY id DESC
+      `,
+      [req.session.userId]
+    );
+
+    res.json(rewards);
+
+  }catch(e){
+
+    console.log(e);
+    res.json([]);
 
   }
 
