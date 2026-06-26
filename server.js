@@ -7007,6 +7007,8 @@ app.post("/save-fcm-token", async (req,res)=>{
       ]
     );
 
+    console.log("FCM enregistré :", token);
+
     res.send("Token enregistré");
 
   }catch(e){
