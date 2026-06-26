@@ -7239,7 +7239,6 @@ async function notifierUtilisateur(userId, titre, message, action = ""){
 }
 app.post("/notifications-read", async (req,res)=>{
 
-  console.log("FCM enregistré :", token);
 
   try{
 

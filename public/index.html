@@ -1698,6 +1698,15 @@ video{
   line-height:1;
 }
 
+
+
+.gift-button-container{
+    width:100%;
+    display:flex;
+    justify-content:center;
+    margin-top:10px;
+}
+
 </style>
 
 <link
@@ -2023,44 +2032,34 @@ onclick="toggleEditProfil()">
 
 </div>
 
+
 <div class="profile-actions">
 
-<button
-onclick="ouvrirAbonnement()">
-<i class="fa-solid fa-star"></i>
+   <button
+onclick="chargerMesRecompenses()"
+title="Mes récompenses">
+  <i class="fa-solid fa-gift"></i>
+</button>     
+
+
+<button onclick="ouvrirAbonnement()">
+  <i class="fa-solid fa-star"></i>
 </button>
 
-<button
-onclick="ouvrirNotifications()"
-style="position:relative;">
-
+<button onclick="ouvrirNotifications()" style="position:relative;">
   <i class="fa-solid fa-bell"></i>
-
-  <span
-  id="notifBadge"
-  class="notif-badge hidden">
-    0
-  </span>
-
+  <span id="notifBadge" class="notif-badge hidden">0</span>
 </button>
 
-<button
-onclick="ouvrirParametresProfil()">
-<i class="fa-solid fa-gear"></i>
+<button onclick="ouvrirParametresProfil()">
+  <i class="fa-solid fa-gear"></i>
 </button>
 
 <button onclick="ouvrirMaCarteJoueur()">
   <i class="fa-solid fa-id-card"></i>
 </button>
 
-<button
-onclick="chargerMesRecompenses()"
-title="Mes récompenses">
-  <i class="fa-solid fa-gift"></i>
-</button>
-
 </div>
-
 </div>
 
 <p id="profilNom"></p>
