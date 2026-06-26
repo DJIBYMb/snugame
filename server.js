@@ -6954,6 +6954,8 @@ app.get("/notifications-unread-count", async (req,res)=>{
 });
 app.post("/notifications-read", async (req,res)=>{
 
+  console.log("FCM enregistré :", token);
+
   try{
 
     if(!req.session.userId){
