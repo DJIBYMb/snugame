@@ -26,11 +26,6 @@ const rateLimit = require("express-rate-limit");
 const nodemailer = require("nodemailer");
 const compression = require("compression");
 
-const mesRecompensesBox =
-  document.getElementById("mesRecompensesBox");
-
-const mesRecompensesList =
-  document.getElementById("mesRecompensesList");
 
 if(process.env.FIREBASE_SERVICE_ACCOUNT){
 
@@ -39,7 +34,7 @@ if(process.env.FIREBASE_SERVICE_ACCOUNT){
 
   if(!getApps().length){
     initializeApp({
-      credential: cert(serviceAccount)
+      creential: cert(serviceAccount)
     });
   }
 
