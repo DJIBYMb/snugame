@@ -3725,6 +3725,33 @@ function confirmerSuppressionVideoProfil(){
 
 }
 
+async function chargerMesRecompenses(){
+
+  const mesRecompensesBox =
+    document.getElementById("mesRecompensesBox");
+
+  const mesRecompensesList =
+    document.getElementById("mesRecompensesList");
+
+  mesRecompensesBox.classList.toggle("hidden");
+
+  const rewards =
+    await get("/my-rewards");
+
+  mesRecompensesList.innerHTML =
+    rewards && rewards.length
+    ? rewards.map(r=>`
+      <div class="match">
+        🎁 ${r.reward}<br>
+        <span class="small">
+          ${r.created_at || ""}
+        </span>
+      </div>
+    `).join("")
+    : "<p class='small'>Aucune récompense pour le moment.</p>";
+
+}
+
 async function chargerMesFavoris(){
 
   document.getElementById("profileVideoTabs").innerHTML = `
@@ -8241,7 +8268,13 @@ window.addEventListener("load", ()=>{
 
 async function chargerMesRecompenses(){
 
-  mesRecompensesBox.classList.remove("hidden");
+  const mesRecompensesBox =
+    document.getElementById("mesRecompensesBox");
+
+  const mesRecompensesList =
+    document.getElementById("mesRecompensesList");
+
+  mesRecompensesBox.classList.toggle("hidden");
 
   const rewards =
     await get("/my-rewards");
@@ -8249,14 +8282,12 @@ async function chargerMesRecompenses(){
   mesRecompensesList.innerHTML =
     rewards && rewards.length
     ? rewards.map(r=>`
-      <div class="match">
-        🎁 ${r.reward}<br>
-        <span class="small">
-          ${r.created_at || ""}
-        </span>
+      <div class="card">
+        <h4>🎁 ${r.reward}</h4>
+        <p>${r.created_at}</p>
       </div>
     `).join("")
-    : "<p class='small'>Aucune récompense pour le moment.</p>";
+    : "<p>Aucune récompense.</p>";
 
 }
 
