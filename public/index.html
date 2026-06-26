@@ -3428,6 +3428,15 @@ if(!data || data.connected === false){
 
   setPage("pageProfil");
 
+  const token =
+  localStorage.getItem("fcmToken");
+
+console.log("TOKEN LOCAL =", token);
+
+if(token){
+  await saveFcmToken(token);
+}
+
   document
   .getElementById("usernameEditBox")
   ?.classList.add("hidden");
