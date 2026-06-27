@@ -765,6 +765,25 @@ CREATE TABLE IF NOT EXISTS warnings(
   created_at TEXT DEFAULT CURRENT_TIMESTAMP
 )
 `);
+db.run(`
+CREATE TABLE IF NOT EXISTS video_watch_time(
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER,
+  highlight_id INTEGER,
+  seconds INTEGER DEFAULT 0,
+  percent INTEGER DEFAULT 0,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP
+)
+`);
+db.run(`
+CREATE TABLE IF NOT EXISTS highlight_views(
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER,
+  highlight_id INTEGER,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(user_id, highlight_id)
+)
+`);
 
 
 
@@ -3948,7 +3967,37 @@ app.get("/highlights", async (req,res)=>{
         ON vf.highlight_id = h.id
         AND vf.user_id = ?
 
-      ORDER BY h.id DESC
+      ORDER BY
+     (
+      (h.vues * 1) +
+     (h.likes * 5) +
+
+     (
+       SELECT COUNT(*)
+       FROM highlight_comments hc
+       WHERE hc.highlight_id = h.id
+      ) * 8 +
+
+     (
+       SELECT COUNT(*)
+       FROM video_favorites vf2
+       WHERE vf2.highlight_id = h.id
+      ) * 10 +
+
+     (
+       SELECT COALESCE(SUM(seconds),0)
+       FROM video_watch_time wt
+       WHERE wt.highlight_id = h.id
+      ) * 1 +
+
+     (
+       SELECT COUNT(*)
+       FROM video_watch_time wt2
+       WHERE wt2.highlight_id = h.id
+      AND wt2.percent >= 80
+     ) * 25
+     ) DESC,
+      h.id DESC
       `,
       [
         userId,
@@ -4091,23 +4140,71 @@ app.post("/view-highlight", async (req,res)=>{
 
   try{
 
+    if(!connected(req)){
+      return res.json({
+        ok:false,
+        message:"Non connecté"
+      });
+    }
+
     const { id } = req.body;
 
-    await run(
+    if(!id){
+      return res.json({
+        ok:false,
+        message:"Vidéo manquante"
+      });
+    }
+
+    const inserted = await run(
       `
-      UPDATE highlights
-      SET vues = vues + 1
+      INSERT OR IGNORE INTO highlight_views(
+        user_id,
+        highlight_id
+      )
+      VALUES(?,?)
+      `,
+      [
+        req.session.userId,
+        id
+      ]
+    );
+
+    if(inserted.changes > 0){
+
+      await run(
+        `
+        UPDATE highlights
+        SET vues = vues + 1
+        WHERE id=?
+        `,
+        [id]
+      );
+
+    }
+
+    const video = await get(
+      `
+      SELECT vues
+      FROM highlights
       WHERE id=?
       `,
       [id]
     );
 
-    res.send("Vue ajoutée");
+    res.json({
+      ok:true,
+      counted: inserted.changes > 0,
+      vues: video ? video.vues : 0
+    });
 
   }catch(e){
 
     console.log(e);
-    res.send("Erreur vue");
+
+    res.json({
+      ok:false
+    });
 
   }
 
@@ -7626,6 +7723,49 @@ chargerVideos();
 </body>
 </html>
   `);
+
+});
+
+app.post("/video-watch-time", async (req,res)=>{
+
+  try{
+
+    if(!connected(req)){
+      return res.send("Non connecté");
+    }
+
+    const {
+      highlight_id,
+      seconds,
+      percent
+    } = req.body;
+
+    await run(
+      `
+      INSERT INTO video_watch_time(
+        user_id,
+        highlight_id,
+        seconds,
+        percent
+      )
+      VALUES(?,?,?,?)
+      `,
+      [
+        req.session.userId,
+        highlight_id,
+        seconds || 0,
+        percent || 0
+      ]
+    );
+
+    res.send("OK");
+
+  }catch(e){
+
+    console.log(e);
+    res.send("Erreur");
+
+  }
 
 });
 

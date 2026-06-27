@@ -3905,13 +3905,6 @@ async function prechargerDonneesUtilisateur(){
     return;
   }
 
-  await post("/view-highlight",{
-  highlight_id:videoId
-});
-
-video.vues =
-  (video.vues || 0) + 1;
-
 
   document.querySelector("header")?.classList.add("hidden");
 document.querySelector(".bottom-nav")?.classList.add("hidden");
@@ -4014,6 +4007,24 @@ async function ouvrirVideoPublique(videoId, userId){
     message.textContent = "Vidéo introuvable";
     return;
   }
+
+  const vueData =
+  await fetch("/view-highlight",{
+    method:"POST",
+    headers:{
+      "Content-Type":"application/json"
+    },
+    body:JSON.stringify({
+      id:videoId
+    })
+  }).then(r=>r.json());
+
+  if(vueData.ok){
+  video.vues = vueData.vues;
+ }
+
+  video.vues =
+  (video.vues || 0) + 1;
 
   setPage("pageDashboard");
 
@@ -6915,6 +6926,46 @@ async function ouvrirModeVideos(options = {}){
 
 }
 
+async function enregistrerTempsVideoPanel(videoEl){
+
+  if(!videoEl){
+    return;
+  }
+
+  const card =
+    videoEl.closest(".tiktok-video");
+
+  if(!card){
+    return;
+  }
+
+  const highlightId =
+    card.dataset.id;
+
+  if(!highlightId){
+    return;
+  }
+
+  const seconds =
+    Math.floor(videoEl.currentTime || 0);
+
+  const percent =
+    videoEl.duration
+    ? Math.floor((videoEl.currentTime / videoEl.duration) * 100)
+    : 0;
+
+  if(seconds < 2){
+    return;
+  }
+
+  await post("/video-watch-time",{
+    highlight_id:highlightId,
+    seconds,
+    percent
+  });
+
+}
+
 let tiktokObserver = null;
 
 function initTikTokAutoplay(){
@@ -7874,13 +7925,18 @@ async function ouvrirModeVideosAvecSon(){
 
 }
 
-function stopAllVideos(){
+
+  function stopAllVideos(){
 
   document
-    .querySelectorAll(".tiktok-video video")
+    .querySelectorAll("#panelHighlights .tiktok-video video")
     .forEach(v=>{
+
+      enregistrerTempsVideoPanel(v);
+
       v.pause();
       v.muted = true;
+
     });
 
 }
@@ -8343,15 +8399,59 @@ async function updateUsername(){
 function stopAllVideosExcept(currentVideo){
 
   document
-    .querySelectorAll(".tiktok-video video")
+    .querySelectorAll("#panelHighlights .tiktok-video video")
     .forEach(video=>{
 
       if(video !== currentVideo){
+
+        enregistrerTempsVideoPanel(video);
+
         video.pause();
         video.currentTime = video.currentTime;
+
       }
 
     });
+
+}
+
+async function enregistrerTempsVideoPanel(videoEl){
+
+  if(!videoEl){
+    return;
+  }
+
+  const card =
+    videoEl.closest(".tiktok-video");
+
+  if(!card){
+    return;
+  }
+
+  const highlightId =
+    card.dataset.id;
+
+  if(!highlightId){
+    return;
+  }
+
+  const seconds =
+    Math.floor(videoEl.currentTime || 0);
+
+  const percent =
+    videoEl.duration
+    ? Math.floor((videoEl.currentTime / videoEl.duration) * 100)
+    : 0;
+
+  if(seconds < 2){
+    return;
+  }
+
+  await post("/video-watch-time",{
+    highlight_id:highlightId,
+    seconds,
+    percent
+  });
 
 }
 
