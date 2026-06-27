@@ -755,6 +755,16 @@ CREATE TABLE IF NOT EXISTS rewards(
   created_at TEXT DEFAULT CURRENT_TIMESTAMP
 )
 `);
+db.run(`
+CREATE TABLE IF NOT EXISTS warnings(
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER,
+  admin_id INTEGER,
+  reason TEXT,
+  video_id INTEGER,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP
+)
+`);
 
 
 
@@ -7378,6 +7388,244 @@ app.get("/my-rewards", async (req,res)=>{
     res.json([]);
 
   }
+
+});
+app.get("/admin/videos", async (req,res)=>{
+
+  try{
+
+    if(!isAdmin(req)){
+      return res.send("Accès admin refusé");
+    }
+
+    const videos = await all(
+      `
+      SELECT
+        h.id,
+        h.titre,
+        h.description,
+        h.media_url,
+        h.thumbnail_url,
+        h.created_at,
+        h.user_id,
+        u.name,
+        u.username,
+        u.email
+      FROM highlights h
+      LEFT JOIN users u
+        ON u.id=h.user_id
+      ORDER BY h.id DESC
+      `
+    );
+
+    res.json(videos);
+
+  }catch(e){
+
+    console.log(e);
+    res.json([]);
+
+  }
+
+});
+app.post("/admin/delete-video-warning", async (req,res)=>{
+
+  try{
+
+    if(!isAdmin(req)){
+      return res.send("Accès admin refusé");
+    }
+
+    const { video_id, reason } = req.body;
+
+    if(!video_id || !reason){
+      return res.send("Vidéo et raison obligatoires");
+    }
+
+    const video = await get(
+      `
+      SELECT *
+      FROM highlights
+      WHERE id=?
+      `,
+      [video_id]
+    );
+
+    if(!video){
+      return res.send("Vidéo introuvable");
+    }
+
+    await run(
+      `
+      INSERT INTO warnings(
+        user_id,
+        admin_id,
+        reason,
+        video_id
+      )
+      VALUES(?,?,?,?)
+      `,
+      [
+        video.user_id,
+        req.session.userId || 0,
+        reason,
+        video_id
+      ]
+    );
+
+    await notifierUtilisateur(
+      video.user_id,
+      "⚠️ Avertissement",
+      "Ta vidéo a été supprimée : " + reason,
+      "warning"
+    );
+
+    await run(
+      `
+      DELETE FROM highlights
+      WHERE id=?
+      `,
+      [video_id]
+    );
+
+    res.send("Vidéo supprimée et avertissement envoyé");
+
+  }catch(e){
+
+    console.log(e);
+    res.send("Erreur suppression vidéo");
+
+  }
+
+});
+app.get("/admin/videos-page", async (req,res)=>{
+
+  if(!isAdmin(req)){
+    return res.send("Accès admin refusé");
+  }
+
+  res.send(`
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin vidéos SNUGAME</title>
+<style>
+body{
+  background:#07111f;
+  color:white;
+  font-family:Arial;
+  padding:20px;
+}
+.card{
+  background:#0f172a;
+  border:1px solid #334155;
+  border-radius:16px;
+  padding:15px;
+  margin:15px 0;
+}
+video,img{
+  width:100%;
+  max-width:320px;
+  border-radius:12px;
+}
+button{
+  padding:12px;
+  border:none;
+  border-radius:10px;
+  background:#ef4444;
+  color:white;
+  font-weight:bold;
+  cursor:pointer;
+}
+textarea{
+  width:100%;
+  min-height:70px;
+  margin:10px 0;
+}
+</style>
+</head>
+<body>
+
+<h1>🎥 Admin vidéos SNUGAME</h1>
+
+<div id="videos"></div>
+
+<script>
+const ADMIN_PASSWORD = new URLSearchParams(location.search).get("admin");
+
+async function chargerVideos(){
+
+  const res = await fetch("/admin/videos?admin=" + ADMIN_PASSWORD);
+  const videos = await res.json();
+
+  document.getElementById("videos").innerHTML =
+    videos.length
+    ? videos.map(v => \`
+      <div class="card">
+        <h2>\${v.titre || "Sans titre"}</h2>
+
+        <p>
+          <b>Publié par :</b>
+          \${v.name || ""} (@\${v.username || ""})<br>
+          <b>Email :</b> \${v.email || ""}<br>
+          <b>User ID :</b> \${v.user_id}<br>
+          <b>Vidéo ID :</b> \${v.id}
+        </p>
+
+        <video controls src="\${v.media_url}"></video>
+
+        <textarea
+        id="reason_\${v.id}"
+        placeholder="Raison de suppression / avertissement"></textarea>
+
+        <button onclick="supprimerVideo(\${v.id})">
+          Supprimer + avertir
+        </button>
+      </div>
+    \`).join("")
+    : "<p>Aucune vidéo.</p>";
+}
+
+async function supprimerVideo(id){
+
+  const reason =
+    document.getElementById("reason_" + id).value.trim();
+
+  if(!reason){
+    alert("Écris une raison");
+    return;
+  }
+
+  if(!confirm("Supprimer cette vidéo et avertir le joueur ?")){
+    return;
+  }
+
+  const res = await fetch(
+    "/admin/delete-video-warning?admin=" + ADMIN_PASSWORD,
+    {
+      method:"POST",
+      headers:{
+        "Content-Type":"application/json"
+      },
+      body:JSON.stringify({
+        video_id:id,
+        reason
+      })
+    }
+  );
+
+  alert(await res.text());
+  chargerVideos();
+}
+
+chargerVideos();
+</script>
+
+</body>
+</html>
+  `);
 
 });
 
