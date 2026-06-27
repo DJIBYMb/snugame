@@ -1793,10 +1793,20 @@ button:active{
 }
 
 .gift-button-container{
-    width:100%;
-    display:flex;
-    justify-content:center;
-    margin-top:10px;
+
+  display:flex;
+  justify-content:center;
+  margin-top:15px;
+
+}
+
+.gift-button-container button{
+
+  width:60px;
+  height:60px;
+  border-radius:50%;
+  font-size:24px;
+
 }
 
 </style>
@@ -2127,13 +2137,6 @@ onclick="toggleEditProfil()">
 
 <div class="profile-actions">
 
-   <button
-onclick="chargerMesRecompenses()"
-title="Mes récompenses">
-  <i class="fa-solid fa-gift"></i>
-</button>     
-
-
 <button onclick="ouvrirAbonnement()">
   <i class="fa-solid fa-star"></i>
 </button>
@@ -2152,6 +2155,19 @@ title="Mes récompenses">
 </button>
 
 </div>
+
+<div class="gift-button-container">
+
+  <button
+  class="secondary"
+  onclick="chargerMesRecompenses()">
+
+    <i class="fa-solid fa-gift"></i>
+
+  </button>
+
+</div>
+
 </div>
 
 <p id="profilNom"></p>
