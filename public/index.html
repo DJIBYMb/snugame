@@ -63,14 +63,14 @@ header{
   position:sticky;
   top:0;
   z-index:10;
-  box-shadow:0 0 25px #1455ff66;
+  box-shadow:none;
 }
 
 header h1{
   margin:0;
   font-size:20px;
   letter-spacing:2px;
-  text-shadow:0 0 12px #ffffff88;
+  text-shadow:none;
 }
 
 header p{
@@ -105,16 +105,9 @@ header p{
   padding:20px;
   border-radius:22px;
   margin:16px 0;
-  box-shadow:
-    0 0 25px #00000055,
-    inset 0 0 20px #ffffff05;
-  backdrop-filter:blur(10px);
+  box-shadow:none;
+ backdrop-filter:none;
   animation:none!important;
-}
-
-.card:hover{
-  border-color:#3b82f6;
-  box-shadow:0 0 25px #1455ff55;
 }
 
 .grid{
@@ -148,7 +141,7 @@ input:focus,
 select:focus,
 textarea:focus{
   border-color:var(--cyan);
-  box-shadow:0 0 15px #06b6d455;
+  box-shadow:none;
 }
 
 button{
@@ -157,13 +150,26 @@ button{
   font-weight:900;
   cursor:pointer;
   transition:.2s ease;
-  box-shadow:0 8px 18px #00000044;
+  box-shadow:none;
+}
+
+.card:hover{
+  border-color:#334155;
+  box-shadow:
+    0 0 25px #00000055,
+    inset 0 0 20px #ffffff05;
 }
 
 button:hover{
-  transform:translateY(-2px) scale(1.02);
-  box-shadow:0 0 24px #22c55e88;
+  transform:none;
+  box-shadow:0 8px 18px #00000044;
 }
+
+button:active{
+  transform:scale(.96);
+  opacity:.9;
+}
+
 
 .secondary{
   background:linear-gradient(135deg,#2563eb,#06b6d4);
@@ -223,7 +229,7 @@ button:hover{
   padding:14px;
   border-radius:18px;
   margin:10px 0;
-  box-shadow:0 0 16px #00000044;
+  box-shadow:none;
 }
 
 .phase-title{
@@ -283,7 +289,7 @@ th{
   border-radius:16px;
   margin-top:10px;
   border:1px solid #334155;
-  box-shadow:0 0 18px #1455ff55;
+  box-shadow:none;
 }
 
 .small{
@@ -332,7 +338,7 @@ h2,h3{
   border-radius:16px;
   padding:12px;
   margin:12px 0;
-  box-shadow:0 0 14px #1455ff44;
+  box-shadow:none;
 }
 
 .bracket-player{
@@ -358,7 +364,7 @@ h2,h3{
 
 .bracket-winner{
   border:1px solid #22c55e;
-  box-shadow:0 0 12px #22c55e66;
+  box-shadow:none;
 }
 
 #notifBox{
@@ -381,7 +387,7 @@ h2,h3{
   padding:14px 18px;
   border-radius:16px;
   min-width:260px;
-  box-shadow:0 0 25px #1455ff88;
+  box-shadow:none;
   animation:slideNotif .3s ease;
   font-weight:bold;
 }
@@ -464,8 +470,7 @@ button:disabled{
       #1455ff,
       #7c2cff
     );
-  box-shadow:
-    0 0 40px #1455ff66;
+  box-shadow:none;
 }
 
 .player-profile-cover{
@@ -1741,13 +1746,6 @@ button:active{
   box-shadow:0 8px 20px rgba(0,0,0,.18);
 }
 
-.card:active,
-.match:active,
-.participant-card:active,
-.profile-video-item:active{
-  transform:scale(.98);
-}
-
 .skeleton{
   background:linear-gradient(
     90deg,
@@ -1792,21 +1790,34 @@ button:active{
 
 }
 
-.gift-button-container{
+.profile-header{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+}
 
+.profile-actions{
   display:flex;
   justify-content:center;
-  margin-top:15px;
+  gap:10px;
+  flex-wrap:nowrap;
+}
 
+.gift-button-container{
+  width:100%;
+  display:flex;
+  justify-content:center;
+  margin-top:14px;
 }
 
 .gift-button-container button{
-
-  width:60px;
-  height:60px;
+  width:58px;
+  height:58px;
   border-radius:50%;
-  font-size:24px;
-
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:22px;
 }
 
 </style>
@@ -2207,11 +2218,6 @@ onclick="toggleEditProfil()">
 
 </div>
 
-
-<div id="profileVideoTabs"></div>
-
-<div id="profileVideosGrid" class="profile-video-grid"></div>
-
 <div
 id="mesRecompensesBox"
 class="card hidden">
@@ -2221,6 +2227,11 @@ class="card hidden">
   <div id="mesRecompensesList"></div>
 
 </div>
+
+
+<div id="profileVideoTabs"></div>
+
+<div id="profileVideosGrid" class="profile-video-grid"></div>
 
 <div
 id="usernameEditBox"
