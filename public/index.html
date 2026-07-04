@@ -3332,18 +3332,6 @@ onclick="toggleCreationTournoi()">
       </button>
 
       <button
-      class="warning owner-only"
-      onclick="creerParticipantsTest()">
-      🧪 Créer 32 joueurs test
-      </button>
-
-      <button
-      class="warning owner-only"
-      onclick="simulerTournoiRapide()">
-      🤖 Simuler tournoi rapide
-      </button>
-
-      <button
       class="secondary owner-only"
       onclick="creerLienPublic()">
       Créer lien public
@@ -10347,29 +10335,6 @@ async function ouvrirTableauProprietaire(){
   appliquerDroitsProprietaire();
 
   await ouvrirPanel("panelProprietaire");
-
-}
-async function simulerTournoiRapide(){
-
-  if(!tournoiSelect.value){
-    message.textContent = "Choisis un tournoi";
-    return;
-  }
-
-  message.textContent = "Simulation en cours...";
-
-  const result = await post("/simuler-tournoi-rapide",{
-    tournament_id: tournoiSelect.value
-  });
-
-  message.textContent = result;
-
-  await afficherTiragePoulePro();
-  await afficherClassementSelonType();
-  await afficherPhaseFinale();
-
-  ouvrirCompetitionBloc("blocArbreTournoi");
-  await afficherArbreTournoi();
 
 }
 
