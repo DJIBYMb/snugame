@@ -34,7 +34,7 @@ if(process.env.FIREBASE_SERVICE_ACCOUNT){
 
   if(!getApps().length){
     initializeApp({
-      creential: cert(serviceAccount)
+      credential: cert(serviceAccount)
     });
   }
 
@@ -201,6 +201,45 @@ function connected(req){
 
 }
 
+async function verifierProprietaireTournoi(req, tournament_id){
+
+  if(!connected(req)){
+    return {
+      ok:false,
+      message:"Connecte-toi"
+    };
+  }
+
+  const tournoi = await get(
+    `
+    SELECT *
+    FROM tournaments
+    WHERE id=?
+    `,
+    [tournament_id]
+  );
+
+  if(!tournoi){
+    return {
+      ok:false,
+      message:"Tournoi introuvable"
+    };
+  }
+
+  if(Number(tournoi.user_id) !== Number(req.session.userId)){
+    return {
+      ok:false,
+      message:"Accès refusé : seul le propriétaire du tournoi peut modifier"
+    };
+  }
+
+  return {
+    ok:true,
+    tournoi
+  };
+
+}
+
 function isAdmin(req){
 
   return (
@@ -357,6 +396,7 @@ function escapeHtml(text){
 }
 
 db.serialize(()=>{
+
 
   db.run(`
     CREATE TABLE IF NOT EXISTS users(
@@ -579,6 +619,7 @@ db.run(`
   ALTER TABLE participants
   ADD COLUMN group_name TEXT
 `,()=>{});
+
 db.run(`
   ALTER TABLE matches
   ADD COLUMN locked INTEGER DEFAULT 0
@@ -784,7 +825,6 @@ CREATE TABLE IF NOT EXISTS highlight_views(
   UNIQUE(user_id, highlight_id)
 )
 `);
-
 
 
 app.get("/", async (req,res)=>{
@@ -1068,6 +1108,23 @@ app.post("/register", async (req,res)=>{
           return res.send("Email déjà utilisé");
         }
 
+        const userId = this.lastID;
+
+        const autoUsername =
+          "user" + userId;
+
+        await run(
+          `
+          UPDATE users
+          SET username=?
+          WHERE id=?
+          `,
+          [
+            autoUsername,
+            userId
+          ]
+        );
+
         await run(
           `
           DELETE FROM email_codes
@@ -1076,7 +1133,7 @@ app.post("/register", async (req,res)=>{
           [cleanEmail]
         );
 
-        req.session.userId = this.lastID;
+        req.session.userId = userId;
 
         res.send("Compte créé");
 
@@ -1091,7 +1148,6 @@ app.post("/register", async (req,res)=>{
   }
 
 });
-
 app.post("/login", loginLimiter, (req,res)=>{
 
   const { email,password } = req.body;
@@ -1284,11 +1340,11 @@ app.post("/tournoi", async (req,res)=>{
     }
 
     if(
-      maxTeams > 20 &&
+      maxTeams > 33 &&
       user.abonnement !== 1
     ){
       return res.send(
-        "Abonnement requis pour créer un tournoi de plus de 20 équipes"
+        "Abonnement requis pour créer un tournoi de plus de 33 équipes"
       );
     }
 
@@ -1351,28 +1407,36 @@ app.post("/tournoi", async (req,res)=>{
 
 });
 
-app.get("/tournois",(req,res)=>{
+app.get("/tournois", async (req,res)=>{
 
   if(!connected(req)){
     return res.json([]);
   }
 
-  db.all(
-    `
-    SELECT
-      t.*,
-      p.prenom AS champion_name
-    FROM tournaments t
-    LEFT JOIN participants p
-    ON p.id = t.champion_id
-    WHERE t.user_id=?
-    ORDER BY t.id DESC
-    `,
-    [req.session.userId],
-    (err,rows)=>{
-      res.json(rows || []);
-    }
-  );
+  try{
+
+    const rows = await all(
+      `
+      SELECT
+        t.*,
+        pchamp.prenom AS champion_name
+      FROM tournaments t
+      LEFT JOIN participants pchamp
+      ON pchamp.id = t.champion_id
+      WHERE t.user_id=?
+      ORDER BY t.id DESC
+      `,
+      [req.session.userId]
+    );
+
+    res.json(rows);
+
+  }catch(e){
+
+    console.log(e);
+    res.json([]);
+
+  }
 
 });
 app.post("/participant", async (req,res)=>{
@@ -1408,6 +1472,12 @@ app.post("/participant", async (req,res)=>{
     if(!tournoi){
       return res.send("Tournoi introuvable");
     }
+    const ownerCheck =
+  await verifierProprietaireTournoi(req, tournament_id);
+
+if(!ownerCheck.ok){
+  return res.send(ownerCheck.message);
+}
 
     const count = await get(
       `
@@ -1557,6 +1627,29 @@ async (req,res)=>{
 
     const { ids } = req.body;
 
+    const participant = await get(
+  `
+  SELECT tournament_id
+  FROM participants
+  WHERE id=?
+  `,
+  [ids[0]]
+);
+
+if(!participant){
+  return res.send("Participant introuvable");
+}
+
+const ownerCheck =
+  await verifierProprietaireTournoi(
+    req,
+    participant.tournament_id
+  );
+
+if(!ownerCheck.ok){
+  return res.send(ownerCheck.message);
+}
+
     if(
       !ids ||
       !Array.isArray(ids) ||
@@ -1598,6 +1691,13 @@ async (req,res)=>{
     if(!tournament_id){
       return res.send("Tournoi manquant");
     }
+
+    const ownerCheck =
+  await verifierProprietaireTournoi(req, tournament_id);
+
+if(!ownerCheck.ok){
+  return res.send(ownerCheck.message);
+}
 
     await run(
       `
@@ -1665,6 +1765,13 @@ app.post("/reset-tournoi", async (req,res)=>{
     if(!tournament_id){
       return res.send("Tournoi obligatoire");
     }
+
+    const ownerCheck =
+  await verifierProprietaireTournoi(req, tournament_id);
+
+if(!ownerCheck.ok){
+  return res.send(ownerCheck.message);
+}
 
     await run(
       `
@@ -2097,6 +2204,22 @@ app.post("/update-match-proof", async (req,res)=>{
     if(!match){
       return res.send("Match introuvable");
     }
+
+    const tournoi = await get(
+  `
+  SELECT *
+  FROM tournaments
+  WHERE id=?
+  `,
+  [match.tournament_id]
+);
+
+if(
+  !tournoi ||
+  Number(tournoi.user_id) !== Number(req.session.userId)
+){
+  return res.send("Accès refusé : seul le propriétaire du tournoi peut valider le score");
+}
 
     if(Number(match.locked) === 1){
       return res.send("Score verrouillé");
@@ -2572,87 +2695,45 @@ function getRoundNameRapide(nbParticipants){
 
 function genererMatchsRapide(participants){
 
+  const total = participants.length;
+
+  if(total !== 32){
+    return {
+      error:"Ce format rapide exige exactement 32 équipes"
+    };
+  }
+
   const melange =
     [...participants]
     .sort(()=>Math.random() - 0.5);
 
-  const total = melange.length;
-
-  let round = "FINALE";
-  let tailleTableau = 2;
-
-  if(total > 16){
-    round = "QUALIF";
-    tailleTableau = 16;
-  }else if(total > 8){
-    round = "8ES";
-    tailleTableau = 16;
-  }else if(total > 4){
-    round = "QUARTS";
-    tailleTableau = 8;
-  }else if(total > 2){
-    round = "DEMIS";
-    tailleTableau = 4;
-  }
-
-  const nombreByes =
-    tailleTableau - total;
-
-  const nombreJoueursQuiJouent =
-    total - nombreByes;
-
   const matchs = [];
 
-  const joueursQuiJouent =
-    melange.slice(0,nombreJoueursQuiJouent);
+  for(let i=0; i<melange.length; i+=2){
 
-  const joueursQualifiesAuto =
-    melange.slice(nombreJoueursQuiJouent);
+    matchs.push({
+      player1:melange[i],
+      player2:melange[i + 1],
+      round:"16ES",
+      leg:"ALLER"
+    });
 
-  for(let i=0; i<joueursQuiJouent.length; i+=2){
-
-    const joueur1 = joueursQuiJouent[i];
-    const joueur2 = joueursQuiJouent[i + 1];
-
-    if(!joueur1 || !joueur2) continue;
-
-    if(round === "QUALIF"){
-
-      matchs.push({
-        player1:joueur1,
-        player2:joueur2,
-        round,
-        leg:"MATCH SIMPLE"
-      });
-
-    }else{
-
-      matchs.push({
-        player1:joueur1,
-        player2:joueur2,
-        round,
-        leg:"ALLER"
-      });
-
-      matchs.push({
-        player1:joueur1,
-        player2:joueur2,
-        round,
-        leg:"RETOUR"
-      });
-
-    }
+    matchs.push({
+      player1:melange[i],
+      player2:melange[i + 1],
+      round:"16ES",
+      leg:"RETOUR"
+    });
 
   }
 
   return {
-    round,
+    round:"16ES",
     matchs,
-    byes:joueursQualifiesAuto
+    byes:[]
   };
 
 }
-
 
 app.get("/tirage/:id",(req,res)=>{
 
@@ -2883,6 +2964,123 @@ button{
     display:none;
   }
 }
+
+
+
+
+.wc-wrap{
+  width:100%;
+  overflow:auto;
+  padding:20px 0 70px;
+}
+
+.wc-board{
+  position:relative;
+  width:2050px;
+  min-height:1850px;
+  background:#020617;
+}
+
+.wc-lines{
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  pointer-events:none;
+  z-index:1;
+}
+
+.wc-lines path{
+  stroke:#e5e7eb;
+  stroke-width:3;
+  fill:none;
+}
+
+.wc-col{
+  position:absolute;
+  width:270px;
+  z-index:2;
+}
+
+.wc-title{
+  text-align:center;
+  color:#60a5fa;
+  font-size:22px;
+  font-weight:900;
+  margin-bottom:16px;
+}
+
+.wc-match{
+  position:absolute;
+  width:330px;
+  min-height:92px;
+  background:#0f172a;
+  border:1px solid #2563eb;
+  border-radius:10px;
+  padding:10px;
+  box-sizing:border-box;
+}
+
+.wc-player{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  font-weight:900;
+  margin:5px 0;
+}
+
+.wc-player.winner{
+  color:#22c55e;
+}
+
+.wc-score{
+  color:#facc15;
+}
+
+.wc-total{
+  color:#facc15;
+  text-align:center;
+  font-weight:900;
+  font-size:13px;
+  margin-top:8px;
+}
+
+.wc-status{
+  text-align:center;
+  color:#cbd5e1;
+  font-size:12px;
+  margin-top:6px;
+}
+
+.wc-champion{
+  background:linear-gradient(135deg,#f59e0b,#fde047);
+  color:#111827;
+  text-align:center;
+  font-size:22px;
+  font-weight:900;
+}
+
+.wc-score small{
+  font-size:10px;
+  color:#94a3b8;
+  font-weight:700;
+  margin:0 4px;
+}
+
+@media(max-width:768px){
+
+  .wc-wrap{
+    overflow:auto;
+    min-height:1150px;
+  }
+
+  .wc-board{
+    transform:scale(.75);
+    transform-origin:top left;
+  }
+
+}
+
 </style>
 </head>
 <body>
@@ -2969,6 +3167,302 @@ button{
 
     }
 
+function regrouperDuelsPublic(matchs){
+
+  const duels = {};
+
+  matchs.forEach(m=>{
+
+    if(m.round === "POULE") return;
+
+    const key =
+      [m.player1_id,m.player2_id]
+      .sort((a,b)=>Number(a)-Number(b))
+      .join("_");
+
+    const ordreDuel =
+      Math.ceil(Number(m.match_order || m.id || 1) / 2);
+
+    if(!duels[key]){
+      duels[key] = {
+        order:ordreDuel,
+        player1_id:m.player1_id,
+        player2_id:m.player2_id,
+        player1_name:m.player1_name,
+        player2_name:m.player2_name,
+        aller:null,
+        retour:null
+      };
+    }
+
+    if(m.journee === "ALLER" || m.leg === "ALLER"){
+      duels[key].aller = m;
+    }
+
+    if(m.journee === "RETOUR" || m.leg === "RETOUR"){
+      duels[key].retour = m;
+    }
+
+  });
+
+  return Object.values(duels).sort((a,b)=>a.order-b.order);
+}
+
+function duelPublicHtml(d){
+
+  if(!d){
+    return `
+      <div class="public-match">
+        <div class="public-player">
+          <span>À déterminer</span>
+          <span class="public-score">Aller - Retour -</span>
+        </div>
+
+        <div class="public-player">
+          <span>À déterminer</span>
+          <span class="public-score">Aller - Retour -</span>
+        </div>
+
+        <div class="public-status">⏳ En attente</div>
+      </div>
+    `;
+  }
+
+  const a = d.aller;
+  const r = d.retour;
+
+  const playedAller = a && Number(a.played) === 1;
+  const playedRetour = r && Number(r.played) === 1;
+
+  const total1 =
+    (playedAller ? Number(a.score1 || 0) : 0) +
+    (playedRetour ? Number(r.score1 || 0) : 0);
+
+  const total2 =
+    (playedAller ? Number(a.score2 || 0) : 0) +
+    (playedRetour ? Number(r.score2 || 0) : 0);
+
+  const winnerId =
+    Number(r?.winner_id || a?.winner_id || 0);
+
+  return `
+    <div class="public-match">
+
+      <div class="public-player ${winnerId === Number(d.player1_id) ? "winner" : ""}">
+        <span>${escapeHtml(d.player1_name || "À déterminer")}</span>
+        <span class="public-score">
+          Aller ${playedAller ? a.score1 : "-"}
+          Retour ${playedRetour ? r.score1 : "-"}
+        </span>
+      </div>
+
+      <div class="public-player ${winnerId === Number(d.player2_id) ? "winner" : ""}">
+        <span>${escapeHtml(d.player2_name || "À déterminer")}</span>
+        <span class="public-score">
+          Aller ${playedAller ? a.score2 : "-"}
+          Retour ${playedRetour ? r.score2 : "-"}
+        </span>
+      </div>
+
+      <div class="public-total">Total : ${total1} - ${total2}</div>
+
+      <div class="public-status">
+        ${playedAller && playedRetour ? "✅ Duel terminé" : "⏳ En attente"}
+      </div>
+
+    </div>
+  `;
+}
+
+const ordrePublic = ["16ES","8ES","QUARTS","DEMIS","FINALE"];
+
+const nombrePublic = {
+  "16ES":16,
+  "8ES":8,
+  "QUARTS":4,
+  "DEMIS":2,
+  "FINALE":1
+};
+
+function afficherArbrePublic(){
+
+  const data = [];
+
+  const ordre = ["16ES","8ES","QUARTS","DEMIS","FINALE"];
+
+  ordre.forEach(tour=>{
+    data.push({
+      tour,
+      matchs: matches.filter(m => m.round === tour)
+    });
+  });
+
+  function regrouperDuels(matchs){
+
+    const duels = {};
+
+    matchs.forEach(m=>{
+
+      const key =
+        [m.player1_id, m.player2_id]
+        .sort((a,b)=>Number(a)-Number(b))
+        .join("_");
+
+      const ordreDuel =
+        Math.ceil(Number(m.match_order || m.id || 1) / 2);
+
+      if(!duels[key]){
+        duels[key] = {
+          order:ordreDuel,
+          player1_id:m.player1_id,
+          player2_id:m.player2_id,
+          player1_name:m.player1_name,
+          player2_name:m.player2_name,
+          aller:null,
+          retour:null
+        };
+      }
+
+      if(m.journee === "ALLER" || m.leg === "ALLER"){
+        duels[key].aller = m;
+      }
+
+      if(m.journee === "RETOUR" || m.leg === "RETOUR"){
+        duels[key].retour = m;
+      }
+
+    });
+
+    return Object.values(duels).sort((a,b)=>a.order-b.order);
+  }
+
+  function duelHtml(d){
+
+    if(!d){
+      return `
+        <div class="wc-player">
+          <span>À déterminer</span>
+          <span class="wc-score"><small>Aller</small> - <small>Retour</small> -</span>
+        </div>
+        <div class="wc-player">
+          <span>À déterminer</span>
+          <span class="wc-score"><small>Aller</small> - <small>Retour</small> -</span>
+        </div>
+        <div class="wc-status">En attente</div>
+      `;
+    }
+
+    const a = d.aller;
+    const r = d.retour;
+
+    const playedAller = a && Number(a.played) === 1;
+    const playedRetour = r && Number(r.played) === 1;
+
+    const total1 =
+      (playedAller ? Number(a.score1 || 0) : 0) +
+      (playedRetour ? Number(r.score1 || 0) : 0);
+
+    const total2 =
+      (playedAller ? Number(a.score2 || 0) : 0) +
+      (playedRetour ? Number(r.score2 || 0) : 0);
+
+    const winnerId = Number(r?.winner_id || a?.winner_id || 0);
+
+    return `
+      <div class="wc-player ${winnerId === Number(d.player1_id) ? "winner" : ""}">
+        <span>${escapeHtml(d.player1_name || "À déterminer")}</span>
+        <span class="wc-score">
+          <small>Aller</small> ${playedAller ? a.score1 : "-"}
+          <small>Retour</small> ${playedRetour ? r.score1 : "-"}
+        </span>
+      </div>
+
+      <div class="wc-player ${winnerId === Number(d.player2_id) ? "winner" : ""}">
+        <span>${escapeHtml(d.player2_name || "À déterminer")}</span>
+        <span class="wc-score">
+          <small>Aller</small> ${playedAller ? a.score2 : "-"}
+          <small>Retour</small> ${playedRetour ? r.score2 : "-"}
+        </span>
+      </div>
+
+      <div class="wc-total">Total : ${total1} - ${total2}</div>
+      <div class="wc-status">
+        ${playedAller && playedRetour ? "✅ Duel terminé" : "⏳ En attente"}
+      </div>
+    `;
+  }
+
+  const config = {
+    "16ES":  { x:20,   count:16, gap:110 },
+    "8ES":   { x:500,  count:8,  gap:220 },
+    "QUARTS":{ x:920,  count:4,  gap:440 },
+    "DEMIS": { x:1300, count:2,  gap:880 },
+    "FINALE":{ x:1650, count:1,  gap:0 }
+  };
+
+  const topStart = 70;
+  const roundsData = {};
+
+  ordre.forEach(tour=>{
+    const bloc = data.find(x => x.tour === tour);
+    roundsData[tour] = bloc ? regrouperDuels(bloc.matchs) : [];
+  });
+
+  let htmlRounds = "";
+
+  ordre.forEach(tour=>{
+
+    const c = config[tour];
+
+    htmlRounds += `
+      <div class="wc-col" style="left:${c.x}px;top:0;">
+        <div class="wc-title">${tour}</div>
+    `;
+
+    for(let i=0; i<c.count; i++){
+
+      const y = topStart + i * c.gap;
+      const duel = roundsData[tour][i];
+
+      htmlRounds += `
+        <div class="wc-match" id="wc-${tour}-${i}" style="top:${y}px;">
+          ${duelHtml(duel)}
+        </div>
+      `;
+    }
+
+    htmlRounds += `</div>`;
+
+  });
+
+  return `
+    <div class="card">
+      <h2>🌳 Arbre du tournoi</h2>
+
+      <div class="wc-wrap">
+        <div class="wc-board" id="wcBoard">
+
+          <svg class="wc-lines" id="wcLines"></svg>
+
+          ${htmlRounds}
+
+          <div class="wc-col" style="left:1480px;top:0;">
+            <div class="wc-title">CHAMPION</div>
+
+            <div class="wc-match wc-champion" id="wcChampion" style="top:560px;">
+              🏆<br><br>
+              ${champion && champion.prenom ? escapeHtml(champion.prenom) : "À déterminer"}
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+html += afficherArbrePublic();
+
     html += `
 </div>
 
@@ -3040,6 +3534,111 @@ ${
 </div>
 
 <script>
+function drawWorldCupLines(){
+
+  const board = document.getElementById("wcBoard");
+  const svg = document.getElementById("wcLines");
+
+  if(!board || !svg) return;
+
+  svg.innerHTML = "";
+  svg.setAttribute("width", board.scrollWidth);
+  svg.setAttribute("height", board.scrollHeight);
+
+  function getPos(el){
+
+    let x = 0;
+    let y = 0;
+    let current = el;
+
+    while(current && current !== board){
+      x += current.offsetLeft;
+      y += current.offsetTop;
+      current = current.offsetParent;
+    }
+
+    return {
+      left:x,
+      right:x + el.offsetWidth,
+      centerY:y + el.offsetHeight / 2
+    };
+
+  }
+
+  function path(d){
+
+    const p = document.createElementNS(
+      "http://www.w3.org/2000/svg",
+      "path"
+    );
+
+    p.setAttribute("d", d);
+    svg.appendChild(p);
+
+  }
+
+  function connect(aEl, bEl, toEl){
+
+    if(!aEl || !bEl || !toEl) return;
+
+    const a = getPos(aEl);
+    const b = getPos(bEl);
+    const to = getPos(toEl);
+
+    const x1 = a.right;
+    const x2 = to.left;
+    const joinX = x1 + 35;
+    const midY = (a.centerY + b.centerY) / 2;
+    const endX = x2 - 35;
+
+    path(\`M \${x1} \${a.centerY} H \${joinX}\`);
+    path(\`M \${b.right} \${b.centerY} H \${joinX}\`);
+    path(\`M \${joinX} \${a.centerY} V \${b.centerY}\`);
+    path(\`M \${joinX} \${midY} H \${endX} V \${to.centerY} H \${x2}\`);
+
+  }
+
+  const schema = [
+    ["16ES", "8ES", 16],
+    ["8ES", "QUARTS", 8],
+    ["QUARTS", "DEMIS", 4],
+    ["DEMIS", "FINALE", 2]
+  ];
+
+  schema.forEach(([from,to,count])=>{
+
+    for(let i = 0; i < count; i += 2){
+
+      connect(
+        document.getElementById(\`wc-\${from}-\${i}\`),
+        document.getElementById(\`wc-\${from}-\${i + 1}\`),
+        document.getElementById(\`wc-\${to}-\${i / 2}\`)
+      );
+
+    }
+
+  });
+
+  const finale = document.getElementById("wc-FINALE-0");
+  const champion = document.getElementById("wcChampion");
+
+  if(finale && champion){
+
+    const a = getPos(finale);
+    const b = getPos(champion);
+
+    path(\`M \${a.right} \${a.centerY} H \${b.left}\`);
+
+  }
+
+}
+
+requestAnimationFrame(()=>{
+  requestAnimationFrame(()=>{
+    drawWorldCupLines();
+  });
+});
+
 setTimeout(()=>{
   location.reload();
 },30000);
@@ -4494,6 +5093,13 @@ app.post("/tirage-automatique-poule-pro", async (req,res)=>{
 
     const { tournament_id } = req.body;
 
+    const ownerCheck =
+  await verifierProprietaireTournoi(req, tournament_id);
+
+if(!ownerCheck.ok){
+  return res.send(ownerCheck.message);
+}
+
     if(!tournament_id){
       return res.send("Tournoi obligatoire");
     }
@@ -4535,6 +5141,59 @@ app.post("/tirage-automatique-poule-pro", async (req,res)=>{
     );
 
     if(Number(dejaMatchs.total || 0) === 0){
+
+      if(tournoi.type === "rapide"){
+
+  if(participants.length !== 32){
+    return res.send("Le tournoi rapide exige exactement 32 équipes");
+  }
+
+  const tirage =
+    genererMatchsRapide(participants);
+
+  if(tirage.error){
+    return res.send(tirage.error);
+  }
+
+  let matchOrder = 1;
+
+  for(const m of tirage.matchs){
+
+    await run(
+      `
+      INSERT INTO matches(
+        tournament_id,
+        round,
+        match_order,
+        journee,
+        player1_id,
+        player2_id
+      )
+      VALUES(?,?,?,?,?,?)
+      `,
+      [
+        tournament_id,
+        m.round,
+        matchOrder++,
+        m.leg,
+        m.player1.id,
+        m.player2.id
+      ]
+    );
+
+  }
+
+  await run(
+    `
+    UPDATE tournaments
+    SET status='started'
+    WHERE id=?
+    `,
+    [tournament_id]
+  );
+
+  return res.send("Tournoi rapide 32 généré");
+}
 
       const groupes =
         genererGroupesAuto(participants);
@@ -4735,8 +5394,8 @@ app.get("/join/:code", async (req,res)=>{
       [tournoi.id]
     );
 
-    if(tournoi.status !== "draft"){
-      return res.send("Les inscriptions sont fermées. Le tirage a commencé.");
+    if(tournoi.status === "started" || tournoi.status === "finished"){
+     return res.send("Les inscriptions sont fermées. Le tirage a commencé.");
     }
 
     if(count.total >= tournoi.max_teams){
@@ -4922,10 +5581,21 @@ async function joinTournament(){
     code:document.getElementById("joinCode").value.trim()
   };
 
-  const result = await post("/join-tournament",payload);
+  const result = await post("/join-tournament", payload);
+
+  if(result.startsWith("dashboardUrl:")){
+
+    window.location.href =
+      result.replace("dashboardUrl:","");
+
+    return;
+
+  }
 
   msg.innerHTML = result;
+
 }
+
 </script>
 
 </body>
@@ -4969,9 +5639,9 @@ app.post("/join-tournament", async (req,res)=>{
       return res.send("Tournoi introuvable");
     }
 
-    if(tournoi.status !== "draft"){
-      return res.send("Les inscriptions sont fermées. Le tirage a commencé.");
-    }
+    if(tournoi.status === "started" || tournoi.status === "finished"){
+    return res.send("Les inscriptions sont fermées. Le tirage a commencé.");
+   }
 
     const count = await get(
       `
@@ -5016,35 +5686,50 @@ app.post("/join-tournament", async (req,res)=>{
       [cleanEmail]
     );
 
-    if(!user){
+if(!user){
 
-      const hash =
-        await bcrypt.hash(password,10);
+  const hash =
+    await bcrypt.hash(password,10);
 
-      const created = await run(
-        `
-        INSERT INTO users(
-          name,
-          email,
-          password
-        )
-        VALUES(?,?,?)
-        `,
-        [
-          name.trim(),
-          cleanEmail,
-          hash
-        ]
-      );
+  const created = await run(
+    `
+    INSERT INTO users(
+      name,
+      email,
+      password
+    )
+    VALUES(?,?,?)
+    `,
+    [
+      name.trim(),
+      cleanEmail,
+      hash
+    ]
+  );
 
-      user = {
-        id:created.lastID,
-        name:name.trim(),
-        email:cleanEmail
-      };
+  const autoUsername =
+    "user" + created.lastID;
 
-    }
+  await run(
+    `
+    UPDATE users
+    SET username=?
+    WHERE id=?
+    `,
+    [
+      autoUsername,
+      created.lastID
+    ]
+  );
 
+  user = {
+    id:created.lastID,
+    name:name.trim(),
+    email:cleanEmail,
+    username:autoUsername
+  };
+
+}
     const already = await get(
       `
       SELECT *
@@ -5065,27 +5750,29 @@ app.post("/join-tournament", async (req,res)=>{
     const result = await run(
       `
       INSERT INTO participants(
-        tournament_id,
-        prenom,
-        email,
-        username,
-        telephone,
-        numero_serie,
-        club_logo,
-        preuve
-      )
-      VALUES(?,?,?,?,?,?,?,?)
+  tournament_id,
+  prenom,
+  email,
+  user_id,
+  username,
+  telephone,
+  numero_serie,
+  club_logo,
+  preuve
+)
+VALUES(?,?,?,?,?,?,?,?,?)
       `,
       [
-        tournoi.id,
-        name.trim(),
-        cleanEmail,
-        name.trim(),
-        "",
-        "",
-        "",
-        "Inscription lien tournoi"
-      ]
+  tournoi.id,
+  name.trim(),
+  cleanEmail,
+  user.id,
+  user.username || name.trim(),
+  "",
+  "",
+  "",
+  "Inscription lien tournoi"
+]
     );
 
     await run(
@@ -5100,35 +5787,9 @@ app.post("/join-tournament", async (req,res)=>{
 
     req.session.userId = user.id;
 
-    res.send(`
-  ✅ Inscription réussie.<br>
-  Tu es ajouté automatiquement aux participants.<br>
-  Attends que l'organisateur lance le tirage.<br><br>
-
-  ${
-    tournoi.group_link
-    ? `
-      <a
-      href="${escapeHtml(tournoi.group_link)}"
-      target="_blank"
-      style="
-        display:block;
-        background:#22c55e;
-        color:#052e16;
-        padding:12px;
-        border-radius:10px;
-        text-align:center;
-        font-weight:bold;
-        text-decoration:none;
-      ">
-      Rejoindre le groupe du tournoi
-      </a>
-    `
-    : ""
-  }
-`);
-      
-    
+    res.send(
+  "dashboardUrl:/app"
+);
 
   }catch(e){
 
@@ -5766,16 +6427,6 @@ app.post("/delete-old-videos", async (req,res)=>{
   res.send("Anciennes vidéos supprimées");
 });
 
-function getNextRoundRapide(round){
-
-  if(round === "QUALIF") return "8ES";
-  if(round === "8ES") return "QUARTS";
-  if(round === "QUARTS") return "DEMIS";
-  if(round === "DEMIS") return "FINALE";
-
-  return null;
-
-}
 
 async function gererTournoiRapideApresScore(match){
 
@@ -5809,119 +6460,229 @@ async function gererTournoiRapideApresScore(match){
     return;
   }
 
-  if(updatedMatch.journee === "MATCH SIMPLE"){
-
-    await qualifierJoueurRapide(
+  const duel = await all(
+    `
+    SELECT *
+    FROM matches
+    WHERE tournament_id=?
+    AND round=?
+    AND (
+      (player1_id=? AND player2_id=?)
+      OR
+      (player1_id=? AND player2_id=?)
+    )
+    `,
+    [
       updatedMatch.tournament_id,
       updatedMatch.round,
-      updatedMatch.winner_id
-    );
+      updatedMatch.player1_id,
+      updatedMatch.player2_id,
+      updatedMatch.player2_id,
+      updatedMatch.player1_id
+    ]
+  );
 
+  const aller =
+    duel.find(m => m.journee === "ALLER");
+
+  const retour =
+    duel.find(m => m.journee === "RETOUR");
+
+  if(!aller || !retour){
     return;
   }
 
   if(
-    updatedMatch.journee === "ALLER" ||
-    updatedMatch.journee === "RETOUR"
+    Number(aller.played) !== 1 ||
+    Number(retour.played) !== 1
   ){
-
-    const duel = await all(
-      `
-      SELECT *
-      FROM matches
-      WHERE tournament_id=?
-      AND round=?
-      AND (
-        (player1_id=? AND player2_id=?)
-        OR
-        (player1_id=? AND player2_id=?)
-      )
-      `,
-      [
-        updatedMatch.tournament_id,
-        updatedMatch.round,
-        updatedMatch.player1_id,
-        updatedMatch.player2_id,
-        updatedMatch.player2_id,
-        updatedMatch.player1_id
-      ]
-    );
-
-    const aller =
-      duel.find(m => m.journee === "ALLER");
-
-    const retour =
-      duel.find(m => m.journee === "RETOUR");
-
-    const belle =
-      duel.find(m => m.journee === "BELLE");
-
-    if(!aller || !retour){
-      return;
-    }
-
-    if(
-      Number(aller.played) !== 1 ||
-      Number(retour.played) !== 1
-    ){
-      return;
-    }
-
-    if(aller.winner_id === retour.winner_id){
-
-      await qualifierJoueurRapide(
-        updatedMatch.tournament_id,
-        updatedMatch.round,
-        aller.winner_id
-      );
-
-      return;
-    }
-
-    if(!belle){
-
-      await run(
-        `
-        INSERT INTO matches(
-          tournament_id,
-          round,
-          match_order,
-          journee,
-          player1_id,
-          player2_id
-        )
-        VALUES(?,?,?,?,?,?)
-        `,
-        [
-          updatedMatch.tournament_id,
-          updatedMatch.round,
-          999,
-          "BELLE",
-          updatedMatch.player1_id,
-          updatedMatch.player2_id
-        ]
-      );
-
-      return;
-    }
-
+    return;
   }
 
-  if(updatedMatch.journee === "BELLE"){
+  let winner = null;
 
-    await qualifierJoueurRapide(
-      updatedMatch.tournament_id,
-      updatedMatch.round,
-      updatedMatch.winner_id
-    );
+const player1 = aller.player1_id;
+const player2 = aller.player2_id;
 
-  }
+const totalPlayer1 =
+  Number(aller.score1 || 0) +
+  Number(retour.score1 || 0);
+
+const totalPlayer2 =
+  Number(aller.score2 || 0) +
+  Number(retour.score2 || 0);
+
+const encaissesPlayer1 =
+  Number(aller.score2 || 0) +
+  Number(retour.score2 || 0);
+
+const encaissesPlayer2 =
+  Number(aller.score1 || 0) +
+  Number(retour.score1 || 0);
+
+// 1. Score cumulé
+if(totalPlayer1 > totalPlayer2){
+  winner = player1;
+}
+else if(totalPlayer2 > totalPlayer1){
+  winner = player2;
+}
+
+// 2. Moins de buts encaissés
+else if(encaissesPlayer1 < encaissesPlayer2){
+  winner = player1;
+}
+else if(encaissesPlayer2 < encaissesPlayer1){
+  winner = player2;
+}
+
+// 3. Vainqueur du match retour
+else if(Number(retour.score1) > Number(retour.score2)){
+  winner = retour.player1_id;
+}
+else if(Number(retour.score2) > Number(retour.score1)){
+  winner = retour.player2_id;
+}
+
+// 4. Toujours égalité
+else{
+  return;
+}
+await qualifierJoueurRapide(
+  updatedMatch.tournament_id,
+  updatedMatch.round,
+  winner
+);
 
 }
 
+app.get("/classement-rapide-32/:id", async (req,res)=>{
+
+  try{
+
+    const participants = await all(
+      `
+      SELECT
+        p.id,
+        p.prenom AS equipe,
+
+        COUNT(m.id) AS j,
+
+        SUM(
+          CASE
+            WHEN m.winner_id = p.id THEN 1
+            ELSE 0
+          END
+        ) AS g,
+
+        SUM(
+          CASE
+            WHEN m.played = 1
+            AND m.score1 = m.score2 THEN 1
+            ELSE 0
+          END
+        ) AS n,
+
+        SUM(
+          CASE
+            WHEN m.loser_id = p.id THEN 1
+            ELSE 0
+          END
+        ) AS p_defaites,
+
+        SUM(
+          CASE
+            WHEN m.player1_id = p.id THEN m.score1
+            WHEN m.player2_id = p.id THEN m.score2
+            ELSE 0
+          END
+        ) AS bp,
+
+        SUM(
+          CASE
+            WHEN m.player1_id = p.id THEN m.score2
+            WHEN m.player2_id = p.id THEN m.score1
+            ELSE 0
+          END
+        ) AS bc
+
+      FROM participants p
+
+      LEFT JOIN matches m
+        ON m.tournament_id = p.tournament_id
+        AND m.played = 1
+        AND (
+          m.player1_id = p.id
+          OR m.player2_id = p.id
+        )
+
+      WHERE p.tournament_id=?
+
+      GROUP BY p.id
+
+      ORDER BY
+        (bp - bc) DESC,
+        bp DESC,
+        p.id ASC
+      `,
+      [req.params.id]
+    );
+
+    res.json(
+      participants.map((p,index)=>{
+
+        const j = Number(p.j || 0);
+        const g = Number(p.g || 0);
+        const n = Number(p.n || 0);
+        const d = Number(p.p_defaites || 0);
+        const bp = Number(p.bp || 0);
+        const bc = Number(p.bc || 0);
+
+        const pts =
+          g * 3 + n;
+
+        const maxPts =
+          j * 3;
+
+        const percent =
+          maxPts > 0
+          ? Math.round((pts / maxPts) * 100)
+          : 0;
+
+        const pe =
+          maxPts - pts;
+
+        return {
+          numero:index + 1,
+          equipe:p.equipe,
+          pts,
+          j,
+          g,
+          n,
+          p:d,
+          bp,
+          bc,
+          dif:bp - bc,
+          percent,
+          pe
+        };
+
+      })
+    );
+
+  }catch(e){
+
+    console.log(e);
+    res.json([]);
+
+  }
+
+});
+
+
 function getNextRoundRapide(round){
 
-  if(round === "QUALIF") return "8ES";
+  if(round === "16ES") return "8ES";
   if(round === "8ES") return "QUARTS";
   if(round === "QUARTS") return "DEMIS";
   if(round === "DEMIS") return "FINALE";
@@ -5952,118 +6713,118 @@ async function qualifierJoueurRapide(
           status='finished'
       WHERE id=?
       `,
-      [
-        winnerId,
-        tournamentId
-      ]
+      [winnerId, tournamentId]
     );
 
     return;
   }
 
   await run(
-  `
-  INSERT INTO rapid_qualifiers(
-    tournament_id,
-    round,
-    player_id
-  )
-  VALUES(?,?,?)
-  `,
-  [
-    tournamentId,
-    round,
-    winnerId
-  ]
-);
-
-const qualifies = await all(
-  `
-  SELECT *
-  FROM rapid_qualifiers
-  WHERE tournament_id=?
-  AND round=?
-  `,
-  [
-    tournamentId,
-    round
-  ]
-);
-
-if(qualifies.length % 2 !== 0){
-  return;
-}
-
-const alreadyNext = await all(
-  `
-  SELECT *
-  FROM matches
-  WHERE tournament_id=?
-  AND round=?
-  `,
-  [
-    tournamentId,
-    nextRound
-  ]
-);
-
-if(alreadyNext.length > 0){
-  return;
-}
-
-for(let i=0; i<qualifies.length; i+=2){
-
-  const p1 = qualifies[i].player_id;
-  const p2 = qualifies[i + 1].player_id;
-
-  await run(
     `
-    INSERT INTO matches(
+    INSERT INTO rapid_qualifiers(
       tournament_id,
       round,
-      match_order,
-      journee,
-      player1_id,
-      player2_id
+      player_id
     )
-    VALUES(?,?,?,?,?,?)
+    VALUES(?,?,?)
     `,
-    [
-      tournamentId,
-      nextRound,
-      i + 1,
-      "ALLER",
-      p1,
-      p2
-    ]
+    [tournamentId, round, winnerId]
   );
 
-  await run(
+  const qualifies = await all(
     `
-    INSERT INTO matches(
-      tournament_id,
-      round,
-      match_order,
-      journee,
-      player1_id,
-      player2_id
-    )
-    VALUES(?,?,?,?,?,?)
+    SELECT *
+    FROM rapid_qualifiers
+    WHERE tournament_id=?
+    AND round=?
+    ORDER BY id
     `,
-    [
-      tournamentId,
-      nextRound,
-      i + 2,
-      "RETOUR",
-      p1,
-      p2
-    ]
+    [tournamentId, round]
   );
 
-}
+  if(qualifies.length % 2 !== 0){
+    return;
+  }
+
+  for(let i=0; i<qualifies.length; i+=2){
+
+    const p1 = qualifies[i].player_id;
+    const p2 = qualifies[i + 1].player_id;
+
+    const alreadyPair = await get(
+      `
+      SELECT id
+      FROM matches
+      WHERE tournament_id=?
+      AND round=?
+      AND (
+        (player1_id=? AND player2_id=?)
+        OR
+        (player1_id=? AND player2_id=?)
+      )
+      LIMIT 1
+      `,
+      [
+        tournamentId,
+        nextRound,
+        p1,
+        p2,
+        p2,
+        p1
+      ]
+    );
+
+    if(alreadyPair){
+      continue;
+    }
+
+    await run(
+      `
+      INSERT INTO matches(
+        tournament_id,
+        round,
+        match_order,
+        journee,
+        player1_id,
+        player2_id
+      )
+      VALUES(?,?,?,?,?,?)
+      `,
+      [
+        tournamentId,
+        nextRound,
+        i + 1,
+        "ALLER",
+        p1,
+        p2
+      ]
+    );
+
+    await run(
+      `
+      INSERT INTO matches(
+        tournament_id,
+        round,
+        match_order,
+        journee,
+        player1_id,
+        player2_id
+      )
+      VALUES(?,?,?,?,?,?)
+      `,
+      [
+        tournamentId,
+        nextRound,
+        i + 2,
+        "RETOUR",
+        p1,
+        p2
+      ]
+    );
+
+  }
 
 }
-
 app.post("/fix-champion/:id", async (req,res)=>{
 
   const match = await get(
@@ -6844,31 +7605,6 @@ app.post("/delete-highlight-comment", async (req,res)=>{
 
     console.log(e);
     res.send("Erreur suppression commentaire");
-
-  }
-
-});
-app.post("/view-highlight", async (req,res)=>{
-
-  try{
-
-    const { highlight_id } = req.body;
-
-    await run(
-      `
-      UPDATE highlights
-      SET vues = COALESCE(vues,0) + 1
-      WHERE id=?
-      `,
-      [highlight_id]
-    );
-
-    res.send("ok");
-
-  }catch(e){
-
-    console.log(e);
-    res.send("erreur");
 
   }
 
@@ -7768,6 +8504,503 @@ app.post("/video-watch-time", async (req,res)=>{
   }
 
 });
+
+app.post("/admin/create-test-participants", async (req,res)=>{
+
+  try{
+
+    if(!isAdmin(req)){
+      return res.send("Accès admin refusé");
+    }
+
+    const { tournament_id } = req.body;
+
+    if(!tournament_id){
+      return res.send("Tournoi obligatoire");
+    }
+
+    const tournoi = await get(
+      `SELECT * FROM tournaments WHERE id=?`,
+      [tournament_id]
+    );
+
+    if(!tournoi){
+      return res.send("Tournoi introuvable");
+    }
+
+    await run(
+      `DELETE FROM participants WHERE tournament_id=?`,
+      [tournament_id]
+    );
+
+    await run(
+      `DELETE FROM matches WHERE tournament_id=?`,
+      [tournament_id]
+    );
+
+    await run(
+      `DELETE FROM rapid_qualifiers WHERE tournament_id=?`,
+      [tournament_id]
+    );
+
+    for(let i=1; i<=32; i++){
+
+      const name =
+        "Test Joueur " + i;
+
+      const result = await run(
+        `
+        INSERT INTO participants(
+          tournament_id,
+          prenom,
+          username,
+          preuve
+        )
+        VALUES(?,?,?,?)
+        `,
+        [
+          tournament_id,
+          name,
+          "test_joueur_" + i,
+          "Compte test"
+        ]
+      );
+
+      await run(
+        `
+        INSERT OR IGNORE INTO player_stats(
+          participant_id
+        )
+        VALUES(?)
+        `,
+        [result.lastID]
+      );
+
+    }
+
+    await run(
+      `
+      UPDATE tournaments
+      SET max_teams=32,
+          type='rapide',
+          status='open',
+          champion_id=NULL
+      WHERE id=?
+      `,
+      [tournament_id]
+    );
+
+    res.send("32 participants test créés ✅");
+
+  }catch(e){
+
+    console.log(e);
+    res.send("Erreur création participants test : " + e.message);
+
+  }
+
+});
+
+app.get("/join-info/:code", async (req,res)=>{
+
+  try{
+
+    const code = req.params.code;
+
+    const tournoi = await get(
+      `
+      SELECT id, name, group_link
+      FROM tournaments
+      WHERE join_code=?
+      `,
+      [code]
+    );
+
+    if(!tournoi){
+      return res.json({
+        ok:false,
+        message:"Lien tournoi invalide"
+      });
+    }
+
+    res.json({
+      ok:true,
+      tournament_id:tournoi.id,
+      tournament_name:tournoi.name,
+      group_link:tournoi.group_link || ""
+    });
+
+  }catch(e){
+
+    console.log(e);
+
+    res.json({
+      ok:false,
+      message:"Erreur lien tournoi"
+    });
+
+  }
+
+});
+
+app.get("/owner/:tournament_id", async (req,res)=>{
+
+  try{
+
+    const tournoi = await get(
+      `
+      SELECT user_id
+      FROM tournaments
+      WHERE id=?
+      `,
+      [req.params.tournament_id]
+    );
+
+    if(!tournoi){
+      return res.json({
+        owner:false
+      });
+    }
+
+    res.json({
+      owner:Number(tournoi.user_id) === Number(req.session.userId)
+    });
+
+  }catch(e){
+
+    res.json({
+      owner:false
+    });
+
+  }
+
+});
+
+app.get("/mes-tournois-participant", async (req,res)=>{
+
+  if(!connected(req)){
+    return res.json([]);
+  }
+
+  const user = await get(
+    `
+    SELECT email
+    FROM users
+    WHERE id=?
+    `,
+    [req.session.userId]
+  );
+
+  const rows = await all(
+    `
+    SELECT DISTINCT
+      t.id,
+      t.name,
+      t.status,
+      t.max_teams
+    FROM tournaments t
+    JOIN participants p
+    ON p.tournament_id = t.id
+    WHERE p.user_id=?
+    OR p.email=?
+    ORDER BY t.id DESC
+    `,
+    [
+      req.session.userId,
+      user ? user.email : ""
+    ]
+  );
+
+  res.json(rows);
+
+});
+
+
+
+app.post("/admin/simuler-tournoi-rapide", async (req,res)=>{
+
+  try{
+
+    if(!isAdmin(req)){
+      return res.send("Accès admin refusé");
+    }
+
+    const { tournament_id } = req.body;
+
+    if(!tournament_id){
+      return res.send("Tournoi obligatoire");
+    }
+
+    let securite = 0;
+
+    while(securite < 200){
+
+      securite++;
+
+      const match = await get(
+        `
+        SELECT *
+        FROM matches
+        WHERE tournament_id=?
+        AND played=0
+        ORDER BY
+          CASE round
+            WHEN '16ES' THEN 1
+            WHEN '8ES' THEN 2
+            WHEN 'QUARTS' THEN 3
+            WHEN 'DEMIS' THEN 4
+            WHEN 'FINALE' THEN 5
+            ELSE 99
+          END,
+          id ASC
+        LIMIT 1
+        `,
+        [tournament_id]
+      );
+
+      if(!match){
+        break;
+      }
+
+      let s1 = Math.floor(Math.random() * 5);
+      let s2 = Math.floor(Math.random() * 5);
+
+      if(s1 === s2){
+        s1++;
+      }
+
+      const winner =
+        s1 > s2 ? match.player1_id : match.player2_id;
+
+      const loser =
+        s1 > s2 ? match.player2_id : match.player1_id;
+
+      await run(
+        `
+        UPDATE matches
+        SET score1=?,
+            score2=?,
+            winner_id=?,
+            loser_id=?,
+            played=1
+        WHERE id=?
+        `,
+        [
+          s1,
+          s2,
+          winner,
+          loser,
+          match.id
+        ]
+      );
+
+      await gererTournoiRapideApresScore(match);
+
+    }
+
+    res.send("Simulation terminée jusqu’à la finale ✅");
+
+  }catch(e){
+
+    console.log(e);
+    res.send("Erreur simulation : " + e.message);
+
+  }
+
+});
+
+app.get("/mes-groupes-tournois", async (req,res)=>{
+
+  try{
+
+    if(!connected(req)){
+      return res.json([]);
+    }
+
+    const rows = await all(
+      `
+      SELECT
+        t.name,
+        t.group_link
+      FROM participants p
+      JOIN tournaments t
+        ON t.id = p.tournament_id
+      WHERE p.user_id=?
+      AND t.group_link IS NOT NULL
+      AND t.group_link != ''
+      ORDER BY p.id DESC
+      LIMIT 3
+      `,
+      [req.session.userId]
+    );
+
+    res.json(rows);
+
+  }catch(e){
+
+    console.log(e);
+    res.json([]);
+
+  }
+
+});
+
+app.post("/simuler-tournoi-rapide", async (req,res)=>{
+
+  try{
+
+    if(!connected(req)){
+      return res.send("Connecte-toi");
+    }
+
+    const { tournament_id } = req.body;
+
+    if(!tournament_id){
+      return res.send("Tournoi obligatoire");
+    }
+
+    const ownerCheck =
+      await verifierProprietaireTournoi(req, tournament_id);
+
+    if(!ownerCheck.ok){
+      return res.send(ownerCheck.message);
+    }
+
+    let securite = 0;
+
+    while(securite < 200){
+
+      securite++;
+
+      const match = await get(
+        `
+        SELECT *
+        FROM matches
+        WHERE tournament_id=?
+        AND played=0
+        ORDER BY
+          CASE round
+            WHEN '16ES' THEN 1
+            WHEN '8ES' THEN 2
+            WHEN 'QUARTS' THEN 3
+            WHEN 'DEMIS' THEN 4
+            WHEN 'FINALE' THEN 5
+            ELSE 99
+          END,
+          id ASC
+        LIMIT 1
+        `,
+        [tournament_id]
+      );
+
+      if(!match){
+        break;
+      }
+
+      let s1 = Math.floor(Math.random() * 5);
+      let s2 = Math.floor(Math.random() * 5);
+
+      if(s1 === s2){
+        s1++;
+      }
+
+      const winner =
+        s1 > s2 ? match.player1_id : match.player2_id;
+
+      const loser =
+        s1 > s2 ? match.player2_id : match.player1_id;
+
+      await run(
+        `
+        UPDATE matches
+        SET score1=?,
+            score2=?,
+            winner_id=?,
+            loser_id=?,
+            played=1
+        WHERE id=?
+        `,
+        [
+          s1,
+          s2,
+          winner,
+          loser,
+          match.id
+        ]
+      );
+
+      await gererTournoiRapideApresScore(match);
+
+    }
+
+    res.send("Simulation terminée jusqu’à la finale ✅");
+
+  }catch(e){
+
+    console.log(e);
+    res.send("Erreur simulation : " + e.message);
+
+  }
+
+});
+
+app.get("/test-dashboard/:tournament_id", async (req,res)=>{
+
+  if(!connected(req)){
+    return res.redirect("/login");
+  }
+
+  res.redirect("/app?tournament=" + req.params.tournament_id);
+
+});
+
+app.get("/tournoi-access/:id", async (req,res)=>{
+
+  if(!connected(req)){
+    return res.json({ ok:false });
+  }
+
+  const user = await get(
+    `SELECT email FROM users WHERE id=?`,
+    [req.session.userId]
+  );
+
+  const tournoi = await get(
+    `
+    SELECT DISTINCT
+      t.*,
+      pchamp.prenom AS champion_name
+    FROM tournaments t
+    LEFT JOIN participants p
+    ON p.tournament_id = t.id
+    LEFT JOIN participants pchamp
+    ON pchamp.id = t.champion_id
+    WHERE t.id=?
+    AND (
+      t.user_id=?
+      OR p.user_id=?
+      OR p.email=?
+    )
+    `,
+    [
+      req.params.id,
+      req.session.userId,
+      req.session.userId,
+      user ? user.email : ""
+    ]
+  );
+
+  if(!tournoi){
+    return res.json({ ok:false });
+  }
+
+  res.json({
+    ok:true,
+    tournoi
+  });
+
+});
+
 
 app.listen(PORT, () => {
 
