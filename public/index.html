@@ -9193,18 +9193,12 @@ if(tournoiUrl){
   document.body.classList.remove("app-loading");
   return;
 }
-  const lastPage =
-    localStorage.getItem("lastPage") || "pageDashboard";
+  setPage("pageDashboard");
 
-  const lastPanel =
-  localStorage.getItem("lastPanel") || "panelProprietaire";
+localStorage.setItem("lastPage", "pageDashboard");
+localStorage.setItem("lastPanel", "panelProprietaire");
 
-  if(lastPage === "pageProfil"){
-    await ouvrirProfilCompte();
-  }else{
-    setPage("pageDashboard");
-    await ouvrirPanel(lastPanel);
-  }
+await ouvrirPanel("panelProprietaire");
 
   document.body.classList.remove("app-loading");
 
