@@ -201,6 +201,15 @@ function connected(req){
 
 }
 
+function tr(req, fr, en){
+
+  const langue =
+    req.headers["x-language"] || "fr";
+
+  return langue === "en" ? en : fr;
+
+}
+
 async function verifierProprietaireTournoi(req, tournament_id){
 
   if(!connected(req)){
@@ -967,7 +976,13 @@ app.post("/send-code", async (req,res)=>{
     const { email } = req.body;
 
     if(!email){
-      return res.send("Email obligatoire");
+      return res.send(
+    tr(
+    req,
+    "Email obligatoire",
+    "Email is required"
+    )
+  );
     }
 
     const cleanEmail =
@@ -983,7 +998,13 @@ app.post("/send-code", async (req,res)=>{
     );
 
     if(existe){
-      return res.send("Email déjà utilisé");
+      return res.send(
+     tr(
+    req,
+    "Email déjà utilisé",
+    "Email already used"
+    )
+  );
     }
 
     const code =
@@ -1013,12 +1034,24 @@ app.post("/send-code", async (req,res)=>{
       text:"Votre code de validation SNUGAME est : " + code
     });
 
-    res.send("Code envoyé");
+    res.send(
+  tr(
+    req,
+    "Code envoyé",
+    "Verification code sent"
+  )
+);
 
   }catch(e){
 
     console.log(e);
-    res.send("Erreur envoi code");
+    res.send(
+  tr(
+    req,
+    "Erreur envoi code",
+    "Failed to send code"
+  )
+);
 
   }
 
@@ -1053,18 +1086,36 @@ app.post("/register", async (req,res)=>{
     const { name,email,password,code } = req.body;
 
     if(!name || !email || !password || !code){
-      return res.send("Tous les champs sont obligatoires");
+      return res.send(
+  tr(
+    req,
+    "Tous les champs sont obligatoires",
+    "All fields are required"
+  )
+);
     }
 
     if(password.length < 8){
-      return res.send("Mot de passe minimum 8 caractères");
+      return res.send(
+  tr(
+    req,
+    "Mot de passe minimum 8 caractères",
+    "Password must contain at least 8 characters"
+  )
+);
     }
 
     if(
       containsBadWords(name) ||
       containsBadWords(email)
     ){
-      return res.send("Contenu interdit détecté");
+      return res.send(
+  tr(
+    req,
+    "Contenu interdit détecté",
+    "Forbidden content detected"
+  )
+);
     }
 
     const cleanEmail =
@@ -1082,7 +1133,13 @@ app.post("/register", async (req,res)=>{
     );
 
     if(!verification){
-      return res.send("Code invalide");
+      return res.send(
+  tr(
+    req,
+    "Code invalide",
+    "Invalid verification code"
+  )
+);
     }
 
     const hash =
@@ -1105,7 +1162,13 @@ app.post("/register", async (req,res)=>{
       async function(err){
 
         if(err){
-          return res.send("Email déjà utilisé");
+          return res.send(
+  tr(
+    req,
+    "Email déjà utilisé",
+    "Email already used"
+  )
+);
         }
 
         const userId = this.lastID;
@@ -1135,7 +1198,13 @@ app.post("/register", async (req,res)=>{
 
         req.session.userId = userId;
 
-        res.send("Compte créé");
+        res.send(
+  tr(
+    req,
+    "Compte créé",
+    "Account created"
+  )
+);
 
       }
     );
@@ -1143,7 +1212,13 @@ app.post("/register", async (req,res)=>{
   }catch(e){
 
     console.log(e);
-    res.send("Erreur inscription");
+    res.send(
+  tr(
+    req,
+    "Erreur inscription",
+    "Registration failed"
+  )
+);
 
   }
 
@@ -1153,7 +1228,13 @@ app.post("/login", loginLimiter, (req,res)=>{
   const { email,password } = req.body;
 
   if(!email || !password){
-    return res.send("Email et mot de passe obligatoires");
+    return res.send(
+  tr(
+    req,
+    "Email et mot de passe obligatoires",
+    "Email and password are required"
+  )
+);
   }
 
   db.get(
@@ -1166,11 +1247,23 @@ app.post("/login", loginLimiter, (req,res)=>{
     async (err,user)=>{
 
       if(!user){
-        return res.send("Compte introuvable");
+        return res.send(
+      tr(
+      req,
+      "Compte introuvable",
+    "Account not found"
+  )
+);
       }
 
       if(Number(user.banned) === 1){
-        return res.send("Compte banni. Contacte l’admin.");
+        return res.send(
+  tr(
+    req,
+    "Compte banni. Contacte l’admin.",
+    "Account banned. Contact the admin."
+  )
+);
       }
 
       const ok =
@@ -1180,18 +1273,36 @@ app.post("/login", loginLimiter, (req,res)=>{
         );
 
       if(!ok){
-        return res.send("Mot de passe incorrect");
+        return res.send(
+  tr(
+    req,
+    "Mot de passe incorrect",
+    "Incorrect password"
+  )
+);
       }
 
       req.session.regenerate(err=>{
 
         if(err){
-          return res.send("Erreur session");
+          return res.send(
+  tr(
+    req,
+    "Erreur session",
+    "Session error"
+  )
+);
         }
 
         req.session.userId = user.id;
 
-        res.send("Connexion réussie");
+        res.send(
+  tr(
+    req,
+    "Connexion réussie",
+    "Login successful"
+  )
+);
 
       });
 
@@ -1203,7 +1314,13 @@ app.post("/login", loginLimiter, (req,res)=>{
 app.post("/logout",(req,res)=>{
 
   req.session.destroy(()=>{
-    res.send("Déconnexion");
+    res.send(
+  tr(
+    req,
+    "Déconnecté",
+    "Logged out"
+  )
+);
   });
 
 });
@@ -1275,7 +1392,13 @@ app.get("/me", async (req,res)=>{
 app.post("/abonnement", async (req,res)=>{
 
   if(!connected(req)){
-    return res.send("Connecte-toi");
+    return res.send(
+  tr(
+    req,
+    "Connecte-toi",
+    "Please log in"
+  )
+);
   }
 
   await run(
@@ -1288,7 +1411,13 @@ app.post("/abonnement", async (req,res)=>{
     [req.session.userId]
   );
 
-  res.send("Abonnement activé");
+  res.send(
+  tr(
+    req,
+    "Abonnement activé",
+    "Subscription activated"
+  )
+);
 
 });
 function generateJoinCode(){
@@ -1305,7 +1434,9 @@ app.post("/tournoi", async (req,res)=>{
   try{
 
     if(!connected(req)){
-      return res.send("Connecte-toi d'abord");
+      return res.send(
+  tr(req,"Connecte-toi d'abord","Please log in first")
+);
     }
 
     const user = await get(
@@ -1318,7 +1449,9 @@ app.post("/tournoi", async (req,res)=>{
     );
 
     if(!user){
-      return res.send("Utilisateur introuvable");
+      return res.send(
+  tr(req,"Utilisateur introuvable","User not found")
+);
     }
 
     const {
@@ -1329,14 +1462,18 @@ app.post("/tournoi", async (req,res)=>{
     } = req.body;
 
     if(!name){
-      return res.send("Nom tournoi obligatoire");
+      return res.send(
+  tr(req,"Nom tournoi obligatoire","Tournament name is required")
+);
     }
 
     const maxTeams =
       Number(max_teams) || 48;
 
     if(maxTeams < 6 || maxTeams > 100){
-      return res.send("Nombre équipes entre 6 et 100");
+      return res.send(
+  tr(req,"Nombre équipes entre 6 et 100","Number of teams must be between 6 and 100")
+);
     }
 
     if(
@@ -1344,7 +1481,11 @@ app.post("/tournoi", async (req,res)=>{
       user.abonnement !== 1
     ){
       return res.send(
-        "Abonnement requis pour créer un tournoi de plus de 33 équipes"
+        tr(
+          req,
+          "Abonnement requis pour créer un tournoi de plus de 33 équipes",
+          "Subscription required to create a tournament with more than 33 teams"
+        )
       );
     }
 
@@ -1396,13 +1537,17 @@ app.post("/tournoi", async (req,res)=>{
       ]
     );
 
-    res.send("Tournoi créé");
+    res.send(
+  tr(req,"Tournoi créé","Tournament created")
+);
 
   }catch(e){
 
     console.log(e);
-    res.send("Erreur création tournoi");
-
+    
+res.send(
+  tr(req,"Erreur création tournoi","Tournament creation failed")
+);
   }
 
 });
@@ -1444,7 +1589,9 @@ app.post("/participant", async (req,res)=>{
   try{
 
     if(!connected(req)){
-      return res.send("Connecte-toi");
+      return res.send(
+  tr(req,"Connecte-toi","Please log in")
+);
     }
 
     const {
@@ -1456,8 +1603,8 @@ app.post("/participant", async (req,res)=>{
 
     if(!tournament_id || !participantUsername){
       return res.send(
-        "Tournoi et nom utilisateur obligatoires"
-      );
+  tr(req,"Tournoi et nom utilisateur obligatoires","Tournament and username are required")
+);
     }
 
     const tournoi = await get(
@@ -1470,7 +1617,9 @@ app.post("/participant", async (req,res)=>{
     );
 
     if(!tournoi){
-      return res.send("Tournoi introuvable");
+      return res.send(
+  tr(req,"Tournoi introuvable","Tournament not found")
+);
     }
     const ownerCheck =
   await verifierProprietaireTournoi(req, tournament_id);
@@ -1513,8 +1662,9 @@ if(!ownerCheck.ok){
 
     if(!user){
       return res.send(
-        "Compte SNUGAME introuvable"
-      );
+  tr(req,"Compte SNUGAME introuvable","SNUGAME account not found")
+  );
+      
     }
 
     const already = await get(
@@ -1532,8 +1682,8 @@ if(!ownerCheck.ok){
 
     if(already){
       return res.send(
-        "Ce joueur est déjà dans ce tournoi"
-      );
+  tr(req,"Ce joueur est déjà dans ce tournoi","This player is already in this tournament")
+);
     }
 
     const prenom =
@@ -1578,14 +1728,16 @@ if(!ownerCheck.ok){
   "tournament:" + tournament_id
 );
 
-    res.send("Participant ajouté");
+    res.send(
+  tr(req,"Participant ajouté","Participant added")
+);
 
   }catch(e){
 
     console.log(e);
     res.send(
-      "Erreur ajout participant : " + e.message
-    );
+  tr(req,"Erreur ajout participant : ","Failed to add participant: ") + e.message
+);
 
   }
 
@@ -1637,7 +1789,9 @@ async (req,res)=>{
 );
 
 if(!participant){
-  return res.send("Participant introuvable");
+  return res.send(
+  tr(req,"Participant introuvable","Participant not found")
+);
 }
 
 const ownerCheck =
@@ -1655,7 +1809,9 @@ if(!ownerCheck.ok){
       !Array.isArray(ids) ||
       ids.length === 0
     ){
-      return res.send("Aucun participant");
+      return res.send(
+  tr(req,"Aucun participant","No participant selected")
+);
     }
 
     const placeholders =
@@ -1669,12 +1825,16 @@ if(!ownerCheck.ok){
       ids
     );
 
-    res.send("Participants supprimés");
+    res.send(
+  tr(req,"Participants supprimés","Participants deleted")
+);
 
   }catch(e){
 
     console.log(e);
-    res.send("Erreur suppression");
+    res.send(
+  tr(req,"Erreur suppression","Deletion failed")
+);
 
   }
 
@@ -1689,7 +1849,9 @@ async (req,res)=>{
     const { tournament_id } = req.body;
 
     if(!tournament_id){
-      return res.send("Tournoi manquant");
+      return res.send(
+  tr(req,"Tournoi manquant","Tournament is missing")
+);
     }
 
     const ownerCheck =
@@ -1745,12 +1907,16 @@ if(!ownerCheck.ok){
 
     }
 
-    res.send("Tournoi supprimé");
+    res.send(
+  tr(req,"Tournoi supprimé","Tournament deleted")
+);
 
   }catch(e){
 
     console.log(e);
-    res.send("Erreur suppression tournoi");
+    res.send(
+  tr(req,"Erreur suppression tournoi","Tournament deletion failed")
+);
 
   }
 
@@ -1763,7 +1929,9 @@ app.post("/reset-tournoi", async (req,res)=>{
     const { tournament_id } = req.body;
 
     if(!tournament_id){
-      return res.send("Tournoi obligatoire");
+      return res.send(
+  tr(req,"Tournoi obligatoire","Tournament is required")
+);
     }
 
     const ownerCheck =
@@ -1800,12 +1968,16 @@ if(!ownerCheck.ok){
       [tournament_id]
     );
 
-    res.send("Tournoi réinitialisé");
+    res.send(
+  tr(req,"Tournoi réinitialisé","Tournament reset")
+);
 
   }catch(e){
 
     console.log(e);
-    res.send("Erreur reset tournoi");
+    res.send(
+  tr(req,"Erreur reset tournoi","Tournament reset failed")
+);
 
   }
 
@@ -2189,7 +2361,9 @@ app.post("/update-match-proof", async (req,res)=>{
     } = req.body;
 
     if(!match_id){
-      return res.send("Match obligatoire");
+      return res.send(
+        tr(req,"Match obligatoire","Match is required")
+      );
     }
 
     const match = await get(
@@ -2202,7 +2376,9 @@ app.post("/update-match-proof", async (req,res)=>{
     );
 
     if(!match){
-      return res.send("Match introuvable");
+      return res.send(
+  tr(req,"Match introuvable","Match not found")
+);
     }
 
     const tournoi = await get(
@@ -2218,32 +2394,61 @@ if(
   !tournoi ||
   Number(tournoi.user_id) !== Number(req.session.userId)
 ){
-  return res.send("Accès refusé : seul le propriétaire du tournoi peut valider le score");
+  return res.send(
+    tr(req,
+      "Accès refusé : seul le propriétaire du tournoi peut valider le score",
+      "Access denied: only the tournament owner can validate the score"
+    )
+  );
 }
 
     if(Number(match.locked) === 1){
-      return res.send("Score verrouillé");
+      return res.send(
+        tr(req,
+          "Score verrouillé",
+          "Score is locked"
+        )
+      );
     }
 
     if(Number(match.played) === 1){
-     return res.send("Ce match est déjà validé");
+     return res.send(
+       tr(req,
+         "Ce match est déjà validé",
+         "This match is already validated"
+       )
+     );
    }
 
     const s1 = Number(score1);
     const s2 = Number(score2);
 
     if(Number.isNaN(s1) || Number.isNaN(s2)){
-      return res.send("Score invalide");
+      return res.send(
+        tr(req,
+          "Score invalide",
+          "Invalid score"
+        )
+      );
     }
 
     if(s1 < 0 || s2 < 0 || s1 > 100 || s2 > 100){
-      return res.send("Score entre 0 et 100");
+      return res.send(
+        tr(req,
+          "Score entre 0 et 100",
+          "Score between 0 and 100"
+        )
+      );
     }
 
     if(match.round !== "POULE" && s1 === s2){
       return res.send(
-        "Match nul interdit en élimination directe"
-      );
+  tr(
+    req,
+    "Match nul interdit en élimination directe",
+    "Draws are not allowed in knockout matches"
+  )
+);
     }
 
     let winner = null;
@@ -2535,7 +2740,9 @@ return res.send("Score validé");
 }catch(e){
 
   console.log(e);
-  res.send("Erreur validation score : " + e.message);
+  res.send(
+    tr(req,"Erreur validation score : " + e.message,"Error validating score : " + e.message)
+  );
 
 }
 
@@ -2548,7 +2755,9 @@ app.post("/annuler-score", async (req,res)=>{
     const { match_id } = req.body;
 
     if(!match_id){
-      return res.send("Match obligatoire");
+      return res.send(
+        tr(req,"Match obligatoire","Match is required")
+      );
     }
 
     const match = await get(
@@ -2561,12 +2770,14 @@ app.post("/annuler-score", async (req,res)=>{
     );
 
     if(!match){
-      return res.send("Match introuvable");
+      return res.send(
+        tr(req,"Match introuvable","Match not found")
+      );
     }
 
     if(match.locked === 1){
       return res.send(
-        "Score verrouillé impossible à annuler"
+        tr(req,"Score verrouillé impossible à annuler","Score is locked and cannot be cancelled")
       );
     }
 
@@ -5315,7 +5526,13 @@ app.post("/send-reset-code", async (req,res)=>{
     const { email } = req.body;
 
     if(!email){
-      return res.send("Email obligatoire");
+      return res.send(
+  tr(
+    req,
+    "Email obligatoire",
+    "Email is required"
+  )
+);
     }
 
     const user = await get(
@@ -5328,7 +5545,13 @@ app.post("/send-reset-code", async (req,res)=>{
     );
 
     if(!user){
-      return res.send("Compte introuvable");
+      return res.send(
+  tr(
+    req,
+    "Compte introuvable",
+    "Account not found"
+  )
+);
     }
 
     const code =
@@ -5357,13 +5580,25 @@ app.post("/send-reset-code", async (req,res)=>{
       text:"Code reset : " + code
     });
 
-    res.send("Code envoyé");
+    res.send(
+  tr(
+    req,
+    "Code envoyé",
+    "Verification code sent"
+  )
+);
 
   }catch(e){
 
     console.log(e);
 
-    res.send("Erreur reset code");
+    res.send(
+  tr(
+    req,
+    "Erreur envoi code",
+    "Failed to send code"
+  )
+);
 
   }
 
@@ -5382,7 +5617,11 @@ app.get("/join/:code", async (req,res)=>{
     );
 
     if(!tournoi){
-      return res.send("Lien inscription invalide");
+      return res.send(
+  tr(req,
+    "Lien inscription invalide",
+    "Invalid registration link")
+);
     }
 
     const count = await get(
@@ -5395,11 +5634,19 @@ app.get("/join/:code", async (req,res)=>{
     );
 
     if(tournoi.status === "started" || tournoi.status === "finished"){
-     return res.send("Les inscriptions sont fermées. Le tirage a commencé.");
+     return res.send(
+  tr(req,
+    "Les inscriptions sont fermées. Le tirage a commencé.",
+    "Registration is closed. The draw has already started.")
+);
     }
 
     if(count.total >= tournoi.max_teams){
-      return res.send("Tournoi complet. Inscriptions fermées.");
+      return res.send(
+  tr(req,
+    "Tournoi complet. Inscriptions fermées.",
+    "Tournament is full. Registrations are closed.")
+);
     }
 
     res.send(`
@@ -5623,7 +5870,11 @@ app.post("/join-tournament", async (req,res)=>{
     } = req.body;
 
     if(!join_code || !name || !email || !password || !code){
-      return res.send("Tous les champs sont obligatoires");
+      return res.send(
+  tr(req,
+    "Tous les champs sont obligatoires",
+    "All fields are required")
+);
     }
 
     const tournoi = await get(
@@ -5636,11 +5887,17 @@ app.post("/join-tournament", async (req,res)=>{
     );
 
     if(!tournoi){
-      return res.send("Tournoi introuvable");
+      return res.send(
+  tr(req,"Tournoi introuvable","Tournament not found")
+);
     }
 
     if(tournoi.status === "started" || tournoi.status === "finished"){
-    return res.send("Les inscriptions sont fermées. Le tirage a commencé.");
+    return res.send(
+  tr(req,
+    "Les inscriptions sont fermées. Le tirage a commencé.",
+    "Registration is closed. The draw has already started.")
+);
    }
 
     const count = await get(
@@ -5653,7 +5910,11 @@ app.post("/join-tournament", async (req,res)=>{
     );
 
     if(count.total >= tournoi.max_teams){
-      return res.send("Tournoi complet. Le lien est fermé.");
+      return res.send(
+  tr(req,
+    "Tournoi complet. Le lien est fermé.",
+    "Tournament is full. Registration link is closed.")
+);
     }
 
     const cleanEmail =
@@ -5674,7 +5935,11 @@ app.post("/join-tournament", async (req,res)=>{
     );
 
     if(!verification){
-      return res.send("Code invalide");
+      return res.send(
+  tr(req,
+    "Code invalide",
+    "Invalid verification code")
+);
     }
 
     let user = await get(
@@ -5744,7 +6009,11 @@ if(!user){
     );
 
     if(already){
-      return res.send("Tu es déjà inscrit à ce tournoi");
+      return res.send(
+  tr(req,
+    "Tu es déjà inscrit à ce tournoi",
+    "You are already registered for this tournament")
+);
     }
 
     const result = await run(
@@ -5795,7 +6064,12 @@ VALUES(?,?,?,?,?,?,?,?,?)
 
     console.log(e);
     
-   res.send("Erreur inscription automatique tournoi : " + e.message);
+   res.send(
+  tr(req,
+    "Erreur inscription automatique tournoi : ",
+    "Tournament registration failed: "
+  ) + e.message
+);
   }
 
 });
@@ -5952,7 +6226,13 @@ app.post("/update-profile-photo", async (req,res)=>{
   try{
 
     if(!req.session.userId){
-      return res.send("Connecte-toi");
+      return res.send(
+  tr(
+    req,
+    "Connecte-toi",
+    "Please log in"
+  )
+);
     }
 
     const { photo } = req.body;
@@ -6047,7 +6327,13 @@ app.post("/update-username", async (req,res)=>{
   try{
 
     if(!req.session.userId){
-      return res.send("Connecte-toi");
+      return res.send(
+  tr(
+    req,
+    "Connecte-toi",
+    "Please log in"
+  )
+);
     }
 
     const { username } = req.body;
@@ -6916,11 +7202,19 @@ app.post("/change-password", async (req,res)=>{
     } = req.body;
 
     if(!oldPassword || !newPassword){
-      return res.send("Tous les champs sont obligatoires");
+      return res.send(
+  tr(req,
+    "Tous les champs sont obligatoires",
+    "All fields are required")
+);
     }
 
     if(newPassword.length < 8){
-      return res.send("Mot de passe minimum 8 caractères");
+      return res.send(
+  tr(req,
+    "Mot de passe minimum 8 caractères",
+    "Password must be at least 8 characters long")
+);
     }
 
     const user = await get(
@@ -7420,11 +7714,20 @@ app.post("/reset-password", async (req,res)=>{
       String(req.body.password || "").trim();
 
     if(!email || !code || !password){
-      return res.send("Tous les champs sont obligatoires");
+      return res.send(
+  tr(req,
+    "Tous les champs sont obligatoires",
+    "All fields are required")
+);
     }
 
     if(password.length < 6){
-      return res.send("Mot de passe trop court");
+      return res.send(
+        tr(req,
+          "Mot de passe trop court",
+          "Password is too short"
+        )
+      );
     }
 
     const user = await get(

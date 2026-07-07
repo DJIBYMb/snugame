@@ -2209,7 +2209,35 @@ button:active{
 }
 
 
+.settings-item{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  width:100%;
+  padding:14px 16px;
+  font-size:16px;
+  border-radius:12px;
+}
 
+.settings-item{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+}
+
+.settings-icon{
+  flex:0 0 auto;
+}
+
+.settings-label{
+  flex:1;
+  text-align:left;
+}
+
+.settings-arrow{
+  flex:0 0 auto;
+}
 
 
 </style>
@@ -2315,12 +2343,14 @@ cursor:pointer;
 
 <input
 id="loginEmail"
+data-i18n-placeholder="email"
 placeholder="Adresse email">
 <div id="msgLoginEmail" class="form-message"></div>
 
 <input
 id="loginPassword"
 type="password"
+data-i18n-placeholder="password"
 placeholder="Mot de passe">
 <div id="msgLoginPassword" class="form-message"></div>
 
@@ -2330,14 +2360,19 @@ display:flex;
 gap:10px;
 flex-wrap:wrap;
 ">
-
-<button onclick="login()">
+<button
+id="btnConnexion"
+data-i18n="login"
+onclick="login()">
 Connexion
 </button>
+
 <div id="msgLoginGeneral" class="form-message"></div>
 
 <button
+id="btnMotDePasseOublie"
 class="secondary"
+data-i18n="forgotPassword"
 onclick="ouvrirMotDePasseOublie()">
 Mot de passe oublié
 </button>
@@ -2345,7 +2380,9 @@ Mot de passe oublié
 </div>
 
 <button
+id="btnCreerCompte"
 class="secondary"
+data-i18n="createAccount"
 onclick="showRegister()">
 Créer un compte
 </button>
@@ -2357,7 +2394,9 @@ class="card hidden"
 id="forgotBox">
 
 <button
+id="btnRetourConnexion"
 class="secondary"
+data-i18n="backLogin"
 onclick="closeForgotPassword()">
 ← Retour connexion
 </button>
@@ -2366,16 +2405,20 @@ onclick="closeForgotPassword()">
 
 <input
 id="forgotEmail"
+data-i18n-placeholder="email"
 placeholder="Ton email">
 
 <button
+id="btnEnvoyerCodeReset"
 class="secondary"
+data-i18n="sendCode"
 onclick="envoyerCodeReset()">
 Envoyer code
 </button>
 
 <input
 id="forgotCode"
+data-i18n-placeholder="receivedCode"
 placeholder="Code reçu">
 
 <input
@@ -2383,7 +2426,10 @@ id="newPassword"
 type="password"
 placeholder="Nouveau mot de passe">
 
-<button onclick="resetPassword()">
+<button
+id="btnChangerMotDePasse"
+data-i18n="changePassword"
+onclick="resetPassword()">
 Changer mot de passe
 </button>
 
@@ -2394,6 +2440,7 @@ class="card hidden"
 id="registerBox">
 
 <button
+id="btnRetourConnexion"
 class="secondary"
 onclick="closeRegister()">
 ← Retour connexion
@@ -2403,15 +2450,18 @@ onclick="closeRegister()">
 
 <input
 id="registerName"
+data-i18n-placeholder="name"
 placeholder="Nom">
 
 <input
 id="registerEmail"
+data-i18n-placeholder="email"
 placeholder="Adresse email">
 
 <input
 id="registerPassword"
 type="password"
+data-i18n-placeholder="password"
 placeholder="Mot de passe">
 
 <button
@@ -2422,6 +2472,7 @@ Envoyer code email
 
 <input
 id="registerCode"
+data-i18n-placeholder="receivedCode"
 placeholder="Code reçu par email">
 
 <button onclick="register()">
@@ -2581,11 +2632,12 @@ onclick="ouvrirDashboardOrganisateurDepuisProfil()">
   🏠
 </button>
 <a
-  id="btnGroupeTournoi"
-  href="#"
-  target="_blank"
-  class="hidden">
-   Rejoindre le groupe
+id="btnGroupeTournoi"
+href="#"
+target="_blank"
+class="hidden"
+data-i18n="joinGroup">
+Rejoindre le groupe
 </a>
 
 </div>
@@ -2604,7 +2656,7 @@ onclick="ouvrirDashboardOrganisateurDepuisProfil()">
 
     style="cursor:pointer;">
 
-    <span>Abonnés</span>
+    <span data-i18n="followers">Abonnés</span>
     <b id="profilFollowers">0</b>
 
   </div>
@@ -2615,14 +2667,14 @@ onclick="ouvrirDashboardOrganisateurDepuisProfil()">
 
     style="cursor:pointer;">
 
-    <span>Suivis</span>
+    <span data-i18n="following">Suivis</span>
     <b id="profilFollowing">0</b>
 
   </div>
 
   <div class="mini-stat">
 
-    <span>Likes</span>
+    <span data-i18n="likes">Likes</span>
     <b id="profilLikes">0</b>
 
   </div>
@@ -2633,7 +2685,7 @@ onclick="ouvrirDashboardOrganisateurDepuisProfil()">
 id="mesRecompensesBox"
 class="card hidden">
 
-  <h3>🎁 Mes récompenses</h3>
+  <h3 data-i18n="myRewards">🎁 Mes récompenses</h3>
 
   <div id="mesRecompensesList"></div>
 
@@ -2720,7 +2772,9 @@ onchange="uploadPhotoProfil()">
       ‹
     </button>
 
-    <h2> Profil joueur</h2>
+    <h2 data-i18n="playerProfile">
+Profil joueur
+</h2>
 
     <div id="maCarteJoueurContent">
       <p>Carte joueur en préparation...</p>
@@ -2760,7 +2814,7 @@ onclick="retourPage()">
 ‹
 </button>
 
-<h2>🔔 Notifications</h2>
+<h2 data-i18n="notifications">🔔 Notifications</h2>
 
 <div id="notificationsList"></div>
 
@@ -2783,47 +2837,61 @@ onclick="retourPage()">
 <h2>⚙️ Paramètres</h2>
 
 <button
+id="btnInfosPersonnelles"
 class="secondary"
+data-i18n="personalInfo"
 onclick="setPage('pageInfosPersonnelles')">
 
 <i class="fa-solid fa-circle-user"></i>
-Informations personnelles
+<span>Informations personnelles</span>
 
 </button>
 
 <button
+id="btnSecurite"
 class="secondary"
+data-i18n="security"
 onclick="setPage('pageSecurite')">
 
 <i class="fa-solid fa-lock"></i>
-Sécurité
+<span>Sécurité</span>
 
 </button>
 
 <button
 class="secondary"
-onclick="
-setPage('pagePolitiqueConfidentialite');
-chargerPolitiqueConfidentialite();
-">
+data-i18n="privacy"
+onclick="chargerPolitiqueConfidentialite()">
 
  Politique de confidentialité
 
 </button>
 
 <button
+id="btnConditions"
 class="secondary"
+data-i18n="terms"
 onclick="
 setPage('pageConditionsUtilisation');
 chargerConditionsUtilisation();
 ">
 
- Conditions d'utilisation
+<span>Conditions d'utilisation</span>
 
 </button>
 
 <button
+id="btnLangage"
+class="secondary"
+data-i18n="language"
+onclick="ouvrirPageLangage()">
+🌐 <span data-i18n-text>Langage</span>
+</button>
+
+<button
+id="btnDeconnexion"
 class="danger"
+data-i18n="logout"
 onclick="logout()">
 Déconnexion
 </button>
@@ -2938,6 +3006,38 @@ onclick="setPage('pageParametres')">
 </section>
 
 <section
+id="pageLangage"
+class="hidden">
+
+<div class="card">
+
+<button
+class="back-btn"
+onclick="setPage('pageParametres')">
+‹
+</button>
+
+<h2>🌐 Langage</h2>
+
+<button
+class="secondary"
+onclick="changerLangue('fr')">
+Français
+</button>
+
+<button
+class="secondary"
+onclick="changerLangue('en')">
+English
+</button>
+
+<p id="msgLangage" class="form-message"></p>
+
+</div>
+
+</section>
+
+<section
 id="pageChangerMotDePasse"
 class="hidden">
 
@@ -2949,7 +3049,9 @@ onclick="setPage('pageSecurite')">
 ‹
 </button>
 
-<h2>Changer mot de passe</h2>
+<h2 data-i18n="changePassword">
+Changer mot de passe
+</h2>
 
 <input
 id="oldPassword"
@@ -2994,7 +3096,7 @@ onclick="setPage('pageSecurite')">
 ‹
 </button>
 
-<h2>Changer adresse email</h2>
+<h2 data-i18n="changeEmail">Changer adresse email</h2>
 
 <button
 class="secondary"
@@ -3074,7 +3176,7 @@ onclick="ouvrirProfilCompte()">
 ‹
 </button>
 
-<h2>Modifier le profil</h2>
+<h2 data-i18n="editProfile">Modifier le profil</h2>
 
 <div id="modifierProfilPhoto"></div>
 
@@ -3112,7 +3214,7 @@ onclick="retourPage()">
 ‹
 </button>
 
-<h2>Changer le nom</h2>
+<h2 data-i18n="changeName">Changer le nom</h2>
 
 <input
 id="newName"
@@ -3120,6 +3222,7 @@ placeholder="Nouveau nom">
 
 <button
 class="secondary"
+data-i18n="save"
 onclick="updateName()">
 Enregistrer
 </button>
@@ -3150,6 +3253,7 @@ autocomplete="off">
 
 <button
 class="secondary"
+data-i18n="save"
 onclick="updateUsername()">
 Enregistrer
 </button>
@@ -3266,23 +3370,30 @@ Classements
 
   <div class="card">
 
-    <h2>Tableau propriétaire</h2>
+    <h2 data-i18n="ownerDashboard">
+Tableau propriétaire
+</h2>
 
     <button
 class="secondary"
+data-i18n="createTournament"
 onclick="toggleCreationTournoi()">
 ➕ Créer tournoi
 </button>
 
 <div id="creationTournoiBox" class="hidden">
 
-  <input id="tournoiNom" placeholder="Nom du tournoi">
+  <input
+id="tournoiNom"
+data-i18n-placeholder="tournamentName"
+placeholder="Nom du tournoi">
 
   <input
   id="tournoiMax"
   type="number"
   value="6"
-  placeholder="Nombre équipes">
+ data-i18n-placeholder="numberTeams"
+placeholder="Nombre équipes">
 
   <label>
   <input type="radio" name="tournoiType" value="poule" checked>
@@ -3296,13 +3407,15 @@ onclick="toggleCreationTournoi()">
 
   <input
   id="tournoiGroupLink"
-  placeholder="Lien groupe WhatsApp / Telegram / Discord">
+  data-i18n-placeholder="groupLink"
+placeholder="Lien groupe WhatsApp / Telegram / Discord">
 
   <button
-  class="owner-only"
-  onclick="creerTournoi()">
-  Créer tournoi
-  </button>
+class="owner-only"
+data-i18n="createTournament"
+onclick="creerTournoi()">
+Créer tournoi
+</button>
 
 </div>
 
@@ -3312,37 +3425,49 @@ onclick="toggleCreationTournoi()">
     </select>
 
     <button
-    class="secondary"
-    onclick="toggleGestionTournoi()">
-    ⚙️ Gestion tournoi
-    </button>
+class="secondary"
+data-i18n="manageTournament"
+onclick="toggleGestionTournoi()">
+⚙️ Gestion tournoi
+</button>
 
-    <div id="gestionTournoiBox" class="hidden">
+<div id="gestionTournoiBox" class="hidden">
 
-      <button
-      class="danger owner-only"
-      onclick="supprimerTournoiComplet()">
-      Supprimer tournoi
-      </button>
+  <button
+  class="danger owner-only"
+  data-i18n="deleteTournament"
+  onclick="supprimerTournoiComplet()">
+  Supprimer tournoi
+  </button>
 
-      <button
+  <button
       class="warning owner-only"
-      onclick="resetTournoi()">
-      Réinitialiser
+      onclick="creerParticipantsTest()">
+      🧪 Créer 32 joueurs test
       </button>
 
-      <button
-      class="secondary owner-only"
-      onclick="creerLienPublic()">
-      Créer lien public
-      </button>
+  <button
+  class="warning owner-only"
+  data-i18n="resetTournament"
+  onclick="resetTournoi()">
+  Réinitialiser
+  </button>
 
-      <input
-      id="lienPublic"
-      readonly
-      placeholder="Lien public résultats">
+  <button
+  class="secondary owner-only"
+  data-i18n="publicLink"
+  onclick="creerLienPublic()">
+  Créer lien public
+  </button>
 
-      <div id="tournois"></div>
+  <input
+  id="lienPublic"
+  readonly
+  data-i18n-placeholder="publicLinkResult"
+  placeholder="Lien public résultats">
+
+  <div id="tournois"></div>
+
 
     </div>
 
@@ -3357,22 +3482,27 @@ class="panel hidden">
 
 <div class="card">
 
-<h2>👥 Participants</h2>
+<h2 data-i18n="participants">
+👥 Participants
+</h2>
 
 <button
 class="secondary owner-only"
+data-i18n="addParticipant"
 onclick="afficherBlocParticipants('blocAjouterParticipant')">
 ➕ Ajouter participant
 </button>
 
 <button
 class="secondary"
+data-i18n="participantList"
 onclick="afficherBlocParticipants('blocListeParticipants'); chargerParticipants()">
 📋 Liste participants
 </button>
 
 <button
 class="danger owner-only"
+data-i18n="manageParticipants"
 onclick="afficherBlocParticipants('blocGestionParticipants'); chargerParticipants()">
 🗑️ Gestion participants
 </button>
@@ -3383,19 +3513,21 @@ onclick="afficherBlocParticipants('blocGestionParticipants'); chargerParticipant
 
 <div id="blocAjouterParticipant" class="participants-bloc">
 
-<h2>Ajouter participant</h2>
+<h2 data-i18n="addParticipant">
+Ajouter participant
+</h2>
 
 <input
 id="participantUsername"
+data-i18n-placeholder="participantUsername"
 placeholder="@username SNUGAME">
 
 
 <button
 class="owner-only"
+data-i18n="addParticipant"
 onclick="ajouterParticipant()">
-
 Ajouter participant
-
 </button>
 
 </div>
@@ -3407,7 +3539,8 @@ Ajouter participant
 <div id="blocListeParticipants"
 class="participants-bloc hidden">
 
-<h2>Participants</h2>
+<h2 data-i18n="participants">
+   Participants</h2>
 
 <div id="participantsCount"></div>
 
@@ -3419,26 +3552,23 @@ class="participants-bloc hidden">
 
 <button
 class="secondary"
+data-i18n="checkAll"
 onclick="cocherTous(true)">
-
 Tout cocher
-
 </button>
 
 <button
 class="secondary"
+data-i18n="uncheckAll"
 onclick="cocherTous(false)">
-
 Tout décocher
-
 </button>
 
 <button
 class="danger owner-only"
+data-i18n="delete"
 onclick="supprimerParticipantsCoches()">
-
- Supprimer
-
+Supprimer
 </button>
 
 <div id="participantsCheckbox"></div>
@@ -3463,42 +3593,78 @@ class="panel hidden">
 
   <div class="competition-sidebar">
 
-    <h2>🏆 Compétition</h2>
+    <h2 data-i18n="competition">
+🏆 Compétition
+</h2>
 
-    <button
-id="btnGenererTirage"
+<button
 class="owner-only"
+data-i18n="draw"
 onclick="customAutoDraw()">
-  🎲 Générer / continuer tirage
+🎲 <span data-i18n-text>Générer / continuer tirage</span>
 </button>
 
-    <button onclick="ouvrirMatchsCompetition()">
-    ⚽ Matchs
-    </button>
+<button
+data-i18n="matches"
+onclick="ouvrirMatchsCompetition()">
+⚽ <span data-i18n-text>Matchs</span>
+</button>
 
-    <button onclick="ouvrirCompetitionBloc('blocClassements'); afficherClassementSelonType()">
-      📊 Classement
-    </button>
+<button
+data-i18n="standings"
+onclick="ouvrirCompetitionBloc('blocClassements'); afficherClassementSelonType()">
+📊 <span data-i18n-text>Classement</span>
+</button>
 
-    <button onclick="ouvrirCompetitionBloc('blocArbreTournoi'); afficherArbreTournoi()">
-      🌳 Arbre du tournoi
-    </button>
+<button
+data-i18n="tree"
+onclick="ouvrirCompetitionBloc('blocArbreTournoi'); afficherArbreTournoi()">
+🌳 <span data-i18n-text>Arbre du tournoi</span>
+</button>
 
-    <button onclick="ouvrirCompetitionBloc('blocFinale'); afficherPhaseFinale()">
-      🏆 Tableau finale
-    </button>
+<button
+data-i18n="finalTable"
+onclick="ouvrirCompetitionBloc('blocFinale'); afficherPhaseFinale()">
+🏆 <span data-i18n-text>Tableau finale</span>
+</button>
 
-    <button onclick="ouvrirCompetitionBloc('blocChampion'); voirChampion()">
-      👑 Champion
-    </button>
+<button
+data-i18n="champion"
+onclick="ouvrirCompetitionBloc('blocChampion'); voirChampion()">
+👑 <span data-i18n-text>Champion</span>
+</button>
 
     <div class="competition-info">
-      <b>Format tournoi</b><br><br>
-      Rapide : 32 équipes<br>
-      16ES → Finale<br>
-      Aller-retour<br>
-      Score cumulé
-    </div>
+
+  <b data-i18n="tournamentFormat">
+    Format tournoi
+  </b>
+
+  <br><br>
+
+  <span data-i18n="quick32">
+    Rapide : 32 équipes
+  </span>
+
+  <br>
+
+  <span data-i18n="round16Final">
+    16ES → Finale
+  </span>
+
+  <br>
+
+  <span data-i18n="homeAway">
+    Aller-retour
+  </span>
+
+  <br>
+
+  <span data-i18n="aggregateScore">
+    Score cumulé
+  </span>
+
+</div>
 
   </div>
 
@@ -3543,21 +3709,35 @@ onclick="customAutoDraw()">
 
     <div class="competition-sidebar">
 
-      <h2>🏆 Compétition organisateur</h2>
+      <h2 data-i18n="competitionOrganizer">
+Compétition organisateur
+</h2>
 
-      <button class="secondary" onclick="quitterPanelClassementOrganisateur()">
-        ← Retour au profil
-      </button>
+<button
+data-i18n="backProfile"
+onclick="quitterPanelClassementOrganisateur()">
+ <span data-i18n-text>Retour au profil</span>
+</button>
 
-      <button onclick="ouvrirMatchsCompetitionOrg()">⚽ Matchs</button>
+<button onclick="ouvrirMatchsCompetitionOrg()" data-i18n="matches">
+⚽ Matchs
+</button>
 
-      <button onclick="ouvrirClassementCompetitionOrg()">📊 Classement</button>
+<button onclick="ouvrirClassementCompetitionOrg()" data-i18n="standings">
+📊 Classement
+</button>
 
-      <button onclick="ouvrirArbreCompetitionOrg()">🌳 Arbre du tournoi</button>
+<button onclick="ouvrirArbreCompetitionOrg()" data-i18n="tree">
+🌳 Arbre du tournoi
+</button>
 
-      <button onclick="ouvrirFinaleCompetitionOrg()">🏆 Tableau finale</button>
+<button onclick="ouvrirFinaleCompetitionOrg()" data-i18n="finalTable">
+🏆 Tableau final
+</button>
 
-      <button onclick="ouvrirChampionCompetitionOrg()">👑 Champion</button>
+<button onclick="ouvrirChampionCompetitionOrg()" data-i18n="champion">
+👑 Champion
+</button>
 
     </div>
 
@@ -3572,7 +3752,9 @@ onclick="customAutoDraw()">
       </div>
 
       <div id="blocArbreTournoiOrg" class="competition-bloc hidden">
-        <h3>🌳 Arbre du tournoi</h3>
+        <h3 data-i18n="tree">
+🌳 Arbre du tournoi
+</h3>
         <div id="arbreTournoiResultOrg"></div>
       </div>
 
@@ -3668,6 +3850,260 @@ class="hidden video-profile-menu">
 </div>
 
 <script>
+
+  
+
+  const LANG = { fr: {
+back: "← Retour",
+backLogin: "← Retour connexion",
+sendCode: "Envoyer le code",
+sendEmailCode: "Envoyer le code email",
+manageTournament: "Gestion tournoi",
+deleteTournament: "Supprimer tournoi",
+resetTournament: "Réinitialiser",
+publicLink: "Créer lien public",
+publicLinkResult: "Lien public résultats",
+receivedCode: "Code reçu",
+email: "Adresse email",
+password: "Mot de passe",
+newPassword: "Nouveau mot de passe",
+confirmPassword: "Confirmer le mot de passe",
+name: "Nom",
+playerName: "Nom du joueur",
+save: "Enregistrer",
+delete: "Supprimer",
+cancel: "Annuler",
+yes: "Oui",
+no: "Non",
+security: "Sécurité",
+personalInfo: "Informations personnelles",
+changePassword: "Changer le mot de passe",
+changeEmail: "Changer l'adresse email",
+verify: "Valider",
+joinGroup: "Rejoindre le groupe",
+dashboard: "Tableau de bord",
+organizer: "Organisateur",
+owner: "Propriétaire",
+competition: "Compétition",
+ranking: "Classement",
+groups: "Poules",
+notifications: "Notifications",
+subscription: "Abonnement",
+paySubscription: "Payer abonnement",
+sendProof: "Envoyer preuve paiement",
+publicLink: "Créer lien public",
+resetTournament: "Réinitialiser",
+deleteTournament: "Supprimer tournoi",
+manageTournament: "Gestion tournoi",
+quickTournament: "Tournoi rapide",
+groupTournament: "Tournoi avec poules",
+username: "Nom d'utilisateur",
+changeUsername: "Changer le nom d'utilisateur",
+uncheckAll:"Tout décocher",
+competitionOrganizer:"Compétition organisateur",
+backProfile:"← Back to profile",
+followers:"Abonnés",
+following:"Suivis",
+likes:"Likes",
+myRewards:"Mes récompenses",
+ipantUsername:"@username SNUGAME",
+participants: "Participants",
+addParticipant: "Ajouter participant",
+participantList: "Liste participants",
+manageParticipants: "Gestion participants",
+tournamentFormat: "Format tournoi",
+quick32: "Rapide : 32 équipes",
+round16Final: "16ES → Finale",
+homeAway: "Aller-retour",
+aggregateScore: "Score cumulé",
+noVideos: "Aucune vidéo publiée",
+teams: "équipes",
+competitionOrganizer: "Compétition organisateur",
+  backProfile: "← Retour au profil",
+  matches: "Matchs",
+  standings: "Classement",
+  tree: "Arbre du tournoi",
+  finalTable: "Tableau final",
+  champion: "Champion",
+    settings: "Paramètres",
+  privacy: "Politique de confidentialité",
+  draw: "Générer / continuer tirage",
+  terms: "Conditions d'utilisation",
+  noMatchAutoDraw: "Aucun match. Clique sur Tirage automatique.",
+  ownerDashboard: "Tableau propriétaire",
+createTournament: "Créer tournoi",
+manageTournament: "Gestion tournoi",
+selectTournament: "Sélectionner un tournoi",
+teams: "équipes",
+  logout: "Déconnexion",
+toBeDetermined: "À déterminer",
+homeAway: "Aller - Retour -",
+waiting: "En attente",
+firstLeg: "Aller",
+secondLeg: "Retour",
+waiting: "En attente",
+total: "Total",
+duelFinished: "Duel terminé"
+
+},
+  en: {
+    back: "← Back",
+backLogin: "← Back to login",
+manageTournament: "Tournament management",
+noVideos: "No videos published",
+deleteTournament: "Delete tournament",
+resetTournament: "Reset tournament",
+publicLink: "Create public link",
+publicLinkResult: "Public results link",
+sendCode: "Send code",
+followers:"Followers",
+following:"Following",
+likes:"Likes",
+myRewards:"My rewards",
+sendEmailCode: "Send email code",
+receivedCode: "Verification code",
+email: "Email address",
+password: "Password",
+newPassword: "New password",
+confirmPassword: "Confirm password",
+name: "Name",
+playerName: "Player name",
+ownerDashboard: "Owner dashboard",
+createTournament: "Create tournament",
+save: "Save",
+delete: "Delete",
+cancel: "Cancel",
+yes: "Yes",
+no: "No",
+security: "Security",
+personalInfo: "Personal information",
+changePassword: "Change password",
+changeEmail: "Change email address",
+verify: "Verify",
+joinGroup: "Join group",
+dashboard: "Dashboard",
+organizer: "Organizer",
+owner: "Owner",
+competition: "Competition",
+ranking: "Standings",
+groups: "Groups",
+notifications: "Notifications",
+subscription: "Subscription",
+paySubscription: "Pay subscription",
+sendProof: "Send payment proof",
+publicLink: "Create public link",
+resetTournament: "Reset tournament",
+deleteTournament: "Delete tournament",
+manageTournament: "Tournament management",
+quickTournament: "Quick tournament",
+groupTournament: "Tournament with groups",
+participantUsername:"SNUGAME username",
+changeUsername: "Change username",
+competitionOrganizer: "Compétition organisateur",
+backProfile:"← Back to profile",
+uncheckAll:"Tout décocher",
+participants: "Participants",
+addParticipant: "Add participant",
+participantList: "Participants list",
+manageParticipants: "Manage participants",
+tournamentFormat: "Tournament format",
+quick32: "Quick: 32 teams",
+round16Final: "Round of 16 → Final",
+homeAway: "Home and away",
+aggregateScore: "Aggregate score",
+teams: "teams",
+  competitionOrganizer: "Organizer competition",
+  backProfile: " ← Back to profile",
+  matches: "Matches",
+  standings: "Standings",
+  tree: "Tournament bracket",
+  finalTable: "Final bracket",
+  champion: "Champion",
+  settings: "Settings",
+  privacy: "Privacy Policy",
+  draw: "Generate / continue draw",
+  terms: "Terms of Use",
+  logout: "Logout",
+  selectTournament: "Select a tournament",
+teams: "teams",
+  noMatchAutoDraw: "No matches. Click Automatic Draw.",
+  toBeDetermined: "To be determined",
+homeAway: "Home - Away -",
+toBeDetermined: "To be determined",
+firstLeg: "First leg",total: "Total",
+total: "Total",
+duelFinished: "Duel finished",
+champion: "Champion",
+secondLeg: "Second leg",
+waiting: "Waiting"
+
+  }
+};
+
+let langueApp =
+  localStorage.getItem("langueApp") || "fr";
+
+
+function tr(key){
+  return LANG[langueApp]?.[key] || LANG.fr[key] || key;
+}
+
+function appliquerLangue(){
+
+  document.querySelectorAll("[data-i18n]").forEach(el=>{
+
+    const key = el.dataset.i18n;
+    const texte = tr(key);
+
+    const textSpan =
+      el.querySelector("[data-i18n-text]");
+
+    if(textSpan){
+      textSpan.textContent = texte;
+      return;
+    }
+
+    el.textContent = texte;
+
+  });
+
+  document.querySelectorAll("[data-i18n-placeholder]").forEach(el=>{
+
+    const key = el.dataset.i18nPlaceholder;
+
+    el.placeholder = tr(key);
+
+  });
+
+}
+  
+function ouvrirPageLangage(){
+
+  setPage("pageLangage");
+
+}
+
+function changerLangue(langue){
+
+  langueApp = langue;
+
+  localStorage.setItem("langueApp", langue);
+
+  if(langue === "fr"){
+    msgLangage.textContent = "Langue changée en français";
+  }else{
+    msgLangage.textContent = "Language changed to English";
+  }
+
+  appliquerLangue();
+
+}
+
+function t(fr,en){
+
+  return langueApp === "en" ? en : fr;
+
+}
 async function chargerGroupesTournoisProfil(){
 
   const data = await get("/mes-groupes-tournois");
@@ -3728,7 +4164,9 @@ function ouvrirCompetitionBlocOrg(id){
 
   document
     .querySelectorAll("#panelClassementOrganisateur .competition-bloc")
-    .forEach(bloc=>bloc.classList.add("hidden"));
+    .forEach(bloc=>{
+      bloc.classList.add("hidden");
+    });
 
   const bloc = document.getElementById(id);
 
@@ -3857,7 +4295,7 @@ async function afficherArbreTournoi(){
   ouvrirCompetitionBloc("blocArbreTournoi");
 
   if(!tournoiSelect.value){
-    message.textContent = "Choisis un tournoi";
+    message.textContent = tr("selectTournament");
     return;
   }
 
@@ -3921,97 +4359,97 @@ return Object.values(duels).sort((a,b)=>{
 }
 
 
-  function getWinnerName(d){
+function getWinnerName(d){
 
-    const a = d?.aller;
-    const r = d?.retour;
+  const a = d?.aller;
+  const r = d?.retour;
 
-    const playedAller = a && Number(a.played) === 1;
-    const playedRetour = r && Number(r.played) === 1;
+  const playedAller = a && Number(a.played) === 1;
+  const playedRetour = r && Number(r.played) === 1;
 
-    if(!playedAller || !playedRetour){
-      return "À déterminer";
-    }
-
-    const total1 = Number(a.score1 || 0) + Number(r.score1 || 0);
-    const total2 = Number(a.score2 || 0) + Number(r.score2 || 0);
-
-    if(total1 > total2) return d.player1_name;
-    if(total2 > total1) return d.player2_name;
-
-    return "À déterminer";
+  if(!playedAller || !playedRetour){
+    return tr("toBeDetermined");
   }
 
-  function duelHtml(d){
+  const total1 = Number(a.score1 || 0) + Number(r.score1 || 0);
+  const total2 = Number(a.score2 || 0) + Number(r.score2 || 0);
 
-if(!d){
-  return `
-    <div class="wc-player">
-      <span>À déterminer</span>
-      <span class="wc-score">
-        <small>Aller</small> -
-        <small>Retour</small> -
-      </span>
-    </div>
+  if(total1 > total2) return d.player1_name;
+  if(total2 > total1) return d.player2_name;
 
-    <div class="wc-player">
-      <span>À déterminer</span>
-      <span class="wc-score">
-        <small>Aller</small> -
-        <small>Retour</small> -
-      </span>
-    </div>
-
-    <div class="wc-status">En attente</div>
-  `;
+  return tr("toBeDetermined");
 }
 
-    const a = d.aller;
-    const r = d.retour;
+function duelHtml(d){
 
-    const playedAller = a && Number(a.played) === 1;
-    const playedRetour = r && Number(r.played) === 1;
-
-    const total1 =
-      (playedAller ? Number(a.score1 || 0) : 0) +
-      (playedRetour ? Number(r.score1 || 0) : 0);
-
-    const total2 =
-      (playedAller ? Number(a.score2 || 0) : 0) +
-      (playedRetour ? Number(r.score2 || 0) : 0);
-
-    const winnerId = Number(r?.winner_id || a?.winner_id || 0);
-
+  if(!d){
     return `
-  <div class="wc-player ${winnerId === Number(d.player1_id) ? "winner" : ""}">
-    <span>${d.player1_name || "À déterminer"}</span>
+      <div class="wc-player">
+        <span>${tr("toBeDetermined")}</span>
+        <span class="wc-score">
+          <small>${tr("firstLeg")}</small> -
+          <small>${tr("secondLeg")}</small> -
+        </span>
+      </div>
 
-    <span class="wc-score">
-      <small>Aller</small> ${playedAller ? a.score1 : "-"}
-      &nbsp;
-      <small>Retour</small> ${playedRetour ? r.score1 : "-"}
-    </span>
-  </div>
+      <div class="wc-player">
+        <span>${tr("toBeDetermined")}</span>
+        <span class="wc-score">
+          <small>${tr("firstLeg")}</small> -
+          <small>${tr("secondLeg")}</small> -
+        </span>
+      </div>
 
-  <div class="wc-player ${winnerId === Number(d.player2_id) ? "winner" : ""}">
-    <span>${d.player2_name || "À déterminer"}</span>
-
-    <span class="wc-score">
-      <small>Aller</small> ${playedAller ? a.score2 : "-"}
-      &nbsp;
-      <small>Retour</small> ${playedRetour ? r.score2 : "-"}
-    </span>
-  </div>
-
-  <div class="wc-total">
-    Total : ${total1} - ${total2}
-  </div>
-
-  <div class="wc-status">
-    ${playedAller && playedRetour ? "✅ Duel terminé" : "⏳ En attente"}
-  </div>
-`;
+      <div class="wc-status">${tr("waiting")}</div>
+    `;
   }
+
+  const a = d.aller;
+  const r = d.retour;
+
+  const playedAller = a && Number(a.played) === 1;
+  const playedRetour = r && Number(r.played) === 1;
+
+  const total1 =
+    (playedAller ? Number(a.score1 || 0) : 0) +
+    (playedRetour ? Number(r.score1 || 0) : 0);
+
+  const total2 =
+    (playedAller ? Number(a.score2 || 0) : 0) +
+    (playedRetour ? Number(r.score2 || 0) : 0);
+
+  const winnerId = Number(r?.winner_id || a?.winner_id || 0);
+
+  return `
+    <div class="wc-player ${winnerId === Number(d.player1_id) ? "winner" : ""}">
+      <span>${d.player1_name || tr("toBeDetermined")}</span>
+
+      <span class="wc-score">
+        <small>${tr("firstLeg")}</small> ${playedAller ? a.score1 : "-"}
+        &nbsp;
+        <small>${tr("secondLeg")}</small> ${playedRetour ? r.score1 : "-"}
+      </span>
+    </div>
+
+    <div class="wc-player ${winnerId === Number(d.player2_id) ? "winner" : ""}">
+      <span>${d.player2_name || tr("toBeDetermined")}</span>
+
+      <span class="wc-score">
+        <small>${tr("firstLeg")}</small> ${playedAller ? a.score2 : "-"}
+        &nbsp;
+        <small>${tr("secondLeg")}</small> ${playedRetour ? r.score2 : "-"}
+      </span>
+    </div>
+
+    <div class="wc-total">
+      ${tr("total")} : ${total1} - ${total2}
+    </div>
+
+    <div class="wc-status">
+      ${playedAller && playedRetour ? "✅ " + tr("duelFinished") : "⏳ " + tr("waiting")}
+    </div>
+  `;
+}
 
   const roundsData = {};
 
@@ -4050,25 +4488,25 @@ if(!d){
   });
 
   arbreTournoiResult.innerHTML = `
-    <div class="wc-wrap">
-      <div class="wc-board" id="wcBoard">
+  <div class="wc-wrap">
+    <div class="wc-board" id="wcBoard">
 
-        <svg class="wc-lines" id="wcLines"></svg>
+      <svg class="wc-lines" id="wcLines"></svg>
 
-        ${htmlRounds}
+      ${htmlRounds}
 
-        <div class="wc-col" style="left:1480px;top:0;">
-          <div class="wc-title">CHAMPION</div>
+      <div class="wc-col" style="left:1480px;top:0;">
+        <div class="wc-title">${tr("champion")}</div>
 
-          <div class="wc-match wc-champion" id="wcChampion" style="top:560px;">
-            🏆<br><br>
-            ${champion && champion.prenom ? champion.prenom : "À déterminer"}
-          </div>
+        <div class="wc-match wc-champion" id="wcChampion" style="top:560px;">
+          🏆<br><br>
+          ${champion && champion.prenom ? champion.prenom : tr("toBeDetermined")}
         </div>
-
       </div>
+
     </div>
-  `;
+  </div>
+`;
 
   requestAnimationFrame(()=>{
   requestAnimationFrame(()=>{
@@ -4182,9 +4620,10 @@ async function afficherArbreOrganisateur(){
   ouvrirCompetitionBlocOrg("blocArbreTournoiOrg");
 
   const tournoiId = getTournoiOrganisateurId();
+  
 
   if(!tournoiId){
-    message.textContent = "Choisis un tournoi";
+    message.textContent = tr("selectTournament");
     return;
   }
 
@@ -4250,72 +4689,72 @@ async function afficherArbreOrganisateur(){
 
   function duelHtml(d){
 
-    if(!d){
-      return `
-        <div class="wc-player">
-          <span>À déterminer</span>
-          <span class="wc-score">
-            <small>Aller</small> -
-            <small>Retour</small> -
-          </span>
-        </div>
-
-        <div class="wc-player">
-          <span>À déterminer</span>
-          <span class="wc-score">
-            <small>Aller</small> -
-            <small>Retour</small> -
-          </span>
-        </div>
-
-        <div class="wc-status">En attente</div>
-      `;
-    }
-
-    const a = d.aller;
-    const r = d.retour;
-
-    const playedAller = a && Number(a.played) === 1;
-    const playedRetour = r && Number(r.played) === 1;
-
-    const total1 =
-      (playedAller ? Number(a.score1 || 0) : 0) +
-      (playedRetour ? Number(r.score1 || 0) : 0);
-
-    const total2 =
-      (playedAller ? Number(a.score2 || 0) : 0) +
-      (playedRetour ? Number(r.score2 || 0) : 0);
-
-    const winnerId = Number(r?.winner_id || a?.winner_id || 0);
-
+  if(!d){
     return `
-      <div class="wc-player ${winnerId === Number(d.player1_id) ? "winner" : ""}">
-        <span>${d.player1_name || "À déterminer"}</span>
+      <div class="wc-player">
+        <span>${tr("toBeDetermined")}</span>
         <span class="wc-score">
-          <small>Aller</small> ${playedAller ? a.score1 : "-"}
-          &nbsp;
-          <small>Retour</small> ${playedRetour ? r.score1 : "-"}
+          <small>${tr("firstLeg")}</small> -
+          <small>${tr("secondLeg")}</small> -
         </span>
       </div>
 
-      <div class="wc-player ${winnerId === Number(d.player2_id) ? "winner" : ""}">
-        <span>${d.player2_name || "À déterminer"}</span>
+      <div class="wc-player">
+        <span>${tr("toBeDetermined")}</span>
         <span class="wc-score">
-          <small>Aller</small> ${playedAller ? a.score2 : "-"}
-          &nbsp;
-          <small>Retour</small> ${playedRetour ? r.score2 : "-"}
+          <small>${tr("firstLeg")}</small> -
+          <small>${tr("secondLeg")}</small> -
         </span>
       </div>
 
-      <div class="wc-total">
-        Total : ${total1} - ${total2}
-      </div>
-
-      <div class="wc-status">
-        ${playedAller && playedRetour ? "✅ Duel terminé" : "⏳ En attente"}
-      </div>
+      <div class="wc-status">${tr("waiting")}</div>
     `;
   }
+
+  const a = d.aller;
+  const r = d.retour;
+
+  const playedAller = a && Number(a.played) === 1;
+  const playedRetour = r && Number(r.played) === 1;
+
+  const total1 =
+    (playedAller ? Number(a.score1 || 0) : 0) +
+    (playedRetour ? Number(r.score1 || 0) : 0);
+
+  const total2 =
+    (playedAller ? Number(a.score2 || 0) : 0) +
+    (playedRetour ? Number(r.score2 || 0) : 0);
+
+  const winnerId = Number(r?.winner_id || a?.winner_id || 0);
+
+  return `
+    <div class="wc-player ${winnerId === Number(d.player1_id) ? "winner" : ""}">
+      <span>${d.player1_name || tr("toBeDetermined")}</span>
+      <span class="wc-score">
+        <small>${tr("firstLeg")}</small> ${playedAller ? a.score1 : "-"}
+        &nbsp;
+        <small>${tr("secondLeg")}</small> ${playedRetour ? r.score1 : "-"}
+      </span>
+    </div>
+
+    <div class="wc-player ${winnerId === Number(d.player2_id) ? "winner" : ""}">
+      <span>${d.player2_name || tr("toBeDetermined")}</span>
+      <span class="wc-score">
+        <small>${tr("firstLeg")}</small> ${playedAller ? a.score2 : "-"}
+        &nbsp;
+        <small>${tr("secondLeg")}</small> ${playedRetour ? r.score2 : "-"}
+      </span>
+    </div>
+
+    <div class="wc-total">
+      ${tr("total")} : ${total1} - ${total2}
+    </div>
+
+    <div class="wc-status">
+      ${playedAller && playedRetour ? "✅ " + tr("duelFinished") : "⏳ " + tr("waiting")}
+    </div>
+  `;
+}
 
   const roundsData = {};
 
@@ -4364,11 +4803,11 @@ async function afficherArbreOrganisateur(){
         ${htmlRounds}
 
         <div class="wc-col" style="left:1480px;top:0;">
-          <div class="wc-title">CHAMPION</div>
+          <div class="wc-title">${tr("champion")}</div>
 
           <div class="wc-match wc-champion" id="wcChampionOrg" style="top:560px;">
             🏆<br><br>
-            ${champion && champion.prenom ? champion.prenom : "À déterminer"}
+            ${champion && champion.prenom ? champion.prenom : tr("toBeDetermined")}
           </div>
         </div>
 
@@ -4862,7 +5301,7 @@ color:white!important;
         </div>
 
       `).join("")
-      : "<p class='small'>Aucune vidéo publiée.</p>"
+      : `<p class="small">${tr("noVideos")}</p>`
     }
 
   </div>
@@ -6013,19 +6452,19 @@ async function chargerTournois(){
     return;
   }
 
-  tournoiSelect.innerHTML = `
-    <option value="">
-      Sélectionner un tournoi
-    </option>
-  ` + data.map(t=>`
-    <option
-     value="${t.id}"
-     data-max="${t.max_teams || 48}"
-     data-type="${t.type || 'poule'}"
-    >
-      ${t.name} (${t.max_teams || 48} équipes) - ID ${t.id}
-    </option>
-  `).join("");
+tournoiSelect.innerHTML = `
+  <option value="">
+    ${tr("selectTournament")}
+  </option>
+` + data.map(t=>`
+  <option
+   value="${t.id}"
+   data-max="${t.max_teams || 48}"
+   data-type="${t.type || 'poule'}"
+  >
+    ${t.name} (${t.max_teams || 48} ${tr("teams")}) - ID ${t.id}
+  </option>
+`).join("");
 
   if(tournoiUrl && data.some(t=>String(t.id) === String(tournoiUrl))){
     tournoiSelect.value = tournoiUrl;
@@ -6127,7 +6566,7 @@ async function chargerParticipants(){
     : 48;
 
   participantsCount.innerHTML =
-    `<h3>${data.length}/${maxTeams} équipes</h3>`;
+`<h3>${data.length}/${maxTeams} ${tr("teams")}</h3>`;
 
   participantsCheckbox.innerHTML =
     data.map(p=>`
@@ -6533,7 +6972,7 @@ async function afficherTiragePoulePro(){
 
   if(data.length === 0){
     pouleProResult.innerHTML =
-      "<p>Aucun match. Clique sur Tirage automatique.</p>";
+      `<p>${tr("noMatchAutoDraw")}</p>`;
     return;
   }
 
@@ -6635,9 +7074,13 @@ async function afficherTiragePouleOrganisateur(){
 
   const tournoiId = getTournoiOrganisateurId();
 
+  console.log("TOURNOI ORG ID =", tournoiId);
+
   if(!tournoiId) return;
 
   const data = await get("/tirage/" + tournoiId);
+
+  console.log("DATA ARBRE ORG =", data);
 
   if(!Array.isArray(data)) return;
 
@@ -9200,6 +9643,8 @@ localStorage.setItem("lastPanel", "panelProprietaire");
 
 await ouvrirPanel("panelProprietaire");
 
+  appliquerLangue();
+
   document.body.classList.remove("app-loading");
 
 }
@@ -10332,38 +10777,53 @@ async function ouvrirTableauProprietaire(){
 
 }
 
+appliquerLangue();
+
+
 </script>
 
 <div class="bottom-nav">
 
-<button id="btnTournoi" onclick="ouvrirPanel('panelProprietaire')">
-  <i class="fa-solid fa-house"></i>
+<button
+id="btnTournoi"
+onclick="ouvrirPanel('panelProprietaire')">
+<i class="fa-solid fa-house"></i>
+<span data-i18n-text></span>
 </button>
 
-<button id="btnParticipants" onclick="ouvrirPanel('panelParticipants')">
-  <i class="fa-solid fa-users"></i>
+<button
+id="btnParticipants"
+onclick="ouvrirPanel('panelParticipants')">
+<i class="fa-solid fa-users"></i>
+<span data-i18n-text></span>
 </button>
 
-<button id="btnClassement" onclick="ouvrirPanel('panelClassementProprietaire')">
-  <i class="fa-solid fa-trophy"></i>
+<button
+id="btnClassement"
+onclick="ouvrirPanel('panelClassementProprietaire')">
+<i class="fa-solid fa-ranking-star"></i>
+<span data-i18n-text></span>
 </button>
 
 <button
 id="btnVideos"
-onclick="ouvrirModeVideosAvecSon()">
-  <i class="fa-solid fa-video"></i>
+onclick="ouvrirModeVideos()">
+<i class="fa-solid fa-video"></i>
+<span data-i18n-text></span>
+
 </button>
 
 <button
 id="btnProfil"
 onclick="ouvrirProfilCompte()">
-  <i class="fa-solid fa-user"></i>
+<i class="fa-solid fa-user"></i>
+<span data-i18n-text></span>
 </button>
 
 </div>
 
-<script>
 
+<script>
 demarrerApplication();
 
 </script>
