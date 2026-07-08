@@ -3420,9 +3420,9 @@ Créer tournoi
 </div>
 
     <select
-    id="tournoiSelect"
-    onchange="loadAll(); verifierProprietaire();">
-    </select>
+id="tournoiSelect"
+onchange="changerTournoiRapide()">
+</select>
 
     <button
 class="secondary"
@@ -3851,7 +3851,22 @@ class="hidden video-profile-menu">
 
 <script>
 
-  
+  let cacheTirage = null;
+let cacheTournoiId = null;
+
+async function changerTournoiRapide(){
+
+  cacheTirage = null;
+  cacheTournoiId = null;
+
+  verifierProprietaire();
+
+  chargerParticipants();
+  afficherTiragePoulePro();
+  afficherClassements();
+  afficherPhaseFinale();
+
+}
 
   const LANG = { fr: {
 back: "← Retour",
@@ -4039,6 +4054,7 @@ waiting: "Waiting"
 
   }
 };
+
 
 let langueApp =
   localStorage.getItem("langueApp") || "fr";
@@ -6534,6 +6550,9 @@ async function ajouterParticipant(){
       participantUsername.value
   });
 
+  cacheTirage = null;
+cacheTournoiId = null;
+
   participantUsername.value = "";
 
   await chargerParticipants();
@@ -6725,6 +6744,9 @@ async function resetTournoi(){
     tournament_id:tournoiSelect.value
   });
 
+  cacheTirage = null;
+cacheTournoiId = null;
+
   nettoyerAffichage();
   await chargerParticipants();
 }
@@ -6738,6 +6760,9 @@ async function tirageAutomatiquePoulePro(){
   await post("/tirage-automatique-poule-pro",{
     tournament_id:tournoiSelect.value
   });
+
+  cacheTirage = null;
+cacheTournoiId = null;
 
   await afficherTiragePoulePro();
   await afficherClassements();
@@ -6962,6 +6987,16 @@ function matchCard(match){
 
 async function afficherTiragePoulePro(){
 
+  const tournoiId = tournoiSelect.value;
+
+if(
+  cacheTirage &&
+  cacheTournoiId === tournoiId
+){
+  pouleProResult.innerHTML = cacheTirage;
+  return;
+}
+
   ouvrirCompetitionBloc("blocMatchs");
 
   if(!tournoiSelect.value) return;
@@ -6985,6 +7020,10 @@ async function afficherTiragePoulePro(){
       ${bloc.matchs.map(matchCard).join("")}
     </div>
   `).join("");
+
+  cacheTirage = pouleProResult.innerHTML;
+cacheTournoiId = tournoiId;
+
  appliquerDroitsProprietaire();
 }
 
@@ -7061,10 +7100,15 @@ const s2Value =
   message.textContent = result;
 
   setTimeout(async ()=>{
-    await afficherTiragePoulePro();
-    await afficherClassements();
-    await afficherPhaseFinale();
-  },1000);
+
+  cacheTirage = null;
+  cacheTournoiId = null;
+
+  await afficherTiragePoulePro();
+  await afficherClassements();
+  await afficherPhaseFinale();
+
+},1000);
 
 }
 
@@ -9218,96 +9262,128 @@ async function deleteOldVideos(){
   await chargerHighlights();
 
 }
+
+let panelEnCours = false;
+let tournoisDejaCharges = false;
+
 async function ouvrirPanel(id){
 
-  stopAllVideos();
+  if(panelEnCours) return;
 
-  currentPanelName = id;
+  panelEnCours = true;
 
-  document.body.classList.remove("video-mode");
+  try{
 
-  setPage("pageDashboard");
+    stopAllVideos();
 
-  document
-    .querySelectorAll(".bottom-nav button")
-    .forEach(b=>b.classList.remove("active"));
+    currentPanelName = id;
 
-  if(
-    id === "panelOrganisateur" ||
-    id === "panelProprietaire" ||
-    id === "panelParticipants" ||
-    id === "panelClassementProprietaire"
-  ){
-    await chargerTournois();
-    await verifierProprietaire();
-    appliquerDroitsProprietaire();
-  }
+    document.body.classList.remove("video-mode");
 
-  if(id === "panelClassementOrganisateur"){
-    await verifierProprietaire();
-  }
-if(id === "panelClassementProprietaire"){
-  if(estProprietaire === false){
-    await ouvrirProfilCompte();
-    message.textContent = "Tu n'es pas propriétaire de ce tournoi";
-    return;
-  }
-}
-  document
-    .querySelectorAll(".panel")
-    .forEach(p=>p.classList.add("hidden"));
+    setPage("pageDashboard");
 
-  const panel = document.getElementById(id);
+    document
+      .querySelectorAll(".bottom-nav button")
+      .forEach(b=>b.classList.remove("active"));
 
-  if(panel){
-    panel.classList.remove("hidden");
-  }
+    document
+      .querySelectorAll(".panel")
+      .forEach(p=>p.classList.add("hidden"));
 
-  if(id === "panelOrganisateur"){
-    return;
-  }
+    const panel = document.getElementById(id);
 
-  if(id === "panelProprietaire"){
-    document.getElementById("gestionTournoiBox")?.classList.add("hidden");
-    document.getElementById("btnTournoi")?.classList.add("active");
-    return;
-  }
-
-  if(id === "panelParticipants"){
-    afficherBlocParticipants("blocListeParticipants");
-    await chargerParticipants();
-    document.getElementById("btnParticipants")?.classList.add("active");
-    return;
-  }
-
-  if(id === "panelClassementProprietaire"){
-    ouvrirCompetitionBloc("blocMatchs");
-    await afficherTiragePoulePro();
-    document.getElementById("btnClassement")?.classList.add("active");
-    return;
-  }
-
-  if(id === "panelClassementOrganisateur"){
-    cacherBottomNav();
-    ouvrirCompetitionBlocOrg("blocMatchsOrg");
-    await afficherTiragePouleOrganisateur();
-    document.getElementById("btnClassement")?.classList.add("active");
-    return;
-  }
-
-  if(id === "panelHighlights"){
-    document.body.classList.add("video-mode");
-
-    if(!window.openingProfileVideo){
-      chargerHighlights();
+    if(panel){
+      panel.classList.remove("hidden");
     }
 
-    document.getElementById("btnVideos")?.classList.add("active");
-    return;
+    if(
+  id === "panelOrganisateur" ||
+  id === "panelProprietaire" ||
+  id === "panelParticipants" ||
+  id === "panelClassementProprietaire"
+){
+  if(!tournoisDejaCharges){
+
+  chargerTournois().then(async ()=>{
+
+    tournoisDejaCharges = true;
+
+    await verifierProprietaire();
+
+    appliquerDroitsProprietaire();
+
+  });
+
+}else{
+
+  verifierProprietaire();
+  appliquerDroitsProprietaire();
+
+}
+}
+
+    if(id === "panelClassementOrganisateur"){
+      await verifierProprietaire();
+    }
+
+    if(id === "panelClassementProprietaire"){
+      if(estProprietaire === false){
+        await ouvrirProfilCompte();
+        message.textContent = "Tu n'es pas propriétaire de ce tournoi";
+        return;
+      }
+    }
+
+    if(id === "panelOrganisateur"){
+      return;
+    }
+
+    if(id === "panelProprietaire"){
+      document.getElementById("gestionTournoiBox")?.classList.add("hidden");
+      document.getElementById("btnTournoi")?.classList.add("active");
+      return;
+    }
+
+    if(id === "panelParticipants"){
+      afficherBlocParticipants("blocListeParticipants");
+      chargerParticipants();
+      document.getElementById("btnParticipants")?.classList.add("active");
+      return;
+    }
+
+    if(id === "panelClassementProprietaire"){
+      ouvrirCompetitionBloc("blocMatchs");
+      afficherTiragePoulePro();
+      document.getElementById("btnClassement")?.classList.add("active");
+      return;
+    }
+
+    if(id === "panelClassementOrganisateur"){
+      cacherBottomNav();
+      ouvrirCompetitionBlocOrg("blocMatchsOrg");
+      afficherTiragePouleOrganisateur();
+      document.getElementById("btnClassement")?.classList.add("active");
+      return;
+    }
+
+    if(id === "panelHighlights"){
+      document.body.classList.add("video-mode");
+
+      if(!window.openingProfileVideo){
+        chargerHighlights();
+      }
+
+      document.getElementById("btnVideos")?.classList.add("active");
+      return;
+    }
+
+  }finally{
+
+    panelEnCours = false;
+
   }
 
 }
-
 function masquerBoutonsOrganisateurVisiteur(){
 
   document
