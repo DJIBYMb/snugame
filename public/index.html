@@ -2239,6 +2239,19 @@ button:active{
   flex:0 0 auto;
 }
 
+.lang-auth-btn{
+  position:fixed;
+  top:14px;
+  right:14px;
+  z-index:999999;
+  width:auto!important;
+  padding:8px 12px!important;
+  border-radius:999px!important;
+  font-size:13px!important;
+  background:rgba(255,255,255,.08)!important;
+  color:white!important;
+  border:1px solid rgba(255,255,255,.18)!important;
+}
 
 </style>
 
@@ -2337,9 +2350,18 @@ cursor:pointer;
 
 <section id="pageAuth">
 
+  <button
+id="btnLangueAuth"
+class="lang-auth-btn"
+onclick="toggleLangueAuth()">
+🌐 FR
+</button>
+
 <div class="card">
 
-<h2>Connexion</h2>
+<h2 data-i18n="login">
+Connexion
+</h2>
 
 <input
 id="loginEmail"
@@ -2401,7 +2423,9 @@ onclick="closeForgotPassword()">
 ← Retour connexion
 </button>
 
-<h2>Mot de passe oublié</h2>
+<h2 data-i18n="forgotPassword">
+Mot de passe oublié
+</h2>
 
 <input
 id="forgotEmail"
@@ -2424,6 +2448,7 @@ placeholder="Code reçu">
 <input
 id="newPassword"
 type="password"
+data-i18n-placeholder="newPassword"
 placeholder="Nouveau mot de passe">
 
 <button
@@ -2440,13 +2465,16 @@ class="card hidden"
 id="registerBox">
 
 <button
-id="btnRetourConnexion"
+id="btnRetourRegister"
 class="secondary"
+data-i18n="backLogin"
 onclick="closeRegister()">
 ← Retour connexion
 </button>
 
-<h2>Créer compte</h2>
+<h2 data-i18n="createAccount">
+Créer un compte
+</h2>
 
 <input
 id="registerName"
@@ -2466,6 +2494,7 @@ placeholder="Mot de passe">
 
 <button
 class="secondary texte-rouge"
+data-i18n="sendEmailCode"
 onclick="envoyerCode()">
 Envoyer code email
 </button>
@@ -2475,7 +2504,9 @@ id="registerCode"
 data-i18n-placeholder="receivedCode"
 placeholder="Code reçu par email">
 
-<button onclick="register()">
+<button
+data-i18n="createAccount"
+onclick="register()">
 Créer compte
 </button>
 
@@ -3440,11 +3471,6 @@ onclick="toggleGestionTournoi()">
   Supprimer tournoi
   </button>
 
-  <button
-      class="warning owner-only"
-      onclick="creerParticipantsTest()">
-      🧪 Créer 32 joueurs test
-      </button>
 
   <button
   class="warning owner-only"
@@ -3868,193 +3894,201 @@ async function changerTournoiRapide(){
 
 }
 
-  const LANG = { fr: {
-back: "← Retour",
-backLogin: "← Retour connexion",
-sendCode: "Envoyer le code",
-sendEmailCode: "Envoyer le code email",
-manageTournament: "Gestion tournoi",
-deleteTournament: "Supprimer tournoi",
-resetTournament: "Réinitialiser",
-publicLink: "Créer lien public",
-publicLinkResult: "Lien public résultats",
-receivedCode: "Code reçu",
-email: "Adresse email",
-password: "Mot de passe",
-newPassword: "Nouveau mot de passe",
-confirmPassword: "Confirmer le mot de passe",
-name: "Nom",
-playerName: "Nom du joueur",
-save: "Enregistrer",
-delete: "Supprimer",
-cancel: "Annuler",
-yes: "Oui",
-no: "Non",
-security: "Sécurité",
-personalInfo: "Informations personnelles",
-changePassword: "Changer le mot de passe",
-changeEmail: "Changer l'adresse email",
-verify: "Valider",
-joinGroup: "Rejoindre le groupe",
-dashboard: "Tableau de bord",
-organizer: "Organisateur",
-owner: "Propriétaire",
-competition: "Compétition",
-ranking: "Classement",
-groups: "Poules",
-notifications: "Notifications",
-subscription: "Abonnement",
-paySubscription: "Payer abonnement",
-sendProof: "Envoyer preuve paiement",
-publicLink: "Créer lien public",
-resetTournament: "Réinitialiser",
-deleteTournament: "Supprimer tournoi",
-manageTournament: "Gestion tournoi",
-quickTournament: "Tournoi rapide",
-groupTournament: "Tournoi avec poules",
-username: "Nom d'utilisateur",
-changeUsername: "Changer le nom d'utilisateur",
-uncheckAll:"Tout décocher",
-competitionOrganizer:"Compétition organisateur",
-backProfile:"← Back to profile",
-followers:"Abonnés",
-following:"Suivis",
-likes:"Likes",
-myRewards:"Mes récompenses",
-ipantUsername:"@username SNUGAME",
-participants: "Participants",
-addParticipant: "Ajouter participant",
-participantList: "Liste participants",
-manageParticipants: "Gestion participants",
-tournamentFormat: "Format tournoi",
-quick32: "Rapide : 32 équipes",
-round16Final: "16ES → Finale",
-homeAway: "Aller-retour",
-aggregateScore: "Score cumulé",
-noVideos: "Aucune vidéo publiée",
-teams: "équipes",
-competitionOrganizer: "Compétition organisateur",
-  backProfile: "← Retour au profil",
-  matches: "Matchs",
-  standings: "Classement",
-  tree: "Arbre du tournoi",
-  finalTable: "Tableau final",
-  champion: "Champion",
-    settings: "Paramètres",
-  privacy: "Politique de confidentialité",
-  draw: "Générer / continuer tirage",
-  terms: "Conditions d'utilisation",
-  noMatchAutoDraw: "Aucun match. Clique sur Tirage automatique.",
-  ownerDashboard: "Tableau propriétaire",
-createTournament: "Créer tournoi",
-manageTournament: "Gestion tournoi",
-selectTournament: "Sélectionner un tournoi",
-teams: "équipes",
-  logout: "Déconnexion",
-toBeDetermined: "À déterminer",
-homeAway: "Aller - Retour -",
-waiting: "En attente",
-firstLeg: "Aller",
-secondLeg: "Retour",
-waiting: "En attente",
-total: "Total",
-duelFinished: "Duel terminé"
+function toggleLangueAuth(){
 
-},
-  en: {
-    back: "← Back",
-backLogin: "← Back to login",
-manageTournament: "Tournament management",
-noVideos: "No videos published",
-deleteTournament: "Delete tournament",
-resetTournament: "Reset tournament",
-publicLink: "Create public link",
-publicLinkResult: "Public results link",
-sendCode: "Send code",
-followers:"Followers",
-following:"Following",
-likes:"Likes",
-myRewards:"My rewards",
-sendEmailCode: "Send email code",
-receivedCode: "Verification code",
-email: "Email address",
-password: "Password",
-newPassword: "New password",
-confirmPassword: "Confirm password",
-name: "Name",
-playerName: "Player name",
-ownerDashboard: "Owner dashboard",
-createTournament: "Create tournament",
-save: "Save",
-delete: "Delete",
-cancel: "Cancel",
-yes: "Yes",
-no: "No",
-security: "Security",
-personalInfo: "Personal information",
-changePassword: "Change password",
-changeEmail: "Change email address",
-verify: "Verify",
-joinGroup: "Join group",
-dashboard: "Dashboard",
-organizer: "Organizer",
-owner: "Owner",
-competition: "Competition",
-ranking: "Standings",
-groups: "Groups",
-notifications: "Notifications",
-subscription: "Subscription",
-paySubscription: "Pay subscription",
-sendProof: "Send payment proof",
-publicLink: "Create public link",
-resetTournament: "Reset tournament",
-deleteTournament: "Delete tournament",
-manageTournament: "Tournament management",
-quickTournament: "Quick tournament",
-groupTournament: "Tournament with groups",
-participantUsername:"SNUGAME username",
-changeUsername: "Change username",
-competitionOrganizer: "Compétition organisateur",
-backProfile:"← Back to profile",
-uncheckAll:"Tout décocher",
-participants: "Participants",
-addParticipant: "Add participant",
-participantList: "Participants list",
-manageParticipants: "Manage participants",
-tournamentFormat: "Tournament format",
-quick32: "Quick: 32 teams",
-round16Final: "Round of 16 → Final",
-homeAway: "Home and away",
-aggregateScore: "Aggregate score",
-teams: "teams",
-  competitionOrganizer: "Organizer competition",
-  backProfile: " ← Back to profile",
-  matches: "Matches",
-  standings: "Standings",
-  tree: "Tournament bracket",
-  finalTable: "Final bracket",
-  champion: "Champion",
-  settings: "Settings",
-  privacy: "Privacy Policy",
-  draw: "Generate / continue draw",
-  terms: "Terms of Use",
-  logout: "Logout",
-  selectTournament: "Select a tournament",
-teams: "teams",
-  noMatchAutoDraw: "No matches. Click Automatic Draw.",
-  toBeDetermined: "To be determined",
-homeAway: "Home - Away -",
-toBeDetermined: "To be determined",
-firstLeg: "First leg",total: "Total",
-total: "Total",
-duelFinished: "Duel finished",
-champion: "Champion",
-secondLeg: "Second leg",
-waiting: "Waiting"
+  if(langueApp === "fr"){
+    changerLangue("en");
+    btnLangueAuth.textContent = "🌐 EN";
+  }else{
+    changerLangue("fr");
+    btnLangueAuth.textContent = "🌐 FR";
+  }
 
+}
+
+const LANG = {
+  fr:{
+    back:"← Retour",
+    backLogin:"← Retour connexion",
+    login:"Connexion",
+    createAccount:"Créer un compte",
+    forgotPassword:"Mot de passe oublié",
+    sendCode:"Envoyer le code",
+    sendEmailCode:"Envoyer le code email",
+    createAccount: "Créer un compte",
+    receivedCode:"Code reçu",
+    email:"Adresse email",
+    password:"Mot de passe",
+    newPassword:"Nouveau mot de passe",
+    confirmPassword:"Confirmer le mot de passe",
+    name:"Nom",
+    save:"Enregistrer",
+    delete:"Supprimer",
+    cancel:"Annuler",
+
+    settings:"Paramètres",
+    language:"Langage",
+    privacy:"Politique de confidentialité",
+    terms:"Conditions d'utilisation",
+    logout:"Déconnexion",
+    security:"Sécurité",
+    personalInfo:"Informations personnelles",
+
+    changePassword:"Changer le mot de passe",
+    changeEmail:"Changer l'adresse email",
+    username:"Nom d'utilisateur",
+    changeUsername:"Changer le nom d'utilisateur",
+
+    tournament:"Tournoi",
+    ownerDashboard:"Tableau propriétaire",
+    createTournament:"Créer tournoi",
+    manageTournament:"Gestion tournoi",
+    deleteTournament:"Supprimer tournoi",
+    resetTournament:"Réinitialiser",
+    publicLink:"Créer lien public",
+    publicLinkResult:"Lien public résultats",
+    selectTournament:"Sélectionner un tournoi",
+    teams:"équipes",
+
+    participants:"Participants",
+    addParticipant:"Ajouter participant",
+    participantList:"Liste participants",
+    manageParticipants:"Gestion participants",
+    participantUsername:"@username SNUGAME",
+    checkAll:"Tout cocher",
+    uncheckAll:"Tout décocher",
+
+    competition:"Compétition",
+    competitionOrganizer:"Compétition organisateur",
+    backProfile:"← Retour au profil",
+    matches:"Matchs",
+    standings:"Classement",
+    ranking:"Classement",
+    tree:"Arbre du tournoi",
+    finalTable:"Tableau final",
+    champion:"Champion",
+    draw:"Générer / continuer tirage",
+
+    tournamentFormat:"Format tournoi",
+    quick32:"Rapide : 32 équipes",
+    round16Final:"16ES → Finale",
+    homeAway:"Aller-retour",
+    aggregateScore:"Score cumulé",
+
+    notifications:"Notifications",
+    subscription:"Abonnement",
+    joinGroup:"Rejoindre le groupe",
+    followers:"Abonnés",
+    following:"Suivis",
+    likes:"Likes",
+    myRewards:"Mes récompenses",
+    playerProfile:"Profil joueur",
+
+    noVideos:"Aucune vidéo publiée",
+    noMatchAutoDraw:"Aucun match. Clique sur Tirage automatique.",
+    toBeDetermined:"À déterminer",
+    firstLeg:"Aller",
+    secondLeg:"Retour",
+    waiting:"En attente",
+    total:"Total",
+    receivedCode: "Code reçu",
+    loginToSeePlayerCard: "Connecte-toi pour voir ta carte joueur.",
+    loginToSeeProfile: "Connecte-toi pour voir ton profil",
+    login: "Connexion",
+    duelFinished:"Duel terminé"
+  },
+
+  en:{
+    back:"← Back",
+    backLogin:"← Back to login",
+    login:"Login",
+    createAccount:"Create account",
+    loginToSeePlayerCard: "Log in to view your player card.",
+    createAccount: "Create account",
+    receivedCode: "Verification code",
+    forgotPassword:"Forgot password",
+    sendCode:"Send code",
+    sendEmailCode:"Send email code",
+    receivedCode:"Verification code",
+    email:"Email address",
+    password:"Password",
+    newPassword:"New password",
+    confirmPassword:"Confirm password",
+    name:"Name",
+    save:"Save",
+    delete:"Delete",
+    cancel:"Cancel",
+
+    settings:"Settings",
+    language:"Language",
+    privacy:"Privacy Policy",
+    terms:"Terms of Use",
+    logout:"Logout",
+    security:"Security",
+    personalInfo:"Personal information",
+
+    changePassword:"Change password",
+    changeEmail:"Change email address",
+    username:"Username",
+    changeUsername:"Change username",
+
+    tournament:"Tournament",
+    ownerDashboard:"Owner dashboard",
+    createTournament:"Create tournament",
+    manageTournament:"Tournament management",
+    deleteTournament:"Delete tournament",
+    resetTournament:"Reset tournament",
+    publicLink:"Create public link",
+    publicLinkResult:"Public results link",
+    selectTournament:"Select a tournament",
+    teams:"teams",
+
+    participants:"Participants",
+    addParticipant:"Add participant",
+    participantList:"Participants list",
+    manageParticipants:"Manage participants",
+    participantUsername:"SNUGAME username",
+    checkAll:"Select all",
+    uncheckAll:"Unselect all",
+
+    competition:"Competition",
+    competitionOrganizer:"Organizer competition",
+    backProfile:"← Back to profile",
+    matches:"Matches",
+    standings:"Standings",
+    ranking:"Standings",
+    tree:"Tournament bracket",
+    finalTable:"Final bracket",
+    champion:"Champion",
+    draw:"Generate / continue draw",
+
+    tournamentFormat:"Tournament format",
+    quick32:"Quick: 32 teams",
+    round16Final:"Round of 16 → Final",
+    homeAway:"Home and away",
+    aggregateScore:"Aggregate score",
+
+    notifications:"Notifications",
+    subscription:"Subscription",
+    joinGroup:"Join group",
+    followers:"Followers",
+    following:"Following",
+    likes:"Likes",
+    myRewards:"My rewards",
+    playerProfile:"Player profile",
+
+    noVideos:"No videos published",
+    noMatchAutoDraw:"No matches. Click Automatic Draw.",
+    toBeDetermined:"To be determined",
+    firstLeg:"First leg",
+    secondLeg:"Second leg",
+    waiting:"Waiting",
+    total:"Total",
+    loginToSeeProfile: "Log in to view your profile",
+    login: "Login",
+    duelFinished:"Duel finished"
   }
 };
-
 
 let langueApp =
   localStorage.getItem("langueApp") || "fr";
@@ -4064,35 +4098,61 @@ function tr(key){
   return LANG[langueApp]?.[key] || LANG.fr[key] || key;
 }
 
-function appliquerLangue(){
+  function appliquerLangue(){
 
   document.querySelectorAll("[data-i18n]").forEach(el=>{
 
     const key = el.dataset.i18n;
     const texte = tr(key);
 
-    const textSpan =
-      el.querySelector("[data-i18n-text]");
+    const textSpan = el.querySelector("[data-i18n-text]");
 
     if(textSpan){
-      textSpan.textContent = texte;
-      return;
-    }
 
-    el.textContent = texte;
+      textSpan.textContent = texte;
+
+    }else{
+
+      el.textContent = texte;
+
+    }
 
   });
 
   document.querySelectorAll("[data-i18n-placeholder]").forEach(el=>{
 
-    const key = el.dataset.i18nPlaceholder;
-
-    el.placeholder = tr(key);
+    el.placeholder = tr(el.dataset.i18nPlaceholder);
 
   });
 
+  const btnLangueAuth =
+    document.getElementById("btnLangueAuth");
+
+  if(btnLangueAuth){
+
+    btnLangueAuth.textContent =
+      langueApp === "fr" ? "🌐 FR" : "🌐 EN";
+
+  }
+
+  // Rafraîchir les éléments créés dynamiquement
+  if(typeof afficherTiragePoulePro === "function"){
+    afficherTiragePoulePro();
+  }
+
+  if(typeof afficherTiragePouleOrganisateur === "function"){
+    afficherTiragePouleOrganisateur();
+  }
+
+  if(typeof afficherArbreTournoi === "function"){
+    afficherArbreTournoi();
+  }
+
+  if(typeof afficherArbreOrganisateur === "function"){
+    afficherArbreOrganisateur();
+  }
+
 }
-  
 function ouvrirPageLangage(){
 
   setPage("pageLangage");
@@ -4862,7 +4922,10 @@ function showNotif(text){
 async function post(url,data){
   const res = await fetch(url,{
     method:"POST",
-    headers:{"Content-Type":"application/json"},
+    headers:{
+  "Content-Type":"application/json",
+  "x-language": langueApp
+},
     body:JSON.stringify(data)
   });
   const text = await res.text();
@@ -4871,7 +4934,11 @@ async function post(url,data){
 }
 
 async function get(url){
-  const res = await fetch(url);
+  const res = await fetch(url,{
+  headers:{
+    "x-language": langueApp
+  }
+});
   const text = await res.text();
   try{
     return JSON.parse(text);
@@ -5398,7 +5465,7 @@ else if((stats.defaites || 0) > (stats.victoires || 0)){
 
   if(!data || data.connected === false){
     maCarteJoueurContent.innerHTML =
-      "<p>Connecte-toi pour voir ta carte joueur.</p>";
+      `<p>${tr("loginToSeePlayerCard")}</p>`;
     return;
   }
 
@@ -6094,7 +6161,7 @@ async function ouvrirProfilCompte(){
 if(!data || data.connected === false){
   setPage("pageAuth");
   message.textContent =
-    "Connecte-toi pour voir ton profil";
+    tr("loginToSeeProfile");
   return;
 }
 
