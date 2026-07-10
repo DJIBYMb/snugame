@@ -6167,6 +6167,8 @@ async function chargerDashboardTournoiProfil(){
 
 async function ouvrirProfilCompte(){
 
+afficherPublicite();
+
   const data = await get("/me");
 
 if(!data || data.connected === false){
