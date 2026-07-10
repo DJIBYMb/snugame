@@ -4212,8 +4212,13 @@ function afficherBottomNav(){
 }
   
 async function ouvrirMatchsCompetitionOrg(){
+
+  verifierPubliciteMatchs();
+
   ouvrirCompetitionBlocOrg("blocMatchsOrg");
+
   await afficherTiragePouleOrganisateur();
+
 }
 
 async function ouvrirClassementCompetitionOrg(){
@@ -4292,6 +4297,8 @@ async function quitterPanelClassementOrganisateur(){
 }
   async function ouvrirMatchsCompetition(){
 
+    verifierPubliciteMatchs();
+
   ouvrirCompetitionBloc("blocMatchs");
 
   await afficherTiragePoulePro();
@@ -4304,6 +4311,8 @@ async function quitterPanelClassementOrganisateur(){
 let modeOrganisateurDepuisProfil = false;
 
 async function ouvrirDashboardOrganisateurDepuisProfil(){
+
+  verifierPubliciteDashboard();
 
   const data = await get("/mes-tournois-participant");
 
@@ -5235,6 +5244,8 @@ function retourDepuisFollowList(){
 }
 
 async function ouvrirProfilPublic(userId){
+
+  verifierPubliciteProfils();
 
   publicProfilContent.style.opacity = "1";
 
@@ -7921,7 +7932,7 @@ async function chargerHighlights(){
   playsinline
   preload="auto"
   onplaying="hideVideoCover(this)"
-  onclick="toggleVideoPause(this)">
+  onclick="verifierPubliciteVideos(); toggleVideoPause(this)">
 </video>
 
         <div class="tiktok-left">
@@ -10344,6 +10355,180 @@ async function suivreDepuisProfilPublic(userId, event){
 let currentCommentVideoId = null;
 
 let currentUserId = null;
+
+let compteurPubDashboard =
+Number(localStorage.getItem("compteurPubDashboard")) || 0;
+
+let compteurPubVideos =
+  Number(localStorage.getItem("compteurPubVideos")) || 0;
+
+  let compteurPubProfils =
+  Number(localStorage.getItem("compteurPubProfils")) || 0;
+
+  let compteurPubMatchs =
+  Number(localStorage.getItem("compteurPubMatchs")) || 0;
+
+  let dernierePubTime =
+  Number(localStorage.getItem("dernierePubTime")) || 0;
+
+  function pubAutorisee(){
+
+  const maintenant = Date.now();
+
+  const attente = 5 * 60 * 1000;
+
+  if(maintenant - dernierePubTime < attente){
+    return false;
+  }
+
+  dernierePubTime = maintenant;
+
+  localStorage.setItem(
+    "dernierePubTime",
+    dernierePubTime
+  );
+
+  return true;
+
+}
+
+
+function afficherPublicite(){
+
+  if(
+    window.AndroidAds &&
+    typeof window.AndroidAds.showInterstitial === "function"
+  ){
+
+    window.AndroidAds.showInterstitial();
+
+  }else{
+
+    console.log("AdMob disponible uniquement dans l'application Android");
+
+  }
+
+}
+
+function verifierPubliciteMatchs(){
+
+  if(utilisateurAbonne === true){
+    return;
+  }
+
+  compteurPubMatchs++;
+
+  localStorage.setItem(
+    "compteurPubMatchs",
+    compteurPubMatchs
+  );
+
+  if(compteurPubMatchs >= 5){
+
+    if(pubAutorisee()){
+  afficherPublicite();
+}
+
+    compteurPubMatchs = 0;
+
+    localStorage.setItem(
+      "compteurPubMatchs",
+      compteurPubMatchs
+    );
+
+  }
+
+}
+
+function verifierPubliciteProfils(){
+
+  if(utilisateurAbonne === true){
+    return;
+  }
+
+  compteurPubProfils++;
+
+  localStorage.setItem(
+    "compteurPubProfils",
+    compteurPubProfils
+  );
+
+  if(compteurPubProfils >= 10){
+
+    if(pubAutorisee()){
+  afficherPublicite();
+}
+
+    compteurPubProfils = 0;
+
+    localStorage.setItem(
+      "compteurPubProfils",
+      compteurPubProfils
+    );
+
+  }
+
+}
+
+function verifierPubliciteVideos(){
+
+  if(utilisateurAbonne === true){
+    return;
+  }
+
+  compteurPubVideos++;
+
+  localStorage.setItem(
+    "compteurPubVideos",
+    compteurPubVideos
+  );
+
+  if(compteurPubVideos >= 5){
+
+    if(pubAutorisee()){
+  afficherPublicite();
+}
+
+    compteurPubVideos = 0;
+
+    localStorage.setItem(
+      "compteurPubVideos",
+      compteurPubVideos
+    );
+
+  }
+
+}
+
+function verifierPubliciteDashboard(){
+
+  if(utilisateurAbonne === true){
+  return;
+}
+
+  compteurPubDashboard++;
+
+  localStorage.setItem(
+    "compteurPubDashboard",
+    compteurPubDashboard
+  );
+
+  if(compteurPubDashboard >= 1){
+
+    if(pubAutorisee()){
+  afficherPublicite();
+}
+
+    compteurPubDashboard = 0;
+
+    localStorage.setItem(
+      "compteurPubDashboard",
+      compteurPubDashboard
+    );
+
+  }
+
+}
 
 let currentPublicUserId = null;
 
