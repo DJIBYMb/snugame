@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="fr">
-<hea>
+<head>
 
 <meta charset="UTF-8">
 
@@ -1405,10 +1405,6 @@ body.video-profil-mode #pageVideoProfil{
   text-align:center!important;
 }
 
-.profile-video-actions{
-  border:3px solid red !important;
-}
-
 #pageVideoProfil .tiktok-actions{
   position:fixed !important;
   right:16px !important;
@@ -1471,7 +1467,10 @@ body.video-profil-mode #pageVideoProfil{
 
 body{
   margin:0;
-  padding:0;
+  padding-top:0;
+  padding-left:0;
+  padding-right:0;
+  padding-bottom:80px;
 }
 
 header{
@@ -1983,6 +1982,10 @@ button:active{
   border:1px solid transparent!important;
 }
 
+.competition-sidebar button.hidden{
+  display:none!important;
+}
+
 .competition-sidebar button:hover{
   background:#111827!important;
   border-color:#334155!important;
@@ -2253,6 +2256,21 @@ button:active{
   border:1px solid rgba(255,255,255,.18)!important;
 }
 
+.button-help{
+  display:block;
+  width:100%;
+  margin-top:-4px;
+  margin-bottom:8px;
+  padding:0 8px;
+
+  color:#94a3b8;
+  font-size:12px;
+  font-weight:500;
+  line-height:1.35;
+
+  text-align:left;
+}
+
 </style>
 
 <link
@@ -2326,7 +2344,7 @@ min-height:50px;
 
 <img
 id="topProfilePhoto"
-src="/default-lo.jpeg"
+src="/logo.png"
 onclick="ouvrirProfilCompte()"
 style="
 position:absolute;
@@ -2493,11 +2511,18 @@ data-i18n-placeholder="password"
 placeholder="Mot de passe">
 
 <button
+id="btnEnvoyerCodeEmail"
 class="secondary texte-rouge"
 data-i18n="sendEmailCode"
 onclick="envoyerCode()">
 Envoyer code email
 </button>
+
+<div
+id="messageCodeEmail"
+style="display:none;color:#00c853;margin-top:8px;font-size:14px;">
+Code envoyé.
+</div>
 
 <input
 id="registerCode"
@@ -2540,7 +2565,7 @@ class="hidden">
 
 <button
 class="back-btn"
-onclick="ouvrirProfilCompte()">
+onclick="retourPage()">
 ‹
 </button>
 
@@ -2750,8 +2775,6 @@ accept="image/*"
 class="hidden"
 onchange="uploadPhotoProfil()">
 
-</div>
-
 <p id="profilEmail"></p>
 
 <p id="profilExpiration"></p>
@@ -2892,7 +2915,10 @@ onclick="setPage('pageSecurite')">
 <button
 class="secondary"
 data-i18n="privacy"
-onclick="chargerPolitiqueConfidentialite()">
+onclick="
+setPage('pagePolitiqueConfidentialite');
+chargerPolitiqueConfidentialite();
+">
 
  Politique de confidentialité
 
@@ -2939,7 +2965,7 @@ class="hidden">
 
 <button
 class="back-btn"
-onclick="setPage('pageParametres')">
+onclick="retourPage()">
 ‹
 </button>
 
@@ -2965,7 +2991,7 @@ class="hidden">
 
 <button
 class="back-btn"
-onclick="setPage('pageParametres')">
+onclick="retourPage()">
 ‹
 </button>
 
@@ -2998,7 +3024,7 @@ class="hidden">
 
 <button
 class="back-btn"
-onclick="setPage('pageParametres')">
+onclick="retourPage()">
 ‹
 </button>
 
@@ -3022,7 +3048,7 @@ class="hidden">
 
 <button
 class="back-btn"
-onclick="setPage('pageParametres')">
+onclick="retourPage()">
 ‹
 </button>
 
@@ -3044,7 +3070,7 @@ class="hidden">
 
 <button
 class="back-btn"
-onclick="setPage('pageParametres')">
+onclick="retourPage()">
 ‹
 </button>
 
@@ -3076,7 +3102,7 @@ class="hidden">
 
 <button
 class="back-btn"
-onclick="setPage('pageSecurite')">
+onclick="retourPage()">
 ‹
 </button>
 
@@ -3123,7 +3149,7 @@ class="hidden">
 
 <button
 class="back-btn"
-onclick="setPage('pageSecurite')">
+onclick="retourPage()">
 ‹
 </button>
 
@@ -3297,8 +3323,6 @@ Le nom d'utilisateur doit être unique et peut être modifié une fois tous les 
 
 </section>
 
-</section>
-
 <section
 id="pagePublierVideo"
 class="hidden">
@@ -3356,7 +3380,7 @@ Propriétaire
 Participants
 </button>
 
-<button onclick="ouvrirPanel('panelClassement')">
+<button onclick="ouvrirPanel('panelClassementProprietaire')">
 Classements
 </button>
 
@@ -3470,7 +3494,6 @@ onclick="toggleGestionTournoi()">
   onclick="supprimerTournoiComplet()">
   Supprimer tournoi
   </button>
-
 
   <button
   class="warning owner-only"
@@ -3624,10 +3647,25 @@ class="panel hidden">
 </h2>
 
 <button
+id="btnTirageRapide"
 class="owner-only"
 data-i18n="draw"
 onclick="customAutoDraw()">
-🎲 <span data-i18n-text>Générer / continuer tirage</span>
+  🎲 <span data-i18n-text>Générer / continuer tirage</span>
+</button>
+
+<button
+id="btnGenererPhaseFinale"
+class="secondary owner-only hidden"
+onclick="genererPhaseFinaleTest()">
+  🏆 Générer la phase finale
+</button>
+
+<button
+id="btnGenererTourSuivant"
+class="secondary owner-only hidden"
+onclick="genererTourSuivantTest()">
+  ➡️ Générer le tour suivant
 </button>
 
 <button
@@ -3877,20 +3915,236 @@ class="hidden video-profile-menu">
 
 <script>
 
+  function afficherBoutonsSelonTypeTournoi(){
+
+  const optionSelectionnee =
+    tournoiSelect.options[
+      tournoiSelect.selectedIndex
+    ];
+
+  const typeTournoi =
+    optionSelectionnee?.dataset.type || "";
+
+  const btnTirageRapide =
+    document.getElementById(
+      "btnTirageRapide"
+    );
+
+  const btnGenererPhaseFinale =
+    document.getElementById(
+      "btnGenererPhaseFinale"
+    );
+
+  const btnGenererTourSuivant =
+    document.getElementById(
+      "btnGenererTourSuivant"
+    );
+
+  /*
+    Aucun tournoi sélectionné :
+    on cache les trois boutons.
+  */
+  if(!tournoiSelect.value){
+
+    btnTirageRapide
+      ?.classList.add("hidden");
+
+    btnGenererPhaseFinale
+      ?.classList.add("hidden");
+
+    btnGenererTourSuivant
+      ?.classList.add("hidden");
+
+    return;
+  }
+
+  /*
+    Tournoi rapide :
+    afficher seulement le tirage rapide.
+  */
+  if(typeTournoi === "rapide"){
+
+    btnTirageRapide
+      ?.classList.remove("hidden");
+
+    btnGenererPhaseFinale
+      ?.classList.add("hidden");
+
+    btnGenererTourSuivant
+      ?.classList.add("hidden");
+
+    return;
+  }
+
+  /*
+    Tournoi poule :
+    cacher le tirage rapide et afficher
+    les deux boutons de phase finale.
+  */
+  btnTirageRapide
+    ?.classList.add("hidden");
+
+  btnGenererPhaseFinale
+    ?.classList.remove("hidden");
+
+  btnGenererTourSuivant
+    ?.classList.remove("hidden");
+
+}
+
+
+
+async function genererPhaseFinaleTest(){
+
+  const tournamentId =
+    Number(
+      tournoiSelect?.value ||
+      getTournoiOrganisateurId()
+    );
+
+  if(
+    !Number.isInteger(tournamentId) ||
+    tournamentId <= 0
+  ){
+
+    message.textContent =
+      "Sélectionne d'abord un tournoi";
+
+    return;
+
+  }
+
+  const result = await post(
+    "/generer-phase-finale",
+    {
+      tournament_id:tournamentId
+    }
+  );
+
+  message.textContent =
+    result;
+
+  cacheTirage = null;
+  cacheTournoiId = null;
+
+  await afficherTiragePoulePro();
+  await afficherPhaseFinale();
+  await afficherArbreTournoi();
+
+}
+
+async function genererTourSuivantTest(){
+
+  const tournamentId =
+    Number(
+      tournoiSelect?.value ||
+      getTournoiOrganisateurId()
+    );
+
+  if(
+    !Number.isInteger(tournamentId) ||
+    tournamentId <= 0
+  ){
+
+    message.textContent =
+      "Sélectionne d'abord un tournoi";
+
+    return;
+
+  }
+
+  const data =
+    await get(
+      "/tirage/" + tournamentId
+    );
+
+  const ordreTours = [
+    "16ES",
+    "8ES",
+    "QUARTS",
+    "DEMIS"
+  ];
+
+  let tourTermine = null;
+
+  for(const round of ordreTours){
+
+    const bloc =
+      data.find(
+        item =>
+          item.tour === round
+      );
+
+    if(!bloc){
+      continue;
+    }
+
+    const tousJoues =
+      bloc.matchs.length > 0 &&
+      bloc.matchs.every(
+        match =>
+          Number(match.played) === 1
+      );
+
+    if(tousJoues){
+
+      tourTermine = round;
+
+    }else{
+
+      break;
+
+    }
+
+  }
+
+  if(!tourTermine){
+
+    message.textContent =
+      "Termine d'abord tous les matchs du tour actuel";
+
+    return;
+
+  }
+
+  const result = await post(
+    "/generer-tour-suivant",
+    {
+      tournament_id:tournamentId,
+      round:tourTermine
+    }
+  );
+
+  message.textContent = result;
+
+  cacheTirage = null;
+  cacheTournoiId = null;
+
+  await afficherTiragePoulePro();
+  await afficherPhaseFinale();
+  await afficherArbreTournoi();
+
+}
+
   let cacheTirage = null;
 let cacheTournoiId = null;
-
 async function changerTournoiRapide(){
 
   cacheTirage = null;
   cacheTournoiId = null;
 
-  verifierProprietaire();
+  /*
+    Met immédiatement les bons boutons
+    selon le tournoi sélectionné.
+  */
+  afficherBoutonsSelonTypeTournoi();
 
-  chargerParticipants();
-  afficherTiragePoulePro();
-  afficherClassements();
-  afficherPhaseFinale();
+  await verifierProprietaire();
+
+  await chargerParticipants();
+  await afficherTiragePoulePro();
+  await afficherClassementSelonType();
+  await afficherPhaseFinale();
 
 }
 
@@ -3995,6 +4249,8 @@ const LANG = {
     loginToSeePlayerCard: "Connecte-toi pour voir ta carte joueur.",
     loginToSeeProfile: "Connecte-toi pour voir ton profil",
     login: "Connexion",
+    help_create_tournament:
+    "Appuie ici pour créer un tournoi.",
     duelFinished:"Duel terminé"
   },
 
@@ -4086,6 +4342,8 @@ const LANG = {
     total:"Total",
     loginToSeeProfile: "Log in to view your profile",
     login: "Login",
+    help_create_tournament:
+    "Tap here to create a tournament.",
     duelFinished:"Duel finished"
   }
 };
@@ -4098,7 +4356,7 @@ function tr(key){
   return LANG[langueApp]?.[key] || LANG.fr[key] || key;
 }
 
-  function appliquerLangue(){
+function appliquerLangue(){
 
   document.querySelectorAll("[data-i18n]").forEach(el=>{
 
@@ -4151,6 +4409,206 @@ function tr(key){
   if(typeof afficherArbreOrganisateur === "function"){
     afficherArbreOrganisateur();
   }
+
+  ajouterMessagesAideBoutons();
+  mettreAJourMessagesAide();
+
+}
+
+function ajouterMessagesAideBoutons(){
+
+  document
+    .querySelectorAll("button[data-i18n]:not(.back-btn)")
+    .forEach(button=>{
+
+      /*
+        On ne met pas de message sous
+        les boutons Retour.
+      */
+      if(
+        button.classList.contains("back-btn")
+      ){
+        return;
+      }
+
+      if(
+  button.closest(
+    "#panelHighlights, #pageVideoProfil, #commentsSheet"
+  )
+){
+  return;
+}
+
+      /*
+        Évite d'ajouter plusieurs fois
+        le même message.
+      */
+      const suivant =
+        button.nextElementSibling;
+
+      if(
+        suivant &&
+        suivant.classList.contains("button-help")
+      ){
+        return;
+      }
+
+      const cleBouton =
+        button.dataset.i18n;
+
+      const message =
+        document.createElement("div");
+
+      message.className =
+        "button-help";
+
+      message.dataset.helpButton =
+        cleBouton;
+
+      button.insertAdjacentElement(
+        "afterend",
+        message
+      );
+
+  });
+
+  mettreAJourMessagesAide();
+
+}
+
+function mettreAJourMessagesAide(){
+
+  document
+    .querySelectorAll(
+      ".button-help[data-help-button]"
+    )
+    .forEach(message=>{
+
+      const cle =
+        message.dataset.helpButton;
+
+      message.textContent =
+        getMessageAideBouton(cle);
+
+    });
+
+}
+function getMessageAideBouton(cle){
+
+  const messages = {
+
+    createTournament:{
+      fr:"Appuie ici pour créer un nouveau tournoi.",
+      en:"Tap here to create a new tournament."
+    },
+
+    manageTournament:{
+      fr:"Ouvre les options de gestion du tournoi.",
+      en:"Open the tournament management options."
+    },
+
+    deleteTournament:{
+      fr:"Supprime définitivement ce tournoi.",
+      en:"Permanently delete this tournament."
+    },
+
+    resetTournament:{
+      fr:"Efface les matchs et recommence le tournoi.",
+      en:"Clear the matches and restart the tournament."
+    },
+
+    publicLink:{
+      fr:"Crée un lien public pour partager les résultats.",
+      en:"Create a public link to share the results."
+    },
+
+    addParticipant:{
+      fr:"Ajoute un joueur au tournoi.",
+      en:"Add a player to the tournament."
+    },
+
+    participantList:{
+      fr:"Affiche tous les participants du tournoi.",
+      en:"View all tournament participants."
+    },
+
+    manageParticipants:{
+      fr:"Sélectionne ou supprime des participants.",
+      en:"Select or delete participants."
+    },
+
+    draw:{
+      fr:"Lance le tirage lorsque le tournoi est complet.",
+      en:"Start the draw when the tournament is full."
+    },
+
+    matches:{
+      fr:"Affiche les matchs du tournoi.",
+      en:"View the tournament matches."
+    },
+
+    standings:{
+      fr:"Affiche le classement des joueurs.",
+      en:"View the player standings."
+    },
+
+    tree:{
+      fr:"Affiche l'arbre complet du tournoi.",
+      en:"View the complete tournament bracket."
+    },
+
+    finalTable:{
+      fr:"Affiche les phases finales du tournoi.",
+      en:"View the tournament final rounds."
+    },
+
+    champion:{
+      fr:"Affiche le vainqueur du tournoi.",
+      en:"View the tournament winner."
+    },
+
+    privacy:{
+      fr:"Consulte la politique de confidentialité.",
+      en:"Read the privacy policy."
+    },
+
+    terms:{
+      fr:"Consulte les conditions d'utilisation.",
+      en:"Read the terms of use."
+    },
+
+    language:{
+      fr:"Choisis la langue de l'application.",
+      en:"Choose the application language."
+    },
+
+    security:{
+      fr:"Gère la sécurité de ton compte.",
+      en:"Manage your account security."
+    },
+
+    personalInfo:{
+      fr:"Consulte tes informations personnelles.",
+      en:"View your personal information."
+    },
+
+    logout:{
+      fr:"Déconnecte ton compte de l'application.",
+      en:"Log out of your account."
+    }
+
+  };
+
+  const item =
+    messages[cle];
+
+  if(!item){
+    return langueApp === "en"
+      ? "Tap here to use this option."
+      : "Appuie ici pour utiliser cette option.";
+  }
+
+  return item[langueApp] || item.fr;
 
 }
 function ouvrirPageLangage(){
@@ -5078,7 +5536,36 @@ function closeRegister(){
 
 }
 
-function setPage(page){
+let pageStack = [];
+
+function setPage(page, enregistrerHistorique = true){
+
+  const anciennePage =
+    currentPageName;
+
+  /*
+    On enregistre la page d'où vient
+    l'utilisateur avant d'ouvrir la nouvelle.
+  */
+  if(
+    enregistrerHistorique === true &&
+    anciennePage &&
+    anciennePage !== page &&
+    anciennePage !== "pageVideoProfil" &&
+    page !== "pageVideoProfil"
+  ){
+
+    const dernierePage =
+      pageStack[pageStack.length - 1];
+
+    /*
+      Évite d'ajouter deux fois la même page.
+    */
+    if(dernierePage !== anciennePage){
+      pageStack.push(anciennePage);
+    }
+
+  }
 
   currentPageName = page;
 
@@ -5089,31 +5576,32 @@ function setPage(page){
     fermerCommentaires();
   }
 
-  if(page !== "pageAuth"){
-    localStorage.setItem("lastPage", page);
+  if(
+    page !== "pageAuth" &&
+    page !== "pageVideoProfil"
+  ){
+    localStorage.setItem(
+      "lastPage",
+      page
+    );
   }
 
   document
     .querySelectorAll("section")
-    .forEach(s=>s.classList.add("hidden"));
+    .forEach(section=>{
+      section.classList.add("hidden");
+    });
 
   document
     .getElementById(page)
     ?.classList.remove("hidden");
 
+    ajouterMessagesAideBoutons();
+   mettreAJourMessagesAide();
+
 }
 
-let pageStack = [];
-
 function ouvrirPage(page){
-
-  if(
-    currentPageName &&
-    currentPageName !== page &&
-    currentPageName !== "pageVideoProfil"
-  ){
-    pageStack.push(currentPageName);
-  }
 
   setPage(page);
 
@@ -5121,30 +5609,59 @@ function ouvrirPage(page){
 
 function retourPage(){
 
-  let lastPage = pageStack.pop();
+  let pagePrecedente =
+    pageStack.pop();
 
-  while(lastPage === "pageVideoProfil"){
-    lastPage = pageStack.pop();
+  /*
+    La page des vidéos ne doit jamais
+    devenir la destination d'un Retour.
+  */
+  while(
+    pagePrecedente === "pageVideoProfil"
+  ){
+    pagePrecedente =
+      pageStack.pop();
   }
 
-  if(lastPage){
+  if(pagePrecedente){
 
-    setPage(lastPage);
+    /*
+      false empêche le bouton Retour
+      de réenregistrer la page actuelle.
+    */
+    setPage(
+      pagePrecedente,
+      false
+    );
 
-    if(lastPage === "pageDashboard"){
+    if(
+      pagePrecedente ===
+      "pageDashboard"
+    ){
 
-      const lastPanel =
-  localStorage.getItem("lastPanel") || "panelOrganisateur";
+      const dernierPanel =
+        localStorage.getItem(
+          "lastPanel"
+        ) || "panelTournoi";
 
-      ouvrirPanel(lastPanel);
+      ouvrirPanel(
+        dernierPanel
+      );
 
     }
 
     return;
   }
 
-  setPage("pageDashboard");
-  ouvrirPanel("panelOrganisateur");
+  setPage(
+    "pageDashboard",
+    false
+  );
+
+  ouvrirPanel(
+    localStorage.getItem("lastPanel") ||
+    "panelTournoi"
+  );
 
 }
 
@@ -5216,7 +5733,7 @@ async function ouvrirListeFollow(type, userId, from = "profile"){
       <div class="match" style="display:flex;align-items:center;gap:10px;">
 
         <img
-        src="${u.profile_photo || '/default-avatar.png'}"
+        src="${u.profile_photo || '/logo.png'}"
         onclick="ouvrirProfilPublic(${u.id})"
         style="
           width:45px;
@@ -5243,6 +5760,8 @@ function retourDepuisFollowList(){
 
 }
 
+let panelAvantProfilPublic = null;
+
 async function ouvrirProfilPublic(userId){
 
   verifierPubliciteProfils();
@@ -5250,6 +5769,11 @@ async function ouvrirProfilPublic(userId){
   publicProfilContent.style.opacity = "1";
 
   currentPublicUserId = userId;
+panelAvantProfilPublic =
+  currentPanelName ||
+  localStorage.getItem("lastPanel") ||
+  null;
+
 
   ouvrirPage("pagePublicProfil");
 
@@ -5280,7 +5804,7 @@ publicProfilContent.innerHTML = `
 
     <img
     class="player-profile-avatar"
-    src="${data.profile_photo || "/default-avatar.png"}">
+    src="${data.profile_photo || "/logo.png"}">
 
     <div class="player-profile-name">
       ${data.name || "Joueur"}
@@ -5445,10 +5969,24 @@ function retourProfilPublic(){
     .querySelector(".bottom-nav")
     ?.classList.remove("hidden");
 
-   retourPage();
+   const panelRetour =
+  panelAvantProfilPublic;
+
+if(panelRetour){
+
+  localStorage.setItem(
+    "lastPanel",
+    panelRetour
+  );
 
 }
 
+panelAvantProfilPublic =
+  null;
+
+retourPage();
+
+}
 async function ouvrirMaCarteJoueur(){
 
   lastPlayerCardFrom = "myProfile";
@@ -5458,14 +5996,36 @@ currentPublicUserId = null;
 
   const data = await get("/me");
 
-  const stats = await get("/my-player-stats");
+if(!data || data.connected === false){
 
-  const saisonActuelle =
+  maCarteJoueurContent.innerHTML =
+    `<p>${tr("loginToSeePlayerCard")}</p>`;
+
+  return;
+}
+
+const statsResult =
+  await get("/my-player-stats");
+
+const trophiesResult =
+  await get("/my-trophies");
+
+const stats =
+  statsResult &&
+  typeof statsResult === "object" &&
+  !statsResult.error
+    ? statsResult
+    : {};
+
+const trophies =
+  Array.isArray(trophiesResult)
+    ? trophiesResult
+    : [];
+
+const saisonActuelle =
   new Date().getFullYear();
 
-  const trophies = await get("/my-trophies");
-
-  let statut = "🟡 Standard";
+let statut = "🟡 Standard";
 
 if((stats.victoires || 0) >= ((stats.defaites || 0) * 3 + 5)){
   statut = "🟢 Inébranlable";
@@ -5474,11 +6034,6 @@ else if((stats.defaites || 0) > (stats.victoires || 0)){
   statut = "🔴 Inconstant";
 }
 
-  if(!data || data.connected === false){
-    maCarteJoueurContent.innerHTML =
-      `<p>${tr("loginToSeePlayerCard")}</p>`;
-    return;
-  }
 
   maCarteJoueurContent.innerHTML = `
 
@@ -5740,7 +6295,6 @@ setTimeout(()=>{
   src="${video.media_url}"
   class="profile-full-video"
   autoplay
-  muted
   playsinline
   preload="auto"
   onplaying="this.previousElementSibling.style.display='none';">
@@ -5770,6 +6324,22 @@ setTimeout(()=>{
 
 </div>
 `;
+
+const videoProfil =
+  videoProfilContent.querySelector(
+    ".profile-full-video"
+  );
+
+if(videoProfil){
+
+  videoProfil.muted = false;
+  videoProfil.volume = 1;
+
+  videoProfil
+    .play()
+    .catch(()=>{});
+
+}
 
 } 
 
@@ -5879,7 +6449,6 @@ async function ouvrirVideoPublique(videoId, userId){
       <video
       src="${video.media_url}"
       class="highlight-video"
-      muted
       loop
       playsinline
       preload="auto"
@@ -5930,6 +6499,22 @@ async function ouvrirVideoPublique(videoId, userId){
     </div>
   `;
 
+  const videoPublique =
+  videoProfilContent.querySelector(
+    ".profile-full-video"
+  );
+
+if(videoPublique){
+
+  videoPublique.muted = false;
+  videoPublique.volume = 1;
+
+  videoPublique
+    .play()
+    .catch(()=>{});
+
+}
+
   const videoEl =
     highlightsList.querySelector("video");
 
@@ -5944,18 +6529,134 @@ async function showPanel(id){
 
 }
 
-async function envoyerCode(){
+let compteurCodeEmail = null;
 
-  if(!registerEmail.value){
-    message.textContent = "Entre ton adresse email";
+function demarrerCompteurCodeEmail(secondes = 60){
+
+  const bouton =
+    document.getElementById("btnEnvoyerCodeEmail");
+
+  if(!bouton){
     return;
   }
 
+  clearInterval(compteurCodeEmail);
+
+  bouton.disabled = true;
+
+  let tempsRestant = secondes;
+
+  bouton.textContent =
+    langueApp === "en"
+      ? `Send again in ${tempsRestant}s`
+      : `Renvoyer dans ${tempsRestant}s`;
+
+  compteurCodeEmail = setInterval(()=>{
+
+    tempsRestant--;
+
+    if(tempsRestant <= 0){
+
+      clearInterval(compteurCodeEmail);
+
+      bouton.disabled = false;
+
+      bouton.textContent =
+      langueApp === "en"
+      ? " Resend code"
+      : " Renvoyer le code";
+
+      return;
+
+    }
+
+    bouton.textContent =
+      langueApp === "en"
+        ? `Send again in ${tempsRestant}s`
+        : `Renvoyer dans ${tempsRestant}s`;
+
+  },1000);
+
+}
+
+async function envoyerCode(){
+
+  const messageCode =
+    document.getElementById("messageCodeEmail");
+
+  const email =
+    registerEmail.value.trim();
+
+  messageCode.style.display = "block";
+
+  if(!email){
+
+    messageCode.style.color = "#ef4444";
+
+    messageCode.textContent =
+      langueApp === "en"
+        ? "Enter your email address."
+        : "Entre ton adresse e-mail.";
+
+    return;
+  }
+
+  const emailValide =
+    /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+  if(!emailValide.test(email)){
+
+    messageCode.style.color = "#ef4444";
+
+    messageCode.textContent =
+      langueApp === "en"
+        ? "Invalid email address."
+        : "Adresse e-mail non valide.";
+
+    return;
+  }
+
+  messageCode.style.color = "#94a3b8";
+
+  messageCode.textContent =
+    langueApp === "en"
+      ? "Sending code..."
+      : "Envoi du code...";
+
   const result = await post("/send-code",{
-    email:registerEmail.value
+    email
   });
 
-  message.textContent = result;
+  if(
+    result === "Code envoyé" ||
+    result === "Verification code sent"
+  ){
+
+    messageCode.style.color = "#22c55e";
+
+    messageCode.textContent =
+  langueApp === "en"
+    ? (
+        premierCodeEnvoye
+          ? "New code sent."
+          : "Code sent."
+      )
+    : (
+        premierCodeEnvoye
+          ? "Nouveau code envoyé."
+          : "Code envoyé."
+      );
+
+premierCodeEnvoye = true;
+
+        demarrerCompteurCodeEmail(60);
+
+  }else{
+
+    messageCode.style.color = "#ef4444";
+    messageCode.textContent = result;
+
+  }
 
 }
 
@@ -6167,7 +6868,6 @@ async function chargerDashboardTournoiProfil(){
 
 async function ouvrirProfilCompte(){
 
-afficherPublicite();
 
   const data = await get("/me");
 
@@ -6176,6 +6876,19 @@ if(!data || data.connected === false){
   message.textContent =
     tr("loginToSeeProfile");
   return;
+}
+
+utilisateurAbonne = false;
+
+if(data.abonnement_expire_at){
+
+  const expiration =
+    new Date(data.abonnement_expire_at);
+
+  utilisateurAbonne =
+    !Number.isNaN(expiration.getTime()) &&
+    expiration.getTime() > Date.now();
+
 }
 
   document
@@ -6494,6 +7207,12 @@ async function chargerMesFavoris(){
 
 async function creerTournoi(){
 
+  if(window.creationTournoiEnCours){
+  return;
+}
+
+window.creationTournoiEnCours = true;
+
   if(!tournoiNom.value){
     message.textContent = "Nom tournoi obligatoire";
     return;
@@ -6506,8 +7225,8 @@ async function creerTournoi(){
 
 const maxTeams =
   typeTournoi === "rapide"
-  ? 32
-  : Number(tournoiMax.value) || 48;
+    ? 32
+    : Number(tournoiMax.value);
 
   if(maxTeams < 6 || maxTeams > 100){
     message.textContent = "Le nombre d'équipes doit être entre 6 et 100";
@@ -6531,21 +7250,39 @@ async function chargerTournois(){
 
   let data = await get("/tournois");
 
-  const params = new URLSearchParams(window.location.search);
-  const tournoiUrl = params.get("tournament");
+  if(!Array.isArray(data)){
 
-  if(tournoiUrl && !data.some(t => String(t.id) === String(tournoiUrl))){
+    data = [];
 
-    const externe = await get("/tournoi-access/" + tournoiUrl);
-
-    if(externe && externe.ok && externe.tournoi){
-      data.unshift(externe.tournoi);
-    }
+    message.textContent =
+      "Impossible de charger les tournois pour le moment";
 
   }
 
-  if(!Array.isArray(data)){
-    return;
+  const params =
+    new URLSearchParams(window.location.search);
+
+  const tournoiUrl =
+    params.get("tournament");
+
+  if(
+    tournoiUrl &&
+    !data.some(
+      t => String(t.id) === String(tournoiUrl)
+    )
+  ){
+
+    const externe =
+      await get("/tournoi-access/" + tournoiUrl);
+
+    if(
+      externe &&
+      externe.ok &&
+      externe.tournoi
+    ){
+      data.unshift(externe.tournoi);
+    }
+
   }
 
 tournoiSelect.innerHTML = `
@@ -6562,13 +7299,30 @@ tournoiSelect.innerHTML = `
   </option>
 `).join("");
 
-  if(tournoiUrl && data.some(t=>String(t.id) === String(tournoiUrl))){
+    if(
+    tournoiUrl &&
+    data.some(
+      t => String(t.id) === String(tournoiUrl)
+    )
+  ){
+
     tournoiSelect.value = tournoiUrl;
+
   }else if(data.length > 0){
+
     tournoiSelect.value = data[0].id;
+
   }else{
+
     tournoiSelect.value = "";
+
   }
+
+  /*
+    Affiche immédiatement les bons boutons
+    après le chargement des tournois.
+  */
+  afficherBoutonsSelonTypeTournoi();
 
   await verifierProprietaire();
 
@@ -6616,22 +7370,47 @@ tournoiSelect.innerHTML = `
   `).join("");
 
 }
+
 async function ajouterParticipant(){
 
   if(!tournoiSelect.value){
+
     message.textContent =
-      "Choisis tournoi";
+      "Choisis un tournoi";
+
     return;
   }
 
-  await post("/participant",{
-    tournament_id:tournoiSelect.value,
-    participantUsername:
-      participantUsername.value
-  });
+  const username =
+    participantUsername.value.trim();
 
-  cacheTirage = null;
-cacheTournoiId = null;
+  if(!username){
+
+    message.textContent =
+      "Entre le nom d'utilisateur du participant";
+
+    participantUsername.focus();
+
+    return;
+  }
+
+  const resultat =
+    await post("/participant",{
+      tournament_id: tournoiSelect.value,
+      participantUsername: username
+    });
+
+  message.textContent =
+    typeof resultat === "string"
+      ? resultat
+      : resultat?.message || "";
+
+  if(
+    resultat?.ok === false ||
+    resultat?.error
+  ){
+    return;
+  }
 
   participantUsername.value = "";
 
@@ -6756,25 +7535,6 @@ async function chargerParticipants(){
 
  `).join("");
 }
-function cocherTous(etat){
-  document.querySelectorAll(".participantCheck").forEach(c=>c.checked=etat);
-}
-
-async function supprimerParticipantsCoches(){
-  const ids = Array.from(
-    document.querySelectorAll(".participantCheck:checked")
-  ).map(i=>i.value);
-
-  if(!ids.length){
-    message.textContent = "Aucun participant sélectionné";
-    return;
-  }
-
-  if(!confirm("Supprimer participants ?")) return;
-
-  await post("/supprimer-participants-selection",{ids});
-  await chargerParticipants();
-}
 
 function cocherTous(etat){
   document.querySelectorAll(".participantCheck").forEach(c=>c.checked=etat);
@@ -6881,13 +7641,24 @@ function matchCard(match){
   const isFinal =
     match.round !== "POULE";
 
-  if(isFinal && Number(match.played) === 1){
+  /*
+    Un match éliminatoire déjà validé
+    est affiché comme résultat fermé.
+
+    Si des tirs au but sont nécessaires,
+    la simulation doit laisser played=0,
+    donc le formulaire restera visible.
+  */
+  if(
+    isFinal &&
+    Number(match.played) === 1
+  ){
 
     return `
       <div class="final-match-card">
 
         <div class="final-match-title">
-         Match
+          Match
         </div>
 
         <div class="final-score-line">
@@ -6907,22 +7678,41 @@ function matchCard(match){
         </div>
 
         ${
+          match.penalty1 !== null &&
+          match.penalty1 !== undefined &&
+          match.penalty2 !== null &&
+          match.penalty2 !== undefined
+          ? `
+            <div
+            style="
+              margin-top:8px;
+              color:#fde047;
+              font-weight:bold;
+              text-align:center;
+            ">
+              TAB : ${match.penalty1} - ${match.penalty2}
+            </div>
+          `
+          : ""
+        }
+
+        ${
           match.proof_photo
           ? `
-           <div style="margin-top:10px;">
-            <p class="small">📸 Preuve du score</p>
-            ${mediaPreview(match.proof_photo)}
-           </div>
-        `
-        : ""
-      }
+            <div style="margin-top:10px;">
+              <p class="small">📸 Preuve du score</p>
+              ${mediaPreview(match.proof_photo)}
+            </div>
+          `
+          : ""
+        }
 
       </div>
     `;
 
   }
 
-  return `
+  return  `
 
   <div class="match">
 
@@ -6988,18 +7778,81 @@ function matchCard(match){
     ">
 
       <input
-      type="number"
-      id="score1_${uid}"
-      value="${match.score1 ?? ""}"
-      placeholder="Score 1">
+       type="number"
+       id="score1_${uid}"
+       min="0"
+       step="1"
+       inputmode="numeric"
+       value="${match.score1 ?? ""}"
+       placeholder="Score 1">
 
       <input
-      type="number"
-      id="score2_${uid}"
-      value="${match.score2 ?? ""}"
-      placeholder="Score 2">
+       type="number"
+       id="score2_${uid}"
+       min="0"
+       step="1"
+       inputmode="numeric"
+       value="${match.score2 ?? ""}"
+       placeholder="Score 2">
 
     </div>
+
+    ${
+  isFinal &&
+  (
+    match.journee === "RETOUR" ||
+    match.leg === "RETOUR"
+  )
+  ? `
+    <div
+    style="
+      margin-top:10px;
+      padding:10px;
+      border:1px solid #334155;
+      border-radius:12px;
+      background:#020617;
+    ">
+
+      <p
+      style="
+        margin:0 0 8px;
+        color:#fde047;
+        font-weight:900;
+      ">
+        Tirs au but si le score cumulé est égal
+      </p>
+
+      <div
+      style="
+        display:grid;
+        grid-template-columns:1fr 1fr;
+        gap:10px;
+      ">
+
+        <input
+        type="number"
+        id="penalty1_${uid}"
+        min="0"
+        step="1"
+        inputmode="numeric"
+        value="${match.penalty1 ?? ""}"
+        placeholder="TAB équipe 1">
+
+        <input
+        type="number"
+        id="penalty2_${uid}"
+        min="0"
+        step="1"
+        inputmode="numeric"
+        value="${match.penalty2 ?? ""}"
+        placeholder="TAB équipe 2">
+
+      </div>
+
+    </div>
+  `
+  : ""
+}
 
     <input
     type="hidden"
@@ -7065,6 +7918,7 @@ function matchCard(match){
 
 }
 
+
 async function afficherTiragePoulePro(){
 
   const tournoiId = tournoiSelect.value;
@@ -7107,90 +7961,6 @@ cacheTournoiId = tournoiId;
  appliquerDroitsProprietaire();
 }
 
-async function validerScore(matchId, uid){
-
-  let photo = "";
-
-  const oldPhoto =
-    document.getElementById("photo_" + matchId);
-
-  if(oldPhoto){
-    photo = oldPhoto.value || "";
-  }
-
-  const fileInput =
-    document.getElementById("file_" + matchId);
-
-  if(fileInput && fileInput.files && fileInput.files.length > 0){
-
-    message.textContent = "Upload image en cours...";
-
-    const formData = new FormData();
-    formData.append("image", fileInput.files[0]);
-
-    const uploadRes = await fetch("/upload-image",{
-      method:"POST",
-      body:formData
-    });
-
-    if(!uploadRes.ok){
-      message.textContent = "Erreur serveur upload image";
-      return;
-    }
-
-    const uploadData = await uploadRes.json();
-
-    if(!uploadData.ok || !uploadData.url){
-      message.textContent = uploadData.message || "Image non uploadée";
-      return;
-    }
-
-    photo = uploadData.url;
-
-    document.getElementById("photo_" + uid).value = photo;
-
-    document.getElementById("preview_" + matchId).innerHTML =
-      mediaPreview(photo + "?t=" + Date.now());
-  }
-
-  message.textContent = "Validation score en cours...";
-
-  const s1Value =
-  document.getElementById(
-    "score1_" + uid
-  ).value;
-
-const s2Input =
-  document.getElementById(
-    "score2_" + uid
-  );
-
-const s2Value =
-  s2Input
-  ? s2Input.value.trim()
-  : "";
-
-  const result = await post("/update-match-proof",{
-    match_id:matchId,
-    score1:s1Value,
-    score2:s2Value,
-    photo_url:photo
-  });
-
-  message.textContent = result;
-
-  setTimeout(async ()=>{
-
-  cacheTirage = null;
-  cacheTournoiId = null;
-
-  await afficherTiragePoulePro();
-  await afficherClassements();
-  await afficherPhaseFinale();
-
-},1000);
-
-}
 
 async function afficherTiragePouleOrganisateur(){
 
@@ -7198,7 +7968,15 @@ async function afficherTiragePouleOrganisateur(){
 
   const tournoiId = getTournoiOrganisateurId();
 
-  console.log("TOURNOI ORG ID =", tournoiId);
+  if(!tournoiId){
+
+  console.log(
+    "Aucun tournoi organisateur sélectionné"
+  );
+
+  return;
+
+}
 
   if(!tournoiId) return;
 
@@ -7256,60 +8034,229 @@ async function validerScoreDirect(matchId, btn){
 
     const box = btn.closest(".match");
 
-    const inputs =
-      box.querySelectorAll("input[type='number']");
+    const score1Input =
+  box.querySelector(
+    "input[id^='score1_']"
+  );
 
-    const score1 = inputs[0].value;
-    const score2 = inputs[1].value;
+const score2Input =
+  box.querySelector(
+    "input[id^='score2_']"
+  );
 
-    if(score1 === "" || score2 === ""){
-      message.textContent = "Remplis les deux scores";
-      btn.disabled = false;
-      btn.textContent = "✅ Valider score";
-      return;
-    }
+const penalty1Input =
+  box.querySelector(
+    "input[id^='penalty1_']"
+  );
 
-    let photoUrl = "";
+const penalty2Input =
+  box.querySelector(
+    "input[id^='penalty2_']"
+  );
 
-    const fileInput =
-      box.querySelector("input[type='file']");
+const score1Value =
+  score1Input?.value.trim() || "";
 
-    if(fileInput && fileInput.files.length > 0){
+const score2Value =
+  score2Input?.value.trim() || "";
 
-      message.textContent = "Upload preuve...";
+const penalty1Value =
+  penalty1Input?.value.trim() || "";
 
-      const formData = new FormData();
-      formData.append("image", fileInput.files[0]);
+const penalty2Value =
+  penalty2Input?.value.trim() || "";
 
-      const uploadRes = await fetch("/upload-image",{
-        method:"POST",
-        body:formData
-      });
+const score1 =
+  Number(score1Value);
 
-      const uploadData = await uploadRes.json();
+const score2 =
+  Number(score2Value);
 
-      if(!uploadData.ok){
-        message.textContent =
-          uploadData.message || "Erreur upload preuve";
+  const penalty1 =
+  penalty1Value === ""
+    ? null
+    : Number(penalty1Value);
 
-        btn.disabled = false;
-        btn.textContent = "✅ Valider score";
-        return;
-      }
+const penalty2 =
+  penalty2Value === ""
+    ? null
+    : Number(penalty2Value);
 
-      photoUrl = uploadData.url;
-    }
+if(
+  score1Value === "" ||
+  score2Value === ""
+){
+
+  message.textContent =
+    "Remplis les deux scores";
+
+  btn.disabled = false;
+  btn.textContent =
+    "✅ Valider score";
+
+  return;
+}
+
+if(
+  penalty1 !== null ||
+  penalty2 !== null
+){
+
+  if(
+    penalty1 === null ||
+    penalty2 === null
+  ){
+
+    message.textContent =
+      "Remplis les deux scores des tirs au but";
+
+    btn.disabled = false;
+    btn.textContent =
+      "✅ Valider score";
+
+    return;
+
+  }
+
+  if(
+    !Number.isInteger(penalty1) ||
+    !Number.isInteger(penalty2) ||
+    penalty1 < 0 ||
+    penalty2 < 0
+  ){
+
+    message.textContent =
+      "Les tirs au but doivent être des nombres entiers positifs ou zéro";
+
+    btn.disabled = false;
+    btn.textContent =
+      "✅ Valider score";
+
+    return;
+
+  }
+
+  if(penalty1 === penalty2){
+
+    message.textContent =
+      "Les tirs au but ne peuvent pas être égaux";
+
+    btn.disabled = false;
+    btn.textContent =
+      "✅ Valider score";
+
+    return;
+
+  }
+
+}
+
+if(
+  !Number.isInteger(score1) ||
+  !Number.isInteger(score2) ||
+  score1 < 0 ||
+  score2 < 0
+){
+
+  message.textContent =
+    "Les scores doivent être des nombres entiers positifs ou zéro";
+
+  btn.disabled = false;
+  btn.textContent =
+    "✅ Valider score";
+
+  return;
+}
+    const oldPhotoInput =
+  box.querySelector(
+    "input[type='hidden'][id^='photo_']"
+  );
+
+let photoUrl =
+  oldPhotoInput
+    ? oldPhotoInput.value || ""
+    : "";
+
+const fileInput =
+  box.querySelector("input[type='file']");
+
+if(
+  fileInput &&
+  fileInput.files.length > 0
+){
+
+  message.textContent =
+    "Upload preuve...";
+
+  const formData =
+    new FormData();
+
+  formData.append(
+    "image",
+    fileInput.files[0]
+  );
+
+  const uploadRes =
+    await fetch("/upload-image",{
+      method:"POST",
+      body:formData
+    });
+
+  if(!uploadRes.ok){
+
+    message.textContent =
+      "Erreur serveur pendant l'envoi de la preuve";
+
+    btn.disabled = false;
+    btn.textContent = "✅ Valider score";
+
+    return;
+  }
+
+  const uploadData =
+    await uploadRes.json();
+
+  if(
+    !uploadData.ok ||
+    !uploadData.url
+  ){
+
+    message.textContent =
+      uploadData.message ||
+      "Erreur upload preuve";
+
+    btn.disabled = false;
+    btn.textContent =
+      "✅ Valider score";
+
+    return;
+  }
+
+  photoUrl =
+    uploadData.url;
+
+  if(oldPhotoInput){
+    oldPhotoInput.value =
+      uploadData.url;
+  }
+
+}
 
     const result = await post("/update-match-proof",{
-      match_id:matchId,
-      score1:score1,
-      score2:score2,
-      photo_url:photoUrl
-    });
+  match_id:matchId,
+  score1,
+  score2,
+  penalty1,
+  penalty2,
+  photo_url:photoUrl
+});
 
     showNotif("🔥 Score validé");
 
     message.textContent = result;
+
+    cacheTirage = null;
+   cacheTournoiId = null;
 
     await afficherTiragePoulePro();
     await afficherClassementSelonType();
@@ -7338,40 +8285,100 @@ async function annulerScore(matchId){
     match_id:matchId
   });
 
+  cacheTirage = null;
+  cacheTournoiId = null;
+
   await afficherTiragePoulePro();
   await afficherClassementSelonType();
   await afficherPhaseFinale();
   await afficherArbreTournoi();
 }
 
-async function uploadPreuve(matchId){
-  const fileInput = document.getElementById("file_" + uid);
+async function uploadPreuve(matchId, uid){
 
-  if(!fileInput.files.length){
-    message.textContent = "Choisis une image";
+  const fileInput =
+    document.getElementById("file_" + uid);
+
+  if(
+    !fileInput ||
+    !fileInput.files ||
+    fileInput.files.length === 0
+  ){
+
+    message.textContent =
+      "Choisis une image";
+
     return;
   }
 
-  const formData = new FormData();
-  formData.append("image", fileInput.files[0]);
+  try{
 
-  const res = await fetch("/upload-image",{
-    method:"POST",
-    body:formData
-  });
+    const formData =
+      new FormData();
 
-  const data = await res.json();
+    formData.append(
+      "image",
+      fileInput.files[0]
+    );
 
-  if(!data.ok){
-    message.textContent = data.message || "Erreur upload";
-    return;
+    const res =
+      await fetch("/upload-image",{
+        method:"POST",
+        body:formData
+      });
+
+    if(!res.ok){
+      throw new Error(
+        "Erreur serveur upload image"
+      );
+    }
+
+    const data =
+      await res.json();
+
+    if(!data.ok || !data.url){
+
+      message.textContent =
+        data.message ||
+        "Erreur upload";
+
+      return;
+    }
+
+    const photoInput =
+      document.getElementById(
+        "photo_" + uid
+      );
+
+    if(photoInput){
+      photoInput.value = data.url;
+    }
+
+    const preview =
+      document.getElementById(
+        "preview_" + uid
+      );
+
+    if(preview){
+      preview.innerHTML =
+        mediaPreview(data.url);
+    }
+
+    message.textContent =
+      "Image uploadée";
+
+  }catch(error){
+
+    console.error(
+      "Erreur upload preuve :",
+      error
+    );
+
+    message.textContent =
+      "Impossible d'envoyer l'image";
+
   }
 
-  document.getElementById("photo_" + matchId).value = data.url;
-  document.getElementById("preview_" + uid).innerHTML =
-    mediaPreview(data.url);
-
-  message.textContent = "Image uploadée";
 }
 
 async function afficherClassements(){
@@ -7665,29 +8672,46 @@ async function afficherPhaseFinaleOrganisateur(){
   `;
 
 }
-
 async function voirChampion(){
 
   if(!tournoiSelect.value){
-    message.textContent = "Choisis tournoi";
+
+    message.textContent =
+      "Choisis un tournoi";
+
     return;
+
   }
 
-  afficherBlocCompetition("blocChampion");
+  ouvrirCompetitionBloc(
+    "blocChampion"
+  );
 
   const champion =
-    await get("/champion/" + tournoiSelect.value);
+    await get(
+      "/champion/" +
+      tournoiSelect.value
+    );
 
-  if(!champion){
+  if(
+    !champion ||
+    champion.error
+  ){
+
     championResult.innerHTML =
       "<p>Aucun champion pour le moment</p>";
+
     return;
+
   }
 
   championResult.innerHTML = `
     <div class="card">
       <h1>🏆 Champion</h1>
-      <h2>${champion.prenom}</h2>
+
+      <h2>
+        ${champion.prenom || "Champion"}
+      </h2>
     </div>
   `;
 
@@ -7929,7 +8953,6 @@ async function chargerHighlights(){
 <video
   src="${h.media_url}"
   class="highlight-video"
-  muted
   loop
   playsinline
   preload="auto"
@@ -8005,6 +9028,17 @@ async function chargerHighlights(){
    `).join("");
 
    prepareFirstPanelVideo();
+
+   document
+  .querySelectorAll(
+    "#panelHighlights .highlight-video"
+  )
+  .forEach(video=>{
+
+    video.muted = false;
+    video.volume = 1;
+
+  });
 
    const firstVideo =
   document.querySelector(
@@ -8171,49 +9205,354 @@ async function commentHighlight(id){
 
 async function customAutoDraw(){
 
-  if(!tournoiSelect.value){
-    await chargerTournois();
-  }
-
-  if(!tournoiSelect.value){
-    message.textContent =
-      "Choisis un tournoi";
+  if(window.tirageEnCours){
     return;
   }
 
-  message.textContent =
-    "Traitement en cours...";
+  window.tirageEnCours = true;
 
-  const result = await post(
-    "/tirage-automatique-poule-pro",
-    {
-      tournament_id:
-        tournoiSelect.value
+  try{
+
+    if(!tournoiSelect.value){
+      await chargerTournois();
     }
-  );
 
-  message.textContent = result;
+    const tournamentId =
+      Number(tournoiSelect.value);
+
+    if(
+      !Number.isInteger(tournamentId) ||
+      tournamentId <= 0
+    ){
+
+      message.textContent =
+        "Choisis un tournoi";
+
+      return;
+
+    }
+
+    message.textContent =
+      "Traitement en cours...";
+
+    /*
+      Lire le tournoi sélectionné.
+      Le type est normalement enregistré
+      dans data-type de l'option.
+    */
+    const optionSelectionnee =
+      tournoiSelect.selectedOptions[0];
+
+    const tournamentType =
+      String(
+        optionSelectionnee?.dataset?.type ||
+        ""
+      )
+        .trim()
+        .toLowerCase();
+
+    const data =
+      await get(
+        "/tirage/" + tournamentId
+      );
+
+    const tirage =
+      Array.isArray(data)
+        ? data
+        : [];
+
+    const ordreTours = [
+      "16ES",
+      "8ES",
+      "QUARTS",
+      "DEMIS",
+      "FINALE"
+    ];
+
+    const blocPoules =
+      tirage.find(
+        bloc =>
+          String(bloc.tour || "")
+            .startsWith("Groupe ")
+      );
+
+    const toursEliminatoires =
+      tirage.filter(
+        bloc =>
+          ordreTours.includes(
+            bloc.tour
+          )
+      );
+
+    let result = "";
+
+    /*
+      1. Aucun match :
+      créer le premier tirage.
+
+      Rapide → 16ES
+      Poule → groupes
+    */
+    if(tirage.length === 0){
+
+  if(tournamentType === "rapide"){
+
+    result = await post(
+      "/tirage-automatique-rapide",
+      {
+        tournament_id:
+          tournamentId
+      }
+    );
+
+  }else if(tournamentType === "poule"){
+
+    result = await post(
+      "/tirage-automatique-poule-pro",
+      {
+        tournament_id:
+          tournamentId
+      }
+    );
+
+  }else{
+
+    message.textContent =
+      "Type de tournoi invalide";
+
+    return;
+
+  }
+
+    /*
+      2. Tournoi avec poules :
+      les groupes existent,
+      mais aucune phase finale.
+    */
+    }else if(
+      tournamentType === "poule" &&
+      blocPoules &&
+      toursEliminatoires.length === 0
+    ){
+
+      const blocsPoules =
+        tirage.filter(
+          bloc =>
+            String(bloc.tour || "")
+              .startsWith("Groupe ")
+        );
+
+      const tousMatchsPoules =
+        blocsPoules.flatMap(
+          bloc =>
+            Array.isArray(bloc.matchs)
+              ? bloc.matchs
+              : []
+        );
+
+      const poulesTerminees =
+        tousMatchsPoules.length > 0 &&
+        tousMatchsPoules.every(
+          match =>
+            Number(match.played) === 1
+        );
+
+      if(!poulesTerminees){
+
+        message.textContent =
+          "Termine d'abord tous les matchs de poules";
+
+        return;
+
+      }
+
+      result = await post(
+        "/generer-phase-finale",
+        {
+          tournament_id:
+            tournamentId
+        }
+      );
+
+    /*
+      3. Une phase éliminatoire existe :
+      chercher le tour le plus avancé.
+    */
+    }else if(
+      toursEliminatoires.length > 0
+    ){
+
+      let tourActuel = null;
+      let blocActuel = null;
+
+      for(const round of ordreTours){
+
+        const bloc =
+          tirage.find(
+            item =>
+              item.tour === round
+          );
+
+        if(bloc){
+
+          tourActuel = round;
+          blocActuel = bloc;
+
+        }
+
+      }
+
+      if(
+        !tourActuel ||
+        !blocActuel
+      ){
+
+        message.textContent =
+          "Impossible de trouver le tour actuel";
+
+        return;
+
+      }
+
+      const matchsActuels =
+        Array.isArray(blocActuel.matchs)
+          ? blocActuel.matchs
+          : [];
+
+      const tousJoues =
+        matchsActuels.length > 0 &&
+        matchsActuels.every(
+          match =>
+            Number(match.played) === 1
+        );
+
+      if(!tousJoues){
+
+        message.textContent =
+          `Termine d'abord tous les matchs de ${tourActuel}`;
+
+        return;
+
+      }
+
+      /*
+        La finale terminée enregistre déjà
+        automatiquement le champion lors
+        de la validation du score retour.
+      */
+      if(tourActuel === "FINALE"){
+
+        const champion =
+          await get(
+            "/champion/" +
+            tournamentId
+          );
+
+        if(
+          champion &&
+          !champion.error
+        ){
+
+          message.textContent =
+            "🏆 Tournoi terminé : champion enregistré";
+
+          await voirChampion();
+
+        }else{
+
+          message.textContent =
+            "La finale est terminée, mais aucun champion n'a été trouvé";
+
+        }
+
+        return;
+
+      }
+
+      result = await post(
+        "/generer-tour-suivant",
+        {
+          tournament_id:
+            tournamentId,
+          round:
+            tourActuel
+        }
+      );
+
+    }else{
+
+      message.textContent =
+        "Aucune action de tirage disponible";
+
+      return;
+
+    }
+
+    message.textContent =
+      typeof result === "string"
+        ? result
+        : result?.message ||
+          "Traitement terminé";
+
+    if(
+      result?.ok === false ||
+      result?.error
+    ){
+      return;
+    }
+
+    cacheTirage = null;
+    cacheTournoiId = null;
+
+    cacheTirage = null;
+cacheTournoiId = null;
+
+try{
 
   await chargerTournois();
   await chargerParticipants();
   await afficherTiragePoulePro();
   await afficherPhaseFinale();
   await afficherBracketPro();
-
-  const option =
-  tournoiSelect.options[tournoiSelect.selectedIndex];
-
-  const type =
-  option?.dataset.type || "poule";
-
   await afficherClassementSelonType();
 
- ouvrirCompetitionBloc("blocArbreTournoi");
- await afficherArbreTournoi();
+  ouvrirCompetitionBloc(
+    "blocArbreTournoi"
+  );
+
+  await afficherArbreTournoi();
+
+}catch(errorAffichage){
+
+  console.error(
+    "Erreur rafraîchissement après tirage :",
+    errorAffichage
+  );
+
+  /*
+    Le tirage a déjà réussi.
+    On ne remplace donc pas son message.
+  */
+
 }
 
+  }catch(error){
 
+    console.error(
+      "Erreur tirage automatique :",
+      error
+    );
 
+    message.textContent =
+      "Impossible de générer ou continuer le tirage";
+
+  }finally{
+
+    window.tirageEnCours = false;
+
+  }
+
+}
 async function afficherClassementRapide32(){
 
   ouvrirCompetitionBloc("blocClassements");
@@ -8373,17 +9712,6 @@ async function banUser(userId){
 
   showNotif(result);
 
-  if(result === "Mot de passe changé"){
-  forgotBox.classList.add("hidden");
-
-  forgotEmail.value = "";
-  forgotCode.value = "";
-  newPassword.value = "";
-
-  message.textContent =
-    "Mot de passe changé. Connecte-toi maintenant.";
-}
-
 }
 
 async function afficherCalendrierPoules(){
@@ -8525,44 +9853,7 @@ async function suivreJoueur(userId){
   showNotif(result);
 
 }
- async function updateUsername(){
-
-  const input =
-    document.getElementById("newUsernameInput");
-
-  const username =
-    input.value.trim();
-
-  if(!username){
-    usernameMessage("❌ Entre ton nom d'utilisateur.", "error");
-    return;
-  }
-
-  const result = await post("/update-username", { username });
-
-  if(result.startsWith("ATTENDRE_30_JOURS")){
-    const joursRestants = result.split(":")[1];
-
-    usernameMessage(
-      `❌ Vous pourrez modifier votre nom d'utilisateur dans ${joursRestants} jour(s).`,
-      "error"
-    );
-    return;
-  }
-
-  if(!result.includes("✅")){
-    usernameMessage("❌ " + result, "error");
-    return;
-  }
-
-  usernameMessage("✅ Nom d'utilisateur modifié avec succès.", "success");
-
-  await ouvrirProfilCompte();
-
-  setTimeout(()=>{
-    setPage("pageModifierProfil");
-  },1500);
-}
+ 
 
 async function rechercherUtilisateurs(){
 
@@ -8657,18 +9948,20 @@ async function suivreDepuisRecherche(userId, event){
 }
 
 function toggleSearchUsers(){
-  searchUsersBox.classList.toggle("hidden");
-}
-
-  
-function toggleSearchUsers(){
 
   const box =
-    document.getElementById("searchUsersBox");
+    document.getElementById(
+      "searchUsersBox"
+    );
+
+  if(!box){
+    return;
+  }
 
   box.classList.toggle("hidden");
 
 }
+  
 async function suivreJoueur(userId){
 
   if(!userId){
@@ -9155,11 +10448,9 @@ function initTikTokAutoplay(){
 
             });
 
-            if(window.videoSoundEnabled){
-              video.muted = false;
-            }else{
-              video.muted = true;
-            }
+            video.muted = false;
+             video.volume = 1;
+            window.videoSoundEnabled = true;
 
             video
               .play()
@@ -9376,30 +10667,25 @@ async function ouvrirPanel(id){
       panel.classList.remove("hidden");
     }
 
-    if(
+   if(
   id === "panelOrganisateur" ||
   id === "panelProprietaire" ||
   id === "panelParticipants" ||
   id === "panelClassementProprietaire"
 ){
+
   if(!tournoisDejaCharges){
 
-  chargerTournois().then(async ()=>{
+    await chargerTournois();
 
     tournoisDejaCharges = true;
 
-    await verifierProprietaire();
+  }
 
-    appliquerDroitsProprietaire();
+  await verifierProprietaire();
 
-  });
-
-}else{
-
-  verifierProprietaire();
   appliquerDroitsProprietaire();
 
-}
 }
 
     if(id === "panelClassementOrganisateur"){
@@ -9426,14 +10712,14 @@ async function ouvrirPanel(id){
 
     if(id === "panelParticipants"){
       afficherBlocParticipants("blocListeParticipants");
-      chargerParticipants();
+      await chargerParticipants();
       document.getElementById("btnParticipants")?.classList.add("active");
       return;
     }
 
     if(id === "panelClassementProprietaire"){
       ouvrirCompetitionBloc("blocMatchs");
-      afficherTiragePoulePro();
+        await afficherTiragePoulePro();
       document.getElementById("btnClassement")?.classList.add("active");
       return;
     }
@@ -9441,27 +10727,34 @@ async function ouvrirPanel(id){
     if(id === "panelClassementOrganisateur"){
       cacherBottomNav();
       ouvrirCompetitionBlocOrg("blocMatchsOrg");
-      afficherTiragePouleOrganisateur();
+        await afficherTiragePouleOrganisateur();
       document.getElementById("btnClassement")?.classList.add("active");
       return;
     }
 
     if(id === "panelHighlights"){
-      document.body.classList.add("video-mode");
 
-      if(!window.openingProfileVideo){
-        chargerHighlights();
-      }
+  document.body.classList.add("video-mode");
 
-      document.getElementById("btnVideos")?.classList.add("active");
-      return;
-    }
+  if(!window.openingProfileVideo){
+    await chargerHighlights();
+  }
+
+  document
+    .getElementById("btnVideos")
+    ?.classList.add("active");
+
+  return;
+}
 
   }finally{
 
     panelEnCours = false;
 
   }
+
+  ajouterMessagesAideBoutons();
+  mettreAJourMessagesAide();
 
 }
 function masquerBoutonsOrganisateurVisiteur(){
@@ -9771,6 +11064,22 @@ async function demarrerApplication(){
   }
 
   currentUserId = data.id;
+
+  utilisateurAbonne = false;
+
+if(
+  Number(data.abonnement) === 1 &&
+  data.abonnement_expire_at
+){
+
+  const expiration =
+    new Date(data.abonnement_expire_at);
+
+  utilisateurAbonne =
+    !Number.isNaN(expiration.getTime()) &&
+    expiration.getTime() > Date.now();
+
+}
 
   await chargerTournois();
 
@@ -10093,7 +11402,7 @@ font-weight:700;
       <div>
 
         <b>
-          @${c.username || "joueur"}
+         ${c.name || c.username || "Joueur"}
         </b>
 
         <div>
@@ -10358,6 +11667,8 @@ let currentCommentVideoId = null;
 
 let currentUserId = null;
 
+let utilisateurAbonne = false;
+
 let compteurPubDashboard =
 Number(localStorage.getItem("compteurPubDashboard")) || 0;
 
@@ -10515,7 +11826,7 @@ function verifierPubliciteDashboard(){
     compteurPubDashboard
   );
 
-  if(compteurPubDashboard >= 1){
+  if(compteurPubDashboard >= 5){
 
     if(pubAutorisee()){
   afficherPublicite();
@@ -10723,44 +12034,6 @@ async function updateUsername(){
   }
 }
 
-async function updateUsername(){
-
-  const input =
-    document.getElementById("newUsernameInput");
-
-  const username =
-    input.value.trim();
-
-  if(!username){
-    usernameMessage("❌ Entre ton nom d'utilisateur.", "error");
-    return;
-  }
-
-  const result = await post("/update-username", { username });
-
-  if(result.startsWith("ATTENDRE_30_JOURS")){
-    const joursRestants = result.split(":")[1];
-
-    usernameMessage(
-      `❌ Vous pourrez modifier votre nom d'utilisateur dans ${joursRestants} jour(s).`,
-      "error"
-    );
-    return;
-  }
-
-  if(!result.includes("✅")){
-    usernameMessage("❌ " + result, "error");
-    return;
-  }
-
-  usernameMessage("✅ Nom d'utilisateur modifié avec succès.", "success");
-
-  await ouvrirProfilCompte();
-
-  setTimeout(()=>{
-    setPage("pageParametres");
-  },1500);
-}
 
 function stopAllVideosExcept(currentVideo){
 

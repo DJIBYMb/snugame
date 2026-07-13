@@ -25,7 +25,7 @@ const { exec } = require("child_process");
 const rateLimit = require("express-rate-limit");
 const nodemailer = require("nodemailer");
 const compression = require("compression");
-
+const helmet = require("helmet");
 
 if(process.env.FIREBASE_SERVICE_ACCOUNT){
 
@@ -36,6 +36,24 @@ if(process.env.FIREBASE_SERVICE_ACCOUNT){
     initializeApp({
       credential: cert(serviceAccount)
     });
+  }
+
+}
+
+const requiredR2 = [
+  "R2_ACCOUNT_ID",
+  "R2_ACCESS_KEY_ID",
+  "R2_SECRET_ACCESS_KEY",
+  "R2_BUCKET",
+  "R2_PUBLIC_URL"
+];
+
+for(const key of requiredR2){
+
+  if(!process.env[key]){
+    throw new Error(
+      `Variable d'environnement manquante : ${key}`
+    );
   }
 
 }
@@ -58,7 +76,16 @@ const r2 = new S3Client({
 
 const app = express();
 
-app.set("trust proxy", 1);
+app.use(
+  helmet({
+    contentSecurityPolicy:false,
+    crossOriginResourcePolicy:false
+  })
+);
+
+if(process.env.NODE_ENV === "production"){
+  app.set("trust proxy", 1);
+}
 
 app.use(compression());
 
@@ -90,8 +117,42 @@ const loginLimiter = rateLimit({
   message:"Trop de tentatives. Réessaie plus tard."
 });
 
+const emailCodeLimiter = rateLimit({
+
+  windowMs: 15 * 60 * 1000,
+
+  max: 5,
+
+  standardHeaders: true,
+
+  legacyHeaders: false,
+
+  message:
+    "Trop de demandes de code. Réessaie dans 15 minutes."
+
+});
+
 const ADMIN_PASSWORD =
-  process.env.ADMIN_PASSWORD || "change-moi-admin";
+  process.env.ADMIN_PASSWORD;
+
+if(!ADMIN_PASSWORD){
+
+  throw new Error(
+    "ADMIN_PASSWORD est obligatoire."
+  );
+
+}
+
+const SESSION_SECRET =
+  process.env.SESSION_SECRET;
+
+if(!SESSION_SECRET){
+
+  throw new Error(
+    "SESSION_SECRET est obligatoire."
+  );
+
+}
 
 const db = new sqlite3.Database(
   path.join(DATA_DIR,"database.sqlite")
@@ -170,6 +231,8 @@ const upload = multer({
   }
 
 });
+
+
 app.use(session({
 
   store:new SQLiteStore({
@@ -177,9 +240,7 @@ app.use(session({
     dir:DATA_DIR
   }),
 
-  secret:
-    process.env.SESSION_SECRET ||
-    "snugame-secret",
+  secret: SESSION_SECRET,
 
   resave:false,
   saveUninitialized:false,
@@ -251,11 +312,113 @@ async function verifierProprietaireTournoi(req, tournament_id){
 
 function isAdmin(req){
 
-  return (
-    req.query.admin === ADMIN_PASSWORD
+  return Boolean(
+    req.session &&
+  
+    req.session.isAdmin === true
+
   );
 
 }
+
+app.get("/admin-login",(req,res)=>{
+
+  res.send(`
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta
+  name="viewport"
+  content="width=device-width,initial-scale=1">
+<title>Administration SNUGAME</title>
+</head>
+
+<body style="
+  background:#07111f;
+  color:white;
+  font-family:Arial;
+  padding:25px;
+">
+
+<h1>Administration SNUGAME</h1>
+
+<form method="POST" action="/admin-login">
+
+  <input
+    type="password"
+    name="password"
+    placeholder="Mot de passe administrateur"
+    required
+    style="
+      width:100%;
+      max-width:420px;
+      padding:14px;
+      margin:10px 0;
+    ">
+
+  <button
+    type="submit"
+    style="
+      display:block;
+      padding:14px 20px;
+      margin-top:10px;
+    ">
+    Connexion
+  </button>
+
+</form>
+
+</body>
+</html>
+  `);
+
+});
+
+app.post("/admin-login", loginLimiter, (req,res)=>{
+
+  const password =
+    String(req.body.password || "");
+
+  if(password !== ADMIN_PASSWORD){
+
+    return res
+      .status(403)
+      .send("Mot de passe administrateur incorrect");
+
+  }
+
+  req.session.regenerate(error=>{
+
+    if(error){
+
+      return res
+        .status(500)
+        .send("Erreur création session admin");
+
+    }
+
+    req.session.isAdmin = true;
+
+    return res.redirect(
+      "/admin-payments"
+    );
+
+  });
+
+});
+
+app.post("/admin-logout",(req,res)=>{
+
+  if(req.session){
+    req.session.isAdmin = false;
+  }
+
+  return res.redirect(
+    "/admin-login"
+  );
+
+});
 
 function run(sql,params=[]){
 
@@ -638,6 +801,16 @@ db.run(`
   ADD COLUMN journee TEXT
 `,()=>{});
 db.run(`
+  ALTER TABLE matches
+  ADD COLUMN penalty1 INTEGER DEFAULT NULL
+`,()=>{});
+
+db.run(`
+  ALTER TABLE matches
+  ADD COLUMN penalty2 INTEGER DEFAULT NULL
+`,()=>{});
+
+db.run(`
   ALTER TABLE users
   ADD COLUMN profile_photo TEXT
 `,()=>{});
@@ -714,7 +887,37 @@ db.run(`
     player_id INTEGER,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
   )
-`);db.run(`
+`);
+db.run(`
+  DELETE FROM rapid_qualifiers
+  WHERE id NOT IN (
+    SELECT MIN(id)
+    FROM rapid_qualifiers
+    GROUP BY tournament_id, round, player_id
+  )
+`, err => {
+
+  if(err){
+    console.log(
+      "Erreur nettoyage rapid_qualifiers :",
+      err
+    );
+    return;
+  }
+
+  db.run(`
+    CREATE UNIQUE INDEX IF NOT EXISTS
+    idx_rapid_qualifier_unique
+    ON rapid_qualifiers(
+      tournament_id,
+      round,
+      player_id
+    )
+  `);
+
+});
+
+db.run(`
   CREATE TABLE IF NOT EXISTS highlight_likes(
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     highlight_id INTEGER,
@@ -834,6 +1037,30 @@ CREATE TABLE IF NOT EXISTS highlight_views(
   UNIQUE(user_id, highlight_id)
 )
 `);
+db.run(
+  `
+  DELETE FROM notifications
+  WHERE datetime(created_at)
+        < datetime('now','-30 days')
+  `,
+  error =>{
+
+    if(error){
+
+      console.error(
+        "Erreur nettoyage notifications :",
+        error
+      );
+
+    }
+
+  }
+);
+
+db.run(`
+  ALTER TABLE rapid_qualifiers
+  ADD COLUMN source_order INTEGER
+`,()=>{});
 
 
 app.get("/", async (req,res)=>{
@@ -855,18 +1082,11 @@ app.get("/", async (req,res)=>{
       `
     );
 
-    res.json(
-      highlights.map(h=>({
-       ...h,
-       current_user_id:req.session.userId
-     }))
-   );
-
     const cards = highlights.map(h=>`
       <div class="card">
         <h3>🔥 ${escapeHtml(h.titre)}</h3>
         <p>
-          <b>${escapeHtml(h.prenom || "Joueur")}</b>
+         <b>${escapeHtml(h.username || h.name || "Joueur")}</b>
           a publié un nouveau highlight
         </p>
         <p>${escapeHtml(h.description || "")}</p>
@@ -969,7 +1189,10 @@ app.get("/app",(req,res)=>{
   );
 });
 
-app.post("/send-code", async (req,res)=>{
+app.post(
+  "/send-code",
+  emailCodeLimiter,
+  async (req,res)=>{
 
   try{
 
@@ -1006,6 +1229,16 @@ app.post("/send-code", async (req,res)=>{
     )
   );
     }
+
+    await run(
+  `
+  DELETE FROM email_codes
+  WHERE email=?
+     OR datetime(created_at)
+        < datetime('now','-1 day')
+  `,
+  [cleanEmail]
+);
 
     const code =
       Math.floor(
@@ -1122,22 +1355,28 @@ app.post("/register", async (req,res)=>{
       email.trim().toLowerCase();
 
     const verification = await get(
-      `
-      SELECT *
-      FROM email_codes
-      WHERE email=?
-      AND code=?
-      ORDER BY id DESC
-      `,
-      [cleanEmail, code.trim()]
-    );
+  `
+  SELECT id
+  FROM email_codes
+  WHERE email=?
+    AND code=?
+    AND datetime(created_at)
+        >= datetime('now','-15 minutes')
+  ORDER BY id DESC
+  LIMIT 1
+  `,
+  [
+    cleanEmail,
+    String(code).trim()
+  ]
+);
 
     if(!verification){
       return res.send(
   tr(
     req,
-    "Code invalide",
-    "Invalid verification code"
+    "Code expiré",
+    "expired verification code"
   )
 );
     }
@@ -1311,6 +1550,24 @@ app.post("/login", loginLimiter, (req,res)=>{
 
 });
 
+const uploadLimiter = rateLimit({
+
+  windowMs: 15 * 60 * 1000,
+
+  max: 20,
+
+  standardHeaders: true,
+
+  legacyHeaders: false,
+
+  message:{
+    ok:false,
+    message:
+      "Trop d'envois de fichiers. Réessaie plus tard."
+  }
+
+});
+
 app.post("/logout",(req,res)=>{
 
   req.session.destroy(()=>{
@@ -1392,34 +1649,27 @@ app.get("/me", async (req,res)=>{
 app.post("/abonnement", async (req,res)=>{
 
   if(!connected(req)){
-    return res.send(
-  tr(
-    req,
-    "Connecte-toi",
-    "Please log in"
-  )
-);
+
+    return res.status(401).send(
+      tr(
+        req,
+        "Connecte-toi",
+        "Please log in"
+      )
+    );
+
   }
 
-  await run(
-    `
-    UPDATE users
-    SET abonnement=1,
-        abonnement_expire_at=datetime('now','+30 days')
-    WHERE id=?
-    `,
-    [req.session.userId]
+  return res.status(403).send(
+    tr(
+      req,
+      "L'abonnement doit être validé après vérification du paiement",
+      "The subscription must be approved after payment verification"
+    )
   );
 
-  res.send(
-  tr(
-    req,
-    "Abonnement activé",
-    "Subscription activated"
-  )
-);
-
 });
+
 function generateJoinCode(){
 
   return Math.random()
@@ -1461,20 +1711,90 @@ app.post("/tournoi", async (req,res)=>{
       type
     } = req.body;
 
-    if(!name){
-      return res.send(
-  tr(req,"Nom tournoi obligatoire","Tournament name is required")
-);
-    }
+    const cleanName =
+  String(name || "")
+    .trim();
+
+if(!cleanName){
+
+  return res.status(400).send(
+    tr(
+      req,
+      "Nom tournoi obligatoire",
+      "Tournament name is required"
+    )
+  );
+
+}
+
+if(
+  cleanName.length < 3 ||
+  cleanName.length > 60
+){
+
+  return res.status(400).send(
+    tr(
+      req,
+      "Le nom du tournoi doit contenir entre 3 et 60 caractères",
+      "The tournament name must contain between 3 and 60 characters"
+    )
+  );
+
+}
 
     const maxTeams =
-      Number(max_teams) || 48;
+  Number(max_teams);
 
-    if(maxTeams < 6 || maxTeams > 100){
-      return res.send(
-  tr(req,"Nombre équipes entre 6 et 100","Number of teams must be between 6 and 100")
-);
-    }
+if(
+  !Number.isInteger(maxTeams) ||
+  maxTeams < 6 ||
+  maxTeams > 100
+){
+
+  return res.status(400).send(
+    tr(
+      req,
+      "Le nombre d'équipes doit être un nombre entier entre 6 et 100",
+      "The number of teams must be an integer between 6 and 100"
+    )
+  );
+
+}
+
+const tournamentType =
+  String(type || "poule")
+    .trim()
+    .toLowerCase();
+
+if(
+  tournamentType !== "poule" &&
+  tournamentType !== "rapide"
+){
+
+  return res.status(400).send(
+    tr(
+      req,
+      "Type de tournoi invalide",
+      "Invalid tournament type"
+    )
+  );
+
+}
+
+if(
+  tournamentType === "rapide" &&
+  maxTeams !== 32
+){
+
+  return res.status(400).send(
+    tr(
+      req,
+      "Le tournoi rapide exige exactement 32 équipes",
+      "The quick tournament requires exactly 32 teams"
+    )
+  );
+
+}
 
     if(
       maxTeams > 33 &&
@@ -1508,6 +1828,33 @@ app.post("/tournoi", async (req,res)=>{
       );
     }
 
+    const dejaOuvert = await get(
+  `
+  SELECT id
+  FROM tournaments
+  WHERE user_id=?
+    AND status='open'
+    AND name=?
+  LIMIT 1
+  `,
+  [
+    req.session.userId,
+    cleanName
+  ]
+);
+
+if(dejaOuvert){
+
+  return res.status(409).send(
+    tr(
+      req,
+      "Un tournoi portant ce nom est déjà ouvert",
+      "A tournament with this name is already open"
+    )
+  );
+
+}
+
     const joinCode =
       Math.random()
       .toString(36)
@@ -1528,12 +1875,12 @@ app.post("/tournoi", async (req,res)=>{
       `,
       [
         req.session.userId,
-        name,
+        cleanName,
         maxTeams,
         "open",
         joinCode,
         group_link || "",
-        type || "poule"
+        tournamentType
       ]
     );
 
@@ -1584,6 +1931,7 @@ app.get("/tournois", async (req,res)=>{
   }
 
 });
+
 app.post("/participant", async (req,res)=>{
 
   try{
@@ -1621,6 +1969,21 @@ app.post("/participant", async (req,res)=>{
   tr(req,"Tournoi introuvable","Tournament not found")
 );
     }
+
+    if(
+  tournoi.status === "started" ||
+  tournoi.status === "finished"
+){
+
+  return res.status(409).send(
+    tr(
+      req,
+      "Impossible d'ajouter un participant : le tournoi a déjà commencé",
+      "A participant cannot be added because the tournament has already started"
+    )
+  );
+
+}
     const ownerCheck =
   await verifierProprietaireTournoi(req, tournament_id);
 
@@ -1638,18 +2001,34 @@ if(!ownerCheck.ok){
     );
 
     if(count.total >= tournoi.max_teams){
-      return res.send(
-        "Maximum " +
-        tournoi.max_teams +
-        " équipes atteint"
-      );
-    }
+
+  return res.status(409).send(
+    tr(
+      req,
+      `Maximum de ${tournoi.max_teams} équipes atteint`,
+      `Maximum of ${tournoi.max_teams} teams reached`
+    )
+  );
+
+}
 
     const cleanUsername =
-      participantUsername
-      .replace("@","")
-      .trim()
-      .toLowerCase();
+  String(participantUsername || "")
+    .trim()
+    .replace(/^@+/, "")
+    .toLowerCase();
+
+    if(!cleanUsername){
+
+  return res.status(400).send(
+    tr(
+      req,
+      "Nom utilisateur invalide",
+      "Invalid username"
+    )
+  );
+
+}
 
     const user = await get(
       `
@@ -1742,242 +2121,583 @@ if(!ownerCheck.ok){
   }
 
 });
+
 app.get("/participants/:id", async (req,res)=>{
 
   try{
 
-   const rows = await all(
-     `
-     SELECT
-     p.*,
-     u.profile_photo
-     FROM participants p
-     LEFT JOIN users u
-      ON u.id = p.user_id
-     WHERE p.tournament_id=?
-     ORDER BY p.id
-     `,
-     [req.params.id]
-    );
+    if(!connected(req)){
 
-    res.json(rows);
+      return res.status(401).json({
+        ok:false,
+        message:tr(
+          req,
+          "Connecte-toi",
+          "Please log in"
+        )
+      });
 
-  }catch(e){
+    }
 
-    console.log(e);
-    res.json([]);
-
-  }
-
-});
-
-app.post(
-"/supprimer-participants-selection",
-async (req,res)=>{
-
-  try{
-
-    const { ids } = req.body;
-
-    const participant = await get(
-  `
-  SELECT tournament_id
-  FROM participants
-  WHERE id=?
-  `,
-  [ids[0]]
-);
-
-if(!participant){
-  return res.send(
-  tr(req,"Participant introuvable","Participant not found")
-);
-}
-
-const ownerCheck =
-  await verifierProprietaireTournoi(
-    req,
-    participant.tournament_id
-  );
-
-if(!ownerCheck.ok){
-  return res.send(ownerCheck.message);
-}
+    const tournamentId =
+      Number(req.params.id);
 
     if(
-      !ids ||
-      !Array.isArray(ids) ||
-      ids.length === 0
+      !Number.isInteger(tournamentId) ||
+      tournamentId <= 0
     ){
-      return res.send(
-  tr(req,"Aucun participant","No participant selected")
-);
+
+      return res.status(400).json({
+        ok:false,
+        message:tr(
+          req,
+          "Identifiant du tournoi invalide",
+          "Invalid tournament ID"
+        )
+      });
+
     }
 
-    const placeholders =
-      ids.map(()=>"?").join(",");
-
-    await run(
+    const tournoi = await get(
       `
-      DELETE FROM participants
-      WHERE id IN (${placeholders})
+      SELECT id
+      FROM tournaments
+      WHERE id=?
       `,
-      ids
+      [tournamentId]
     );
 
-    res.send(
-  tr(req,"Participants supprimés","Participants deleted")
-);
+    if(!tournoi){
 
-  }catch(e){
+      return res.status(404).json({
+        ok:false,
+        message:tr(
+          req,
+          "Tournoi introuvable",
+          "Tournament not found"
+        )
+      });
 
-    console.log(e);
-    res.send(
-  tr(req,"Erreur suppression","Deletion failed")
-);
+    }
+
+    const rows = await all(
+      `
+      SELECT
+        p.id,
+        p.tournament_id,
+        p.prenom,
+        p.username,
+        p.club_logo,
+        p.group_name,
+        p.user_id,
+        u.profile_photo
+      FROM participants p
+      LEFT JOIN users u
+        ON u.id=p.user_id
+      WHERE p.tournament_id=?
+      ORDER BY p.id
+      `,
+      [tournamentId]
+    );
+
+    return res.json(rows);
+
+  }catch(error){
+
+    console.error(
+      "Erreur chargement participants :",
+      error
+    );
+
+    return res.status(500).json({
+      ok:false,
+      message:tr(
+        req,
+        "Impossible de charger les participants",
+        "Failed to load participants"
+      )
+    });
 
   }
 
 });
 
 app.post(
-"/supprimer-tournoi-complet",
-async (req,res)=>{
+  "/supprimer-participants-selection",
+  async (req,res)=>{
 
-  try{
+    try{
 
-    const { tournament_id } = req.body;
+      if(!connected(req)){
+        return res.status(401).send(
+          tr(
+            req,
+            "Connecte-toi",
+            "Please log in"
+          )
+        );
+      }
 
-    if(!tournament_id){
-      return res.send(
-  tr(req,"Tournoi manquant","Tournament is missing")
-);
-    }
+      const { ids } = req.body;
 
-    const ownerCheck =
-  await verifierProprietaireTournoi(req, tournament_id);
+      if(
+        !Array.isArray(ids) ||
+        ids.length === 0
+      ){
+        return res.status(400).send(
+          tr(
+            req,
+            "Aucun participant sélectionné",
+            "No participant selected"
+          )
+        );
+      }
 
-if(!ownerCheck.ok){
-  return res.send(ownerCheck.message);
+      const cleanIds =
+        ids
+          .map(Number)
+          .filter(
+            id =>
+              Number.isInteger(id) &&
+              id > 0
+          );
+
+      if(cleanIds.length !== ids.length){
+        return res.status(400).send(
+          tr(
+            req,
+            "Liste de participants invalide",
+            "Invalid participant list"
+          )
+        );
+      }
+
+      const participant = await get(
+        `
+        SELECT tournament_id
+        FROM participants
+        WHERE id=?
+        `,
+        [cleanIds[0]]
+      );
+
+      if(!participant){
+        return res.status(404).send(
+          tr(
+            req,
+            "Participant introuvable",
+            "Participant not found"
+          )
+        );
+      }
+
+      const ownerCheck =
+        await verifierProprietaireTournoi(
+          req,
+          participant.tournament_id
+        );
+
+      if(!ownerCheck.ok){
+        return res.status(403).send(
+          ownerCheck.message
+        );
+      }
+
+      const tournoi =
+  ownerCheck.tournoi;
+
+if(
+  tournoi.status === "started" ||
+  tournoi.status === "finished"
+){
+
+  return res.status(409).send(
+    tr(
+      req,
+      "Impossible de supprimer des participants : le tournoi a déjà commencé",
+      "Participants cannot be deleted because the tournament has already started"
+    )
+  );
+
 }
 
-    await run(
-      `
-      DELETE FROM matches
-      WHERE tournament_id=?
-      `,
-      [tournament_id]
-    );
+      const placeholders =
+        cleanIds.map(() => "?").join(",");
 
-    await run(
-      `
-      DELETE FROM participants
-      WHERE tournament_id=?
-      `,
-      [tournament_id]
-    );
+      const participantsSelectionnes =
+        await all(
+          `
+          SELECT id, tournament_id
+          FROM participants
+          WHERE id IN (${placeholders})
+          `,
+          cleanIds
+        );
 
-    await run(
-      `
-      DELETE FROM tournaments
-      WHERE id=?
-      `,
-      [tournament_id]
-    );
+      if(
+        participantsSelectionnes.length !==
+        cleanIds.length
+      ){
+        return res.status(404).send(
+          tr(
+            req,
+            "Un ou plusieurs participants sont introuvables",
+            "One or more participants were not found"
+          )
+        );
+      }
 
-    const reste = await get(
-      `
-      SELECT COUNT(*) AS total
-      FROM tournaments
-      `
-    );
+      const tournoiDifferent =
+        participantsSelectionnes.some(
+          p =>
+            Number(p.tournament_id) !==
+            Number(participant.tournament_id)
+        );
 
-    if(reste.total === 0){
+      if(tournoiDifferent){
+        return res.status(403).send(
+          tr(
+            req,
+            "Impossible de supprimer des participants de plusieurs tournois",
+            "Participants from different tournaments cannot be deleted together"
+          )
+        );
+      }
+
+      await run(
+  `
+  DELETE FROM player_stats
+  WHERE participant_id IN (${placeholders})
+  `,
+  cleanIds
+);
 
       await run(
         `
-        DELETE FROM sqlite_sequence
-        WHERE name IN (
-          'tournaments',
-          'participants',
-          'matches'
+        DELETE FROM participants
+        WHERE id IN (${placeholders})
+        `,
+        cleanIds
+      );
+
+      return res.send(
+        tr(
+          req,
+          "Participants supprimés",
+          "Participants deleted"
         )
-        `
+      );
+
+    }catch(error){
+
+      console.error(
+        "Erreur suppression participants :",
+        error
+      );
+
+      return res.status(500).send(
+        tr(
+          req,
+          "Erreur suppression",
+          "Deletion failed"
+        )
       );
 
     }
 
-    res.send(
-  tr(req,"Tournoi supprimé","Tournament deleted")
+  }
 );
 
-  }catch(e){
 
-    console.log(e);
-    res.send(
-  tr(req,"Erreur suppression tournoi","Tournament deletion failed")
-);
+app.post(
+  "/supprimer-tournoi-complet",
+  async (req,res)=>{
+
+  try{
+
+    if(!connected(req)){
+
+      return res.status(401).send(
+        tr(
+          req,
+          "Connecte-toi",
+          "Please log in"
+        )
+      );
+
+    }
+
+    const tournamentId =
+      Number(req.body.tournament_id);
+
+    if(
+      !Number.isInteger(tournamentId) ||
+      tournamentId <= 0
+    ){
+
+      return res.status(400).send(
+        tr(
+          req,
+          "Tournoi manquant ou invalide",
+          "Tournament is missing or invalid"
+        )
+      );
+
+    }
+
+    const ownerCheck =
+      await verifierProprietaireTournoi(
+        req,
+        tournamentId
+      );
+
+    if(!ownerCheck.ok){
+
+      return res.status(403).send(
+        ownerCheck.message
+      );
+
+    }
+
+    await run("BEGIN TRANSACTION");
+
+    try{
+
+      await run(
+        `
+        DELETE FROM matches
+        WHERE tournament_id=?
+        `,
+        [tournamentId]
+      );
+
+      await run(
+        `
+        DELETE FROM rapid_qualifiers
+        WHERE tournament_id=?
+        `,
+        [tournamentId]
+      );
+
+      await run(
+        `
+        DELETE FROM player_stats
+        WHERE participant_id IN (
+          SELECT id
+          FROM participants
+          WHERE tournament_id=?
+        )
+        `,
+        [tournamentId]
+      );
+
+      await run(
+        `
+        DELETE FROM participants
+        WHERE tournament_id=?
+        `,
+        [tournamentId]
+      );
+
+      await run(
+        `
+        DELETE FROM counted_tournaments
+        WHERE tournament_id=?
+        `,
+        [tournamentId]
+      );
+
+      await run(
+        `
+        DELETE FROM user_trophies
+        WHERE tournament_id=?
+        `,
+        [tournamentId]
+      );
+
+      await run(
+        `
+        DELETE FROM tournaments
+        WHERE id=?
+        `,
+        [tournamentId]
+      );
+
+      await run("COMMIT");
+
+      return res.send(
+        tr(
+          req,
+          "Tournoi supprimé",
+          "Tournament deleted"
+        )
+      );
+
+    }catch(errorTransaction){
+
+      try{
+        await run("ROLLBACK");
+      }catch(errorRollback){
+
+        console.error(
+          "Erreur ROLLBACK suppression tournoi :",
+          errorRollback
+        );
+
+      }
+
+      throw errorTransaction;
+
+    }
+
+  }catch(error){
+
+    console.error(
+      "Erreur suppression tournoi :",
+      error
+    );
+
+    return res.status(500).send(
+      tr(
+        req,
+        "Erreur suppression tournoi",
+        "Tournament deletion failed"
+      )
+    );
 
   }
 
 });
+
 
 app.post("/reset-tournoi", async (req,res)=>{
 
   try{
 
-    const { tournament_id } = req.body;
+    if(!connected(req)){
 
-    if(!tournament_id){
-      return res.send(
-  tr(req,"Tournoi obligatoire","Tournament is required")
-);
+      return res.status(401).send(
+        tr(
+          req,
+          "Connecte-toi",
+          "Please log in"
+        )
+      );
+
+    }
+
+    const tournamentId =
+      Number(req.body.tournament_id);
+
+    if(
+      !Number.isInteger(tournamentId) ||
+      tournamentId <= 0
+    ){
+
+      return res.status(400).send(
+        tr(
+          req,
+          "Tournoi obligatoire ou invalide",
+          "Tournament is required or invalid"
+        )
+      );
+
     }
 
     const ownerCheck =
-  await verifierProprietaireTournoi(req, tournament_id);
+      await verifierProprietaireTournoi(
+        req,
+        tournamentId
+      );
 
-if(!ownerCheck.ok){
-  return res.send(ownerCheck.message);
-}
+    if(!ownerCheck.ok){
 
-    await run(
-      `
-      DELETE FROM matches
-      WHERE tournament_id=?
-      `,
-      [tournament_id]
+      return res.status(403).send(
+        ownerCheck.message
+      );
+
+    }
+
+    await run("BEGIN TRANSACTION");
+
+    try{
+
+      await run(
+        `
+        DELETE FROM matches
+        WHERE tournament_id=?
+        `,
+        [tournamentId]
+      );
+
+      await run(
+        `
+        DELETE FROM rapid_qualifiers
+        WHERE tournament_id=?
+        `,
+        [tournamentId]
+      );
+
+      await run(
+        `
+        UPDATE participants
+        SET group_name=NULL
+        WHERE tournament_id=?
+        `,
+        [tournamentId]
+      );
+
+      await run(
+        `
+        UPDATE tournaments
+        SET status='open',
+            champion_id=NULL
+        WHERE id=?
+        `,
+        [tournamentId]
+      );
+
+      await run("COMMIT");
+
+      return res.send(
+        tr(
+          req,
+          "Tournoi réinitialisé",
+          "Tournament reset"
+        )
+      );
+
+    }catch(errorTransaction){
+
+      try{
+        await run("ROLLBACK");
+      }catch(errorRollback){
+
+        console.error(
+          "Erreur ROLLBACK reset tournoi :",
+          errorRollback
+        );
+
+      }
+
+      throw errorTransaction;
+
+    }
+
+  }catch(error){
+
+    console.error(
+      "Erreur reset tournoi :",
+      error
     );
 
-    await run(
-      `
-      UPDATE participants
-      SET group_name=NULL
-      WHERE tournament_id=?
-      `,
-      [tournament_id]
+    return res.status(500).send(
+      tr(
+        req,
+        "Erreur réinitialisation du tournoi",
+        "Tournament reset failed"
+      )
     );
-
-    await run(
-      `
-      UPDATE tournaments
-      SET status='draft',
-          champion_id=NULL
-      WHERE id=?
-      `,
-      [tournament_id]
-    );
-
-    res.send(
-  tr(req,"Tournoi réinitialisé","Tournament reset")
-);
-
-  }catch(e){
-
-    console.log(e);
-    res.send(
-  tr(req,"Erreur reset tournoi","Tournament reset failed")
-);
 
   }
 
@@ -2032,10 +2752,29 @@ async function classementPoules(tournament_id){
 
     if(!a || !b) continue;
 
-    const s1 = Number(m.score1);
-    const s2 = Number(m.score2);
+   if(
+  m.score1 === null ||
+  m.score1 === undefined ||
+  m.score2 === null ||
+  m.score2 === undefined
+){
+  continue;
+}
 
-    if(Number.isNaN(s1) || Number.isNaN(s2)) continue;
+const s1 =
+  Number(m.score1);
+
+const s2 =
+  Number(m.score2);
+
+if(
+  !Number.isInteger(s1) ||
+  !Number.isInteger(s2) ||
+  s1 < 0 ||
+  s2 < 0
+){
+  continue;
+}
 
     a.j++;
     b.j++;
@@ -2281,41 +3020,7 @@ async function recompenserChampion(tournament_id, champion_participant_id){
 
   await assurerStatsJoueur(champion.user_id);
 
-  const dejaRecompense = await get(
-  `
-  SELECT id
-  FROM user_trophies
-  WHERE user_id=?
-  AND tournament_id=?
-  AND trophy=?
-  `,
-  [
-    champion.user_id,
-    tournament_id,
-    "🏆 Champion"
-  ]
-);
-
-if(dejaRecompense){
-  return;
-}
-
-  await run(
-    `
-    UPDATE user_player_stats
-    SET tournois_gagnes = tournois_gagnes + 1,
-        coupes = coupes + 1,
-        xp = xp + 100,
-        niveau = CAST((xp + 100) / 100 AS INTEGER) + 1
-    WHERE user_id=?
-    AND season_year=?
-    `,
-    [
-      champion.user_id,
-      new Date().getFullYear()
-    ]
-  );
-
+  const trophéeAjoute =
   await run(
     `
     INSERT OR IGNORE INTO user_trophies(
@@ -2329,10 +3034,47 @@ if(dejaRecompense){
     [
       champion.user_id,
       tournament_id,
-      tournoi ? tournoi.name : "Tournoi",
+      tournoi
+        ? tournoi.name
+        : "Tournoi",
       "🏆 Champion"
     ]
   );
+
+if(
+  Number(trophéeAjoute.changes || 0) === 0
+){
+
+  /*
+    Le trophée existait déjà :
+    on ne recompte pas les statistiques.
+  */
+  return;
+
+}
+
+await run(
+  `
+  UPDATE user_player_stats
+  SET tournois_gagnes =
+        tournois_gagnes + 1,
+      coupes =
+        coupes + 1,
+      xp =
+        xp + 100,
+      niveau =
+        CAST(
+          (xp + 100) / 100
+          AS INTEGER
+        ) + 1
+  WHERE user_id=?
+    AND season_year=?
+  `,
+  [
+    champion.user_id,
+    new Date().getFullYear()
+  ]
+);
 
 }
 async function tournoiOfficiel(tournament_id){
@@ -2349,22 +3091,266 @@ async function tournoiOfficiel(tournament_id){
   return Number(count.total || 0) >= 15;
 
 }
+
+async function enregistrerChampionApresFinale(
+  match
+){
+
+  if(
+    match.round !== "FINALE"
+  ){
+    return;
+  }
+
+  const finale = await all(
+    `
+    SELECT *
+    FROM matches
+    WHERE tournament_id=?
+      AND round='FINALE'
+    ORDER BY match_order ASC, id ASC
+    `,
+    [match.tournament_id]
+  );
+
+  const aller =
+    finale.find(
+      m =>
+        m.journee === "ALLER" ||
+        m.leg === "ALLER"
+    );
+
+  const retour =
+    finale.find(
+      m =>
+        m.journee === "RETOUR" ||
+        m.leg === "RETOUR"
+    );
+
+  if(
+    !aller ||
+    !retour ||
+    Number(aller.played) !== 1 ||
+    Number(retour.played) !== 1
+  ){
+    return;
+  }
+
+  const player1 =
+    Number(aller.player1_id);
+
+  const player2 =
+    Number(aller.player2_id);
+
+  function scoreDuJoueur(
+    matchRow,
+    playerId
+  ){
+
+    if(
+      Number(matchRow.player1_id) ===
+      playerId
+    ){
+
+      return Number(
+        matchRow.score1 || 0
+      );
+
+    }
+
+    if(
+      Number(matchRow.player2_id) ===
+      playerId
+    ){
+
+      return Number(
+        matchRow.score2 || 0
+      );
+
+    }
+
+    return 0;
+
+  }
+
+  const total1 =
+    scoreDuJoueur(
+      aller,
+      player1
+    ) +
+    scoreDuJoueur(
+      retour,
+      player1
+    );
+
+  const total2 =
+    scoreDuJoueur(
+      aller,
+      player2
+    ) +
+    scoreDuJoueur(
+      retour,
+      player2
+    );
+
+  let championId = null;
+
+  if(total1 > total2){
+
+    championId = player1;
+
+  }else if(total2 > total1){
+
+    championId = player2;
+
+  }else{
+
+    const penalty1 =
+      retour.penalty1 === null ||
+      retour.penalty1 === undefined
+        ? null
+        : Number(retour.penalty1);
+
+    const penalty2 =
+      retour.penalty2 === null ||
+      retour.penalty2 === undefined
+        ? null
+        : Number(retour.penalty2);
+
+    if(
+      penalty1 === null ||
+      penalty2 === null ||
+      penalty1 === penalty2
+    ){
+      return;
+    }
+
+    championId =
+      penalty1 > penalty2
+        ? Number(retour.player1_id)
+        : Number(retour.player2_id);
+
+  }
+
+  const tournoi = await get(
+    `
+    SELECT
+      id,
+      name,
+      status,
+      champion_id
+    FROM tournaments
+    WHERE id=?
+    `,
+    [match.tournament_id]
+  );
+
+  if(!tournoi){
+    return;
+  }
+
+  /*
+    Évite d'enregistrer et récompenser
+    deux fois le même champion.
+  */
+  if(
+    tournoi.status === "finished" &&
+    Number(tournoi.champion_id) ===
+    Number(championId)
+  ){
+    return;
+  }
+
+  await run(
+    `
+    UPDATE tournaments
+    SET champion_id=?,
+        status='finished'
+    WHERE id=?
+    `,
+    [
+      championId,
+      match.tournament_id
+    ]
+  );
+
+  await compterTournoiTermine(
+    match.tournament_id
+  );
+
+  await recompenserChampion(
+    match.tournament_id,
+    championId
+  );
+
+  const champion = await get(
+    `
+    SELECT
+      user_id,
+      prenom
+    FROM participants
+    WHERE id=?
+    `,
+    [championId]
+  );
+
+  if(
+    champion &&
+    champion.user_id
+  ){
+
+    await notifierUtilisateur(
+      champion.user_id,
+      "👑 Champion SNUGAME",
+      `Félicitations ! Tu as remporté le tournoi "${tournoi.name || "Tournoi"}" 🏆`,
+      `tournament:${match.tournament_id}`
+    );
+
+  }
+
+}
+
 app.post("/update-match-proof", async (req,res)=>{
 
   try{
 
-    const {
-      match_id,
-      score1,
-      score2,
-      photo_url
-    } = req.body;
+    if(!connected(req)){
 
-    if(!match_id){
-      return res.send(
-        tr(req,"Match obligatoire","Match is required")
-      );
-    }
+  return res.status(401).send(
+    tr(
+      req,
+      "Connecte-toi pour valider un score",
+      "Log in to validate a score"
+    )
+  );
+
+}
+
+    const {
+  score1,
+  score2,
+  penalty1,
+  penalty2,
+  photo_url
+} = req.body;
+
+const matchId =
+  Number(req.body.match_id);
+
+if(
+  !Number.isInteger(matchId) ||
+  matchId <= 0
+){
+
+  return res.status(400).send(
+    tr(
+      req,
+      "Match obligatoire ou invalide",
+      "Match is required or invalid"
+    )
+  );
+
+}
 
     const match = await get(
       `
@@ -2372,7 +3358,7 @@ app.post("/update-match-proof", async (req,res)=>{
       FROM matches
       WHERE id=?
       `,
-      [match_id]
+      [matchId]
     );
 
     if(!match){
@@ -2423,33 +3409,123 @@ if(
     const s1 = Number(score1);
     const s2 = Number(score2);
 
-    if(Number.isNaN(s1) || Number.isNaN(s2)){
-      return res.send(
-        tr(req,
-          "Score invalide",
-          "Invalid score"
-        )
-      );
-    }
+    const p1 =
+  penalty1 === null ||
+  penalty1 === undefined ||
+  penalty1 === ""
+    ? null
+    : Number(penalty1);
 
-    if(s1 < 0 || s2 < 0 || s1 > 100 || s2 > 100){
-      return res.send(
-        tr(req,
-          "Score entre 0 et 100",
-          "Score between 0 and 100"
-        )
-      );
-    }
+const p2 =
+  penalty2 === null ||
+  penalty2 === undefined ||
+  penalty2 === ""
+    ? null
+    : Number(penalty2);
 
-    if(match.round !== "POULE" && s1 === s2){
-      return res.send(
-  tr(
-    req,
-    "Match nul interdit en élimination directe",
-    "Draws are not allowed in knockout matches"
-  )
-);
-    }
+    if(
+  !Number.isInteger(s1) ||
+  !Number.isInteger(s2)
+){
+
+  return res.status(400).send(
+    tr(
+      req,
+      "Les scores doivent être des nombres entiers",
+      "Scores must be whole numbers"
+    )
+  );
+
+}
+
+if(
+  s1 < 0 ||
+  s2 < 0 ||
+  s1 > 100 ||
+  s2 > 100
+){
+
+  return res.status(400).send(
+    tr(
+      req,
+      "Les scores doivent être compris entre 0 et 100",
+      "Scores must be between 0 and 100"
+    )
+  );
+
+}
+
+if(
+  p1 !== null ||
+  p2 !== null
+){
+
+  if(
+    p1 === null ||
+    p2 === null
+  ){
+
+    return res.status(400).send(
+      tr(
+        req,
+        "Les deux scores des tirs au but sont obligatoires",
+        "Both penalty shootout scores are required"
+      )
+    );
+
+  }
+
+  if(
+    !Number.isInteger(p1) ||
+    !Number.isInteger(p2) ||
+    p1 < 0 ||
+    p2 < 0 ||
+    p1 > 100 ||
+    p2 > 100
+  ){
+
+    return res.status(400).send(
+      tr(
+        req,
+        "Les tirs au but doivent être des nombres entiers entre 0 et 100",
+        "Penalty shootout scores must be whole numbers between 0 and 100"
+      )
+    );
+
+  }
+
+  if(p1 === p2){
+
+    return res.status(400).send(
+      tr(
+        req,
+        "Les tirs au but ne peuvent pas être égaux",
+        "Penalty shootout scores cannot be equal"
+      )
+    );
+
+  }
+
+  const matchRetour =
+    match.journee === "RETOUR" ||
+    match.leg === "RETOUR";
+
+  if(
+    match.round === "POULE" ||
+    !matchRetour
+  ){
+
+    return res.status(400).send(
+      tr(
+        req,
+        "Les tirs au but sont autorisés uniquement au match retour d'une phase éliminatoire",
+        "Penalty shootouts are allowed only in the second leg of a knockout round"
+      )
+    );
+
+  }
+
+}
 
     let winner = null;
     let loser = null;
@@ -2462,26 +3538,47 @@ if(
       loser = match.player1_id;
     }
 
-    await run(
-      `
-      UPDATE matches
-      SET score1=?,
-          score2=?,
-          proof_photo=?,
-          winner_id=?,
-          loser_id=?,
-          played=1
-      WHERE id=?
-      `,
-      [
-        s1,
-        s2,
-        photo_url || "",
-        winner,
-        loser,
-        match_id
-      ]
-    );
+    const validationMatch =
+  await run(
+    `
+    UPDATE matches
+    SET score1=?,
+        score2=?,
+        penalty1=?,
+        penalty2=?,
+        proof_photo=?,
+        winner_id=?,
+        loser_id=?,
+        played=1
+    WHERE id=?
+      AND played=0
+      AND locked=0
+    `,
+    [
+      s1,
+      s2,
+      p1,
+      p2,
+      photo_url || "",
+      winner,
+      loser,
+      matchId
+    ]
+  );
+
+if(
+  Number(validationMatch.changes || 0) === 0
+){
+
+  return res.status(409).send(
+    tr(
+      req,
+      "Ce match est déjà validé ou verrouillé",
+      "This match has already been validated or locked"
+    )
+  );
+
+}
 
     const matchPlayers = await all(
   `
@@ -2564,102 +3661,6 @@ if(officiel){
   }
 
 }
-
-    if(match.round === "FINALE" && winner){
-
-  await run(
-    `
-    UPDATE tournaments
-    SET champion_id=?,
-        status='finished'
-    WHERE id=?
-    `,
-    [
-      winner,
-      match.tournament_id
-    ]
-  );
-  await compterTournoiTermine(match.tournament_id);
-
-  await recompenserChampion(
-  match.tournament_id,
-  winner
- );
-  await compterTournoiTermine(match.tournament_id);
-
-  const officiel =
-  await tournoiOfficiel(match.tournament_id);
-
-if(officiel){
-
-  const championUser = await get(
-    `
-    SELECT user_id
-    FROM participants
-    WHERE id=?
-    `,
-    [winner]
-  );
-
-  const tournoi = await get(
-    `
-    SELECT name
-    FROM tournaments
-    WHERE id=?
-    `,
-    [match.tournament_id]
-  );
-
-  if(championUser && championUser.user_id){
-
-    await assurerStatsJoueur(championUser.user_id);
-
-    await run(
-      `
-      UPDATE user_player_stats
-      SET coupes = coupes + 1,
-          tournois_gagnes = tournois_gagnes + 1,
-          xp = xp + 100,
-          niveau = CAST((xp + 100) / 100 AS INTEGER) + 1
-      WHERE user_id=?
-      AND season_year=?
-      `,
-      [
-        championUser.user_id,
-        new Date().getFullYear()
-      ]
-    );
-
-    await run(
-      `
-      INSERT INTO user_trophies(
-        user_id,
-        tournament_id,
-        tournament_name,
-        trophy
-      )
-      VALUES(?,?,?,?)
-      `,
-      [
-        championUser.user_id,
-        match.tournament_id,
-        tournoi ? tournoi.name : "Tournoi",
-        "🏆 Champion"
-      ]
-    );
-
-    await notifierUtilisateur(
-  championUser.user_id,
-  "👑 Félicitations !",
-  `Tu as remporté le tournoi "${tournoi.name}". Bravo Champion ! 🏆`,
-  `tournament:${match.tournament_id}`
-);
-  }
-
-}
-
-}
-
     if(match.player1_id){
       await ajouterXP(match.player1_id,5);
     }
@@ -2733,9 +3734,18 @@ await run(
   [s2, match.player2_id]
 );
 
-  await gererTournoiRapideApresScore(match);
 
-return res.send("Score validé");
+  await enregistrerChampionApresFinale(
+  match
+);
+
+return res.send(
+  tr(
+    req,
+    "Score validé",
+    "Score validated"
+  )
+);
 
 }catch(e){
 
@@ -2752,13 +3762,35 @@ app.post("/annuler-score", async (req,res)=>{
 
   try{
 
-    const { match_id } = req.body;
+    if(!connected(req)){
 
-    if(!match_id){
-      return res.send(
-        tr(req,"Match obligatoire","Match is required")
+      return res.status(401).send(
+        tr(
+          req,
+          "Connecte-toi",
+          "Please log in"
+        )
       );
+
     }
+
+    const matchId =
+  Number(req.body.match_id);
+
+if(
+  !Number.isInteger(matchId) ||
+  matchId <= 0
+){
+
+  return res.status(400).send(
+    tr(
+      req,
+      "Match obligatoire ou invalide",
+      "Match is required or invalid"
+    )
+  );
+
+}
 
     const match = await get(
       `
@@ -2766,84 +3798,231 @@ app.post("/annuler-score", async (req,res)=>{
       FROM matches
       WHERE id=?
       `,
-      [match_id]
+      [matchId]
     );
 
     if(!match){
-      return res.send(
-        tr(req,"Match introuvable","Match not found")
+
+      return res.status(404).send(
+        tr(
+          req,
+          "Match introuvable",
+          "Match not found"
+        )
       );
+
     }
 
-    if(match.locked === 1){
-      return res.send(
-        tr(req,"Score verrouillé impossible à annuler","Score is locked and cannot be cancelled")
+    const ownerCheck =
+      await verifierProprietaireTournoi(
+        req,
+        match.tournament_id
       );
+
+    if(!ownerCheck.ok){
+
+      return res.status(403).send(
+        ownerCheck.message
+      );
+
     }
+
+    const officiel =
+  await tournoiOfficiel(
+    match.tournament_id
+  );
+
+if(officiel){
+
+  return res.status(409).send(
+    tr(
+      req,
+      "Impossible d'annuler ce score : les statistiques officielles ont déjà été enregistrées",
+      "This score cannot be cancelled because official statistics have already been recorded"
+    )
+  );
+
+}
+
+    if(Number(match.locked) === 1){
+
+      return res.status(409).send(
+        tr(
+          req,
+          "Score verrouillé impossible à annuler",
+          "Score is locked and cannot be cancelled"
+        )
+      );
+
+    }
+
+    if(match.round !== "POULE"){
+
+  const nextRound =
+    getNextRoundRapide(
+      match.round
+    );
+
+  if(nextRound){
+
+    const tourSuivant = await get(
+      `
+      SELECT COUNT(*) AS total
+      FROM matches
+      WHERE tournament_id=?
+        AND round=?
+      `,
+      [
+        match.tournament_id,
+        nextRound
+      ]
+    );
+
+    if(
+      Number(
+        tourSuivant?.total || 0
+      ) > 0
+    ){
+
+      return res.status(409).send(
+        tr(
+          req,
+          "Impossible d'annuler ce score : le tour suivant est déjà généré",
+          "This score cannot be cancelled because the next round has already been generated"
+        )
+      );
+
+    }
+
+  }
+
+}
 
     await run(
       `
       UPDATE matches
       SET score1=NULL,
           score2=NULL,
+          penalty1=NULL,
+          penalty2=NULL,
           winner_id=NULL,
           loser_id=NULL,
           proof_photo='',
           played=0
       WHERE id=?
       `,
-      [match_id]
+      [matchId]
     );
 
-    res.send("Score annulé");
+    return res.send(
+      tr(
+        req,
+        "Score annulé",
+        "Score cancelled"
+      )
+    );
 
   }catch(e){
 
-    console.log(e);
-    res.send("Erreur annulation score");
+    console.error(
+      "Erreur annulation score :",
+      e
+    );
+
+    return res.status(500).send(
+      tr(
+        req,
+        "Erreur annulation score",
+        "Failed to cancel score"
+      )
+    );
 
   }
 
 });
 
-
 function genererGroupesAuto(participants){
 
-  const total = participants.length;
+  const total =
+    participants.length;
 
-  let tailleGroupe = 4;
+  let nombreGroupes;
 
-  if(total <= 10){
-    tailleGroupe = 3;
+  if(total === 48){
+
+    nombreGroupes = 12;
+
+  }else if(total <= 8){
+
+    /*
+      6 joueurs → 3 + 3
+      7 joueurs → 4 + 3
+      8 joueurs → 4 + 4
+    */
+    nombreGroupes = 2;
+
+  }else if(total <= 10){
+
+    /*
+      9 joueurs → 3 + 3 + 3
+      10 joueurs → 4 + 3 + 3
+    */
+    nombreGroupes = 3;
+
   }else if(total <= 30){
-    tailleGroupe = 4;
-  }else{
-    tailleGroupe = 5;
-  }
 
-  const nombreGroupes =
-    Math.ceil(total / tailleGroupe);
+    /*
+      Groupes équilibrés
+      d’environ 4 joueurs.
+    */
+    nombreGroupes =
+      Math.floor(total / 4);
+
+  }else{
+
+    /*
+      Groupes équilibrés
+      d’environ 5 joueurs.
+    */
+    nombreGroupes =
+      Math.ceil(total / 5);
+
+  }
 
   const groupes = [];
 
-  for(let i=0;i<nombreGroupes;i++){
+  for(
+    let i = 0;
+    i < nombreGroupes;
+    i++
+  ){
+
     groupes.push([]);
+
   }
 
   const melange =
     [...participants]
-    .sort(()=>Math.random() - 0.5);
+      .sort(
+        () => Math.random() - 0.5
+      );
 
   let index = 0;
 
   for(const joueur of melange){
 
-    groupes[index].push(joueur);
+    groupes[index].push(
+      joueur
+    );
 
     index++;
 
-    if(index >= groupes.length){
+    if(
+      index >= groupes.length
+    ){
+
       index = 0;
+
     }
 
   }
@@ -2851,6 +4030,7 @@ function genererGroupesAuto(participants){
   return groupes;
 
 }
+
 function genererMatchsPoule(equipes){
 
   const list = [...equipes];
@@ -3012,7 +4192,701 @@ app.get("/tirage/:id",(req,res)=>{
 
 });
 
+async function tousMatchsPoulesTermines(
+  tournamentId
+){
 
+  const result = await get(
+    `
+    SELECT
+      COUNT(*) AS total,
+      SUM(
+        CASE
+          WHEN played=1 THEN 1
+          ELSE 0
+        END
+      ) AS joues
+    FROM matches
+    WHERE tournament_id=?
+      AND round='POULE'
+    `,
+    [tournamentId]
+  );
+
+  const total =
+    Number(result?.total || 0);
+
+  const joues =
+    Number(result?.joues || 0);
+
+  return (
+    total > 0 &&
+    total === joues
+  );
+
+}
+function nombreQualifiesPourGroupes(
+  nombreGroupes
+){
+
+  if(nombreGroupes <= 0){
+    return 0;
+  }
+
+  /*
+    Format spécial :
+    12 groupes de 4
+    → 32 qualifiés.
+  */
+  if(nombreGroupes === 12){
+    return 32;
+  }
+
+  /*
+    On souhaite environ deux qualifiés
+    par groupe, puis on choisit la puissance
+    de 2 immédiatement inférieure.
+  */
+  const nombreSouhaite =
+    nombreGroupes * 2;
+
+  if(nombreSouhaite >= 32){
+    return 32;
+  }
+
+  if(nombreSouhaite >= 16){
+    return 16;
+  }
+
+  if(nombreSouhaite >= 8){
+    return 8;
+  }
+
+  if(nombreSouhaite >= 4){
+    return 4;
+  }
+
+  return 2;
+
+}
+async function recupererQualifiesPoules(
+  tournamentId
+){
+
+  const groupes =
+    await classementPoules(
+      tournamentId
+    );
+
+  const nomsGroupes =
+    Object
+      .keys(groupes)
+      .filter(
+        nom =>
+          nom !== "Sans groupe"
+      )
+      .sort();
+
+  const nombreCible =
+    nombreQualifiesPourGroupes(
+      nomsGroupes.length
+    );
+
+  if(nombreCible === 0){
+    return [];
+  }
+
+  const premiers = [];
+  const deuxiemes = [];
+  const troisiemes = [];
+  const autres = [];
+
+  for(const nomGroupe of nomsGroupes){
+
+    const classement =
+      groupes[nomGroupe];
+
+    if(!Array.isArray(classement)){
+      continue;
+    }
+
+    classement.forEach(
+      (joueur,index)=>{
+
+        const qualifie = {
+          ...joueur,
+          groupe:nomGroupe,
+          positionGroupe:index + 1
+        };
+
+        if(index === 0){
+
+          premiers.push(
+            qualifie
+          );
+
+        }else if(index === 1){
+
+          deuxiemes.push(
+            qualifie
+          );
+
+        }else if(index === 2){
+
+          troisiemes.push(
+            qualifie
+          );
+
+        }else{
+
+          autres.push(
+            qualifie
+          );
+
+        }
+
+      }
+    );
+
+  }
+
+  function comparerJoueurs(a,b){
+
+    return (
+      b.pts - a.pts ||
+      b.diff - a.diff ||
+      b.bp - a.bp ||
+      b.v - a.v ||
+      a.bc - b.bc ||
+      String(a.prenom || "")
+        .localeCompare(
+          String(b.prenom || "")
+        )
+    );
+
+  }
+
+  deuxiemes.sort(
+    comparerJoueurs
+  );
+
+  troisiemes.sort(
+    comparerJoueurs
+  );
+
+  autres.sort(
+    comparerJoueurs
+  );
+
+  const qualifies = [];
+
+  /*
+    Tous les premiers de groupe
+    sont qualifiés en priorité.
+  */
+  qualifies.push(
+    ...premiers
+  );
+
+  /*
+    On complète avec les meilleurs
+    deuxièmes.
+  */
+  for(const joueur of deuxiemes){
+
+    if(
+      qualifies.length >=
+      nombreCible
+    ){
+      break;
+    }
+
+    qualifies.push(
+      joueur
+    );
+
+  }
+
+  /*
+    Format 48 équipes ou si nécessaire :
+    on complète avec les meilleurs troisièmes.
+  */
+  for(const joueur of troisiemes){
+
+    if(
+      qualifies.length >=
+      nombreCible
+    ){
+      break;
+    }
+
+    qualifies.push(
+      joueur
+    );
+
+  }
+
+  /*
+    Sécurité pour un format inhabituel.
+  */
+  for(const joueur of autres){
+
+    if(
+      qualifies.length >=
+      nombreCible
+    ){
+      break;
+    }
+
+    qualifies.push(
+      joueur
+    );
+
+  }
+
+  return qualifies.slice(
+    0,
+    nombreCible
+  );
+
+}
+
+async function creerPremierTourPhaseFinale(
+  tournamentId,
+  qualifies
+){
+
+  if(
+    !Array.isArray(qualifies) ||
+    qualifies.length < 2
+  ){
+    throw new Error(
+      "Nombre de qualifiés insuffisant"
+    );
+  }
+
+  const premierTour =
+    determinerPremierTourFinal(
+      qualifies.length
+    );
+
+  if(!premierTour){
+
+    throw new Error(
+      "Nombre de qualifiés incompatible avec une phase finale"
+    );
+
+  }
+
+  const dejaCree = await get(
+    `
+    SELECT COUNT(*) AS total
+    FROM matches
+    WHERE tournament_id=?
+      AND round=?
+    `,
+    [
+      tournamentId,
+      premierTour
+    ]
+  );
+
+  if(
+    Number(dejaCree?.total || 0) > 0
+  ){
+
+    return {
+      created:false,
+      round:premierTour
+    };
+
+  }
+
+  /*
+    Mélange des qualifiés.
+    On pourra ensuite améliorer les confrontations
+    pour éviter deux joueurs du même groupe.
+  */
+  const melange =
+    [...qualifies]
+      .sort(
+        () => Math.random() - 0.5
+      );
+
+  let matchOrder = 1;
+
+  for(
+    let index = 0;
+    index < melange.length;
+    index += 2
+  ){
+
+    const joueur1 =
+      melange[index];
+
+    const joueur2 =
+      melange[index + 1];
+
+    if(!joueur1 || !joueur2){
+      continue;
+    }
+
+    await run(
+      `
+      INSERT INTO matches(
+        tournament_id,
+        round,
+        match_order,
+        journee,
+        player1_id,
+        player2_id
+      )
+      VALUES(?,?,?,?,?,?)
+      `,
+      [
+        tournamentId,
+        premierTour,
+        matchOrder++,
+        "ALLER",
+        joueur1.id,
+        joueur2.id
+      ]
+    );
+
+    await run(
+      `
+      INSERT INTO matches(
+        tournament_id,
+        round,
+        match_order,
+        journee,
+        player1_id,
+        player2_id
+      )
+      VALUES(?,?,?,?,?,?)
+      `,
+      [
+        tournamentId,
+        premierTour,
+        matchOrder++,
+        "RETOUR",
+        joueur1.id,
+        joueur2.id
+      ]
+    );
+
+  }
+
+  return {
+    created:true,
+    round:premierTour
+  };
+
+}
+
+async function genererTourSuivantPhaseFinale(
+  tournamentId,
+  round
+){
+
+  const nextRound =
+    getNextRoundRapide(round);
+
+  if(!nextRound){
+
+    return {
+      created:false,
+      finished:true
+    };
+
+  }
+
+  const matchs = await all(
+    `
+    SELECT *
+    FROM matches
+    WHERE tournament_id=?
+      AND round=?
+    ORDER BY match_order ASC, id ASC
+    `,
+    [
+      tournamentId,
+      round
+    ]
+  );
+
+  if(matchs.length === 0){
+
+    throw new Error(
+      "Aucun match trouvé pour ce tour"
+    );
+
+  }
+
+  const duels = new Map();
+
+  for(const match of matchs){
+
+    const ordreDuel =
+      Math.ceil(
+        Number(match.match_order || 1) / 2
+      );
+
+    if(!duels.has(ordreDuel)){
+
+      duels.set(
+        ordreDuel,
+        {
+          aller:null,
+          retour:null
+        }
+      );
+
+    }
+
+    const duel =
+      duels.get(ordreDuel);
+
+    if(
+      match.journee === "ALLER" ||
+      match.leg === "ALLER"
+    ){
+
+      duel.aller = match;
+
+    }
+
+    if(
+      match.journee === "RETOUR" ||
+      match.leg === "RETOUR"
+    ){
+
+      duel.retour = match;
+
+    }
+
+  }
+
+  const gagnants = [];
+
+  for(const [ordreDuel, duel] of duels){
+
+    if(
+      !duel.aller ||
+      !duel.retour ||
+      Number(duel.aller.played) !== 1 ||
+      Number(duel.retour.played) !== 1
+    ){
+
+      return {
+        created:false,
+        incomplete:true
+      };
+
+    }
+
+    const player1 =
+      Number(duel.aller.player1_id);
+
+    const player2 =
+      Number(duel.aller.player2_id);
+
+    function scoreDuJoueur(match, playerId){
+
+      if(
+        Number(match.player1_id) === playerId
+      ){
+        return Number(match.score1 || 0);
+      }
+
+      if(
+        Number(match.player2_id) === playerId
+      ){
+        return Number(match.score2 || 0);
+      }
+
+      return 0;
+
+    }
+
+    const total1 =
+      scoreDuJoueur(
+        duel.aller,
+        player1
+      ) +
+      scoreDuJoueur(
+        duel.retour,
+        player1
+      );
+
+    const total2 =
+      scoreDuJoueur(
+        duel.aller,
+        player2
+      ) +
+      scoreDuJoueur(
+        duel.retour,
+        player2
+      );
+
+    let winnerId = null;
+
+    if(total1 > total2){
+
+      winnerId = player1;
+
+    }else if(total2 > total1){
+
+      winnerId = player2;
+
+    }else{
+
+      const penalty1 =
+        duel.retour.penalty1 === null ||
+        duel.retour.penalty1 === undefined
+          ? null
+          : Number(
+              duel.retour.penalty1
+            );
+
+      const penalty2 =
+        duel.retour.penalty2 === null ||
+        duel.retour.penalty2 === undefined
+          ? null
+          : Number(
+              duel.retour.penalty2
+            );
+
+      if(
+        penalty1 === null ||
+        penalty2 === null
+      ){
+
+        return {
+          created:false,
+          penaltiesMissing:true
+        };
+
+      }
+
+      winnerId =
+        penalty1 > penalty2
+          ? Number(
+              duel.retour.player1_id
+            )
+          : Number(
+              duel.retour.player2_id
+            );
+
+    }
+
+    gagnants.push({
+      ordreDuel,
+      playerId:winnerId
+    });
+
+  }
+
+  gagnants.sort(
+    (a,b) =>
+      a.ordreDuel - b.ordreDuel
+  );
+
+  const dejaCree = await get(
+    `
+    SELECT COUNT(*) AS total
+    FROM matches
+    WHERE tournament_id=?
+      AND round=?
+    `,
+    [
+      tournamentId,
+      nextRound
+    ]
+  );
+
+  if(
+    Number(dejaCree?.total || 0) > 0
+  ){
+
+    return {
+      created:false,
+      alreadyCreated:true,
+      round:nextRound
+    };
+
+  }
+
+  let matchOrder = 1;
+
+  for(
+    let index = 0;
+    index < gagnants.length;
+    index += 2
+  ){
+
+    const joueur1 =
+      gagnants[index];
+
+    const joueur2 =
+      gagnants[index + 1];
+
+    if(!joueur1 || !joueur2){
+      continue;
+    }
+
+    await run(
+      `
+      INSERT INTO matches(
+        tournament_id,
+        round,
+        match_order,
+        journee,
+        player1_id,
+        player2_id
+      )
+      VALUES(?,?,?,?,?,?)
+      `,
+      [
+        tournamentId,
+        nextRound,
+        matchOrder++,
+        "ALLER",
+        joueur1.playerId,
+        joueur2.playerId
+      ]
+    );
+
+    await run(
+      `
+      INSERT INTO matches(
+        tournament_id,
+        round,
+        match_order,
+        journee,
+        player1_id,
+        player2_id
+      )
+      VALUES(?,?,?,?,?,?)
+      `,
+      [
+        tournamentId,
+        nextRound,
+        matchOrder++,
+        "RETOUR",
+        joueur1.playerId,
+        joueur2.playerId
+      ]
+    );
+
+  }
+
+  return {
+    created:true,
+    round:nextRound
+  };
+
+}
 
 app.get("/champion/:id",(req,res)=>{
 
@@ -3871,9 +5745,28 @@ setTimeout(()=>{
 
 });
 
-app.post("/upload-image",(req,res)=>{
+app.post(
+  "/upload-image",
+  uploadLimiter,
+  (req,res)=>{
 
-  upload.single("image")(req,res,async (err)=>{
+    if(!connected(req)){
+
+      return res.status(401).json({
+        ok:false,
+        message:tr(
+          req,
+          "Connecte-toi pour envoyer un fichier",
+          "Log in to upload a file"
+        )
+      });
+
+    }
+
+    upload.single("image")(
+      req,
+      res,
+      async (err)=>{
 
     try{
 
@@ -3918,62 +5811,94 @@ app.post("/upload-image",(req,res)=>{
 
       let thumbnail_url = "";
 
-      if(req.file.mimetype.startsWith("video/")){
+     if(req.file.mimetype.startsWith("video/")){
 
-        const tempVideo =
-          path.join(os.tmpdir(), fileName);
+  const tempVideo =
+    path.join(os.tmpdir(), fileName);
 
-        const thumbName =
-          fileName.replace(/\.[^/.]+$/, "") + ".jpg";
+  const thumbName =
+    fileName.replace(/\.[^/.]+$/, "") + ".jpg";
 
-        const tempThumb =
-          path.join(os.tmpdir(), thumbName);
+  const tempThumb =
+    path.join(os.tmpdir(), thumbName);
 
-        fs.writeFileSync(tempVideo, req.file.buffer);
+  try{
 
-        await new Promise((resolve)=>{
-          execFile(
-            "ffmpeg",
-            [
-              "-y",
-              "-i",tempVideo,
-              "-frames:v","1",
-              "-q:v","2",
-              tempThumb
-            ],
-            ()=>{
-              resolve();
-            }
-          );
-        });
+    fs.writeFileSync(
+      tempVideo,
+      req.file.buffer
+    );
 
-        if(fs.existsSync(tempThumb)){
+    await new Promise((resolve,reject)=>{
 
-          const thumbBuffer =
-            fs.readFileSync(tempThumb);
+      execFile(
+        "ffmpeg",
+        [
+          "-y",
+          "-i", tempVideo,
+          "-frames:v", "1",
+          "-q:v", "2",
+          tempThumb
+        ],
+        error =>{
 
-          await r2.send(
-            new PutObjectCommand({
-              Bucket:process.env.R2_BUCKET,
-              Key:thumbName,
-              Body:thumbBuffer,
-              ContentType:"image/jpeg"
-            })
-          );
+          if(error){
+            reject(error);
+            return;
+          }
 
-          thumbnail_url =
-            `${process.env.R2_PUBLIC_URL}/${thumbName}`;
+          resolve();
+
         }
+      );
 
-        if(fs.existsSync(tempVideo)){
-          fs.unlinkSync(tempVideo);
-        }
+    });
 
-        if(fs.existsSync(tempThumb)){
-          fs.unlinkSync(tempThumb);
-        }
-      }
+    if(fs.existsSync(tempThumb)){
 
+      const thumbBuffer =
+        fs.readFileSync(tempThumb);
+
+      await r2.send(
+        new PutObjectCommand({
+          Bucket:process.env.R2_BUCKET,
+          Key:thumbName,
+          Body:thumbBuffer,
+          ContentType:"image/jpeg"
+        })
+      );
+
+      thumbnail_url =
+        `${process.env.R2_PUBLIC_URL}/${thumbName}`;
+
+    }
+
+  }catch(error){
+
+    console.error(
+      "Erreur création miniature :",
+      error
+    );
+
+    /*
+      La vidéo reste envoyée même si la
+      miniature ne peut pas être créée.
+    */
+    thumbnail_url = "";
+
+  }finally{
+
+    if(fs.existsSync(tempVideo)){
+      fs.unlinkSync(tempVideo);
+    }
+
+    if(fs.existsSync(tempThumb)){
+      fs.unlinkSync(tempThumb);
+    }
+
+  }
+
+}
       console.log("UPLOAD URL =", url);
       console.log("UPLOAD THUMB =", thumbnail_url);
 
@@ -4550,12 +6475,12 @@ app.get("/admin-payments", async (req,res)=>{
   ${
     p.status !== "approved"
     ? `
-      <form method="POST" action="/admin-valider-paiement?admin=${ADMIN_PASSWORD}">
+      <form method="POST" action="/admin-valider-paiement">
         <input type="hidden" name="payment_id" value="${p.id}">
         <input type="hidden" name="user_id" value="${p.user_id}">
         <button>Valider abonnement 1 mois</button>
       </form>
-      <form method="POST" action="/admin-refuser-paiement?admin=${ADMIN_PASSWORD}">
+     <form method="POST" action="/admin-refuser-paiement"> 
   <input type="hidden" name="payment_id" value="${p.id}">
   <input type="hidden" name="user_id" value="${p.user_id}">
   <button style="background:#ef4444;color:white;">
@@ -4586,90 +6511,302 @@ app.get("/admin-payments", async (req,res)=>{
 
 });
 
-app.post("/admin-valider-paiement", async (req,res)=>{
+app.post(
+  "/admin-valider-paiement",
+  async (req,res)=>{
 
-  try{
+    try{
 
-    const {
-      payment_id,
-      user_id
-    } = req.body;
+      if(!isAdmin(req)){
 
-    await run(
-      `
-      UPDATE users
-      SET abonnement=1,
-          abonnement_expire_at=datetime('now','+30 days')
-      WHERE id=?
-      `,
-      [user_id]
-    );
+        return res
+          .status(403)
+          .send("Accès admin refusé");
 
-    await run(
-      `
-      UPDATE payments
-      SET status='approved'
-      WHERE id=?
-      `,
-      [payment_id]
-    );
+      }
 
-    res.redirect("/admin-payments");
+      const {
+        payment_id,
+        user_id
+      } = req.body;
 
-  }catch(e){
+      if(!payment_id || !user_id){
 
-    console.log(e);
-    res.send("Erreur validation paiement");
+        return res
+          .status(400)
+          .send(
+            "Paiement et utilisateur obligatoires"
+          );
+
+      }
+
+      const paiement = await get(
+        `
+        SELECT *
+        FROM payments
+        WHERE id=?
+        AND user_id=?
+        `,
+        [
+          payment_id,
+          user_id
+        ]
+      );
+
+      if(!paiement){
+
+        return res
+          .status(404)
+          .send("Paiement introuvable");
+
+      }
+
+      if(paiement.status === "approved"){
+
+        return res.redirect(
+          "/admin-payments?admin=" +
+          encodeURIComponent(
+            ADMIN_PASSWORD
+          )
+        );
+
+      }
+
+      await run("BEGIN TRANSACTION");
+
+      try{
+
+        await run(
+          `
+          UPDATE users
+          SET abonnement=1,
+              abonnement_expire_at=
+                datetime('now','+30 days')
+          WHERE id=?
+          `,
+          [user_id]
+        );
+
+        await run(
+          `
+          UPDATE payments
+          SET status='approved'
+          WHERE id=?
+          AND user_id=?
+          `,
+          [
+            payment_id,
+            user_id
+          ]
+        );
+
+        await run("COMMIT");
+
+      }catch(error){
+
+        await run("ROLLBACK");
+
+        throw error;
+
+      }
+
+      return res.redirect(
+        "/admin-payments?admin=" +
+        encodeURIComponent(
+          ADMIN_PASSWORD
+        )
+      );
+
+    }catch(e){
+
+      console.error(
+        "Erreur validation paiement :",
+        e
+      );
+
+      return res
+        .status(500)
+        .send(
+          "Erreur validation paiement"
+        );
+
+    }
 
   }
+);
 
-});
-app.post("/admin-refuser-paiement", async (req,res)=>{
+app.post(
+  "/admin-refuser-paiement",
+  async (req,res)=>{
+
+    try{
+
+      if(!isAdmin(req)){
+
+        return res
+          .status(403)
+          .send("Accès admin refusé");
+
+      }
+
+      const paymentId =
+        Number(req.body.payment_id);
+
+      const userId =
+        Number(req.body.user_id);
+
+      if(
+        !Number.isInteger(paymentId) ||
+        paymentId <= 0 ||
+        !Number.isInteger(userId) ||
+        userId <= 0
+      ){
+
+        return res
+          .status(400)
+          .send(
+            "Paiement ou utilisateur invalide"
+          );
+
+      }
+
+      const paiement = await get(
+        `
+        SELECT id, user_id, status
+        FROM payments
+        WHERE id=?
+          AND user_id=?
+        `,
+        [
+          paymentId,
+          userId
+        ]
+      );
+
+      if(!paiement){
+
+        return res
+          .status(404)
+          .send(
+            "Paiement introuvable"
+          );
+
+      }
+
+      if(paiement.status === "approved"){
+
+        return res
+          .status(409)
+          .send(
+            "Un paiement déjà validé ne peut pas être refusé"
+          );
+
+      }
+
+      await run(
+        `
+        UPDATE payments
+        SET status='refused'
+        WHERE id=?
+          AND user_id=?
+        `,
+        [
+          paymentId,
+          userId
+        ]
+      );
+
+      return res.redirect(
+        "/admin-payments"
+      );
+
+    }catch(error){
+
+      console.error(
+        "Erreur refus paiement :",
+        error
+      );
+
+      return res
+        .status(500)
+        .send(
+          "Erreur refus paiement"
+        );
+
+    }
+
+  }
+);
+
+app.get("/download-db",(req,res)=>{
 
   try{
 
     if(!isAdmin(req)){
-      return res.send("Accès admin refusé");
+
+      return res
+        .status(403)
+        .send("Accès admin refusé");
+
     }
 
-    const { payment_id,user_id } = req.body;
+    const dbPath =
+      path.join(
+        DATA_DIR,
+        "database.sqlite"
+      );
 
-    await run(
-      `
-      UPDATE users
-      SET abonnement=0,
-          abonnement_expire_at=NULL
-      WHERE id=?
-      `,
-      [user_id]
+    if(!fs.existsSync(dbPath)){
+
+      return res
+        .status(404)
+        .send(
+          "Base de données introuvable"
+        );
+
+    }
+
+    return res.download(
+      dbPath,
+      "snugame-backup.sqlite",
+      error =>{
+
+        if(error){
+
+          console.error(
+            "Erreur téléchargement base :",
+            error
+          );
+
+          if(!res.headersSent){
+
+            res
+              .status(500)
+              .send(
+                "Erreur téléchargement base"
+              );
+
+          }
+
+        }
+
+      }
     );
 
-    await run(
-      `
-      UPDATE payments
-      SET status='refused'
-      WHERE id=?
-      `,
-      [payment_id]
+  }catch(error){
+
+    console.error(
+      "Erreur route download-db :",
+      error
     );
 
-    res.redirect("/admin-payments?admin=" + ADMIN_PASSWORD);
-
-  }catch(e){
-
-    console.log(e);
-    res.send("Erreur refus paiement");
+    return res
+      .status(500)
+      .send(
+        "Erreur téléchargement base"
+      );
 
   }
-
-});
-
-app.get("/download-db",(req,res)=>{
-
-  const dbPath =
-    path.join(DATA_DIR,"database.sqlite");
-
-  res.download(dbPath);
 
 });
 
@@ -4836,34 +6973,128 @@ app.post("/like-highlight", async (req,res)=>{
   try{
 
     if(!connected(req)){
-      return res.send("Connecte-toi");
+
+      return res.status(401).send(
+        tr(
+          req,
+          "Connecte-toi",
+          "Please log in"
+        )
+      );
+
     }
 
-    const { id } = req.body;
+    const highlightId =
+      Number(req.body.id);
+
+    if(
+      !Number.isInteger(highlightId) ||
+      highlightId <= 0
+    ){
+
+      return res.status(400).send(
+        tr(
+          req,
+          "Vidéo invalide",
+          "Invalid video"
+        )
+      );
+
+    }
+
+    const video = await get(
+      `
+      SELECT
+        h.id,
+        h.user_id,
+        h.titre,
+        u.username,
+        u.name
+      FROM highlights h
+      LEFT JOIN users u
+        ON u.id=?
+      WHERE h.id=?
+      `,
+      [
+        req.session.userId,
+        highlightId
+      ]
+    );
+
+    if(!video){
+
+      return res.status(404).send(
+        tr(
+          req,
+          "Vidéo introuvable",
+          "Video not found"
+        )
+      );
+
+    }
 
     const dejaLike = await get(
       `
-      SELECT *
+      SELECT id
       FROM highlight_likes
       WHERE highlight_id=?
-      AND user_id=?
+        AND user_id=?
       `,
       [
-        id,
+        highlightId,
         req.session.userId
       ]
     );
 
-    if(dejaLike){
+    await run("BEGIN TRANSACTION");
+
+    try{
+
+      if(dejaLike){
+
+        await run(
+          `
+          DELETE FROM highlight_likes
+          WHERE highlight_id=?
+            AND user_id=?
+          `,
+          [
+            highlightId,
+            req.session.userId
+          ]
+        );
+
+        await run(
+          `
+          UPDATE highlights
+          SET likes=MAX(likes-1,0)
+          WHERE id=?
+          `,
+          [highlightId]
+        );
+
+        await run("COMMIT");
+
+        return res.send(
+          tr(
+            req,
+            "Like retiré",
+            "Like removed"
+          )
+        );
+
+      }
 
       await run(
         `
-        DELETE FROM highlight_likes
-        WHERE highlight_id=?
-        AND user_id=?
+        INSERT INTO highlight_likes(
+          highlight_id,
+          user_id
+        )
+        VALUES(?,?)
         `,
         [
-          id,
+          highlightId,
           req.session.userId
         ]
       );
@@ -4871,76 +7102,58 @@ app.post("/like-highlight", async (req,res)=>{
       await run(
         `
         UPDATE highlights
-        SET likes = MAX(likes - 1, 0)
+        SET likes=likes+1
         WHERE id=?
         `,
-        [id]
+        [highlightId]
       );
 
-      return res.send("Like retiré");
+      await run("COMMIT");
+
+    }catch(error){
+
+      await run("ROLLBACK");
+      throw error;
+
     }
 
-    await run(
-      `
-      INSERT INTO highlight_likes(
-        highlight_id,
-        user_id
+    if(
+      video.user_id &&
+      Number(video.user_id) !==
+      Number(req.session.userId)
+    ){
+
+      await notifierUtilisateur(
+        video.user_id,
+        "❤️ Nouveau like",
+        `${video.username || video.name || "Un joueur"} a aimé ta vidéo`,
+        `video:${highlightId}`
+      );
+
+    }
+
+    return res.send(
+      tr(
+        req,
+        "Like ajouté",
+        "Like added"
       )
-      VALUES(?,?)
-      `,
-      [
-        id,
-        req.session.userId
-      ]
     );
 
-    await run(
-      `
-      UPDATE highlights
-      SET likes = likes + 1
-      WHERE id=?
-      `,
-      [id]
+  }catch(error){
+
+    console.error(
+      "Erreur like vidéo :",
+      error
     );
-    
-    const video = await get(
-  `
-  SELECT
-    h.user_id,
-    h.titre,
-    u.username,
-    u.name
-  FROM highlights h
-  LEFT JOIN users u
-    ON u.id=?
-  WHERE h.id=?
-  `,
-  [
-    req.session.userId,
-    id
-  ]
-);
 
-if(
-  video &&
-  Number(video.user_id) !== Number(req.session.userId)
-){
-
-  await notifierUtilisateur(
-    video.user_id,
-    "❤️ Nouveau like",
-    `${video.username || video.name || "Un joueur"} a aimé ta vidéo`,
-    `video:${id}`
-  );
-
-}
-
-    res.send("Like ajouté");
-
-  }catch(e){
-
-    console.log(e);
-    res.send("Erreur like");
+    return res.status(500).send(
+      tr(
+        req,
+        "Erreur like",
+        "Failed to like video"
+      )
+    );
 
   }
 
@@ -5020,196 +7233,251 @@ app.post("/view-highlight", async (req,res)=>{
 
 });
 
-app.post("/comment-highlight", async (req,res)=>{
+app.get(
+  "/comments-highlight/:id",
+  async (req,res)=>{
+
+    try{
+
+      const highlightId =
+        Number(req.params.id);
+
+      if(
+        !Number.isInteger(highlightId) ||
+        highlightId <= 0
+      ){
+
+        return res.status(400).json({
+          ok:false,
+          message:tr(
+            req,
+            "Vidéo invalide",
+            "Invalid video"
+          )
+        });
+
+      }
+
+      const video = await get(
+        `
+        SELECT id
+        FROM highlights
+        WHERE id=?
+        `,
+        [highlightId]
+      );
+
+      if(!video){
+
+        return res.status(404).json({
+          ok:false,
+          message:tr(
+            req,
+            "Vidéo introuvable",
+            "Video not found"
+          )
+        });
+
+      }
+
+      const comments = await all(
+        `
+        SELECT
+          c.id,
+          c.highlight_id,
+          c.user_id,
+          c.comment,
+          c.created_at,
+          u.name,
+          u.username,
+          u.profile_photo
+        FROM highlight_comments c
+        LEFT JOIN users u
+          ON u.id=c.user_id
+        WHERE c.highlight_id=?
+        ORDER BY c.id DESC
+        LIMIT 200
+        `,
+        [highlightId]
+      );
+
+      return res.json(comments);
+
+    }catch(error){
+
+      console.error(
+        "Erreur chargement commentaires :",
+        error
+      );
+
+      return res.status(500).json({
+        ok:false,
+        message:tr(
+          req,
+          "Impossible de charger les commentaires",
+          "Failed to load comments"
+        )
+      });
+
+    }
+
+  }
+);
+
+app.post("/follow-player", async (req,res)=>{
 
   try{
 
-    const {
-      highlight_id,
-      participant_id,
-      comment
-    } = req.body;
+    if(!connected(req)){
 
-    if(
-      !highlight_id ||
-      !participant_id ||
-      !comment
-    ){
-      return res.send(
-        "Informations manquantes"
+      return res.status(401).send(
+        tr(
+          req,
+          "Connecte-toi d'abord",
+          "Please log in first"
+        )
       );
+
     }
 
-    await run(
+    const playerUserId =
+      Number(req.body.player_user_id);
+
+    if(
+      !Number.isInteger(playerUserId) ||
+      playerUserId <= 0
+    ){
+
+      return res.status(400).send(
+        tr(
+          req,
+          "Joueur invalide",
+          "Invalid player"
+        )
+      );
+
+    }
+
+    if(
+      playerUserId ===
+      Number(req.session.userId)
+    ){
+
+      return res.status(400).send(
+        tr(
+          req,
+          "Tu ne peux pas te suivre toi-même",
+          "You cannot follow yourself"
+        )
+      );
+
+    }
+
+    const player = await get(
       `
-      INSERT INTO highlight_comments(
-        highlight_id,
-        participant_id,
-        comment
-      )
-      VALUES(?,?,?)
+      SELECT id
+      FROM users
+      WHERE id=?
+      `,
+      [playerUserId]
+    );
+
+    if(!player){
+
+      return res.status(404).send(
+        tr(
+          req,
+          "Joueur introuvable",
+          "Player not found"
+        )
+      );
+
+    }
+
+    const existing = await get(
+      `
+      SELECT id
+      FROM follows
+      WHERE follower_id=?
+        AND following_participant_id=?
       `,
       [
-        highlight_id,
-        participant_id,
-        comment
+        req.session.userId,
+        playerUserId
       ]
     );
 
-    const video = await get(
-  `
-  SELECT
-    h.user_id,
-    h.titre,
-    p.prenom
-  FROM highlights h
-  LEFT JOIN participants p
-    ON p.id=?
-  WHERE h.id=?
-  `,
-  [
-    participant_id,
-    highlight_id
-  ]
-);
+    if(existing){
 
-if(
-  video &&
-  Number(video.user_id) !== Number(req.session.userId)
-){
+      await run(
+        `
+        DELETE FROM follows
+        WHERE id=?
+        `,
+        [existing.id]
+      );
 
-  await notifierUtilisateur(
-    video.user_id,
-    "💬 Nouveau commentaire",
-    `${video.prenom || "Un joueur"} a commenté ta vidéo`,
-    `video:${highlight_id}`
-  );
+      return res.send("Unfollow");
 
-}
-
-    res.send("Commentaire ajouté");
-
-  }catch(e){
-
-    console.log(e);
-    res.send("Erreur commentaire");
-
-  }
-
-});
-
-app.get("/comments-highlight/:id", async (req,res)=>{
-
-  try{
-
-    const comments = await all(
-      `
-      SELECT
-        c.*,
-        p.prenom
-      FROM highlight_comments c
-      LEFT JOIN participants p
-      ON p.id=c.participant_id
-      WHERE c.highlight_id=?
-      ORDER BY c.id DESC
-      `,
-      [req.params.id]
-    );
-
-    res.json(comments);
-
-  }catch(e){
-
-    console.log(e);
-    res.json([]);
-
-  }
-
-});
-
-    app.post("/follow-player", async (req,res)=>{
-
-  try{
-
-    if(!req.session.userId){
-      return res.send("Connecte-toi d'abord");
     }
-
-    const { player_user_id } = req.body;
-
-    if(!player_user_id){
-      return res.send("Joueur manquant");
-    }
-
-    if(Number(player_user_id) === Number(req.session.userId)){
-      return res.send("Tu ne peux pas te suivre toi-même");
-    }
-
-
-const existing = await get(
-  `
-  SELECT id
-  FROM followers
-  WHERE follower_id=?
-  AND following_id=?
-  `,
-  [
-    req.session.userId,
-    player_user_id
-  ]
-);
-
-if(existing){
-
-  await run(
-    `
-    DELETE FROM followers
-    WHERE id=?
-    `,
-    [existing.id]
-  );
-
-  return res.send("Unfollow");
-
-}
 
     await run(
       `
-      INSERT INTO followers(
+      INSERT OR IGNORE INTO follows(
         follower_id,
-        following_id
+        following_participant_id
       )
       VALUES(?,?)
       `,
-      [req.session.userId, player_user_id]
+      [
+        req.session.userId,
+        playerUserId
+      ]
     );
 
     const me = await get(
-  `
-  SELECT username, name
-  FROM users
-  WHERE id=?
-  `,
-  [req.session.userId]
-);
+      `
+      SELECT username, name
+      FROM users
+      WHERE id=?
+      `,
+      [req.session.userId]
+    );
 
-await notifierUtilisateur(
-  player_user_id,
-  "🔔 Nouvel abonné",
-  `${me?.username || me?.name || "Un joueur"} s'est abonné à toi`,
-  `profile:${req.session.userId}`
-);
+    await notifierUtilisateur(
+      playerUserId,
+      "🔔 Nouvel abonné",
+      `${me?.username || me?.name || "Un joueur"} s'est abonné à toi`,
+      `profile:${req.session.userId}`
+    );
 
-    res.send("Abonnement réussi ✅");
+    return res.send(
+      tr(
+        req,
+        "Abonnement réussi ✅",
+        "Follow successful ✅"
+      )
+    );
 
-  }catch(e){
+  }catch(error){
 
-    console.log(e);
-    res.send("Erreur abonnement joueur");
+    console.error(
+      "Erreur abonnement joueur :",
+      error
+    );
+
+    return res.status(500).send(
+      tr(
+        req,
+        "Erreur abonnement joueur",
+        "Failed to follow player"
+      )
+    );
 
   }
 
 });
+
 app.get("/followers/:id", async (req,res)=>{
 
   try{
@@ -5294,38 +7562,94 @@ app.get("/user-following/:id", async (req,res)=>{
   }
 
 });
-app.post("/tirage-automatique-poule-pro", async (req,res)=>{
+
+app.post(
+  "/tirage-automatique-rapide",
+  async (req,res)=>{
 
   try{
 
     if(!connected(req)){
-      return res.send("Connecte-toi");
+
+      return res.status(401).send(
+        tr(
+          req,
+          "Connecte-toi",
+          "Please log in"
+        )
+      );
+
     }
 
-    const { tournament_id } = req.body;
+    const tournamentId =
+      Number(req.body.tournament_id);
+
+    if(
+      !Number.isInteger(tournamentId) ||
+      tournamentId <= 0
+    ){
+
+      return res.status(400).send(
+        tr(
+          req,
+          "Tournoi obligatoire ou invalide",
+          "Tournament is required or invalid"
+        )
+      );
+
+    }
 
     const ownerCheck =
-  await verifierProprietaireTournoi(req, tournament_id);
+      await verifierProprietaireTournoi(
+        req,
+        tournamentId
+      );
 
-if(!ownerCheck.ok){
-  return res.send(ownerCheck.message);
-}
+    if(!ownerCheck.ok){
 
-    if(!tournament_id){
-      return res.send("Tournoi obligatoire");
+      return res.status(403).send(
+        ownerCheck.message
+      );
+
     }
 
-    const tournoi = await get(
-      `
-      SELECT *
-      FROM tournaments
-      WHERE id=?
-      `,
-      [tournament_id]
-    );
+    const tournoi =
+      ownerCheck.tournoi;
 
     if(!tournoi){
-      return res.send("Tournoi introuvable");
+
+      return res.status(404).send(
+        tr(
+          req,
+          "Tournoi introuvable",
+          "Tournament not found"
+        )
+      );
+
+    }
+
+    if(tournoi.type !== "rapide"){
+
+      return res.status(400).send(
+        tr(
+          req,
+          "Ce tournoi n'est pas un tournoi rapide",
+          "This tournament is not a quick tournament"
+        )
+      );
+
+    }
+
+    if(tournoi.status === "finished"){
+
+      return res.status(409).send(
+        tr(
+          req,
+          "Le tournoi est déjà terminé",
+          "The tournament is already finished"
+        )
+      );
+
     }
 
     const participants = await all(
@@ -5335,11 +7659,19 @@ if(!ownerCheck.ok){
       WHERE tournament_id=?
       ORDER BY id
       `,
-      [tournament_id]
+      [tournamentId]
     );
 
-    if(participants.length < 2){
-      return res.send("Il faut au moins 2 participants");
+    if(participants.length !== 32){
+
+      return res.status(400).send(
+        tr(
+          req,
+          `Le tournoi rapide exige exactement 32 participants. Actuellement : ${participants.length}/32.`,
+          `The quick tournament requires exactly 32 participants. Currently: ${participants.length}/32.`
+        )
+      );
+
     }
 
     const dejaMatchs = await get(
@@ -5348,96 +7680,349 @@ if(!ownerCheck.ok){
       FROM matches
       WHERE tournament_id=?
       `,
-      [tournament_id]
+      [tournamentId]
     );
 
-    if(Number(dejaMatchs.total || 0) === 0){
+    if(
+      Number(dejaMatchs?.total || 0) > 0
+    ){
 
-      if(tournoi.type === "rapide"){
+      return res.status(409).send(
+        tr(
+          req,
+          "Le tirage rapide est déjà généré",
+          "The quick-tournament draw has already been generated"
+        )
+      );
 
-  if(participants.length !== 32){
-    return res.send("Le tournoi rapide exige exactement 32 équipes");
-  }
+    }
 
-  const tirage =
-    genererMatchsRapide(participants);
+    const tirage =
+      genererMatchsRapide(
+        participants
+      );
 
-  if(tirage.error){
-    return res.send(tirage.error);
-  }
+    if(
+      !tirage ||
+      tirage.error ||
+      !Array.isArray(tirage.matchs)
+    ){
 
-  let matchOrder = 1;
+      return res.status(400).send(
+        tirage?.error ||
+        tr(
+          req,
+          "Impossible de générer le tournoi rapide",
+          "Unable to generate the quick tournament"
+        )
+      );
 
-  for(const m of tirage.matchs){
+    }
 
-    await run(
-      `
-      INSERT INTO matches(
-        tournament_id,
-        round,
-        match_order,
-        journee,
-        player1_id,
-        player2_id
-      )
-      VALUES(?,?,?,?,?,?)
-      `,
-      [
-        tournament_id,
-        m.round,
-        matchOrder++,
-        m.leg,
-        m.player1.id,
-        m.player2.id
-      ]
-    );
+    await run("BEGIN TRANSACTION");
 
-  }
-
-  await run(
-    `
-    UPDATE tournaments
-    SET status='started'
-    WHERE id=?
-    `,
-    [tournament_id]
-  );
-
-  return res.send("Tournoi rapide 32 généré");
-}
-
-      const groupes =
-        genererGroupesAuto(participants);
+    try{
 
       let matchOrder = 1;
 
-      for(let g=0; g<groupes.length; g++){
+      for(const match of tirage.matchs){
+
+        await run(
+          `
+          INSERT INTO matches(
+            tournament_id,
+            round,
+            match_order,
+            journee,
+            player1_id,
+            player2_id
+          )
+          VALUES(?,?,?,?,?,?)
+          `,
+          [
+            tournamentId,
+            match.round,
+            matchOrder++,
+            match.leg,
+            match.player1.id,
+            match.player2.id
+          ]
+        );
+
+      }
+
+      await run(
+        `
+        UPDATE tournaments
+        SET status='started'
+        WHERE id=?
+        `,
+        [tournamentId]
+      );
+
+      await run("COMMIT");
+
+    }catch(errorTransaction){
+
+      try{
+        await run("ROLLBACK");
+      }catch(errorRollback){
+
+        console.error(
+          "Erreur ROLLBACK tirage rapide :",
+          errorRollback
+        );
+
+      }
+
+      throw errorTransaction;
+
+    }
+
+    for(const participant of participants){
+
+      if(!participant.user_id){
+        continue;
+      }
+
+      await notifierUtilisateur(
+        participant.user_id,
+        "🏆 Début du tournoi",
+        `Le tournoi "${tournoi.name}" vient de commencer.`,
+        `tournament:${tournamentId}`
+      );
+
+    }
+
+    return res.send(
+      tr(
+        req,
+        "Tournoi rapide 32 généré",
+        "Quick 32-team tournament generated"
+      )
+    );
+
+  }catch(error){
+
+    console.error(
+      "Erreur tirage rapide :",
+      error
+    );
+
+    return res.status(500).send(
+      tr(
+        req,
+        "Erreur pendant la génération du tournoi rapide",
+        "Error while generating the quick tournament"
+      )
+    );
+
+  }
+
+});
+
+app.post(
+  "/tirage-automatique-poule-pro",
+  async (req,res)=>{
+
+  try{
+
+    if(!connected(req)){
+
+      return res.status(401).send(
+        tr(
+          req,
+          "Connecte-toi",
+          "Please log in"
+        )
+      );
+
+    }
+
+    const tournamentId =
+      Number(req.body.tournament_id);
+
+    if(
+      !Number.isInteger(tournamentId) ||
+      tournamentId <= 0
+    ){
+
+      return res.status(400).send(
+        tr(
+          req,
+          "Tournoi obligatoire ou invalide",
+          "Tournament is required or invalid"
+        )
+      );
+
+    }
+
+    const ownerCheck =
+      await verifierProprietaireTournoi(
+        req,
+        tournamentId
+      );
+
+    if(!ownerCheck.ok){
+
+      return res.status(403).send(
+        ownerCheck.message
+      );
+
+    }
+
+    const tournoi =
+      ownerCheck.tournoi;
+
+    if(!tournoi){
+
+      return res.status(404).send(
+        tr(
+          req,
+          "Tournoi introuvable",
+          "Tournament not found"
+        )
+      );
+
+    }
+
+    if(tournoi.status === "finished"){
+
+      return res.status(409).send(
+        tr(
+          req,
+          "Le tournoi est déjà terminé",
+          "The tournament is already finished"
+        )
+      );
+
+    }
+
+    const participants = await all(
+      `
+      SELECT *
+      FROM participants
+      WHERE tournament_id=?
+      ORDER BY id
+      `,
+      [tournamentId]
+    );
+
+    const nombreParticipants =
+      participants.length;
+
+    const nombreMaximum =
+      Number(tournoi.max_teams || 0);
+
+    if(
+      nombreParticipants !==
+      nombreMaximum
+    ){
+
+      return res.status(400).send(
+        tr(
+          req,
+          `Le tournoi n'est pas complet. Il faut ${nombreMaximum} participants. Actuellement : ${nombreParticipants}/${nombreMaximum}.`,
+          `The tournament is not full. ${nombreMaximum} participants are required. Currently: ${nombreParticipants}/${nombreMaximum}.`
+        )
+      );
+
+    }
+
+    const dejaMatchs = await get(
+      `
+      SELECT COUNT(*) AS total
+      FROM matches
+      WHERE tournament_id=?
+      `,
+      [tournamentId]
+    );
+
+    if(
+      Number(dejaMatchs.total || 0) > 0
+    ){
+
+      return res.status(409).send(
+        tr(
+          req,
+          "Tirage déjà généré",
+          "Draw already generated"
+        )
+      );
+
+    }
+
+    /*
+      Toutes les vérifications sont terminées.
+      On peut maintenant commencer la transaction.
+    */
+    await run("BEGIN TRANSACTION");
+
+    try{
+
+      
+      /*
+        TOURNOI AVEC POULES
+      */
+      if(tournoi.type !== "poule"){
+
+  return res.status(400).send(
+    tr(
+      req,
+      "Cette route est réservée aux tournois avec poules",
+      "This route is only available for group-stage tournaments"
+    )
+  );
+
+}
+
+      const groupes =
+        genererGroupesAuto(
+          participants
+        );
+
+      let matchOrder = 1;
+
+      for(
+        let indexGroupe = 0;
+        indexGroupe < groupes.length;
+        indexGroupe++
+      ){
+
+        const groupe =
+          groupes[indexGroupe];
 
         const groupName =
-          String.fromCharCode(65 + g);
+          String.fromCharCode(
+            65 + indexGroupe
+          );
 
-        for(const p of groupes[g]){
+        for(const participant of groupe){
 
           await run(
             `
             UPDATE participants
             SET group_name=?
             WHERE id=?
+              AND tournament_id=?
             `,
             [
               groupName,
-              p.id
+              participant.id,
+              tournamentId
             ]
           );
 
         }
 
-        const rounds =
-          genererMatchsPoule(groupes[g]);
+        const journees =
+          genererMatchsPoule(
+            groupe
+          );
 
-        for(const journee of rounds){
+        for(const journee of journees){
 
-          for(const m of journee){
+          for(const match of journee){
 
             await run(
               `
@@ -5452,12 +8037,12 @@ if(!ownerCheck.ok){
               VALUES(?,?,?,?,?,?)
               `,
               [
-                tournament_id,
+                tournamentId,
                 "POULE",
                 groupName,
                 matchOrder++,
-                m[0].id,
-                m[1].id
+                match[0].id,
+                match[1].id
               ]
             );
 
@@ -5473,136 +8058,602 @@ if(!ownerCheck.ok){
         SET status='started'
         WHERE id=?
         `,
-        [tournament_id]
+        [tournamentId]
       );
 
-      for(const p of participants){
+      await run("COMMIT");
 
-        if(!p.user_id){
+      /*
+        Les notifications sont envoyées après
+        la validation de la transaction.
+      */
+      for(const participant of participants){
+
+        if(!participant.user_id){
           continue;
         }
 
         await notifierUtilisateur(
-          p.user_id,
+          participant.user_id,
           "🏆 Début du tournoi",
           `Le tournoi "${tournoi.name}" vient de commencer.`,
-          `tournament:${tournament_id}`
+          `tournament:${tournamentId}`
         );
 
       }
 
-      return res.send("Tirage poules généré");
+      return res.send(
+        tr(
+          req,
+          "Tirage poules généré",
+          "Group-stage draw generated"
+        )
+      );
+
+    }catch(errorTransaction){
+
+      try{
+        await run("ROLLBACK");
+      }catch(errorRollback){
+        console.error(
+          "Erreur ROLLBACK tirage :",
+          errorRollback
+        );
+      }
+
+      throw errorTransaction;
+
     }
 
-    return res.send("Tirage déjà généré");
+  }catch(error){
 
-  }catch(e){
+    console.error(
+      "Erreur tirage :",
+      error
+    );
 
-    console.log(e);
-    res.send("Erreur tirage : " + e.message);
+    return res.status(500).send(
+      tr(
+        req,
+        "Erreur pendant la génération du tirage",
+        "Error while generating the draw"
+      )
+    );
 
   }
 
 });
 
-app.post("/generer-phase-finale", async (req,res)=>{
-  req.url = "/tirage-automatique-poule-pro";
-  return app._router.handle(req,res);
-});
-
-app.post("/generer-tour-suivant", async (req,res)=>{
-  req.url = "/tirage-automatique-poule-pro";
-  return app._router.handle(req,res);
-});
-
-app.post("/valider-champion-auto", async (req,res)=>{
-  req.url = "/tirage-automatique-poule-pro";
-  return app._router.handle(req,res);
-});
-app.post("/send-reset-code", async (req,res)=>{
+app.post(
+  "/generer-phase-finale",
+  async (req,res)=>{
 
   try{
 
-    const { email } = req.body;
+    if(!connected(req)){
 
-    if(!email){
-      return res.send(
-  tr(
-    req,
-    "Email obligatoire",
-    "Email is required"
-  )
-);
+      return res.status(401).send(
+        tr(
+          req,
+          "Connecte-toi",
+          "Please log in"
+        )
+      );
+
     }
 
-    const user = await get(
-      `
-      SELECT *
-      FROM users
-      WHERE email=?
-      `,
-      [email.trim().toLowerCase()]
+    const tournamentId =
+      Number(req.body.tournament_id);
+
+    if(
+      !Number.isInteger(tournamentId) ||
+      tournamentId <= 0
+    ){
+
+      return res.status(400).send(
+        tr(
+          req,
+          "Tournoi obligatoire ou invalide",
+          "Tournament is required or invalid"
+        )
+      );
+
+    }
+
+    const ownerCheck =
+      await verifierProprietaireTournoi(
+        req,
+        tournamentId
+      );
+
+    if(!ownerCheck.ok){
+
+      return res.status(403).send(
+        ownerCheck.message
+      );
+
+    }
+
+    const tournoi =
+      ownerCheck.tournoi;
+
+    if(tournoi.type !== "poule"){
+
+      return res.status(400).send(
+        tr(
+          req,
+          "Cette action est réservée aux tournois avec poules",
+          "This action is only available for group-stage tournaments"
+        )
+      );
+
+    }
+
+    if(tournoi.status === "finished"){
+
+      return res.status(409).send(
+        tr(
+          req,
+          "Le tournoi est déjà terminé",
+          "The tournament is already finished"
+        )
+      );
+
+    }
+
+    const poulesTerminees =
+      await tousMatchsPoulesTermines(
+        tournamentId
+      );
+
+    if(!poulesTerminees){
+
+      return res.status(409).send(
+        tr(
+          req,
+          "Tous les matchs de poules doivent être terminés avant la phase finale",
+          "All group-stage matches must be completed before the knockout stage"
+        )
+      );
+
+    }
+
+    const qualifies =
+      await recupererQualifiesPoules(
+        tournamentId
+      );
+
+      const groupesDebug =
+  await classementPoules(
+    tournamentId
+  );
+
+console.log(
+  "NOMBRE GROUPES =",
+  Object.keys(groupesDebug)
+    .filter(g => g !== "Sans groupe")
+    .length
+);
+
+console.log(
+  "NOMBRE QUALIFIÉS =",
+  qualifies.length
+);
+
+    if(
+      !Array.isArray(qualifies) ||
+      qualifies.length < 2
+    ){
+
+      return res.status(400).send(
+        tr(
+          req,
+          "Impossible de déterminer les équipes qualifiées",
+          "Unable to determine the qualified teams"
+        )
+      );
+
+    }
+
+    await run("BEGIN TRANSACTION");
+
+    try{
+
+      const resultat =
+        await creerPremierTourPhaseFinale(
+          tournamentId,
+          qualifies
+        );
+
+      await run("COMMIT");
+
+      if(!resultat.created){
+
+        return res.status(409).send(
+          tr(
+            req,
+            "La phase finale est déjà générée",
+            "The knockout stage has already been generated"
+          )
+        );
+
+      }
+
+      return res.send(
+        tr(
+          req,
+          `Phase finale générée : ${resultat.round}`,
+          `Knockout stage generated: ${resultat.round}`
+        )
+      );
+
+    }catch(errorTransaction){
+
+      try{
+        await run("ROLLBACK");
+      }catch(errorRollback){
+        console.error(
+          "Erreur ROLLBACK phase finale :",
+          errorRollback
+        );
+      }
+
+      throw errorTransaction;
+
+    }
+
+  }catch(error){
+
+    console.error(
+      "Erreur génération phase finale :",
+      error
     );
 
-    if(!user){
-      return res.send(
-  tr(
-    req,
-    "Compte introuvable",
-    "Account not found"
-  )
-);
-    }
-
-    const code =
-      Math.floor(
-        100000 + Math.random() * 900000
-      ).toString();
-
-    await run(
-      `
-      INSERT INTO email_codes(
-        email,
-        code
+    return res.status(500).send(
+      tr(
+        req,
+        "Erreur pendant la génération de la phase finale",
+        "Failed to generate the knockout stage"
       )
-      VALUES(?,?)
-      `,
-      [
-        email.trim().toLowerCase(),
-        code
-      ]
     );
-
-    await transporter.sendMail({
-      from:process.env.MAIL_USER,
-      to:email,
-      subject:"Reset mot de passe SNUGAME",
-      text:"Code reset : " + code
-    });
-
-    res.send(
-  tr(
-    req,
-    "Code envoyé",
-    "Verification code sent"
-  )
-);
-
-  }catch(e){
-
-    console.log(e);
-
-    res.send(
-  tr(
-    req,
-    "Erreur envoi code",
-    "Failed to send code"
-  )
-);
 
   }
 
 });
+
+app.post(
+  "/generer-tour-suivant",
+  async (req,res)=>{
+
+  try{
+
+    if(!connected(req)){
+
+      return res.status(401).send(
+        tr(
+          req,
+          "Connecte-toi",
+          "Please log in"
+        )
+      );
+
+    }
+
+    const tournamentId =
+      Number(req.body.tournament_id);
+
+    const round =
+      String(req.body.round || "")
+        .trim()
+        .toUpperCase();
+
+    if(
+      !Number.isInteger(tournamentId) ||
+      tournamentId <= 0
+    ){
+
+      return res.status(400).send(
+        tr(
+          req,
+          "Tournoi obligatoire ou invalide",
+          "Tournament is required or invalid"
+        )
+      );
+
+    }
+
+    const roundsAutorises = [
+      "16ES",
+      "8ES",
+      "QUARTS",
+      "DEMIS"
+    ];
+
+    if(!roundsAutorises.includes(round)){
+
+      return res.status(400).send(
+        tr(
+          req,
+          "Tour invalide",
+          "Invalid round"
+        )
+      );
+
+    }
+
+    const ownerCheck =
+      await verifierProprietaireTournoi(
+        req,
+        tournamentId
+      );
+
+    if(!ownerCheck.ok){
+
+      return res.status(403).send(
+        ownerCheck.message
+      );
+
+    }
+
+    const tournoi =
+      ownerCheck.tournoi;
+
+    if(tournoi.status === "finished"){
+
+      return res.status(409).send(
+        tr(
+          req,
+          "Le tournoi est déjà terminé",
+          "The tournament is already finished"
+        )
+      );
+
+    }
+
+    await run("BEGIN TRANSACTION");
+
+    try{
+
+      const resultat =
+        await genererTourSuivantPhaseFinale(
+          tournamentId,
+          round
+        );
+
+      if(resultat.incomplete){
+
+        await run("ROLLBACK");
+
+        return res.status(409).send(
+          tr(
+            req,
+            "Tous les matchs de ce tour doivent être terminés",
+            "All matches in this round must be completed"
+          )
+        );
+
+      }
+
+      if(resultat.penaltiesMissing){
+
+        await run("ROLLBACK");
+
+        return res.status(409).send(
+          tr(
+            req,
+            "Des tirs au but sont nécessaires pour départager un duel",
+            "Penalty shootout scores are required to decide a tie"
+          )
+        );
+
+      }
+
+      if(resultat.alreadyCreated){
+
+        await run("ROLLBACK");
+
+        return res.status(409).send(
+          tr(
+            req,
+            "Le tour suivant est déjà généré",
+            "The next round has already been generated"
+          )
+        );
+
+      }
+
+      if(resultat.finished){
+
+        await run("ROLLBACK");
+
+        return res.status(400).send(
+          tr(
+            req,
+            "Aucun tour suivant après la finale",
+            "There is no round after the final"
+          )
+        );
+
+      }
+
+      await run("COMMIT");
+
+      return res.send(
+        tr(
+          req,
+          `Tour suivant généré : ${resultat.round}`,
+          `Next round generated: ${resultat.round}`
+        )
+      );
+
+    }catch(errorTransaction){
+
+      try{
+        await run("ROLLBACK");
+      }catch(errorRollback){
+
+        console.error(
+          "Erreur ROLLBACK tour suivant :",
+          errorRollback
+        );
+
+      }
+
+      throw errorTransaction;
+
+    }
+
+  }catch(error){
+
+    console.error(
+      "Erreur génération tour suivant :",
+      error
+    );
+
+    return res.status(500).send(
+      tr(
+        req,
+        "Erreur pendant la génération du tour suivant",
+        "Failed to generate the next round"
+      )
+    );
+
+  }
+
+});
+
+
+app.post(
+  "/send-reset-code",
+  emailCodeLimiter,
+  async (req,res)=>{
+
+    const reponseGenerique =
+      tr(
+        req,
+        "Si un compte correspond à cette adresse, un code sera envoyé.",
+        "If an account matches this address, a code will be sent."
+      );
+
+    try{
+
+      const email =
+        String(req.body.email || "")
+          .trim()
+          .toLowerCase();
+
+      if(!email){
+
+        return res.status(400).send(
+          tr(
+            req,
+            "Email obligatoire",
+            "Email is required"
+          )
+        );
+
+      }
+
+      if(
+        !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+      ){
+
+        return res.status(400).send(
+          tr(
+            req,
+            "Adresse email invalide",
+            "Invalid email address"
+          )
+        );
+
+      }
+
+      const user = await get(
+        `
+        SELECT id
+        FROM users
+        WHERE email=?
+        `,
+        [email]
+      );
+
+      /*
+        Même réponse si le compte n'existe pas,
+        afin de ne pas révéler les utilisateurs.
+      */
+      if(!user){
+
+        return res.send(
+          reponseGenerique
+        );
+
+      }
+
+      await run(
+        `
+        DELETE FROM email_codes
+        WHERE email=?
+           OR datetime(created_at)
+              < datetime('now','-1 day')
+        `,
+        [email]
+      );
+
+      const code =
+        Math.floor(
+          100000 +
+          Math.random() * 900000
+        ).toString();
+
+      await run(
+        `
+        INSERT INTO email_codes(
+          email,
+          code
+        )
+        VALUES(?,?)
+        `,
+        [
+          email,
+          code
+        ]
+      );
+
+      await transporter.sendMail({
+        from:process.env.MAIL_USER,
+        to:email,
+        subject:
+          "Réinitialisation du mot de passe SNUGAME",
+        text:
+          "Votre code de réinitialisation SNUGAME est : " +
+          code +
+          "\n\nCe code expire dans 15 minutes."
+      });
+
+      return res.send(
+        reponseGenerique
+      );
+
+    }catch(error){
+
+      console.error(
+        "Erreur envoi code reset :",
+        error
+      );
+
+      /*
+        Réponse générique pour ne pas révéler
+        l'existence ou non du compte.
+      */
+      return res.send(
+        reponseGenerique
+      );
+
+    }
+
+  }
+);
+
 app.get("/join/:code", async (req,res)=>{
 
   try{
@@ -6078,13 +9129,42 @@ app.post("/admin-ban-user", async (req,res)=>{
   try{
 
     if(!isAdmin(req)){
-      return res.send("Accès admin refusé");
+
+      return res
+        .status(403)
+        .send("Accès admin refusé");
+
     }
 
-    const { user_id } = req.body;
+    const userId =
+      Number(req.body.user_id);
 
-    if(!user_id){
-      return res.send("Utilisateur obligatoire");
+    if(
+      !Number.isInteger(userId) ||
+      userId <= 0
+    ){
+
+      return res
+        .status(400)
+        .send("Utilisateur invalide");
+
+    }
+
+    const user = await get(
+      `
+      SELECT id
+      FROM users
+      WHERE id=?
+      `,
+      [userId]
+    );
+
+    if(!user){
+
+      return res
+        .status(404)
+        .send("Utilisateur introuvable");
+
     }
 
     await run(
@@ -6093,15 +9173,27 @@ app.post("/admin-ban-user", async (req,res)=>{
       SET banned=1
       WHERE id=?
       `,
-      [user_id]
+      [userId]
     );
 
-    res.send("Utilisateur banni");
+    /*
+      Supprime les sessions actives de cet
+      utilisateur si ta table de sessions
+      contient les données sous forme JSON.
+    */
 
-  }catch(e){
+    return res.redirect("/admin-users");
 
-    console.log(e);
-    res.send("Erreur bannissement");
+  }catch(error){
+
+    console.error(
+      "Erreur bannissement :",
+      error
+    );
+
+    return res
+      .status(500)
+      .send("Erreur bannissement");
 
   }
 
@@ -6127,7 +9219,7 @@ app.get("/admin-users", async (req,res)=>{
       `
     );
 
-    let html = `
+let html = `
 <!DOCTYPE html>
 <html lang="fr">
 <head>
@@ -6138,14 +9230,14 @@ app.get("/admin-users", async (req,res)=>{
 
 <h1>Admin Utilisateurs SNUGAME</h1>
 
-<a href="/admin-payments?admin=${ADMIN_PASSWORD}" style="color:#60a5fa;">
+<a href="/admin-payments" style="color:#60a5fa;">
 Retour paiements
 </a>
 `;
 
-    users.forEach(u=>{
+users.forEach(u=>{
 
-      html += `
+  html += `
 <div style="background:#0f172a;border:1px solid #334155;border-radius:15px;padding:15px;margin:12px 0;">
   <h2>${escapeHtml(u.name || "Sans nom")}</h2>
   <p>ID : ${u.id}</p>
@@ -6156,13 +9248,13 @@ Retour paiements
   ${
     u.banned === 1
     ? `
-      <form method="POST" action="/admin-unban-user?admin=${ADMIN_PASSWORD}">
+      <form method="POST" action="/admin-unban-user">
         <input type="hidden" name="user_id" value="${u.id}">
         <button>Débannir</button>
       </form>
     `
     : `
-      <form method="POST" action="/admin-ban-user?admin=${ADMIN_PASSWORD}">
+      <form method="POST" action="/admin-ban-user">
         <input type="hidden" name="user_id" value="${u.id}">
         <button style="background:#ef4444;color:white;">Bannir</button>
       </form>
@@ -6188,196 +9280,382 @@ Retour paiements
   }
 
 });
+
 app.post("/admin-unban-user", async (req,res)=>{
 
   try{
 
     if(!isAdmin(req)){
-      return res.send("Accès admin refusé");
+
+      return res
+        .status(403)
+        .send("Accès admin refusé");
+
     }
 
-    const { user_id } = req.body;
+    const userId =
+      Number(req.body.user_id);
 
-    if(!user_id){
-      return res.send("Utilisateur obligatoire");
+    if(
+      !Number.isInteger(userId) ||
+      userId <= 0
+    ){
+
+      return res
+        .status(400)
+        .send("Utilisateur invalide");
+
     }
 
-    await run(
+    const result = await run(
       `
       UPDATE users
       SET banned=0
       WHERE id=?
       `,
-      [user_id]
+      [userId]
     );
 
-    res.redirect("/admin-users?admin=" + ADMIN_PASSWORD);
+    if(result.changes === 0){
 
-  }catch(e){
+      return res
+        .status(404)
+        .send("Utilisateur introuvable");
 
-    console.log(e);
-    res.send("Erreur débannissement");
+    }
+
+    return res.redirect("/admin-users");
+
+  }catch(error){
+
+    console.error(
+      "Erreur débannissement :",
+      error
+    );
+
+    return res
+      .status(500)
+      .send("Erreur débannissement");
 
   }
 
 });
-app.post("/update-profile-photo", async (req,res)=>{
 
-  try{
+app.post(
+  "/update-profile-photo",
+  async (req,res)=>{
 
-    if(!req.session.userId){
+    try{
+
+      if(!connected(req)){
+
+        return res.status(401).send(
+          tr(
+            req,
+            "Connecte-toi",
+            "Please log in"
+          )
+        );
+
+      }
+
+      const photo =
+        String(req.body.photo || "")
+          .trim();
+
+      if(!photo){
+
+        return res.status(400).send(
+          tr(
+            req,
+            "Photo obligatoire",
+            "Profile photo is required"
+          )
+        );
+
+      }
+
+      if(photo.length > 2000){
+
+        return res.status(400).send(
+          tr(
+            req,
+            "Adresse de photo trop longue",
+            "Profile photo URL is too long"
+          )
+        );
+
+      }
+
+      let photoUrl;
+
+      try{
+
+        photoUrl = new URL(photo);
+
+      }catch{
+
+        return res.status(400).send(
+          tr(
+            req,
+            "Adresse de photo invalide",
+            "Invalid profile photo URL"
+          )
+        );
+
+      }
+
+      const r2PublicUrl =
+        String(
+          process.env.R2_PUBLIC_URL || ""
+        ).replace(/\/+$/,"");
+
+      if(
+        !r2PublicUrl ||
+        !photo.startsWith(
+          r2PublicUrl + "/"
+        )
+      ){
+
+        return res.status(400).send(
+          tr(
+            req,
+            "La photo doit avoir été envoyée depuis SNUGAME",
+            "The photo must have been uploaded through SNUGAME"
+          )
+        );
+
+      }
+
+      const extension =
+        path.extname(
+          photoUrl.pathname
+        ).toLowerCase();
+
+      const allowedExtensions = [
+        ".jpg",
+        ".jpeg",
+        ".png",
+        ".webp"
+      ];
+
+      if(
+        !allowedExtensions.includes(
+          extension
+        )
+      ){
+
+        return res.status(400).send(
+          tr(
+            req,
+            "Format de photo invalide",
+            "Invalid profile photo format"
+          )
+        );
+
+      }
+
+      await run(
+        `
+        UPDATE users
+        SET profile_photo=?
+        WHERE id=?
+        `,
+        [
+          photo,
+          req.session.userId
+        ]
+      );
+
       return res.send(
-  tr(
-    req,
-    "Connecte-toi",
-    "Please log in"
-  )
+        tr(
+          req,
+          "Photo profil mise à jour",
+          "Profile photo updated"
+        )
+      );
+
+    }catch(error){
+
+      console.error(
+        "Erreur photo profil :",
+        error
+      );
+
+      return res.status(500).send(
+        tr(
+          req,
+          "Erreur photo profil",
+          "Failed to update profile photo"
+        )
+      );
+
+    }
+
+  }
 );
-    }
 
-    const { photo } = req.body;
-
-    if(!photo){
-      return res.send("Photo obligatoire");
-    }
-
-    await run(
-      `
-      UPDATE users
-      SET profile_photo=?
-      WHERE id=?
-      `,
-      [
-        photo,
-        req.session.userId
-      ]
-    );
-
-    res.send("Photo profil mise à jour");
-
-  }catch(e){
-
-    console.log(e);
-    res.send("Erreur photo profil");
-
-  }
-
-});
-app.post("/follow-player", async (req,res)=>{
-
-  try{
-
-    if(!req.session.userId){
-      return res.send("Connecte-toi d'abord");
-    }
-
-    const { player_user_id } = req.body;
-
-    if(!player_user_id){
-      return res.send("Joueur obligatoire");
-    }
-
-    if(Number(player_user_id) === Number(req.session.userId)){
-      return res.send("Tu ne peux pas t'abonner à toi-même");
-    }
-
-    const exist = await get(
-      `
-      SELECT *
-      FROM followers
-      WHERE follower_id=?
-      AND following_id=?
-      `,
-      [
-        req.session.userId,
-        player_user_id
-      ]
-    );
-
-    if(exist){
-      return res.send("Déjà abonné");
-    }
-
-    await run(
-      `
-      INSERT INTO followers(
-        follower_id,
-        following_id
-      )
-      VALUES(?,?)
-      `,
-      [
-        req.session.userId,
-        player_user_id
-      ]
-    );
-
-    res.send("Abonnement réussi ✅");
-
-  }catch(e){
-
-    console.log(e);
-    res.send("Erreur abonnement joueur");
-
-  }
-
-});
 app.post("/update-username", async (req,res)=>{
 
   try{
 
-    if(!req.session.userId){
-      return res.send(
-  tr(
-    req,
-    "Connecte-toi",
-    "Please log in"
-  )
-);
-    }
+    if(!connected(req)){
 
-    const { username } = req.body;
+      return res.status(401).send(
+        tr(
+          req,
+          "Connecte-toi",
+          "Please log in"
+        )
+      );
 
-    if(!username){
-      return res.send("Nom utilisateur obligatoire");
     }
 
     const clean =
-      username.trim().toLowerCase();
+      String(req.body.username || "")
+        .trim()
+        .toLowerCase();
 
-    if(clean.length < 3){
-      return res.send("Minimum 3 caractères");
+    if(!clean){
+
+      return res.status(400).send(
+        tr(
+          req,
+          "Nom utilisateur obligatoire",
+          "Username is required"
+        )
+      );
+
+    }
+
+    if(
+      clean.length < 3 ||
+      clean.length > 30
+    ){
+
+      return res.status(400).send(
+        tr(
+          req,
+          "Le nom utilisateur doit contenir entre 3 et 30 caractères",
+          "Username must contain between 3 and 30 characters"
+        )
+      );
+
     }
 
     if(!/^[a-z0-9._]+$/.test(clean)){
-      return res.send("Utilise seulement lettres, chiffres, point ou _");
+
+      return res.status(400).send(
+        tr(
+          req,
+          "Utilise seulement lettres, chiffres, point ou _",
+          "Use only letters, numbers, dots or underscores"
+        )
+      );
+
+    }
+
+    if(
+      clean.startsWith(".") ||
+      clean.endsWith(".") ||
+      clean.startsWith("_") ||
+      clean.endsWith("_")
+    ){
+
+      return res.status(400).send(
+        tr(
+          req,
+          "Le nom utilisateur ne doit pas commencer ou finir par un point ou un _",
+          "Username must not start or end with a dot or underscore"
+        )
+      );
+
+    }
+
+    if(
+      clean.includes("..") ||
+      clean.includes("__")
+    ){
+
+      return res.status(400).send(
+        tr(
+          req,
+          "Les points ou _ ne doivent pas être répétés",
+          "Dots or underscores must not be repeated"
+        )
+      );
+
+    }
+
+    if(containsBadWords(clean)){
+
+      return res.status(400).send(
+        tr(
+          req,
+          "Contenu interdit détecté",
+          "Forbidden content detected"
+        )
+      );
+
     }
 
     const user = await get(
       `
-      SELECT username_updated_at
+      SELECT
+        username,
+        username_updated_at
       FROM users
       WHERE id=?
       `,
       [req.session.userId]
     );
 
-    if(user && user.username_updated_at){
+    if(!user){
 
-      const last = new Date(user.username_updated_at);
-      const now = new Date();
+      return res.status(404).send(
+        tr(
+          req,
+          "Compte introuvable",
+          "Account not found"
+        )
+      );
+
+    }
+
+    if(user.username === clean){
+
+      return res.status(400).send(
+        tr(
+          req,
+          "Ce nom utilisateur est déjà le tien",
+          "This is already your username"
+        )
+      );
+
+    }
+
+    if(user.username_updated_at){
+
+      const last =
+        new Date(user.username_updated_at);
+
       const diffDays =
-        (now - last) / (1000 * 60 * 60 * 24);
+        (Date.now() - last.getTime()) /
+        (1000 * 60 * 60 * 24);
 
-      if(diffDays < 30){
+      if(
+        !Number.isNaN(diffDays) &&
+        diffDays < 30
+      ){
 
-  const joursRestants =
-    Math.ceil(30 - diffDays);
+        const joursRestants =
+          Math.ceil(30 - diffDays);
 
-  return res.send(
-    `ATTENDRE_30_JOURS:${joursRestants}`
-  );
-}
+        return res.status(429).send(
+          `ATTENDRE_30_JOURS:${joursRestants}`
+        );
+
+      }
 
     }
 
@@ -6386,13 +9664,24 @@ app.post("/update-username", async (req,res)=>{
       SELECT id
       FROM users
       WHERE username=?
-      AND id!=?
+        AND id<>?
       `,
-      [clean,req.session.userId]
+      [
+        clean,
+        req.session.userId
+      ]
     );
 
     if(exist){
-      return res.send("Ce nom utilisateur est déjà pris");
+
+      return res.status(409).send(
+        tr(
+          req,
+          "Ce nom utilisateur est déjà pris",
+          "This username is already taken"
+        )
+      );
+
     }
 
     await run(
@@ -6409,16 +9698,48 @@ app.post("/update-username", async (req,res)=>{
       ]
     );
 
-    res.send("Nom utilisateur mis à jour ✅");
+    return res.send(
+      tr(
+        req,
+        "Nom utilisateur mis à jour ✅",
+        "Username updated ✅"
+      )
+    );
 
-  }catch(e){
+  }catch(error){
 
-    console.log(e);
-    res.send("Erreur nom utilisateur");
+    console.error(
+      "Erreur nom utilisateur :",
+      error
+    );
+
+    if(
+      error.code ===
+      "SQLITE_CONSTRAINT"
+    ){
+
+      return res.status(409).send(
+        tr(
+          req,
+          "Ce nom utilisateur est déjà pris",
+          "This username is already taken"
+        )
+      );
+
+    }
+
+    return res.status(500).send(
+      tr(
+        req,
+        "Erreur nom utilisateur",
+        "Username update failed"
+      )
+    );
 
   }
 
 });
+
 
 app.get("/search-users", async (req,res)=>{
 
@@ -6482,22 +9803,22 @@ app.get("/player-profile/:id", async (req,res)=>{
     }
 
     const followers = await get(
-      `
-      SELECT COUNT(*) AS total
-      FROM followers
-      WHERE following_id=?
-      `,
-      [user.id]
-    );
+  `
+  SELECT COUNT(*) AS total
+  FROM follows
+  WHERE following_participant_id=?
+  `,
+  [user.id]
+);
 
     const following = await get(
-      `
-      SELECT COUNT(*) AS total
-      FROM followers
-      WHERE follower_id=?
-      `,
-      [user.id]
-    );
+  `
+  SELECT COUNT(*) AS total
+  FROM follows
+  WHERE follower_id=?
+  `,
+  [user.id]
+);
 
     const stats = await get(
       `
@@ -6544,20 +9865,26 @@ app.get("/notifications", async (req,res)=>{
 
   try{
 
-    await run(
-      `
-      DELETE FROM notifications
-      WHERE created_at < datetime('now','-30 days')
-      `
-    );
+    if(!connected(req)){
 
-    if(!req.session.userId){
-      return res.json([]);
+      return res.status(401).json({
+        ok:false,
+        message:tr(
+          req,
+          "Connecte-toi",
+          "Please log in"
+        )
+      });
+
     }
 
     const rows = await all(
       `
-      SELECT *
+      SELECT
+        id,
+        message,
+        seen,
+        created_at
       FROM notifications
       WHERE user_id=?
       ORDER BY id DESC
@@ -6566,12 +9893,23 @@ app.get("/notifications", async (req,res)=>{
       [req.session.userId]
     );
 
-    res.json(rows);
+    return res.json(rows);
 
-  }catch(e){
+  }catch(error){
 
-    console.log(e);
-    res.json([]);
+    console.error(
+      "Erreur chargement notifications :",
+      error
+    );
+
+    return res.status(500).json({
+      ok:false,
+      message:tr(
+        req,
+        "Impossible de charger les notifications",
+        "Failed to load notifications"
+      )
+    });
 
   }
 
@@ -6581,43 +9919,167 @@ app.post("/delete-highlight", async (req,res)=>{
 
   try{
 
-    if(!req.session.userId){
-      return res.send("Connecte-toi");
+    if(!connected(req)){
+
+      return res.status(401).send(
+        tr(
+          req,
+          "Connecte-toi",
+          "Please log in"
+        )
+      );
+
     }
 
-    const { id } = req.body;
+    const highlightId =
+      Number(req.body.id);
+
+    if(
+      !Number.isInteger(highlightId) ||
+      highlightId <= 0
+    ){
+
+      return res.status(400).send(
+        tr(
+          req,
+          "Vidéo invalide",
+          "Invalid video"
+        )
+      );
+
+    }
 
     const highlight = await get(
       `
-      SELECT *
+      SELECT id, user_id
       FROM highlights
       WHERE id=?
       `,
-      [id]
+      [highlightId]
     );
 
     if(!highlight){
-      return res.send("Vidéo introuvable");
+
+      return res.status(404).send(
+        tr(
+          req,
+          "Vidéo introuvable",
+          "Video not found"
+        )
+      );
+
     }
 
-    if(Number(highlight.user_id) !== Number(req.session.userId)){
-      return res.send("Tu ne peux supprimer que tes vidéos");
+    if(
+      Number(highlight.user_id) !==
+      Number(req.session.userId)
+    ){
+
+      return res.status(403).send(
+        tr(
+          req,
+          "Tu ne peux supprimer que tes vidéos",
+          "You can only delete your own videos"
+        )
+      );
+
     }
 
-    await run(
-      `
-      DELETE FROM highlights
-      WHERE id=?
-      `,
-      [id]
+    await run("BEGIN TRANSACTION");
+
+    try{
+
+      await run(
+        `
+        DELETE FROM highlight_likes
+        WHERE highlight_id=?
+        `,
+        [highlightId]
+      );
+
+      await run(
+        `
+        DELETE FROM highlight_comments
+        WHERE highlight_id=?
+        `,
+        [highlightId]
+      );
+
+      await run(
+        `
+        DELETE FROM video_favorites
+        WHERE highlight_id=?
+        `,
+        [highlightId]
+      );
+
+      await run(
+        `
+        DELETE FROM highlight_views
+        WHERE highlight_id=?
+        `,
+        [highlightId]
+      );
+
+      await run(
+        `
+        DELETE FROM video_watch_time
+        WHERE highlight_id=?
+        `,
+        [highlightId]
+      );
+
+      await run(
+        `
+        DELETE FROM warnings
+        WHERE video_id=?
+        `,
+        [highlightId]
+      );
+
+      await run(
+        `
+        DELETE FROM highlights
+        WHERE id=?
+          AND user_id=?
+        `,
+        [
+          highlightId,
+          req.session.userId
+        ]
+      );
+
+      await run("COMMIT");
+
+    }catch(error){
+
+      await run("ROLLBACK");
+      throw error;
+
+    }
+
+    return res.send(
+      tr(
+        req,
+        "Vidéo supprimée",
+        "Video deleted"
+      )
     );
 
-    res.send("Vidéo supprimée");
+  }catch(error){
 
-  }catch(e){
+    console.error(
+      "Erreur suppression vidéo :",
+      error
+    );
 
-    console.log(e);
-    res.send("Erreur suppression vidéo");
+    return res.status(500).send(
+      tr(
+        req,
+        "Erreur suppression vidéo",
+        "Failed to delete video"
+      )
+    );
 
   }
 
@@ -6683,36 +10145,120 @@ app.get("/user-videos/:userId", async (req,res)=>{
 
 app.post("/fix-old-videos", async (req,res)=>{
 
-  if(!req.session.userId){
-    return res.send("Connecte-toi");
+  try{
+
+    if(!isAdmin(req)){
+
+      return res
+        .status(403)
+        .send("Accès admin refusé");
+
+    }
+
+    const userId =
+      Number(req.body.user_id);
+
+    if(
+      !Number.isInteger(userId) ||
+      userId <= 0
+    ){
+
+      return res
+        .status(400)
+        .send(
+          "Identifiant utilisateur invalide"
+        );
+
+    }
+
+    const user = await get(
+      `
+      SELECT id
+      FROM users
+      WHERE id=?
+      `,
+      [userId]
+    );
+
+    if(!user){
+
+      return res
+        .status(404)
+        .send(
+          "Utilisateur introuvable"
+        );
+
+    }
+
+    const result = await run(
+      `
+      UPDATE highlights
+      SET user_id=?
+      WHERE user_id IS NULL
+      `,
+      [userId]
+    );
+
+    return res.send(
+      `${result.changes || 0} anciennes vidéos liées à l'utilisateur`
+    );
+
+  }catch(error){
+
+    console.error(
+      "Erreur rattachement anciennes vidéos :",
+      error
+    );
+
+    return res
+      .status(500)
+      .send(
+        "Erreur rattachement anciennes vidéos"
+      );
+
   }
 
-  await run(
-    `
-    UPDATE highlights
-    SET user_id=?
-    WHERE user_id IS NULL
-    `,
-    [req.session.userId]
-  );
-
-  res.send("Anciennes vidéos liées à ton compte");
 });
 
 app.post("/delete-old-videos", async (req,res)=>{
 
-  if(!req.session.userId){
-    return res.send("Connecte-toi");
+  try{
+
+    if(!isAdmin(req)){
+
+      return res
+        .status(403)
+        .send("Accès admin refusé");
+
+    }
+
+    const result = await run(
+      `
+      DELETE FROM highlights
+      WHERE user_id IS NULL
+      `
+    );
+
+    return res.send(
+      `${result.changes || 0} anciennes vidéos supprimées`
+    );
+
+  }catch(error){
+
+    console.error(
+      "Erreur suppression anciennes vidéos :",
+      error
+    );
+
+    return res
+      .status(500)
+      .send(
+        "Erreur suppression anciennes vidéos"
+      );
+
   }
 
-  await run(`
-    DELETE FROM highlights
-    WHERE user_id IS NULL
-  `);
-
-  res.send("Anciennes vidéos supprimées");
 });
-
 
 async function gererTournoiRapideApresScore(match){
 
@@ -6725,7 +10271,10 @@ async function gererTournoiRapideApresScore(match){
     [match.tournament_id]
   );
 
-  if(!tournoi || tournoi.type !== "rapide"){
+  if(
+    !tournoi ||
+    tournoi.type !== "rapide"
+  ){
     return;
   }
 
@@ -6742,7 +10291,10 @@ async function gererTournoiRapideApresScore(match){
     [match.id]
   );
 
-  if(!updatedMatch || Number(updatedMatch.played) !== 1){
+  if(
+    !updatedMatch ||
+    Number(updatedMatch.played) !== 1
+  ){
     return;
   }
 
@@ -6751,12 +10303,19 @@ async function gererTournoiRapideApresScore(match){
     SELECT *
     FROM matches
     WHERE tournament_id=?
-    AND round=?
-    AND (
-      (player1_id=? AND player2_id=?)
-      OR
-      (player1_id=? AND player2_id=?)
-    )
+      AND round=?
+      AND (
+        (
+          player1_id=?
+          AND player2_id=?
+        )
+        OR
+        (
+          player1_id=?
+          AND player2_id=?
+        )
+      )
+    ORDER BY id
     `,
     [
       updatedMatch.tournament_id,
@@ -6769,10 +10328,18 @@ async function gererTournoiRapideApresScore(match){
   );
 
   const aller =
-    duel.find(m => m.journee === "ALLER");
+    duel.find(
+      m =>
+        m.journee === "ALLER" ||
+        m.leg === "ALLER"
+    );
 
   const retour =
-    duel.find(m => m.journee === "RETOUR");
+    duel.find(
+      m =>
+        m.journee === "RETOUR" ||
+        m.leg === "RETOUR"
+    );
 
   if(!aller || !retour){
     return;
@@ -6785,62 +10352,110 @@ async function gererTournoiRapideApresScore(match){
     return;
   }
 
+  const player1 =
+    Number(aller.player1_id);
+
+  const player2 =
+    Number(aller.player2_id);
+
+  function scoreDuJoueur(matchRow, playerId){
+
+    if(
+      Number(matchRow.player1_id) ===
+      Number(playerId)
+    ){
+      return Number(matchRow.score1 || 0);
+    }
+
+    if(
+      Number(matchRow.player2_id) ===
+      Number(playerId)
+    ){
+      return Number(matchRow.score2 || 0);
+    }
+
+    return 0;
+
+  }
+
+  const totalPlayer1 =
+    scoreDuJoueur(aller, player1) +
+    scoreDuJoueur(retour, player1);
+
+  const totalPlayer2 =
+    scoreDuJoueur(aller, player2) +
+    scoreDuJoueur(retour, player2);
+
   let winner = null;
 
-const player1 = aller.player1_id;
-const player2 = aller.player2_id;
+  if(totalPlayer1 > totalPlayer2){
 
-const totalPlayer1 =
-  Number(aller.score1 || 0) +
-  Number(retour.score1 || 0);
+    winner = player1;
 
-const totalPlayer2 =
-  Number(aller.score2 || 0) +
-  Number(retour.score2 || 0);
+  }else if(totalPlayer2 > totalPlayer1){
 
-const encaissesPlayer1 =
-  Number(aller.score2 || 0) +
-  Number(retour.score2 || 0);
+    winner = player2;
 
-const encaissesPlayer2 =
-  Number(aller.score1 || 0) +
-  Number(retour.score1 || 0);
+}else{
 
-// 1. Score cumulé
-if(totalPlayer1 > totalPlayer2){
-  winner = player1;
+  const penalty1 =
+    retour.penalty1 === null ||
+    retour.penalty1 === undefined
+      ? null
+      : Number(retour.penalty1);
+
+  const penalty2 =
+    retour.penalty2 === null ||
+    retour.penalty2 === undefined
+      ? null
+      : Number(retour.penalty2);
+
+  if(
+    penalty1 === null ||
+    penalty2 === null
+  ){
+
+    return;
+
+  }
+
+  if(penalty1 > penalty2){
+
+    winner = Number(
+      retour.player1_id
+    );
+
+  }else if(penalty2 > penalty1){
+
+    winner = Number(
+      retour.player2_id
+    );
+
+  }else{
+
+    return;
+
+  }
+
 }
-else if(totalPlayer2 > totalPlayer1){
-  winner = player2;
-}
+  const sourceOrder =
+  Math.ceil(
+    Number(
+      aller.match_order ||
+      retour.match_order ||
+      1
+    ) / 2
+  );
 
-// 2. Moins de buts encaissés
-else if(encaissesPlayer1 < encaissesPlayer2){
-  winner = player1;
-}
-else if(encaissesPlayer2 < encaissesPlayer1){
-  winner = player2;
-}
-
-// 3. Vainqueur du match retour
-else if(Number(retour.score1) > Number(retour.score2)){
-  winner = retour.player1_id;
-}
-else if(Number(retour.score2) > Number(retour.score1)){
-  winner = retour.player2_id;
-}
-
-// 4. Toujours égalité
-else{
-  return;
-}
 await qualifierJoueurRapide(
   updatedMatch.tournament_id,
   updatedMatch.round,
-  winner
+  winner,
+  sourceOrder
 );
 
 }
+
 
 app.get("/classement-rapide-32/:id", async (req,res)=>{
 
@@ -6980,7 +10595,8 @@ function getNextRoundRapide(round){
 async function qualifierJoueurRapide(
   tournamentId,
   round,
-  winnerId
+  winnerId,
+  sourceOrder
 ){
 
   if(!winnerId){
@@ -6992,143 +10608,14 @@ async function qualifierJoueurRapide(
 
   if(!nextRound){
 
-    await run(
-      `
-      UPDATE tournaments
-      SET champion_id=?,
-          status='finished'
-      WHERE id=?
-      `,
-      [winnerId, tournamentId]
-    );
-
-    return;
-  }
-
-  await run(
+  const tournoi = await get(
     `
-    INSERT INTO rapid_qualifiers(
-      tournament_id,
-      round,
-      player_id
-    )
-    VALUES(?,?,?)
+    SELECT name
+    FROM tournaments
+    WHERE id=?
     `,
-    [tournamentId, round, winnerId]
+    [tournamentId]
   );
-
-  const qualifies = await all(
-    `
-    SELECT *
-    FROM rapid_qualifiers
-    WHERE tournament_id=?
-    AND round=?
-    ORDER BY id
-    `,
-    [tournamentId, round]
-  );
-
-  if(qualifies.length % 2 !== 0){
-    return;
-  }
-
-  for(let i=0; i<qualifies.length; i+=2){
-
-    const p1 = qualifies[i].player_id;
-    const p2 = qualifies[i + 1].player_id;
-
-    const alreadyPair = await get(
-      `
-      SELECT id
-      FROM matches
-      WHERE tournament_id=?
-      AND round=?
-      AND (
-        (player1_id=? AND player2_id=?)
-        OR
-        (player1_id=? AND player2_id=?)
-      )
-      LIMIT 1
-      `,
-      [
-        tournamentId,
-        nextRound,
-        p1,
-        p2,
-        p2,
-        p1
-      ]
-    );
-
-    if(alreadyPair){
-      continue;
-    }
-
-    await run(
-      `
-      INSERT INTO matches(
-        tournament_id,
-        round,
-        match_order,
-        journee,
-        player1_id,
-        player2_id
-      )
-      VALUES(?,?,?,?,?,?)
-      `,
-      [
-        tournamentId,
-        nextRound,
-        i + 1,
-        "ALLER",
-        p1,
-        p2
-      ]
-    );
-
-    await run(
-      `
-      INSERT INTO matches(
-        tournament_id,
-        round,
-        match_order,
-        journee,
-        player1_id,
-        player2_id
-      )
-      VALUES(?,?,?,?,?,?)
-      `,
-      [
-        tournamentId,
-        nextRound,
-        i + 2,
-        "RETOUR",
-        p1,
-        p2
-      ]
-    );
-
-  }
-
-}
-app.post("/fix-champion/:id", async (req,res)=>{
-
-  const match = await get(
-    `
-    SELECT *
-    FROM matches
-    WHERE tournament_id=?
-    AND round='FINALE'
-    AND played=1
-    ORDER BY id DESC
-    LIMIT 1
-    `,
-    [req.params.id]
-  );
-
-  if(!match || !match.winner_id){
-    return res.send("Aucune finale gagnée trouvée");
-  }
 
   await run(
     `
@@ -7138,31 +10625,275 @@ app.post("/fix-champion/:id", async (req,res)=>{
     WHERE id=?
     `,
     [
-      match.winner_id,
-      req.params.id
+      winnerId,
+      tournamentId
     ]
   );
 
-  res.send("Champion corrigé");
+  await compterTournoiTermine(
+    tournamentId
+  );
 
-});
+  await recompenserChampion(
+    tournamentId,
+    winnerId
+  );
+
+  const champion = await get(
+    `
+    SELECT user_id
+    FROM participants
+    WHERE id=?
+    `,
+    [winnerId]
+  );
+
+  if(
+    champion &&
+    champion.user_id
+  ){
+
+    await notifierUtilisateur(
+      champion.user_id,
+      "👑 Félicitations !",
+      `Tu as remporté le tournoi "${tournoi?.name || "Tournoi"}". Bravo Champion ! 🏆`,
+      `tournament:${tournamentId}`
+    );
+
+  }
+
+  return;
+}
+await run(
+  `
+  INSERT OR IGNORE INTO rapid_qualifiers(
+    tournament_id,
+    round,
+    player_id,
+    source_order
+  )
+  VALUES(?,?,?,?)
+  `,
+  [
+    tournamentId,
+    round,
+    winnerId,
+    Number(sourceOrder || 0)
+  ]
+);
+
+const qualifies = await all(
+  `
+  SELECT
+    player_id,
+    MIN(source_order) AS source_order
+  FROM rapid_qualifiers
+  WHERE tournament_id=?
+    AND round=?
+  GROUP BY player_id
+  ORDER BY
+    MIN(source_order) ASC,
+    player_id ASC
+  `,
+  [
+    tournamentId,
+    round
+  ]
+);
+const qualifiesParOrdre =
+  new Map();
+
+for(const qualifie of qualifies){
+
+  qualifiesParOrdre.set(
+    Number(qualifie.source_order),
+    Number(qualifie.player_id)
+  );
+
+}
+
+const ordreMaximum =
+  Math.max(
+    0,
+    ...qualifies.map(
+      q => Number(q.source_order || 0)
+    )
+  );
+
+for(
+  let ordreSource = 1;
+  ordreSource <= ordreMaximum;
+  ordreSource += 2
+){
+
+  const p1 =
+    qualifiesParOrdre.get(
+      ordreSource
+    );
+
+  const p2 =
+    qualifiesParOrdre.get(
+      ordreSource + 1
+    );
+
+  /*
+    On attend que les deux duels voisins
+    soient terminés.
+  */
+  if(!p1 || !p2){
+    continue;
+  }
+
+  const ordreDuelSuivant =
+    Math.ceil(
+      ordreSource / 2
+    );
+
+  const alreadyPair = await get(
+    `
+    SELECT id
+    FROM matches
+    WHERE tournament_id=?
+      AND round=?
+      AND (
+        (
+          player1_id=?
+          AND player2_id=?
+        )
+        OR
+        (
+          player1_id=?
+          AND player2_id=?
+        )
+      )
+    LIMIT 1
+    `,
+    [
+      tournamentId,
+      nextRound,
+      p1,
+      p2,
+      p2,
+      p1
+    ]
+  );
+
+  if(alreadyPair){
+    continue;
+  }
+
+  const matchOrderAller =
+    ordreDuelSuivant * 2 - 1;
+
+  const matchOrderRetour =
+    ordreDuelSuivant * 2;
+
+  await run(
+    `
+    INSERT INTO matches(
+      tournament_id,
+      round,
+      match_order,
+      journee,
+      player1_id,
+      player2_id
+    )
+    VALUES(?,?,?,?,?,?)
+    `,
+    [
+      tournamentId,
+      nextRound,
+      matchOrderAller,
+      "ALLER",
+      p1,
+      p2
+    ]
+  );
+
+  await run(
+    `
+    INSERT INTO matches(
+      tournament_id,
+      round,
+      match_order,
+      journee,
+      player1_id,
+      player2_id
+    )
+    VALUES(?,?,?,?,?,?)
+    `,
+    [
+      tournamentId,
+      nextRound,
+      matchOrderRetour,
+      "RETOUR",
+      p1,
+      p2
+    ]
+  );
+
+}
+
+}
+
 
 app.post("/update-name", async (req,res)=>{
 
   try{
 
     if(!connected(req)){
-      return res.send("Connecte-toi d'abord");
+
+      return res.status(401).send(
+        tr(
+          req,
+          "Connecte-toi d'abord",
+          "Please log in first"
+        )
+      );
+
     }
 
-    const { name } = req.body;
+    const name =
+      String(req.body.name || "")
+        .trim();
 
-    if(!name || !name.trim()){
-      return res.send("Nom obligatoire");
+    if(!name){
+
+      return res.status(400).send(
+        tr(
+          req,
+          "Nom obligatoire",
+          "Name is required"
+        )
+      );
+
+    }
+
+    if(
+      name.length < 2 ||
+      name.length > 50
+    ){
+
+      return res.status(400).send(
+        tr(
+          req,
+          "Le nom doit contenir entre 2 et 50 caractères",
+          "The name must contain between 2 and 50 characters"
+        )
+      );
+
     }
 
     if(containsBadWords(name)){
-      return res.send("Contenu interdit détecté");
+
+      return res.status(400).send(
+        tr(
+          req,
+          "Contenu interdit détecté",
+          "Forbidden content detected"
+        )
+      );
+
     }
 
     await run(
@@ -7172,153 +10903,311 @@ app.post("/update-name", async (req,res)=>{
       WHERE id=?
       `,
       [
-        name.trim(),
+        name,
         req.session.userId
       ]
     );
 
-    res.send("Nom modifié");
+    return res.send(
+      tr(
+        req,
+        "Nom modifié",
+        "Name updated"
+      )
+    );
 
-  }catch(e){
+  }catch(error){
 
-    console.log(e);
-    res.send("Erreur modification nom");
+    console.error(
+      "Erreur modification nom :",
+      error
+    );
+
+    return res.status(500).send(
+      tr(
+        req,
+        "Erreur modification du nom",
+        "Failed to update name"
+      )
+    );
 
   }
 
 });
 
-app.post("/change-password", async (req,res)=>{
+app.post(
+  "/change-password",
+  loginLimiter,
+  async (req,res)=>{
 
-  try{
+    try{
 
-    if(!connected(req)){
-      return res.send("Connecte-toi d'abord");
-    }
+      if(!connected(req)){
 
-    const {
-      oldPassword,
-      newPassword
-    } = req.body;
+        return res.status(401).send(
+          tr(
+            req,
+            "Connecte-toi d'abord",
+            "Please log in first"
+          )
+        );
 
-    if(!oldPassword || !newPassword){
-      return res.send(
-  tr(req,
-    "Tous les champs sont obligatoires",
-    "All fields are required")
-);
-    }
+      }
 
-    if(newPassword.length < 8){
-      return res.send(
-  tr(req,
-    "Mot de passe minimum 8 caractères",
-    "Password must be at least 8 characters long")
-);
-    }
+      const oldPassword =
+        String(req.body.oldPassword || "");
 
-    const user = await get(
-      `
-      SELECT *
-      FROM users
-      WHERE id=?
-      `,
-      [req.session.userId]
-    );
+      const newPassword =
+        String(req.body.newPassword || "");
 
-    if(!user){
-      return res.send("Compte introuvable");
-    }
+      if(!oldPassword || !newPassword){
 
-    const ok =
-      await bcrypt.compare(
-        oldPassword,
-        user.password
+        return res.status(400).send(
+          tr(
+            req,
+            "Tous les champs sont obligatoires",
+            "All fields are required"
+          )
+        );
+
+      }
+
+      if(newPassword.length < 8){
+
+        return res.status(400).send(
+          tr(
+            req,
+            "Mot de passe minimum 8 caractères",
+            "Password must be at least 8 characters long"
+          )
+        );
+
+      }
+
+      if(newPassword.length > 200){
+
+        return res.status(400).send(
+          tr(
+            req,
+            "Mot de passe trop long",
+            "Password is too long"
+          )
+        );
+
+      }
+
+      const user = await get(
+        `
+        SELECT id, password
+        FROM users
+        WHERE id=?
+        `,
+        [req.session.userId]
       );
 
-    if(!ok){
-      return res.send("Ancien mot de passe incorrect");
+      if(!user){
+
+        return res.status(404).send(
+          tr(
+            req,
+            "Compte introuvable",
+            "Account not found"
+          )
+        );
+
+      }
+
+      const oldPasswordValid =
+        await bcrypt.compare(
+          oldPassword,
+          user.password
+        );
+
+      if(!oldPasswordValid){
+
+        return res.status(400).send(
+          tr(
+            req,
+            "Ancien mot de passe incorrect",
+            "Incorrect current password"
+          )
+        );
+
+      }
+
+      const samePassword =
+        await bcrypt.compare(
+          newPassword,
+          user.password
+        );
+
+      if(samePassword){
+
+        return res.status(400).send(
+          tr(
+            req,
+            "Le nouveau mot de passe doit être différent de l'ancien",
+            "The new password must be different from the current password"
+          )
+        );
+
+      }
+
+      const hash =
+        await bcrypt.hash(
+          newPassword,
+          12
+        );
+
+      await run(
+        `
+        UPDATE users
+        SET password=?
+        WHERE id=?
+        `,
+        [
+          hash,
+          user.id
+        ]
+      );
+
+      return res.send(
+        tr(
+          req,
+          "Mot de passe changé",
+          "Password changed"
+        )
+      );
+
+    }catch(error){
+
+      console.error(
+        "Erreur changement mot de passe :",
+        error
+      );
+
+      return res.status(500).send(
+        tr(
+          req,
+          "Erreur changement de mot de passe",
+          "Password change failed"
+        )
+      );
+
     }
-
-    const hash =
-      await bcrypt.hash(newPassword,10);
-
-    await run(
-      `
-      UPDATE users
-      SET password=?
-      WHERE id=?
-      `,
-      [
-        hash,
-        req.session.userId
-      ]
-    );
-
-    res.send("Mot de passe changé");
-
-  }catch(e){
-
-    console.log(e);
-    res.send("Erreur changement mot de passe");
 
   }
+);
 
-});
+app.post(
+  "/send-old-email-code",
+  emailCodeLimiter,
+  async (req,res)=>{
 
-app.post("/send-old-email-code", async (req,res)=>{
+    try{
 
-  try{
+      if(!connected(req)){
 
-    if(!connected(req)){
-      return res.send("Connecte-toi d'abord");
+        return res.status(401).send(
+          tr(
+            req,
+            "Connecte-toi d'abord",
+            "Please log in first"
+          )
+        );
+
+      }
+
+      const user = await get(
+        `
+        SELECT email
+        FROM users
+        WHERE id=?
+        `,
+        [req.session.userId]
+      );
+
+      if(!user){
+
+        return res.status(404).send(
+          tr(
+            req,
+            "Compte introuvable",
+            "Account not found"
+          )
+        );
+
+      }
+
+      await run(
+        `
+        DELETE FROM email_codes
+        WHERE email=?
+           OR datetime(created_at)
+              < datetime('now','-1 day')
+        `,
+        [user.email]
+      );
+
+      const code =
+        Math.floor(
+          100000 +
+          Math.random() * 900000
+        ).toString();
+
+      await run(
+        `
+        INSERT INTO email_codes(
+          email,
+          code
+        )
+        VALUES(?,?)
+        `,
+        [
+          user.email,
+          code
+        ]
+      );
+
+      await transporter.sendMail({
+        from:process.env.MAIL_USER,
+        to:user.email,
+        subject:
+          "Code de vérification email SNUGAME",
+        text:
+          "Votre code est : " +
+          code +
+          "\n\nCe code expire dans 15 minutes."
+      });
+
+      return res.send(
+        tr(
+          req,
+          "Code envoyé à ton email actuel",
+          "Code sent to your current email"
+        )
+      );
+
+    }catch(error){
+
+      console.error(
+        "Erreur envoi code ancien email :",
+        error
+      );
+
+      return res.status(500).send(
+        tr(
+          req,
+          "Erreur envoi code ancien email",
+          "Failed to send code to current email"
+        )
+      );
+
     }
-
-    const user = await get(
-      `
-      SELECT email
-      FROM users
-      WHERE id=?
-      `,
-      [req.session.userId]
-    );
-
-    if(!user){
-      return res.send("Compte introuvable");
-    }
-
-    const code =
-      Math.floor(100000 + Math.random() * 900000)
-      .toString();
-
-    await run(
-      `
-      INSERT INTO email_codes(email,code)
-      VALUES(?,?)
-      `,
-      [
-        user.email,
-        code
-      ]
-    );
-
-    await transporter.sendMail({
-     from:process.env.MAIL_USER,
-     to:user.email,
-     subject:"Code vérification email SNUGAME",
-     text:"Votre code est : " + code
-   });
-
-    res.send("Code envoyé à ton email actuel");
-
-  }catch(e){
-
-    console.log(e);
-    res.send("Erreur envoi code ancien email");
 
   }
+);
 
-});
 app.post("/verify-old-email-code", async (req,res)=>{
 
   try{
@@ -7347,165 +11236,393 @@ app.post("/verify-old-email-code", async (req,res)=>{
     }
 
     const verification = await get(
-      `
-      SELECT *
-      FROM email_codes
-      WHERE email=?
-      AND code=?
-      ORDER BY id DESC
-      `,
-      [
-        user.email,
-        code.trim()
-      ]
-    );
+  `
+  SELECT id
+  FROM email_codes
+  WHERE email=?
+    AND code=?
+    AND datetime(created_at)
+        >= datetime('now','-15 minutes')
+  ORDER BY id DESC
+  LIMIT 1
+  `,
+  [
+    user.email,
+    String(code).trim()
+  ]
+);
 
     if(!verification){
-      return res.send("Code invalide");
-    }
 
-    res.send("Code valide");
+  return res.status(400).send(
+    tr(
+      req,
+      "Code incorrect ou expiré",
+      "Invalid or expired code"
+    )
+  );
 
-  }catch(e){
+}
 
-    console.log(e);
-    res.send("Erreur vérification code");
+return res.send(
+  tr(
+    req,
+    "Code valide",
+    "Valid code"
+  )
+);
 
-  }
+}catch(error){
 
-});
-app.post("/send-new-email-code", async (req,res)=>{
+  console.error(
+    "Erreur vérification ancien email :",
+    error
+  );
 
-  try{
+  return res.status(500).send(
+    tr(
+      req,
+      "Erreur vérification du code",
+      "Code verification failed"
+    )
+  );
 
-    if(!connected(req)){
-      return res.send("Connecte-toi d'abord");
-    }
-
-    const { email } = req.body;
-
-    if(!email){
-      return res.send("Nouvel email obligatoire");
-    }
-
-    const cleanEmail =
-      email.trim().toLowerCase();
-
-    const existing = await get(
-      `
-      SELECT id
-      FROM users
-      WHERE email=?
-      `,
-      [cleanEmail]
-    );
-
-    if(existing){
-      return res.send("Email déjà utilisé");
-    }
-
-    const code =
-      Math.floor(100000 + Math.random() * 900000)
-      .toString();
-
-    await run(
-      `
-      INSERT INTO email_codes(email,code)
-      VALUES(?,?)
-      `,
-      [
-        cleanEmail,
-        code
-      ]
-    );
-
-    await transporter.sendMail({
-     from:process.env.MAIL_USER,
-     to:cleanEmail,
-     subject:"Code nouvel email SNUGAME",
-     text:"Votre code est : " + code
-    });
-
-    res.send("Code envoyé au nouvel email");
-
-  }catch(e){
-
-    console.log(e);
-    res.send("Erreur envoi code nouvel email");
-
-  }
+}
 
 });
-app.post("/confirm-new-email", async (req,res)=>{
 
-  try{
+app.post(
+  "/send-new-email-code",
+  emailCodeLimiter,
+  async (req,res)=>{
 
-    if(!connected(req)){
-      return res.send("Connecte-toi d'abord");
+    try{
+
+      if(!connected(req)){
+
+        return res.status(401).send(
+          tr(
+            req,
+            "Connecte-toi d'abord",
+            "Please log in first"
+          )
+        );
+
+      }
+
+      const cleanEmail =
+        String(req.body.email || "")
+          .trim()
+          .toLowerCase();
+
+      if(!cleanEmail){
+
+        return res.status(400).send(
+          tr(
+            req,
+            "Nouvel email obligatoire",
+            "New email is required"
+          )
+        );
+
+      }
+
+      if(
+        !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(
+          cleanEmail
+        )
+      ){
+
+        return res.status(400).send(
+          tr(
+            req,
+            "Adresse email invalide",
+            "Invalid email address"
+          )
+        );
+
+      }
+
+      const currentUser = await get(
+        `
+        SELECT email
+        FROM users
+        WHERE id=?
+        `,
+        [req.session.userId]
+      );
+
+      if(!currentUser){
+
+        return res.status(404).send(
+          tr(
+            req,
+            "Compte introuvable",
+            "Account not found"
+          )
+        );
+
+      }
+
+      if(
+        currentUser.email.toLowerCase() ===
+        cleanEmail
+      ){
+
+        return res.status(400).send(
+          tr(
+            req,
+            "Cette adresse est déjà ton email actuel",
+            "This is already your current email"
+          )
+        );
+
+      }
+
+      const existing = await get(
+        `
+        SELECT id
+        FROM users
+        WHERE email=?
+        `,
+        [cleanEmail]
+      );
+
+      if(existing){
+
+        return res.status(409).send(
+          tr(
+            req,
+            "Email déjà utilisé",
+            "Email already used"
+          )
+        );
+
+      }
+
+      await run(
+        `
+        DELETE FROM email_codes
+        WHERE email=?
+           OR datetime(created_at)
+              < datetime('now','-1 day')
+        `,
+        [cleanEmail]
+      );
+
+      const code =
+        Math.floor(
+          100000 +
+          Math.random() * 900000
+        ).toString();
+
+      await run(
+        `
+        INSERT INTO email_codes(
+          email,
+          code
+        )
+        VALUES(?,?)
+        `,
+        [
+          cleanEmail,
+          code
+        ]
+      );
+
+      await transporter.sendMail({
+        from:process.env.MAIL_USER,
+        to:cleanEmail,
+        subject:
+          "Code nouvel email SNUGAME",
+        text:
+          "Votre code est : " +
+          code +
+          "\n\nCe code expire dans 15 minutes."
+      });
+
+      return res.send(
+        tr(
+          req,
+          "Code envoyé au nouvel email",
+          "Code sent to the new email"
+        )
+      );
+
+    }catch(error){
+
+      console.error(
+        "Erreur envoi code nouvel email :",
+        error
+      );
+
+      return res.status(500).send(
+        tr(
+          req,
+          "Erreur envoi code nouvel email",
+          "Failed to send code to new email"
+        )
+      );
+
     }
-
-    const { email, code } = req.body;
-
-    if(!email || !code){
-      return res.send("Email et code obligatoires");
-    }
-
-    const cleanEmail =
-      email.trim().toLowerCase();
-
-    const verification = await get(
-      `
-      SELECT *
-      FROM email_codes
-      WHERE email=?
-      AND code=?
-      ORDER BY id DESC
-      `,
-      [
-        cleanEmail,
-        code.trim()
-      ]
-    );
-
-    if(!verification){
-      return res.send("Code invalide");
-    }
-
-    const existing = await get(
-      `
-      SELECT id
-      FROM users
-      WHERE email=?
-      `,
-      [cleanEmail]
-    );
-
-    if(existing){
-      return res.send("Email déjà utilisé");
-    }
-
-    await run(
-      `
-      UPDATE users
-      SET email=?
-      WHERE id=?
-      `,
-      [
-        cleanEmail,
-        req.session.userId
-      ]
-    );
-
-    res.send("Nouvelle adresse enregistrée");
-
-  }catch(e){
-
-    console.log(e);
-    res.send("Erreur changement email");
 
   }
+);
 
-});
+app.post(
+  "/confirm-new-email",
+  emailCodeLimiter,
+  async (req,res)=>{
+
+    try{
+
+      if(!connected(req)){
+
+        return res.status(401).send(
+          tr(
+            req,
+            "Connecte-toi d'abord",
+            "Please log in first"
+          )
+        );
+
+      }
+
+      const cleanEmail =
+        String(req.body.email || "")
+          .trim()
+          .toLowerCase();
+
+      const code =
+        String(req.body.code || "")
+          .trim();
+
+      if(!cleanEmail || !code){
+
+        return res.status(400).send(
+          tr(
+            req,
+            "Email et code obligatoires",
+            "Email and code are required"
+          )
+        );
+
+      }
+
+      const verification = await get(
+        `
+        SELECT id
+        FROM email_codes
+        WHERE email=?
+          AND code=?
+          AND datetime(created_at)
+              >= datetime('now','-15 minutes')
+        ORDER BY id DESC
+        LIMIT 1
+        `,
+        [
+          cleanEmail,
+          code
+        ]
+      );
+
+      if(!verification){
+
+        return res.status(400).send(
+          tr(
+            req,
+            "Code incorrect ou expiré",
+            "Invalid or expired code"
+          )
+        );
+
+      }
+
+      const existing = await get(
+        `
+        SELECT id
+        FROM users
+        WHERE email=?
+          AND id<>?
+        `,
+        [
+          cleanEmail,
+          req.session.userId
+        ]
+      );
+
+      if(existing){
+
+        return res.status(409).send(
+          tr(
+            req,
+            "Email déjà utilisé",
+            "Email already used"
+          )
+        );
+
+      }
+
+      await run("BEGIN TRANSACTION");
+
+      try{
+
+        await run(
+          `
+          UPDATE users
+          SET email=?
+          WHERE id=?
+          `,
+          [
+            cleanEmail,
+            req.session.userId
+          ]
+        );
+
+        await run(
+          `
+          DELETE FROM email_codes
+          WHERE email=?
+          `,
+          [cleanEmail]
+        );
+
+        await run("COMMIT");
+
+      }catch(error){
+
+        await run("ROLLBACK");
+        throw error;
+
+      }
+
+      return res.send(
+        tr(
+          req,
+          "Nouvelle adresse enregistrée",
+          "New email address saved"
+        )
+      );
+
+    }catch(error){
+
+      console.error(
+        "Erreur changement email :",
+        error
+      );
+
+      return res.status(500).send(
+        tr(
+          req,
+          "Erreur changement email",
+          "Failed to change email"
+        )
+      );
+
+    }
+
+  }
+);
 
 app.get("/my-player-stats", async (req,res)=>{
 
@@ -7700,39 +11817,49 @@ app.get("/my-profile-videos", async (req,res)=>{
 
 });
 
-app.post("/reset-password", async (req,res)=>{
+app.post("/reset-password", loginLimiter, async (req,res)=>{
 
   try{
 
     const email =
-      req.body.email.trim().toLowerCase();
+      String(req.body.email || "")
+        .trim()
+        .toLowerCase();
 
     const code =
-      String(req.body.code || "").trim();
+      String(req.body.code || "")
+        .trim();
 
     const password =
-      String(req.body.password || "").trim();
+      String(req.body.password || "");
 
     if(!email || !code || !password){
-      return res.send(
-  tr(req,
-    "Tous les champs sont obligatoires",
-    "All fields are required")
-);
-    }
 
-    if(password.length < 6){
-      return res.send(
-        tr(req,
-          "Mot de passe trop court",
-          "Password is too short"
+      return res.status(400).send(
+        tr(
+          req,
+          "Tous les champs sont obligatoires",
+          "All fields are required"
         )
       );
+
+    }
+
+    if(password.length < 8){
+
+      return res.status(400).send(
+        tr(
+          req,
+          "Mot de passe minimum 8 caractères",
+          "Password must contain at least 8 characters"
+        )
+      );
+
     }
 
     const user = await get(
       `
-      SELECT *
+      SELECT id
       FROM users
       WHERE email=?
       `,
@@ -7740,15 +11867,25 @@ app.post("/reset-password", async (req,res)=>{
     );
 
     if(!user){
-      return res.send("Email introuvable");
+
+      return res.status(404).send(
+        tr(
+          req,
+          "Email introuvable",
+          "Email not found"
+        )
+      );
+
     }
 
     const codeRow = await get(
       `
-      SELECT *
+      SELECT id
       FROM email_codes
       WHERE email=?
-      AND code=?
+        AND code=?
+        AND datetime(created_at)
+            >= datetime('now','-15 minutes')
       ORDER BY id DESC
       LIMIT 1
       `,
@@ -7756,83 +11893,236 @@ app.post("/reset-password", async (req,res)=>{
     );
 
     if(!codeRow){
-      return res.send("Code incorrect");
+
+      return res.status(400).send(
+        tr(
+          req,
+          "Code incorrect ou expiré",
+          "Invalid or expired code"
+        )
+      );
+
     }
 
     const hashedPassword =
-  await bcrypt.hash(password, 10);
+      await bcrypt.hash(password, 10);
 
-await run(
-  `
-  UPDATE users
-  SET password=?
-  WHERE email=?
-  `,
-  [
-    hashedPassword,
-    email
-  ]
+    await run("BEGIN TRANSACTION");
+
+    try{
+
+      await run(
+        `
+        UPDATE users
+        SET password=?
+        WHERE id=?
+        `,
+        [
+          hashedPassword,
+          user.id
+        ]
+      );
+
+      await run(
+        `
+        DELETE FROM email_codes
+        WHERE email=?
+        `,
+        [email]
+      );
+
+      await run("COMMIT");
+
+    }catch(error){
+
+      await run("ROLLBACK");
+      throw error;
+
+    }
+
+    return res.send(
+      tr(
+        req,
+        "Mot de passe changé",
+        "Password changed"
+      )
+    );
+
+  }catch(e){
+
+    console.error(
+      "Erreur reset password :",
+      e
+    );
+
+    return res.status(500).send(
+      tr(
+        req,
+        "Erreur réinitialisation du mot de passe",
+        "Password reset failed"
+      )
+    );
+
+  }
+
+});
+
+app.post(
+  "/add-highlight-comment",
+  async (req,res)=>{
+
+    try{
+
+      if(!connected(req)){
+
+        return res.status(401).send(
+          tr(
+            req,
+            "Connecte-toi pour commenter",
+            "Log in to comment"
+          )
+        );
+
+      }
+
+      const highlightId =
+        Number(req.body.highlight_id);
+
+      const comment =
+        String(req.body.comment || "")
+          .trim();
+
+      if(
+        !Number.isInteger(highlightId) ||
+        highlightId <= 0
+      ){
+
+        return res.status(400).send(
+          tr(
+            req,
+            "Vidéo invalide",
+            "Invalid video"
+          )
+        );
+
+      }
+
+      if(!comment){
+
+        return res.status(400).send(
+          tr(
+            req,
+            "Commentaire obligatoire",
+            "Comment is required"
+          )
+        );
+
+      }
+
+      if(comment.length > 500){
+
+        return res.status(400).send(
+          tr(
+            req,
+            "Le commentaire ne doit pas dépasser 500 caractères",
+            "The comment must not exceed 500 characters"
+          )
+        );
+
+      }
+
+      if(containsBadWords(comment)){
+
+        return res.status(400).send(
+          tr(
+            req,
+            "Contenu interdit détecté",
+            "Forbidden content detected"
+          )
+        );
+
+      }
+
+      const highlight = await get(
+        `
+        SELECT id, user_id
+        FROM highlights
+        WHERE id=?
+        `,
+        [highlightId]
+      );
+
+      if(!highlight){
+
+        return res.status(404).send(
+          tr(
+            req,
+            "Vidéo introuvable",
+            "Video not found"
+          )
+        );
+
+      }
+
+      await run(
+        `
+        INSERT INTO highlight_comments(
+          highlight_id,
+          user_id,
+          comment
+        )
+        VALUES(?,?,?)
+        `,
+        [
+          highlightId,
+          req.session.userId,
+          comment
+        ]
+      );
+
+      if(
+        highlight.user_id &&
+        Number(highlight.user_id) !==
+        Number(req.session.userId)
+      ){
+
+        await notifierUtilisateur(
+          highlight.user_id,
+          "💬 Nouveau commentaire",
+          "Quelqu'un a commenté ta vidéo",
+          `video:${highlightId}`
+        );
+
+      }
+
+      return res.send(
+        tr(
+          req,
+          "Commentaire ajouté",
+          "Comment added"
+        )
+      );
+
+    }catch(error){
+
+      console.error(
+        "Erreur ajout commentaire :",
+        error
+      );
+
+      return res.status(500).send(
+        tr(
+          req,
+          "Erreur commentaire",
+          "Failed to add comment"
+        )
+      );
+
+    }
+
+  }
 );
 
-    await run(
-      `
-      DELETE FROM email_codes
-      WHERE email=?
-      `,
-      [email]
-    );
-
-    res.send("Mot de passe changé");
-
-  }catch(e){
-
-    console.log(e);
-    res.send("Erreur reset password");
-
-  }
-
-});
-
-app.post("/add-highlight-comment", async (req,res)=>{
-
-  try{
-
-    if(!req.session.userId){
-      return res.send("Connecte-toi pour commenter");
-    }
-
-    const { highlight_id, comment } = req.body;
-
-    if(!highlight_id || !comment){
-      return res.send("Commentaire obligatoire");
-    }
-
-    await run(
-      `
-      INSERT INTO highlight_comments(
-        highlight_id,
-        user_id,
-        comment
-      )
-      VALUES(?,?,?)
-      `,
-      [
-        highlight_id,
-        req.session.userId,
-        comment.trim()
-      ]
-    );
-
-    res.send("Commentaire ajouté");
-
-  }catch(e){
-
-    console.log(e);
-    res.send("Erreur commentaire");
-
-  }
-
-});
 app.get("/highlight-comments/:id", async (req,res)=>{
 
   try{
@@ -7842,6 +12132,7 @@ app.get("/highlight-comments/:id", async (req,res)=>{
       SELECT
         highlight_comments.*,
         highlight_comments.user_id,
+        users.name,
         users.username,
         users.profile_photo
       FROM highlight_comments
@@ -7863,6 +12154,7 @@ app.get("/highlight-comments/:id", async (req,res)=>{
   }
 
 });
+
 app.post("/delete-highlight-comment", async (req,res)=>{
 
   try{
@@ -7939,30 +12231,48 @@ app.post("/delete-highlight-comment", async (req,res)=>{
     }
 
     const stats = await get(
-      `
-    SELECT
-       (SELECT COUNT(*) FROM followers WHERE following_id=?) AS followers,
-       (SELECT COUNT(*) FROM followers WHERE follower_id=?) AS following,
-       (SELECT COALESCE(SUM(likes),0) FROM highlights WHERE user_id=?) AS likes
-      `,
-      [userId, userId, userId]
-    );
+  `
+  SELECT
+    (
+      SELECT COUNT(*)
+      FROM follows
+      WHERE following_participant_id=?
+    ) AS followers,
+
+    (
+      SELECT COUNT(*)
+      FROM follows
+      WHERE follower_id=?
+    ) AS following,
+
+    (
+      SELECT COALESCE(SUM(likes),0)
+      FROM highlights
+      WHERE user_id=?
+    ) AS likes
+  `,
+  [
+    userId,
+    userId,
+    userId
+  ]
+);
 
     let isFollowing = 0;
 
 if(req.session.userId){
   const follow = await get(
-    `
-    SELECT id
-    FROM followers
-    WHERE follower_id=?
-    AND following_id=?
-    `,
-    [
-      req.session.userId,
-      userId
-    ]
-  );
+  `
+  SELECT id
+  FROM follows
+  WHERE follower_id=?
+    AND following_participant_id=?
+  `,
+  [
+    req.session.userId,
+    userId
+  ]
+);
 
   isFollowing = follow ? 1 : 0;
 }
@@ -8192,18 +12502,60 @@ Pour toute question, contactez-nous à :
   `);
 
 });
+
 app.post("/favorite-video", async (req,res)=>{
 
   try{
 
-    if(!req.session.userId){
-      return res.send("Connecte-toi");
+    if(!connected(req)){
+
+      return res.status(401).send(
+        tr(
+          req,
+          "Connecte-toi",
+          "Please log in"
+        )
+      );
+
     }
 
-    const { highlight_id } = req.body;
+    const highlightId =
+      Number(req.body.highlight_id);
 
-    if(!highlight_id){
-      return res.send("Vidéo manquante");
+    if(
+      !Number.isInteger(highlightId) ||
+      highlightId <= 0
+    ){
+
+      return res.status(400).send(
+        tr(
+          req,
+          "Vidéo invalide",
+          "Invalid video"
+        )
+      );
+
+    }
+
+    const video = await get(
+      `
+      SELECT id
+      FROM highlights
+      WHERE id=?
+      `,
+      [highlightId]
+    );
+
+    if(!video){
+
+      return res.status(404).send(
+        tr(
+          req,
+          "Vidéo introuvable",
+          "Video not found"
+        )
+      );
+
     }
 
     const existing = await get(
@@ -8211,9 +12563,12 @@ app.post("/favorite-video", async (req,res)=>{
       SELECT id
       FROM video_favorites
       WHERE user_id=?
-      AND highlight_id=?
+        AND highlight_id=?
       `,
-      [req.session.userId, highlight_id]
+      [
+        req.session.userId,
+        highlightId
+      ]
     );
 
     if(existing){
@@ -8221,35 +12576,66 @@ app.post("/favorite-video", async (req,res)=>{
       await run(
         `
         DELETE FROM video_favorites
-        WHERE id=?
+        WHERE user_id=?
+          AND highlight_id=?
         `,
-        [existing.id]
+        [
+          req.session.userId,
+          highlightId
+        ]
       );
 
-      return res.send("Favori retiré");
+      return res.send(
+        tr(
+          req,
+          "Favori retiré",
+          "Favorite removed"
+        )
+      );
+
     }
 
     await run(
       `
-      INSERT INTO video_favorites(
+      INSERT OR IGNORE INTO video_favorites(
         user_id,
         highlight_id
       )
       VALUES(?,?)
       `,
-      [req.session.userId, highlight_id]
+      [
+        req.session.userId,
+        highlightId
+      ]
     );
 
-    res.send("Favori ajouté");
+    return res.send(
+      tr(
+        req,
+        "Favori ajouté",
+        "Favorite added"
+      )
+    );
 
-  }catch(e){
+  }catch(error){
 
-    console.log(e);
-    res.send("Erreur favori");
+    console.error(
+      "Erreur favori vidéo :",
+      error
+    );
+
+    return res.status(500).send(
+      tr(
+        req,
+        "Erreur favori",
+        "Favorite failed"
+      )
+    );
 
   }
 
 });
+
 app.get("/my-favorite-videos", async (req,res)=>{
 
   try{
@@ -8383,55 +12769,135 @@ async function notifierUtilisateur(userId, titre, message, action = ""){
   }
 
 }
-app.post("/notifications-read", async (req,res)=>{
 
+app.post("/notifications-read", async (req,res)=>{
 
   try{
 
-    if(!req.session.userId){
-      return res.send("Non connecté");
+    if(!connected(req)){
+
+      return res.status(401).json({
+        ok:false,
+        message:tr(
+          req,
+          "Connecte-toi",
+          "Please log in"
+        )
+      });
+
     }
 
-    await run(
+    const result = await run(
       `
       UPDATE notifications
       SET seen=1
       WHERE user_id=?
+        AND seen=0
       `,
       [req.session.userId]
     );
 
-    res.send("OK");
+    return res.json({
+      ok:true,
+      updated:
+        Number(result.changes || 0)
+    });
 
-  }catch(e){
+  }catch(error){
 
-    console.log(e);
-    res.send("Erreur notifications");
+    console.error(
+      "Erreur lecture notifications :",
+      error
+    );
+
+    return res.status(500).json({
+      ok:false,
+      message:tr(
+        req,
+        "Erreur notifications",
+        "Notifications error"
+      )
+    });
 
   }
 
 });
+
 app.post("/save-fcm-token", async (req,res)=>{
 
   try{
 
-    if(!req.session.userId){
-      return res.send("Non connecté");
+    if(!connected(req)){
+
+      return res.status(401).send(
+        tr(
+          req,
+          "Non connecté",
+          "Not logged in"
+        )
+      );
+
     }
 
-    const { token } = req.body;
+    const token =
+      String(req.body.token || "")
+        .trim();
 
     if(!token){
-      return res.send("Token manquant");
+
+      return res.status(400).send(
+        tr(
+          req,
+          "Token manquant",
+          "Token is missing"
+        )
+      );
+
     }
+
+    if(
+      token.length < 50 ||
+      token.length > 4096
+    ){
+
+      return res.status(400).send(
+        tr(
+          req,
+          "Token Firebase invalide",
+          "Invalid Firebase token"
+        )
+      );
+
+    }
+
+    /*
+      Si ce token était lié à un ancien compte,
+      on le rattache au compte actuellement connecté.
+    */
+    await run(
+      `
+      DELETE FROM fcm_tokens
+      WHERE token=?
+        AND user_id<>?
+      `,
+      [
+        token,
+        req.session.userId
+      ]
+    );
 
     await run(
       `
-      INSERT OR REPLACE INTO fcm_tokens(
+      INSERT INTO fcm_tokens(
         user_id,
-        token
+        token,
+        created_at
       )
-      VALUES(?,?)
+      VALUES(?,?,datetime('now'))
+      ON CONFLICT(token)
+      DO UPDATE SET
+        user_id=excluded.user_id,
+        created_at=datetime('now')
       `,
       [
         req.session.userId,
@@ -8439,14 +12905,28 @@ app.post("/save-fcm-token", async (req,res)=>{
       ]
     );
 
-    console.log("FCM enregistré :", token);
+    return res.send(
+      tr(
+        req,
+        "Token enregistré",
+        "Token saved"
+      )
+    );
 
-    res.send("Token enregistré");
+  }catch(error){
 
-  }catch(e){
+    console.error(
+      "Erreur enregistrement FCM :",
+      error.message
+    );
 
-    console.log(e);
-    res.send("Erreur token FCM");
+    return res.status(500).send(
+      tr(
+        req,
+        "Erreur token FCM",
+        "FCM token error"
+      )
+    );
 
   }
 
@@ -8455,14 +12935,81 @@ app.post("/send-reward", async (req,res)=>{
 
   try{
 
-    if(!connected(req)){
-      return res.send("Connecte-toi");
+    if(!isAdmin(req)){
+
+      return res
+        .status(403)
+        .send("Accès admin refusé");
+
     }
 
-    const { user_id, reward } = req.body;
+    const userId =
+      Number(req.body.user_id);
 
-    if(!user_id || !reward){
-      return res.send("Joueur et récompense obligatoires");
+    const reward =
+      String(req.body.reward || "")
+        .trim();
+
+    if(
+      !Number.isInteger(userId) ||
+      userId <= 0
+    ){
+
+      return res
+        .status(400)
+        .send(
+          "Identifiant utilisateur invalide"
+        );
+
+    }
+
+    if(!reward){
+
+      return res
+        .status(400)
+        .send(
+          "Récompense obligatoire"
+        );
+
+    }
+
+    if(reward.length > 150){
+
+      return res
+        .status(400)
+        .send(
+          "La récompense ne doit pas dépasser 150 caractères"
+        );
+
+    }
+
+    if(containsBadWords(reward)){
+
+      return res
+        .status(400)
+        .send(
+          "Contenu interdit détecté"
+        );
+
+    }
+
+    const user = await get(
+      `
+      SELECT id
+      FROM users
+      WHERE id=?
+      `,
+      [userId]
+    );
+
+    if(!user){
+
+      return res
+        .status(404)
+        .send(
+          "Utilisateur introuvable"
+        );
+
     }
 
     await run(
@@ -8475,25 +13022,35 @@ app.post("/send-reward", async (req,res)=>{
       VALUES(?,?,?)
       `,
       [
-        user_id,
+        userId,
         reward,
-        req.session.userId
+        0
       ]
     );
 
     await notifierUtilisateur(
-      user_id,
+      userId,
       "🎁 Récompense reçue",
       "Tu as reçu : " + reward,
       "reward"
     );
 
-    res.send("Récompense envoyée");
+    return res.send(
+      "Récompense envoyée"
+    );
 
-  }catch(e){
+  }catch(error){
 
-    console.log(e);
-    res.send("Erreur récompense");
+    console.error(
+      "Erreur récompense :",
+      error
+    );
+
+    return res
+      .status(500)
+      .send(
+        "Erreur récompense"
+      );
 
   }
 
@@ -8808,102 +13365,6 @@ app.post("/video-watch-time", async (req,res)=>{
 
 });
 
-app.post("/admin/create-test-participants", async (req,res)=>{
-
-  try{
-
-    if(!isAdmin(req)){
-      return res.send("Accès admin refusé");
-    }
-
-    const { tournament_id } = req.body;
-
-    if(!tournament_id){
-      return res.send("Tournoi obligatoire");
-    }
-
-    const tournoi = await get(
-      `SELECT * FROM tournaments WHERE id=?`,
-      [tournament_id]
-    );
-
-    if(!tournoi){
-      return res.send("Tournoi introuvable");
-    }
-
-    await run(
-      `DELETE FROM participants WHERE tournament_id=?`,
-      [tournament_id]
-    );
-
-    await run(
-      `DELETE FROM matches WHERE tournament_id=?`,
-      [tournament_id]
-    );
-
-    await run(
-      `DELETE FROM rapid_qualifiers WHERE tournament_id=?`,
-      [tournament_id]
-    );
-
-    for(let i=1; i<=32; i++){
-
-      const name =
-        "Test Joueur " + i;
-
-      const result = await run(
-        `
-        INSERT INTO participants(
-          tournament_id,
-          prenom,
-          username,
-          preuve
-        )
-        VALUES(?,?,?,?)
-        `,
-        [
-          tournament_id,
-          name,
-          "test_joueur_" + i,
-          "Compte test"
-        ]
-      );
-
-      await run(
-        `
-        INSERT OR IGNORE INTO player_stats(
-          participant_id
-        )
-        VALUES(?)
-        `,
-        [result.lastID]
-      );
-
-    }
-
-    await run(
-      `
-      UPDATE tournaments
-      SET max_teams=32,
-          type='rapide',
-          status='open',
-          champion_id=NULL
-      WHERE id=?
-      `,
-      [tournament_id]
-    );
-
-    res.send("32 participants test créés ✅");
-
-  }catch(e){
-
-    console.log(e);
-    res.send("Erreur création participants test : " + e.message);
-
-  }
-
-});
-
 app.get("/join-info/:code", async (req,res)=>{
 
   try{
@@ -9111,6 +13572,34 @@ app.get("/tournoi-access/:id", async (req,res)=>{
   });
 
 });
+
+function determinerPremierTourFinal(
+  nombreQualifies
+){
+
+  if(nombreQualifies === 32){
+    return "16ES";
+  }
+
+  if(nombreQualifies === 16){
+    return "8ES";
+  }
+
+  if(nombreQualifies === 8){
+    return "QUARTS";
+  }
+
+  if(nombreQualifies === 4){
+    return "DEMIS";
+  }
+
+  if(nombreQualifies === 2){
+    return "FINALE";
+  }
+
+  return null;
+
+}
 
 
 app.listen(PORT, () => {
