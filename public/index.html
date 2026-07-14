@@ -8957,7 +8957,7 @@ async function chargerHighlights(){
   playsinline
   preload="auto"
   onplaying="hideVideoCover(this)"
-  onclick="verifierPubliciteVideos(); toggleVideoPause(this)">
+  onclick="toggleVideoPause(this)">
 </video>
 
         <div class="tiktok-left">
@@ -10417,6 +10417,8 @@ async function enregistrerTempsVideoPanel(videoEl){
 
 let tiktokObserver = null;
 
+let derniereVideoComptee = null;
+
 function initTikTokAutoplay(){
 
   if(tiktokObserver){
@@ -10440,23 +10442,31 @@ function initTikTokAutoplay(){
 
           if(entry.isIntersecting){
 
-            videos.forEach(v=>{
+  if(derniereVideoComptee !== video){
 
-              if(v !== video){
-                v.pause();
-              }
+    derniereVideoComptee = video;
 
-            });
+    verifierPubliciteVideos();
 
-            video.muted = false;
-             video.volume = 1;
-            window.videoSoundEnabled = true;
+  }
 
-            video
-              .play()
-              .catch(()=>{});
+  videos.forEach(v=>{
 
-          }else{
+    if(v !== video){
+      v.pause();
+    }
+
+  });
+
+  video.muted = false;
+  video.volume = 1;
+  window.videoSoundEnabled = true;
+
+  video
+    .play()
+    .catch(()=>{});
+
+}else{
 
             video.pause();
 
@@ -10638,6 +10648,12 @@ let panelEnCours = false;
 let tournoisDejaCharges = false;
 
 async function ouvrirPanel(id){
+
+  if(id === "panelProprietaire"){
+    verifierPubliciteDashboard();
+  }
+
+  // le reste de ton code...
 
   if(panelEnCours) return;
 
@@ -11738,9 +11754,9 @@ function verifierPubliciteMatchs(){
 
   if(compteurPubMatchs >= 5){
 
-    if(pubAutorisee()){
-  afficherPublicite();
-}
+  if(pubAutorisee()){
+
+    afficherPublicite();
 
     compteurPubMatchs = 0;
 
@@ -11750,6 +11766,8 @@ function verifierPubliciteMatchs(){
     );
 
   }
+
+}
 
 }
 
@@ -11769,20 +11787,21 @@ function verifierPubliciteProfils(){
   if(compteurPubProfils >= 10){
 
     if(pubAutorisee()){
-  afficherPublicite();
-}
 
-    compteurPubProfils = 0;
+      afficherPublicite();
 
-    localStorage.setItem(
-      "compteurPubProfils",
-      compteurPubProfils
-    );
+      compteurPubProfils = 0;
+
+      localStorage.setItem(
+        "compteurPubProfils",
+        compteurPubProfils
+      );
+
+    }
 
   }
 
 }
-
 function verifierPubliciteVideos(){
 
   if(utilisateurAbonne === true){
@@ -11799,15 +11818,17 @@ function verifierPubliciteVideos(){
   if(compteurPubVideos >= 5){
 
     if(pubAutorisee()){
-  afficherPublicite();
-}
 
-    compteurPubVideos = 0;
+      afficherPublicite();
 
-    localStorage.setItem(
-      "compteurPubVideos",
-      compteurPubVideos
-    );
+      compteurPubVideos = 0;
+
+      localStorage.setItem(
+        "compteurPubVideos",
+        compteurPubVideos
+      );
+
+    }
 
   }
 
@@ -11816,8 +11837,8 @@ function verifierPubliciteVideos(){
 function verifierPubliciteDashboard(){
 
   if(utilisateurAbonne === true){
-  return;
-}
+    return;
+  }
 
   compteurPubDashboard++;
 
@@ -11829,15 +11850,17 @@ function verifierPubliciteDashboard(){
   if(compteurPubDashboard >= 5){
 
     if(pubAutorisee()){
-  afficherPublicite();
-}
 
-    compteurPubDashboard = 0;
+      afficherPublicite();
 
-    localStorage.setItem(
-      "compteurPubDashboard",
-      compteurPubDashboard
-    );
+      compteurPubDashboard = 0;
+
+      localStorage.setItem(
+        "compteurPubDashboard",
+        compteurPubDashboard
+      );
+
+    }
 
   }
 
