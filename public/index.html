@@ -2271,6 +2271,43 @@ button:active{
   text-align:left;
 }
 
+.notification{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  padding:12px;
+  border-bottom:1px solid #2d3748;
+  transition:background 0.2s;
+}
+
+.notification:hover{
+  background:rgba(255,255,255,0.04);
+}
+
+.notification-icon{
+  width:42px;
+  height:42px;
+  border-radius:50%;
+  background:#1f2937;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  color:#4da3ff;
+  font-size:18px;
+  flex-shrink:0;
+}
+
+.notification-content{
+  flex:1;
+  min-width:0;
+}
+
+.notification-message{
+  color:#fff;
+  line-height:1.4;
+  overflow-wrap:anywhere;
+}
+
 </style>
 
 <link
@@ -3647,11 +3684,20 @@ class="panel hidden">
 </h2>
 
 <button
+  id="btnTirageMatchsPoules"
+  type="button"
+  class="secondary"
+  onclick="tirageAutomatiquePoulePro()"
+>
+   🎲   Générer les matchs de poule
+</button>
+
+<button
 id="btnTirageRapide"
 class="owner-only"
 data-i18n="draw"
 onclick="customAutoDraw()">
-  🎲 <span data-i18n-text>Générer / continuer tirage</span>
+   🎲   <span data-i18n-text>Générer / continuer tirage</span>
 </button>
 
 <button
@@ -3915,6 +3961,136 @@ class="hidden video-profile-menu">
 
 <script>
 
+  function iconeNotification(type){
+
+  switch(type){
+
+    case "comment":
+      return `<i class="fas fa-comment"></i>`;
+
+    case "comment_reply":
+      return `<i class="fas fa-reply"></i>`;
+
+    case "like":
+      return `<i class="fas fa-heart"></i>`;
+
+    case "favorite":
+      return `<i class="fas fa-star"></i>`;
+
+    case "follow":
+      return `<i class="fas fa-user-plus"></i>`;
+
+    case "tournament":
+      return `<i class="fas fa-trophy"></i>`;
+
+    case "payment":
+      return `<i class="fas fa-money-bill-wave"></i>`;
+
+    case "warning":
+      return `<i class="fas fa-exclamation-triangle"></i>`;
+
+    case "system":
+      return `<i class="fas fa-bell"></i>`;
+
+    default:
+      return `<i class="fas fa-bell"></i>`;
+
+  }
+
+}
+
+  let creationParticipantsTestEnCours = false;
+
+async function creer100ParticipantsTest(){
+
+  if(creationParticipantsTestEnCours){
+    return;
+  }
+
+  const tournamentId =
+    Number(tournoiSelect.value);
+
+  if(
+    !Number.isInteger(tournamentId) ||
+    tournamentId <= 0
+  ){
+
+    message.textContent =
+      "Sélectionne d'abord un tournoi";
+
+    return;
+
+  }
+
+  const tournoiSelectionne =
+    tournoiSelect.options[
+      tournoiSelect.selectedIndex
+    ];
+
+  const maxTeams =
+    Number(
+      tournoiSelectionne?.dataset?.max || 0
+    );
+
+  if(maxTeams !== 100){
+
+    message.textContent =
+      "Ce bouton fonctionne uniquement avec un tournoi configuré pour 100 participants";
+
+    return;
+
+  }
+
+  const confirmation =
+    confirm(
+      "Créer automatiquement les participants test jusqu'à atteindre 100 participants ?"
+    );
+
+  if(!confirmation){
+    return;
+  }
+
+  creationParticipantsTestEnCours = true;
+
+  try{
+
+    message.textContent =
+      "Création des participants test...";
+
+    const resultat =
+      await post(
+        "/creer-100-participants-test",
+        {
+          tournament_id:tournamentId
+        }
+      );
+
+    message.textContent =
+      typeof resultat === "string"
+        ? resultat
+        : resultat?.message ||
+          "Création terminée";
+
+    await chargerParticipants();
+
+  }catch(error){
+
+    console.error(
+      "Erreur création participants test :",
+      error
+    );
+
+    message.textContent =
+      "Impossible de créer les participants test";
+
+  }finally{
+
+    creationParticipantsTestEnCours = false;
+
+  }
+
+}
+
   function afficherBoutonsSelonTypeTournoi(){
 
   const optionSelectionnee =
@@ -4128,22 +4304,56 @@ async function genererTourSuivantTest(){
 
   let cacheTirage = null;
 let cacheTournoiId = null;
+let versionChangementTournoi = 0;
 async function changerTournoiRapide(){
+
+  const maVersion =
+    ++versionChangementTournoi;
+
+  const tournoiSelectionne =
+    tournoiSelect.value;
 
   cacheTirage = null;
   cacheTournoiId = null;
 
-  /*
-    Met immédiatement les bons boutons
-    selon le tournoi sélectionné.
-  */
   afficherBoutonsSelonTypeTournoi();
 
   await verifierProprietaire();
 
+  if(
+    maVersion !== versionChangementTournoi ||
+    tournoiSelect.value !== tournoiSelectionne
+  ){
+    return;
+  }
+
   await chargerParticipants();
+
+  if(
+    maVersion !== versionChangementTournoi ||
+    tournoiSelect.value !== tournoiSelectionne
+  ){
+    return;
+  }
+
   await afficherTiragePoulePro();
+
+  if(
+    maVersion !== versionChangementTournoi ||
+    tournoiSelect.value !== tournoiSelectionne
+  ){
+    return;
+  }
+
   await afficherClassementSelonType();
+
+  if(
+    maVersion !== versionChangementTournoi ||
+    tournoiSelect.value !== tournoiSelectionne
+  ){
+    return;
+  }
+
   await afficherPhaseFinale();
 
 }
@@ -5386,33 +5596,218 @@ function showNotif(text){
 
 }
 
-async function post(url,data){
-  const res = await fetch(url,{
-    method:"POST",
-    headers:{
-  "Content-Type":"application/json",
-  "x-language": langueApp
-},
-    body:JSON.stringify(data)
-  });
-  const text = await res.text();
-  message.textContent = text;
-  return text;
+let redirectionConnexionEnCours = false;
+
+async function gererSessionExpiree(){
+
+  if(redirectionConnexionEnCours){
+    return;
+  }
+
+  redirectionConnexionEnCours = true;
+
+  stopAllVideosSecurise();
+
+  if(tiktokObserver){
+    tiktokObserver.disconnect();
+    tiktokObserver = null;
+  }
+
+  derniereVideoComptee = null;
+  currentUserId = null;
+  currentCommentVideoId = null;
+  utilisateurAbonne = false;
+
+  document.body.classList.remove(
+    "video-mode",
+    "video-profil-mode"
+  );
+
+  document
+    .getElementById("commentsSheet")
+    ?.classList.add("hidden");
+
+  sessionStorage.clear();
+
+  setPage("pageAuth");
+
+  const msg =
+    document.getElementById(
+      "msgLoginGeneral"
+    );
+
+  if(msg){
+
+    msg.textContent =
+      "Ta session a expiré. Connecte-toi à nouveau.";
+
+    msg.className =
+      "form-message error";
+
+  }else{
+
+    showNotif(
+      "Ta session a expiré. Connecte-toi à nouveau."
+    );
+
+  }
+
+  setTimeout(()=>{
+
+    redirectionConnexionEnCours = false;
+
+  },1000);
+
+}
+
+async function post(url, data = {}){
+
+  try{
+
+    const res = await fetch(url,{
+      method:"POST",
+      headers:{
+        "Content-Type":"application/json",
+        "x-language":langueApp
+      },
+      credentials:"same-origin",
+      body:JSON.stringify(data)
+    });
+
+    const text = await res.text();
+
+    if(res.status === 401){
+
+      /*
+        Ne pas relancer la protection
+        lorsque la route appelée est logout.
+      */
+      if(url !== "/logout"){
+        await gererSessionExpiree();
+      }
+
+      return text;
+    }
+
+    if(!res.ok){
+
+      console.error(
+        "Erreur POST :",
+        url,
+        res.status,
+        text
+      );
+
+      if(message){
+        message.textContent =
+          text ||
+          "Une erreur est survenue.";
+      }
+
+      return text;
+    }
+
+    return text;
+
+  }catch(error){
+
+    console.error(
+      "Erreur réseau POST :",
+      url,
+      error
+    );
+
+    if(message){
+
+      message.textContent =
+        "Impossible de contacter le serveur.";
+
+    }
+
+    return "ERREUR_RESEAU";
+
+  }
+
 }
 
 async function get(url){
-  const res = await fetch(url,{
-  headers:{
-    "x-language": langueApp
-  }
-});
-  const text = await res.text();
+
   try{
-    return JSON.parse(text);
-  }catch{
-    message.textContent = text;
+
+    const res = await fetch(url,{
+      method:"GET",
+      headers:{
+        "x-language":langueApp
+      },
+      credentials:"same-origin"
+    });
+
+    const text = await res.text();
+
+    if(res.status === 401){
+
+      await gererSessionExpiree();
+
+      return null;
+    }
+
+    if(!res.ok){
+
+      console.error(
+        "Erreur GET :",
+        url,
+        res.status,
+        text
+      );
+
+      if(message){
+
+        message.textContent =
+          text ||
+          "Impossible de charger les données.";
+
+      }
+
+      return null;
+    }
+
+    if(!text){
+      return null;
+    }
+
+    try{
+
+      return JSON.parse(text);
+
+    }catch{
+
+      /*
+        Certaines routes GET peuvent
+        volontairement retourner du texte.
+      */
+      return text;
+
+    }
+
+  }catch(error){
+
+    console.error(
+      "Erreur réseau GET :",
+      url,
+      error
+    );
+
+    if(message){
+
+      message.textContent =
+        "Impossible de contacter le serveur.";
+
+    }
+
     return null;
+
   }
+
 }
 
 function drawWorldCupLinesOrg(){
@@ -6367,7 +6762,7 @@ document.body.classList.remove("video-profil-mode");
 
   videoProfilContent.innerHTML = "";
 
-  retourPage();
+  ouvrirProfilCompte();
 
 }
 
@@ -6765,14 +7160,150 @@ async function saveFcmToken(token){
 
 }
 
+function stopAllVideosSecurise(){
+
+  document
+    .querySelectorAll("video")
+    .forEach(video=>{
+
+      try{
+        video.pause();
+        video.muted = true;
+        video.removeAttribute("autoplay");
+      }catch(error){
+        console.error(
+          "Impossible d'arrêter une vidéo :",
+          error
+        );
+      }
+
+    });
+
+}
+
+let deconnexionEnCours = false;
 
 async function logout(){
 
-  await post("/logout",{});
+  if(deconnexionEnCours){
+    return;
+  }
 
-  sessionStorage.clear();
+  deconnexionEnCours = true;
 
-  setPage("pageAuth");
+  try{
+
+    /*
+      Arrêter toutes les vidéos avant
+      de supprimer la session.
+    */
+    stopAllVideosSecurise();
+
+    /*
+      Arrêter l'observer TikTok.
+    */
+    if(tiktokObserver){
+      tiktokObserver.disconnect();
+      tiktokObserver = null;
+    }
+
+    derniereVideoComptee = null;
+
+    /*
+      Fermer les commentaires.
+    */
+    const sheet =
+      document.getElementById("commentsSheet");
+
+    if(sheet){
+      sheet.classList.add("hidden");
+    }
+
+    const input =
+      document.getElementById("commentInput");
+
+    if(input){
+      input.value = "";
+      input.blur();
+    }
+
+    /*
+      Informer le serveur.
+    */
+    try{
+
+      await fetch("/logout",{
+        method:"POST",
+        headers:{
+          "Content-Type":"application/json",
+          "x-language":langueApp
+        },
+        credentials:"same-origin",
+        body:JSON.stringify({})
+      });
+
+    }catch(error){
+
+      console.error(
+        "Erreur pendant la déconnexion serveur :",
+        error
+      );
+
+    }
+
+  }finally{
+
+    sessionStorage.clear();
+
+    currentUserId = null;
+    currentCommentVideoId = null;
+    utilisateurAbonne = false;
+
+    cacheTirage = null;
+    cacheTournoiId = null;
+
+    estProprietaire = false;
+    currentPanelName = null;
+    tournoisDejaCharges = false;
+
+    window.videoSoundEnabled = false;
+    window.favorisChanged = false;
+
+    document.body.classList.remove(
+      "video-mode",
+      "video-profil-mode"
+    );
+
+    const highlightsList =
+      document.getElementById("highlightsList");
+
+    if(highlightsList){
+      highlightsList.innerHTML = "";
+    }
+
+    const profileVideoContainer =
+      document.getElementById(
+        "profileVideoContainer"
+      );
+
+    if(profileVideoContainer){
+      profileVideoContainer.innerHTML = "";
+    }
+
+    if(
+      typeof tournoiSelect !== "undefined" &&
+      tournoiSelect
+    ){
+      tournoiSelect.innerHTML = "";
+    }
+
+    localStorage.removeItem("lastPanel");
+
+    setPage("pageAuth");
+
+    deconnexionEnCours = false;
+
+  }
 
 }
 
@@ -7208,45 +7739,88 @@ async function chargerMesFavoris(){
 async function creerTournoi(){
 
   if(window.creationTournoiEnCours){
-  return;
-}
-
-window.creationTournoiEnCours = true;
-
-  if(!tournoiNom.value){
-    message.textContent = "Nom tournoi obligatoire";
     return;
   }
 
-  const typeTournoi =
-  document.querySelector(
-    'input[name="tournoiType"]:checked'
-  ).value;
+  window.creationTournoiEnCours = true;
 
-const maxTeams =
-  typeTournoi === "rapide"
-    ? 32
-    : Number(tournoiMax.value);
+  try{
 
-  if(maxTeams < 6 || maxTeams > 100){
-    message.textContent = "Le nombre d'équipes doit être entre 6 et 100";
-    return;
+    if(!tournoiNom.value.trim()){
+
+      message.textContent =
+        "Nom tournoi obligatoire";
+
+      return;
+
+    }
+
+    const typeTournoi =
+      document.querySelector(
+        'input[name="tournoiType"]:checked'
+      )?.value;
+
+    if(!typeTournoi){
+
+      message.textContent =
+        "Choisis un type de tournoi";
+
+      return;
+
+    }
+
+    const maxTeams =
+      typeTournoi === "rapide"
+        ? 32
+        : Number(tournoiMax.value);
+
+    if(maxTeams < 6 || maxTeams > 100){
+
+      message.textContent =
+        "Le nombre d'équipes doit être entre 6 et 100";
+
+      return;
+
+    }
+
+    await post("/tournoi",{
+      name:tournoiNom.value.trim(),
+      max_teams:maxTeams,
+      group_link:tournoiGroupLink.value.trim(),
+      type:typeTournoi
+    });
+
+    tournoiNom.value = "";
+    tournoiGroupLink.value = "";
+
+    await chargerTournois();
+
+    message.textContent =
+      "Tournoi créé avec succès";
+
+  }catch(error){
+
+    console.error(
+      "Erreur création tournoi :",
+      error
+    );
+
+    message.textContent =
+      "Impossible de créer le tournoi pour le moment";
+
+  }finally{
+
+    window.creationTournoiEnCours = false;
+
   }
 
-  await post("/tournoi",{
-  name:tournoiNom.value,
-  max_teams:maxTeams,
-  group_link:tournoiGroupLink.value,
-  type:typeTournoi
-});
-
-  tournoiNom.value = "";
-
-  await chargerTournois();
-
 }
+
 
 async function chargerTournois(){
+
+    const ancienTournoiSelectionne =
+    tournoiSelect.value;
 
   let data = await get("/tournois");
 
@@ -7299,25 +7873,37 @@ tournoiSelect.innerHTML = `
   </option>
 `).join("");
 
-    if(
-    tournoiUrl &&
-    data.some(
-      t => String(t.id) === String(tournoiUrl)
-    )
-  ){
+if(
+  tournoiUrl &&
+  data.some(
+    t => String(t.id) === String(tournoiUrl)
+  )
+){
 
-    tournoiSelect.value = tournoiUrl;
+  tournoiSelect.value = tournoiUrl;
 
-  }else if(data.length > 0){
+}else if(
+  ancienTournoiSelectionne &&
+  data.some(
+    t =>
+      String(t.id) ===
+      String(ancienTournoiSelectionne)
+  )
+){
 
-    tournoiSelect.value = data[0].id;
+  tournoiSelect.value =
+    ancienTournoiSelectionne;
 
-  }else{
+}else if(data.length > 0){
 
-    tournoiSelect.value = "";
+  tournoiSelect.value =
+    String(data[0].id);
 
-  }
+}else{
 
+  tournoiSelect.value = "";
+
+}
   /*
     Affiche immédiatement les bons boutons
     après le chargement des tournois.
@@ -7369,9 +7955,17 @@ tournoiSelect.innerHTML = `
     </div>
   `).join("");
 
+    tournoisDejaCharges = true;
+
 }
 
+let ajoutParticipantEnCours = false;
+
 async function ajouterParticipant(){
+
+  if(ajoutParticipantEnCours){
+    return;
+  }
 
   if(!tournoiSelect.value){
 
@@ -7394,30 +7988,50 @@ async function ajouterParticipant(){
     return;
   }
 
-  const resultat =
-    await post("/participant",{
-      tournament_id: tournoiSelect.value,
-      participantUsername: username
-    });
+  ajoutParticipantEnCours = true;
 
-  message.textContent =
-    typeof resultat === "string"
-      ? resultat
-      : resultat?.message || "";
+  try{
 
-  if(
-    resultat?.ok === false ||
-    resultat?.error
-  ){
-    return;
+    const resultat =
+      await post("/participant",{
+        tournament_id: tournoiSelect.value,
+        participantUsername: username
+      });
+
+    message.textContent =
+      typeof resultat === "string"
+        ? resultat
+        : resultat?.message || "";
+
+    if(
+      resultat?.ok === false ||
+      resultat?.error
+    ){
+      return;
+    }
+
+    participantUsername.value = "";
+
+    await chargerParticipants();
+    await afficherTiragePoulePro();
+    await afficherClassements();
+    await afficherPhaseFinale();
+
+  }catch(error){
+
+    console.error(
+      "Erreur ajout participant :",
+      error
+    );
+
+    message.textContent =
+      "Impossible d'ajouter le participant pour le moment";
+
+  }finally{
+
+    ajoutParticipantEnCours = false;
+
   }
-
-  participantUsername.value = "";
-
-  await chargerParticipants();
-  await afficherTiragePoulePro();
-  await afficherClassements();
-  await afficherPhaseFinale();
 
 }
 
@@ -7540,20 +8154,78 @@ function cocherTous(etat){
   document.querySelectorAll(".participantCheck").forEach(c=>c.checked=etat);
 }
 
-async function supprimerParticipantsCoches(){
-  const ids = Array.from(
-    document.querySelectorAll(".participantCheck:checked")
-  ).map(i=>i.value);
+let suppressionParticipantsEnCours = false;
 
-  if(!ids.length){
-    message.textContent = "Aucun participant sélectionné";
+async function supprimerParticipantsCoches(){
+
+  if(suppressionParticipantsEnCours){
     return;
   }
 
-  if(!confirm("Supprimer participants ?")) return;
+  const ids = Array.from(
+    document.querySelectorAll(
+      ".participantCheck:checked"
+    )
+  ).map(i=>i.value);
 
-  await post("/supprimer-participants-selection",{ids});
-  await chargerParticipants();
+  if(!ids.length){
+
+    message.textContent =
+      "Aucun participant sélectionné";
+
+    return;
+
+  }
+
+  if(!confirm("Supprimer participants ?")){
+    return;
+  }
+
+  suppressionParticipantsEnCours = true;
+
+  try{
+
+    const resultat =
+      await post(
+        "/supprimer-participants-selection",
+        {ids}
+      );
+
+    if(
+      resultat?.ok === false ||
+      resultat?.error
+    ){
+
+      message.textContent =
+        resultat?.message ||
+        resultat?.error ||
+        "Impossible de supprimer les participants";
+
+      return;
+
+    }
+
+    message.textContent =
+      "Participants supprimés avec succès";
+
+    await chargerParticipants();
+
+  }catch(error){
+
+    console.error(
+      "Erreur suppression participants :",
+      error
+    );
+
+    message.textContent =
+      "Impossible de supprimer les participants pour le moment";
+
+  }finally{
+
+    suppressionParticipantsEnCours = false;
+
+  }
+
 }
 
 async function supprimerTournoiComplet(){
@@ -8278,20 +8950,47 @@ if(
 
 }
 
+let annulationScoreEnCours = false;
+
 async function annulerScore(matchId){
-  if(!confirm("Annuler ce score ?")) return;
 
-  await post("/annuler-score",{
-    match_id:matchId
-  });
+  if(annulationScoreEnCours){
+    return;
+  }
 
-  cacheTirage = null;
-  cacheTournoiId = null;
+  if(!confirm("Annuler ce score ?")){
+    return;
+  }
 
-  await afficherTiragePoulePro();
-  await afficherClassementSelonType();
-  await afficherPhaseFinale();
-  await afficherArbreTournoi();
+  annulationScoreEnCours = true;
+
+  try{
+
+    await post("/annuler-score",{
+      match_id:matchId
+    });
+
+    cacheTirage = null;
+    cacheTournoiId = null;
+
+    await afficherTiragePoulePro();
+    await afficherClassementSelonType();
+    await afficherPhaseFinale();
+    await afficherArbreTournoi();
+
+  }catch(error){
+
+    console.error(error);
+
+    message.textContent =
+      "Impossible d'annuler le score.";
+
+  }finally{
+
+    annulationScoreEnCours = false;
+
+  }
+
 }
 
 async function uploadPreuve(matchId, uid){
@@ -8943,8 +9642,10 @@ async function chargerHighlights(){
     data.map(h=>`
 
     <div
-    class="tiktok-video"
-    data-id="${h.id}">
+  class="tiktok-video"
+  data-id="${h.id}"
+  data-highlight-id="${h.id}"
+>
 
     <img
   src="${h.thumbnail_url || '/default-video-cover.png'}"
@@ -10075,42 +10776,196 @@ async function ouvrirProfilJoueur(userId){
 
 }
 
+  async function ouvrirNotificationVideo(
+  highlightId,
+  ouvrirCommentairesAuto = false,
+  notificationId
+){
+
+  const id = Number(highlightId);
+
+  if(
+    !Number.isInteger(id) ||
+    id <= 0
+  ){
+    showNotif(
+      "Vidéo introuvable."
+    );
+    return;
+  }
+
+  if(
+  Number.isInteger(Number(notificationId)) &&
+  Number(notificationId) > 0
+){
+
+  await post(
+    "/notification-lue",
+    {
+      notification_id:Number(notificationId)
+    }
+  ).catch(()=>{});
+
+}
+
+  stopAllVideosSecurise();
+
+  /*
+    Remplace panelVideos seulement si
+    ton panneau vidéo porte un autre ID.
+  */
+  await ouvrirPanel("panelHighlights");
+
+  /*
+    Recharge les vidéos si cette fonction
+    existe dans ton frontend.
+  */
+  if(
+    typeof chargerHighlights === "function"
+  ){
+    await chargerHighlights();
+  }
+
+  const blocVideo =
+    document.querySelector(
+      `[data-highlight-id="${id}"]`
+    );
+
+  if(blocVideo){
+
+    blocVideo.scrollIntoView({
+      behavior:"smooth",
+      block:"center"
+    });
+
+    const video =
+      blocVideo.querySelector("video");
+
+    if(video){
+
+      document
+        .querySelectorAll("video")
+        .forEach(v=>{
+
+          if(v !== video){
+            v.pause();
+          }
+
+        });
+
+      video.play().catch(()=>{});
+
+    }
+
+  }
+
+  if(ouvrirCommentairesAuto){
+
+    setTimeout(()=>{
+
+      ouvrirCommentaires(id);
+
+    },300);
+
+  }
+
+}
+
 async function chargerNotifications(){
 
   const data =
     await get("/notifications");
 
+  if(!notificationsList){
+    return;
+  }
+
+  if(!Array.isArray(data) || data.length === 0){
+
+    notificationsList.innerHTML =
+      "<p class='small'>Aucune notification.</p>";
+
+    return;
+  }
+
   notificationsList.innerHTML =
-    data && data.length
-    ? data.map(n=>{
+    data.map(n=>{
 
       const parts =
-        (n.message || "").split("|");
+        String(n.message || "")
+          .split("|");
 
-      const text = parts[0];
-      const action = parts[1] || "";
+      const text =
+        parts[0] || "";
+
+      const action =
+        parts[1] || "";
 
       let onclick = "";
 
       if(action.startsWith("profile:")){
-        const userId =
-          action.replace("profile:","");
 
-        onclick =
-          `onclick="ouvrirProfilPublic(${userId})"`;
+        const userId =
+          Number(
+            action.replace(
+              "profile:",
+              ""
+            )
+          );
+
+        if(
+          Number.isInteger(userId) &&
+          userId > 0
+        ){
+
+          onclick =
+            `onclick="ouvrirProfilPublic(${userId})"`;
+
+        }
+
       }
 
-      return `
-        <div
-        class="match"
-        ${onclick}
-        style="cursor:pointer;">
-          ${text}
-        </div>
-      `;
+      let actionNotification = onclick;
 
-    }).join("")
-    : "<p class='small'>Aucune notification.</p>";
+if(
+  (
+    n.type === "comment" ||
+    n.type === "comment_reply"
+  ) &&
+  Number(n.highlight_id) > 0
+){
+
+  actionNotification =
+  `onclick="ouvrirNotificationVideo(${Number(n.highlight_id)}, true, ${Number(n.id)})"`;
+
+ }
+
+        return `
+  <div
+    class="notification"
+    ${actionNotification}
+    style="
+      cursor:${actionNotification ? "pointer" : "default"};
+    "
+  >
+
+    <div class="notification-icon">
+      ${iconeNotification(n.type)}
+    </div>
+
+    <div class="notification-content">
+
+      <div class="notification-message">
+        ${escapeHtml(text)}
+      </div>
+
+    </div>
+
+  </div>
+`;  
+
+    }).join("");
+
 }
 
 async function ouvrirNotifications(){
@@ -10767,12 +11622,13 @@ async function ouvrirPanel(id){
 
     panelEnCours = false;
 
+    ajouterMessagesAideBoutons();
+    mettreAJourMessagesAide();
+
   }
 
-  ajouterMessagesAideBoutons();
-  mettreAJourMessagesAide();
-
 }
+
 function masquerBoutonsOrganisateurVisiteur(){
 
   document
@@ -10984,7 +11840,6 @@ async function updateName(){
     }
   },1500);
 }
-
 async function changerMotDePasse(){
 
   const oldPass =
@@ -10997,51 +11852,82 @@ async function changerMotDePasse(){
     confirmSecurePassword.value.trim();
 
   if(!oldPass || !newPass || !confirmPass){
+
     message.textContent =
       "Tous les champs sont obligatoires";
+
     return;
+
   }
 
   if(newPass.length < 8){
+
     message.textContent =
-      "Le nouveau mot de passe doit faire au moins 8 caractères";
+      "Le nouveau mot de passe doit contenir au moins 8 caractères";
+
     return;
+
   }
 
   if(newPass !== confirmPass){
+
     message.textContent =
-      "Les mots de passe ne correspondent pas";
+      "Les nouveaux mots de passe ne correspondent pas";
+
     return;
+
   }
 
   try{
 
-  const result =
-    await post("/change-password",{
-      oldPassword:oldPass,
-      newPassword:newPass
-    });
+    const result =
+      await post("/change-password",{
+        oldPassword:oldPass,
+        newPassword:newPass
+      });
 
-  alert(JSON.stringify(result));
+    console.log(
+      "Résultat changement mot de passe :",
+      result
+    );
 
-}catch(e){
+    if(
+      result === "Mot de passe changé" ||
+      result?.ok === true
+    ){
 
-  console.log(e);
-  alert("ERREUR : " + e);
+      oldPassword.value = "";
+      newSecurePassword.value = "";
+      confirmSecurePassword.value = "";
 
-}
+      message.textContent =
+        "Mot de passe changé avec succès";
 
-  console.log(result);
-  alert(JSON.stringify(result));
+      setPage("pageSecurite");
 
-  if(result === "Mot de passe changé"){
-    oldPassword.value = "";
-    newSecurePassword.value = "";
-    confirmSecurePassword.value = "";
-    setPage("pageSecurite");
+    }else{
+
+      message.textContent =
+        result?.message ||
+        result ||
+        "Impossible de changer le mot de passe";
+
+    }
+
+  }catch(error){
+
+    console.error(
+      "Erreur changement mot de passe :",
+      error
+    );
+
+    message.textContent =
+      "Une erreur est survenue";
+
   }
 
 }
+
 async function ouvrirAccueilDemarrage(){
 
   const data = await get("/me");
@@ -11355,84 +12241,522 @@ function chargerConditionsUtilisation(){
 
 }
 
+function escapeHtml(value){
 
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+
+}
 
 async function ouvrirCommentaires(videoId){
 
-  console.log("ouverture commentaires");
+  const id = Number(videoId);
 
-  currentCommentVideoId = videoId;
+  if(
+    !Number.isInteger(id) ||
+    id <= 0
+  ){
+    showNotif("Vidéo invalide.");
+    return;
+  }
 
-  commentsSheet.classList.remove("hidden");
+  currentCommentVideoId = id;
+
+  const sheet =
+    document.getElementById(
+      "commentsSheet"
+    );
+
+  const list =
+    document.getElementById(
+      "commentsList"
+    );
+
+  if(!sheet || !list){
+    return;
+  }
+
+  sheet.classList.remove("hidden");
+
+  list.innerHTML = `
+    <p class="small">
+      Chargement des commentaires...
+    </p>
+  `;
 
   const commentaires =
-    await get("/highlight-comments/" + videoId);
+    await get(
+      "/highlight-comments/" + id
+    );
 
-  commentsList.innerHTML =
-  commentaires.map(c=>`
+  if(currentCommentVideoId !== id){
+    return;
+  }
 
-  ${
-  Number(c.user_id) === Number(currentUserId)
-  ? `
-    <button
-id="deleteComment_${c.id}"
-onclick="supprimerCommentaire(${c.id})"
-class="hidden"
-style="
-background:none;
-border:none;
-box-shadow:none;
-padding:0;
-margin-top:6px;
-color:#ef4444;
-font-weight:700;
-">
-  Supprimer
-</button>
-  `
-  : ""
-}
+  if(!Array.isArray(commentaires)){
 
-    <div
-    onclick="toggleDeleteComment(${c.id})"
-    style="
-    display:flex;
-    gap:10px;
-    padding:10px 0;
-    border-bottom:1px solid #334155;
-    cursor:pointer;
-    ">
+    list.innerHTML = `
+      <p class="small">
+        Impossible de charger les commentaires.
+      </p>
+    `;
 
-      <img
-      src="${
-        c.profile_photo ||
-        '/default-lo.jpeg'
-      }"
-      style="
-      width:40px;
-      height:40px;
-      border-radius:50%;
-      object-fit:cover;
-      ">
+    return;
+  }
 
-      <div>
+  if(commentaires.length === 0){
 
-        <b>
-         ${c.name || c.username || "Joueur"}
-        </b>
+    list.innerHTML = `
+      <p class="small">
+        Aucun commentaire pour le moment.
+      </p>
+    `;
 
-        <div>
-          ${c.comment}
+    return;
+  }
+
+  list.innerHTML =
+    commentaires.map(c=>{
+
+      const commentId =
+        Number(c.id);
+
+      const userId =
+        Number(c.user_id);
+
+      const nom =
+        escapeHtml(
+          c.name ||
+          c.username ||
+          "Joueur"
+        );
+
+      const commentaire =
+        escapeHtml(c.comment);
+
+      const photo =
+        escapeHtml(
+          c.profile_photo ||
+          "/default-avatar.png"
+        );
+
+        const proprietaireCommentaire =
+  userId === Number(currentUserId);
+
+const proprietaireVideo =
+  Number(c.video_owner_id) ===
+  Number(currentUserId);
+
+const peutSupprimer =
+  proprietaireCommentaire ||
+  proprietaireVideo;
+      
+      const replies =
+        Array.isArray(c.replies)
+          ? c.replies
+          : [];
+
+      const htmlReplies =
+        replies.map(reply=>{
+
+          const replyId =
+            Number(reply.id);
+
+          const replyUserId =
+            Number(reply.user_id);
+
+          const replyName =
+            escapeHtml(
+              reply.name ||
+              reply.username ||
+              "Joueur"
+            );
+
+          const replyText =
+            escapeHtml(reply.comment);
+
+          const replyPhoto =
+            escapeHtml(
+              reply.profile_photo ||
+              "/default-avatar.png"
+            );
+
+          const replyOwner =
+  replyUserId === Number(currentUserId);
+
+const replyVideoOwner =
+  Number(reply.video_owner_id) ===
+  Number(currentUserId);
+
+const peutSupprimerReponse =
+  replyOwner ||
+  replyVideoOwner;
+
+          return `
+            <div
+              class="comment-reply-item"
+              data-comment-id="${replyId}"
+              style="
+                display:flex;
+                gap:9px;
+                padding:9px 0;
+                margin-left:42px;
+                border-top:1px solid #263348;
+              "
+            >
+
+              <img
+                src="${replyPhoto}"
+                alt="Photo de ${replyName}"
+                loading="lazy"
+                onerror="
+                  this.onerror=null;
+                  this.src='/default-avatar.png';
+                "
+                style="
+                  width:32px;
+                  height:32px;
+                  border-radius:50%;
+                  object-fit:cover;
+                  flex-shrink:0;
+                "
+              >
+
+              <div style="flex:1;min-width:0;">
+
+                <b style="font-size:14px;">
+                  ${replyName}
+                </b>
+
+                <div
+                  style="
+                    margin-top:3px;
+                    font-size:14px;
+                    white-space:pre-wrap;
+                    overflow-wrap:anywhere;
+                  "
+                >${replyText}</div>
+
+                <div
+                  style="
+                    display:flex;
+                    gap:12px;
+                    margin-top:6px;
+                  "
+                >
+
+                  <button
+                    type="button"
+                    onclick="
+                      preparerReponseCommentaire(
+                        ${commentId},
+                        '${replyName.replaceAll("'", "\\'")}'
+                      )
+                    "
+                    style="
+                      width:auto;
+                      padding:0;
+                      margin:0;
+                      background:none;
+                      border:none;
+                      box-shadow:none;
+                      color:#60a5fa;
+                      font-size:12px;
+                    "
+                  >
+                    Répondre
+                  </button>
+
+                  ${
+                    peutSupprimerReponse
+                      ? `
+                        <button
+                          type="button"
+                          onclick="
+                            supprimerCommentaire(
+                              ${replyId},
+                              this
+                            )
+                          "
+                          style="
+                            width:auto;
+                            padding:0;
+                            margin:0;
+                            background:none;
+                            border:none;
+                            box-shadow:none;
+                            color:#ef4444;
+                            font-size:12px;
+                          "
+                        >
+                          Supprimer
+                        </button>
+                      `
+                      : ""
+                  }
+
+                </div>
+
+              </div>
+
+            </div>
+          `;
+
+        }).join("");
+
+      return `
+        <div
+          class="comment-item"
+          data-comment-id="${commentId}"
+          style="
+            padding:10px 0;
+            border-bottom:1px solid #334155;
+          "
+        >
+
+          <div
+            style="
+              display:flex;
+              gap:10px;
+            "
+          >
+
+            <img
+              src="${photo}"
+              alt="Photo de ${nom}"
+              loading="lazy"
+              onerror="
+                this.onerror=null;
+                this.src='/default-avatar.png';
+              "
+              style="
+                width:40px;
+                height:40px;
+                border-radius:50%;
+                object-fit:cover;
+                flex-shrink:0;
+              "
+            >
+
+            <div style="flex:1;min-width:0;">
+
+              <b>${nom}</b>
+
+              <div
+                style="
+                  margin-top:4px;
+                  overflow-wrap:anywhere;
+                  white-space:pre-wrap;
+                "
+              >${commentaire}</div>
+
+              <div
+                style="
+                  display:flex;
+                  gap:14px;
+                  margin-top:8px;
+                "
+              >
+
+                <button
+                  type="button"
+                  onclick="
+                    preparerReponseCommentaire(
+                      ${commentId},
+                      '${nom.replaceAll("'", "\\'")}'
+                    )
+                  "
+                  style="
+                    width:auto;
+                    padding:0;
+                    margin:0;
+                    background:none;
+                    border:none;
+                    box-shadow:none;
+                    color:#60a5fa;
+                    font-size:13px;
+                  "
+                >
+                  Répondre
+                </button>
+
+                ${
+                  peutSupprimer
+                    ? `
+                      <button
+                        type="button"
+                        onclick="
+                          supprimerCommentaire(
+                            ${commentId},
+                            this
+                          )
+                        "
+                        style="
+                          width:auto;
+                          padding:0;
+                          margin:0;
+                          background:none;
+                          border:none;
+                          box-shadow:none;
+                          color:#ef4444;
+                          font-size:13px;
+                        "
+                      >
+                        Supprimer
+                      </button>
+                    `
+                    : ""
+                }
+
+              </div>
+
+              ${
+                replies.length > 0
+                  ? `
+                    <button
+                      type="button"
+                      id="btnReplies_${commentId}"
+                      onclick="
+                        toggleReponsesCommentaire(
+                          ${commentId},
+                          ${replies.length}
+                        )
+                      "
+                      style="
+                        width:auto;
+                        padding:5px 0;
+                        margin-top:7px;
+                        background:none;
+                        border:none;
+                        box-shadow:none;
+                        color:#94a3b8;
+                        font-size:13px;
+                        font-weight:600;
+                      "
+                    >
+                      Voir les ${replies.length}
+                      ${
+                        replies.length > 1
+                          ? "réponses"
+                          : "réponse"
+                      }
+                      ▼
+                    </button>
+                  `
+                  : ""
+              }
+
+            </div>
+
+          </div>
+
+          <div
+            id="replies_${commentId}"
+            class="hidden"
+            style="margin-top:4px;"
+          >
+            ${htmlReplies}
+          </div>
+
         </div>
+      `;
 
-      </div>
-
-    </div>
-
-  `).join("");
+    }).join("");
 
 }
 
+function toggleReponsesCommentaire(
+  commentId,
+  nombreReponses
+){
+
+  const bloc =
+    document.getElementById(
+      "replies_" + commentId
+    );
+
+  const bouton =
+    document.getElementById(
+      "btnReplies_" + commentId
+    );
+
+  if(!bloc || !bouton){
+    return;
+  }
+
+  const estCache =
+    bloc.classList.contains("hidden");
+
+  if(estCache){
+
+    bloc.classList.remove("hidden");
+
+    bouton.innerHTML = `
+      Masquer les réponses ▲
+    `;
+
+  }else{
+
+    bloc.classList.add("hidden");
+
+    bouton.innerHTML = `
+      Voir les ${nombreReponses}
+      ${
+        nombreReponses > 1
+          ? "réponses"
+          : "réponse"
+      }
+      ▼
+    `;
+
+  }
+
+}
+
+let commentaireParentId = null;
+let nomUtilisateurRepondu = "";
+
+function preparerReponseCommentaire(
+  commentId,
+  username
+){
+
+  const id = Number(commentId);
+
+  if(
+    !Number.isInteger(id) ||
+    id <= 0
+  ){
+    return;
+  }
+
+  const input =
+    document.getElementById(
+      "commentInput"
+    );
+
+  if(!input){
+    return;
+  }
+
+  commentaireParentId = id;
+  nomUtilisateurRepondu =
+    String(username || "")
+      .trim()
+      .slice(0,50);
+
+  input.value =
+    nomUtilisateurRepondu
+      ? `@${nomUtilisateurRepondu} `
+      : "";
+
+  input.focus();
+
+}
 
 async function ouvrirModeVideosAvecSon(){
 
@@ -11458,33 +12782,123 @@ async function ouvrirModeVideosAvecSon(){
 
 }
 
+let envoiCommentaireEnCours = false;
+
 async function envoyerCommentaire(){
 
-  console.log("envoyer commentaire");
+  if(envoiCommentaireEnCours){
+    return;
+  }
+
+  const input =
+    document.getElementById(
+      "commentInput"
+    );
+
+  const bouton =
+    document.querySelector(
+      ".comment-send-btn"
+    );
+
+  if(!input){
+    return;
+  }
 
   const texte =
-    commentInput.value.trim();
+    input.value.trim();
+
+  const highlightId =
+    Number(currentCommentVideoId);
+
+  if(
+    !Number.isInteger(highlightId) ||
+    highlightId <= 0
+  ){
+    showNotif(
+      "Vidéo introuvable."
+    );
+    return;
+  }
+
+  if(!currentUserId){
+
+    await gererSessionExpiree();
+    return;
+
+  }
 
   if(!texte){
     return;
   }
 
-  const result =
-    await post("/add-highlight-comment",{
-      highlight_id:currentCommentVideoId,
-      comment:texte
-    });
+  if(texte.length > 500){
 
-  if(result !== "Commentaire ajouté"){
-    message.textContent = result;
+    showNotif(
+      "Le commentaire ne doit pas dépasser 500 caractères."
+    );
+
     return;
   }
 
-  commentInput.value = "";
+  envoiCommentaireEnCours = true;
 
-  await ouvrirCommentaires(
-    currentCommentVideoId
-  );
+  if(bouton){
+    bouton.disabled = true;
+  }
+
+  try{
+
+    const result =
+      await post(
+        "/add-highlight-comment",
+        {
+          highlight_id:highlightId,
+          comment:texte,
+
+          /*
+            Le backend utilisera cette valeur
+            lorsque le système de réponse
+            sera ajouté.
+          */
+          parent_comment_id:
+            commentaireParentId
+        }
+      );
+
+    if(
+      result !== "Commentaire ajouté"
+    ){
+
+      if(
+        result !== "ERREUR_RESEAU"
+      ){
+        showNotif(
+          result ||
+          "Impossible d'ajouter le commentaire."
+        );
+      }
+
+      return;
+    }
+
+    input.value = "";
+
+    commentaireParentId = null;
+    nomUtilisateurRepondu = "";
+
+    await ouvrirCommentaires(
+      highlightId
+    );
+
+  }finally{
+
+    envoiCommentaireEnCours = false;
+
+    if(bouton){
+      bouton.disabled = false;
+    }
+
+  }
 
 }
 
@@ -11508,6 +12922,8 @@ function fermerCommentaires(){
 
   commentsSheet.classList.add("hidden");
 
+  currentCommentVideoId = null;
+
 }
 
 let startY = 0;
@@ -11527,23 +12943,91 @@ commentsSheet.addEventListener("touchend", e=>{
 
 });
 
-async function supprimerCommentaire(commentId){
+const commentairesSuppressionEnCours =
+  new Set();
 
-  const ok =
-    confirm("Supprimer ce commentaire ?");
+async function supprimerCommentaire(
+  commentId,
+  bouton
+){
 
-  if(!ok){
+  const id = Number(commentId);
+
+  if(
+    !Number.isInteger(id) ||
+    id <= 0
+  ){
     return;
   }
 
-  const result =
-    await post("/delete-highlight-comment",{
-      comment_id:commentId
-    });
+  if(
+    commentairesSuppressionEnCours
+      .has(id)
+  ){
+    return;
+  }
 
-  message.textContent = result;
+  const confirmation =
+    confirm(
+      "Supprimer ce commentaire ?"
+    );
 
-  await ouvrirCommentaires(currentCommentVideoId);
+  if(!confirmation){
+    return;
+  }
+
+  commentairesSuppressionEnCours
+    .add(id);
+
+  if(bouton){
+    bouton.disabled = true;
+  }
+
+  try{
+
+    const result =
+      await post(
+        "/delete-highlight-comment",
+        {
+          comment_id:id
+        }
+      );
+
+    if(
+      result !== "Commentaire supprimé"
+    ){
+
+      showNotif(
+        result ||
+        "Impossible de supprimer le commentaire."
+      );
+
+      return;
+    }
+
+    showNotif(
+      "Commentaire supprimé."
+    );
+
+    const ligne =
+      document.querySelector(
+        `.comment-item[data-comment-id="${id}"]`
+      );
+
+    if(ligne){
+      ligne.remove();
+    }
+
+  }finally{
+
+    commentairesSuppressionEnCours
+      .delete(id);
+
+    if(bouton){
+      bouton.disabled = false;
+    }
+
+  }
 
 }
 
@@ -11868,34 +13352,85 @@ function verifierPubliciteDashboard(){
 
 let currentPublicUserId = null;
 
-let swipeStartX = 0;
-let swipeStartY = 0;
-
 let pageHistory = [];
 let currentPageName = null;
 let panelHistory = [];
 let currentPanelName = null;
 
+let swipeStartX = null;
+let swipeStartY = null;
+
 document.addEventListener("touchstart", e=>{
 
-  swipeStartX = e.touches[0].clientX;
-  swipeStartY = e.touches[0].clientY;
+  const zoneInterdite =
+    e.target.closest(
+      [
+        ".wc-wrap",
+        ".competition-sidebar",
+        ".arbre-sidebar",
+        ".tiktok-feed",
+        ".table-wrap",
+        "input",
+        "textarea",
+        "select",
+        "button"
+      ].join(",")
+    );
+
+  if(zoneInterdite){
+
+    swipeStartX = null;
+    swipeStartY = null;
+
+    return;
+
+  }
+
+  swipeStartX =
+    e.touches[0].clientX;
+
+  swipeStartY =
+    e.touches[0].clientY;
 
 });
 
 document.addEventListener("touchend", e=>{
 
-  const endX = e.changedTouches[0].clientX;
-  const endY = e.changedTouches[0].clientY;
+  if(
+    swipeStartX === null ||
+    swipeStartY === null
+  ){
+    return;
+  }
 
-  const diffX = endX - swipeStartX;
-  const diffY = endY - swipeStartY;
+  const endX =
+    e.changedTouches[0].clientX;
+
+  const endY =
+    e.changedTouches[0].clientY;
+
+  const diffX =
+    endX - swipeStartX;
+
+  const diffY =
+    endY - swipeStartY;
+
+  swipeStartX = null;
+  swipeStartY = null;
 
   if(Math.abs(diffX) < 120){
     return;
   }
 
   if(Math.abs(diffY) > 60){
+    return;
+  }
+
+  /*
+    Le retour fonctionne seulement
+    avec un glissement vers la droite.
+  */
+  if(diffX < 0){
     return;
   }
 
@@ -11935,6 +13470,8 @@ function usernameMessage(text, type = "info"){
   msg.className =
     "form-message " + type;
 }
+
+let timerRetourUsername = null;
 
 async function updateUsername(){
 
@@ -12029,13 +13566,24 @@ async function updateUsername(){
 
       await ouvrirProfilCompte();
 
-      setTimeout(()=>{
+     clearTimeout(timerRetourUsername);
 
-        setPage(
-          "pageModifierProfil"
-        );
+timerRetourUsername = setTimeout(()=>{
 
-      },1500);
+  /*
+    On change la page seulement si
+    l'utilisateur se trouve encore
+    dans la partie modification du profil.
+  */
+  if(
+    currentPageName === "pageChangerUsername"
+  ){
+    setPage("pageModifierProfil");
+  }
+
+  timerRetourUsername = null;
+
+},1500); 
 
       return;
     }
@@ -12204,35 +13752,6 @@ function hideVideoCover(video){
   }
 
 }
-
-
-async function creerParticipantsTest(){
-
-  if(!tournoiSelect.value){
-    message.textContent = "Sélectionne un tournoi";
-    return;
-  }
-
-  if(!confirm("Créer 32 joueurs test dans ce tournoi ?")){
-    return;
-  }
-
-  message.textContent = "Création des 32 joueurs test...";
-
-  const result = await post(
-    "/admin/create-test-participants?admin=Djiby_77714",
-    {
-      tournament_id:tournoiSelect.value
-    }
-  );
-
-  message.textContent = result;
-
-  await chargerParticipants();
-  await afficherClassementRapide32();
-
-}
-
 async function afficherLienGroupeApresInscription(joinCode){
 
   const info =

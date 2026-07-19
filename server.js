@@ -153,16 +153,25 @@ if(!SESSION_SECRET){
   );
 
 }
+const DATABASE_PATH =
+  path.join(
+    DATA_DIR,
+    "database.sqlite"
+  );
 
-const db = new sqlite3.Database(
-  path.join(DATA_DIR,"database.sqlite")
-);
+const db =
+  new sqlite3.Database(
+    DATABASE_PATH
+  );
+
+
 
 db.serialize(()=>{
   db.run("PRAGMA journal_mode = WAL");
   db.run("PRAGMA synchronous = NORMAL");
   db.run("PRAGMA cache_size = 10000");
   db.run("PRAGMA temp_store = MEMORY");
+  db.run("PRAGMA busy_timeout = 5000");
 });
 
 app.use(express.json({ limit:"20mb" }));
@@ -490,6 +499,164 @@ function all(sql,params=[]){
   });
 
 }
+let fileTransactions =
+  Promise.resolve();
+
+function executerTransaction(operation){
+
+  const lancerTransaction =
+    async ()=>{
+
+      const transactionDb =
+        new sqlite3.Database(
+          DATABASE_PATH
+        );
+
+      const transactionRun =
+        (sql, params = []) =>
+          new Promise(
+            (resolve, reject)=>{
+
+              transactionDb.run(
+                sql,
+                params,
+                function(error){
+
+                  if(error){
+                    reject(error);
+                  }else{
+                    resolve(this);
+                  }
+
+                }
+              );
+
+            }
+          );
+
+      const transactionGet =
+        (sql, params = []) =>
+          new Promise(
+            (resolve, reject)=>{
+
+              transactionDb.get(
+                sql,
+                params,
+                (error, row)=>{
+
+                  if(error){
+                    reject(error);
+                  }else{
+                    resolve(row);
+                  }
+
+                }
+              );
+
+            }
+          );
+
+      const transactionAll =
+        (sql, params = []) =>
+          new Promise(
+            (resolve, reject)=>{
+
+              transactionDb.all(
+                sql,
+                params,
+                (error, rows)=>{
+
+                  if(error){
+                    reject(error);
+                  }else{
+                    resolve(rows || []);
+                  }
+
+                }
+              );
+
+            }
+          );
+
+      try{
+
+        await transactionRun(
+          "PRAGMA busy_timeout = 5000"
+        );
+
+        await transactionRun(
+          "BEGIN IMMEDIATE TRANSACTION"
+        );
+
+        const resultat =
+          await operation({
+            run:transactionRun,
+            get:transactionGet,
+            all:transactionAll
+          });
+
+        await transactionRun(
+          "COMMIT"
+        );
+
+        return resultat;
+
+      }catch(error){
+
+        try{
+
+          await transactionRun(
+            "ROLLBACK"
+          );
+
+        }catch(errorRollback){
+
+          console.error(
+            "Erreur ROLLBACK :",
+            errorRollback
+          );
+
+        }
+
+        throw error;
+
+      }finally{
+
+        await new Promise(resolve=>{
+
+          transactionDb.close(error=>{
+
+            if(error){
+
+              console.error(
+                "Erreur fermeture transaction :",
+                error
+              );
+
+            }
+
+            resolve();
+
+          });
+
+        });
+
+      }
+
+    };
+
+  const transaction =
+    fileTransactions.then(
+      lancerTransaction,
+      lancerTransaction
+    );
+
+  fileTransactions =
+    transaction.catch(()=>{});
+
+  return transaction;
+
+}
 
 async function donnerBadge(
   participant_id,
@@ -716,6 +883,29 @@ db.run(`
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP
     )
   `);
+  db.run(
+  `
+  ALTER TABLE highlight_comments
+  ADD COLUMN parent_comment_id INTEGER
+  `,
+  err=>{
+
+    if(
+      err &&
+      !String(err.message).includes(
+        "duplicate column name"
+      )
+    ){
+
+      console.error(
+        "Erreur ajout parent_comment_id :",
+        err
+      );
+
+    }
+
+  }
+);
 
   db.run(`
     CREATE TABLE IF NOT EXISTS follows(
@@ -859,6 +1049,54 @@ CREATE TABLE IF NOT EXISTS notifications(
   created_at TEXT DEFAULT CURRENT_TIMESTAMP
 )
 `);
+db.run(
+  `
+  ALTER TABLE notifications
+  ADD COLUMN highlight_id INTEGER
+  `,
+  err=>{
+
+    if(
+      err &&
+      !String(err.message).includes(
+        "duplicate column name"
+      )
+    ){
+
+      console.error(
+        "Erreur ajout highlight_id :",
+        err
+      );
+
+    }
+
+  }
+);
+
+db.run(
+  `
+  ALTER TABLE notifications
+  ADD COLUMN type TEXT DEFAULT 'general'
+  `,
+  err=>{
+
+    if(
+      err &&
+      !String(err.message).includes(
+        "duplicate column name"
+      )
+    ){
+
+      console.error(
+        "Erreur ajout colonne type :",
+        err
+      );
+
+    }
+
+  }
+);
+
 db.run(`
   ALTER TABLE highlights
   ADD COLUMN user_id INTEGER
@@ -2618,71 +2856,54 @@ app.post("/reset-tournoi", async (req,res)=>{
 
     }
 
-    await run("BEGIN TRANSACTION");
+    await executerTransaction(
+  async ({ run })=>{
 
-    try{
+    await run(
+      `
+      DELETE FROM matches
+      WHERE tournament_id=?
+      `,
+      [tournamentId]
+    );
 
-      await run(
-        `
-        DELETE FROM matches
-        WHERE tournament_id=?
-        `,
-        [tournamentId]
-      );
+    await run(
+      `
+      DELETE FROM rapid_qualifiers
+      WHERE tournament_id=?
+      `,
+      [tournamentId]
+    );
 
-      await run(
-        `
-        DELETE FROM rapid_qualifiers
-        WHERE tournament_id=?
-        `,
-        [tournamentId]
-      );
+    await run(
+      `
+      UPDATE participants
+      SET group_name=NULL
+      WHERE tournament_id=?
+      `,
+      [tournamentId]
+    );
 
-      await run(
-        `
-        UPDATE participants
-        SET group_name=NULL
-        WHERE tournament_id=?
-        `,
-        [tournamentId]
-      );
+    await run(
+      `
+      UPDATE tournaments
+      SET status='open',
+          champion_id=NULL
+      WHERE id=?
+      `,
+      [tournamentId]
+    );
 
-      await run(
-        `
-        UPDATE tournaments
-        SET status='open',
-            champion_id=NULL
-        WHERE id=?
-        `,
-        [tournamentId]
-      );
+  }
+);
 
-      await run("COMMIT");
-
-      return res.send(
-        tr(
-          req,
-          "Tournoi réinitialisé",
-          "Tournament reset"
-        )
-      );
-
-    }catch(errorTransaction){
-
-      try{
-        await run("ROLLBACK");
-      }catch(errorRollback){
-
-        console.error(
-          "Erreur ROLLBACK reset tournoi :",
-          errorRollback
-        );
-
-      }
-
-      throw errorTransaction;
-
-    }
+return res.send(
+  tr(
+    req,
+    "Tournoi réinitialisé",
+    "Tournament reset"
+  )
+);
 
   }catch(error){
 
@@ -4453,8 +4674,15 @@ async function recupererQualifiesPoules(
 
 async function creerPremierTourPhaseFinale(
   tournamentId,
-  qualifies
+  qualifies,
+  outilsTransaction = {}
 ){
+
+  const transactionGet =
+    outilsTransaction.get || get;
+
+  const transactionRun =
+    outilsTransaction.run || run;
 
   if(
     !Array.isArray(qualifies) ||
@@ -4478,7 +4706,8 @@ async function creerPremierTourPhaseFinale(
 
   }
 
-  const dejaCree = await get(
+  const dejaCree =
+  await transactionGet(
     `
     SELECT COUNT(*) AS total
     FROM matches
@@ -4531,7 +4760,7 @@ async function creerPremierTourPhaseFinale(
       continue;
     }
 
-    await run(
+    await transactionRun(
       `
       INSERT INTO matches(
         tournament_id,
@@ -4553,7 +4782,7 @@ async function creerPremierTourPhaseFinale(
       ]
     );
 
-    await run(
+    await transactionRun(
       `
       INSERT INTO matches(
         tournament_id,
@@ -7506,9 +7735,37 @@ app.get("/followers/:id", async (req,res)=>{
   }
 
 });
+
 app.get("/user-followers/:id", async (req,res)=>{
 
   try{
+
+    const userId =
+      Number(req.params.id);
+
+    if(
+      !Number.isInteger(userId) ||
+      userId <= 0
+    ){
+
+      return res.status(400).json([]);
+
+    }
+
+    const user = await get(
+      `
+      SELECT id
+      FROM users
+      WHERE id=?
+      `,
+      [userId]
+    );
+
+    if(!user){
+
+      return res.status(404).json([]);
+
+    }
 
     const users = await all(
       `
@@ -7517,23 +7774,30 @@ app.get("/user-followers/:id", async (req,res)=>{
         u.name,
         u.username,
         u.profile_photo
-      FROM followers f
+      FROM follows f
       JOIN users u
         ON u.id = f.follower_id
-      WHERE f.following_id=?
+      WHERE f.following_participant_id=?
       ORDER BY f.id DESC
       `,
-      [req.params.id]
+      [userId]
     );
 
-    res.json(users);
+    return res.json(users);
 
-  }catch(e){
-    console.log(e);
-    res.json([]);
+  }catch(error){
+
+    console.error(
+      "Erreur liste abonnés :",
+      error
+    );
+
+    return res.status(500).json([]);
+
   }
 
 });
+
 app.get("/user-following/:id", async (req,res)=>{
 
   try{
@@ -7545,9 +7809,9 @@ app.get("/user-following/:id", async (req,res)=>{
         u.name,
         u.username,
         u.profile_photo
-      FROM followers f
+      FROM follows f
       JOIN users u
-        ON u.id = f.following_id
+        ON u.id = f.following_participant_id
       WHERE f.follower_id=?
       ORDER BY f.id DESC
       `,
@@ -7557,8 +7821,14 @@ app.get("/user-following/:id", async (req,res)=>{
     res.json(users);
 
   }catch(e){
-    console.log(e);
+
+    console.log(
+      "Erreur liste suivis :",
+      e
+    );
+
     res.json([]);
+
   }
 
 });
@@ -7929,42 +8199,7 @@ app.post(
 
     }
 
-    const dejaMatchs = await get(
-      `
-      SELECT COUNT(*) AS total
-      FROM matches
-      WHERE tournament_id=?
-      `,
-      [tournamentId]
-    );
-
-    if(
-      Number(dejaMatchs.total || 0) > 0
-    ){
-
-      return res.status(409).send(
-        tr(
-          req,
-          "Tirage déjà généré",
-          "Draw already generated"
-        )
-      );
-
-    }
-
-    /*
-      Toutes les vérifications sont terminées.
-      On peut maintenant commencer la transaction.
-    */
-    await run("BEGIN TRANSACTION");
-
-    try{
-
-      
-      /*
-        TOURNOI AVEC POULES
-      */
-      if(tournoi.type !== "poule"){
+    if(tournoi.type !== "poule"){
 
   return res.status(400).send(
     tr(
@@ -7976,136 +8211,144 @@ app.post(
 
 }
 
-      const groupes =
-        genererGroupesAuto(
-          participants
+await executerTransaction(
+  async ({ run, get })=>{
+
+    /*
+      Cette vérification est faite dans
+      la transaction verrouillée.
+
+      Même si deux personnes cliquent
+      presque au même moment, une seule
+      pourra créer les matchs.
+    */
+    const dejaMatchs =
+      await get(
+        `
+        SELECT COUNT(*) AS total
+        FROM matches
+        WHERE tournament_id=?
+        `,
+        [tournamentId]
+      );
+
+    if(
+      Number(dejaMatchs?.total || 0) > 0
+    ){
+
+      const erreur =
+        new Error("TIRAGE_DEJA_GENERE");
+
+      erreur.code =
+        "TIRAGE_DEJA_GENERE";
+
+      throw erreur;
+
+    }
+
+    const groupes =
+      genererGroupesAuto(
+        participants
+      );
+
+    let matchOrder = 1;
+
+    for(
+      let indexGroupe = 0;
+      indexGroupe < groupes.length;
+      indexGroupe++
+    ){
+
+      const groupe =
+        groupes[indexGroupe];
+
+      const groupName =
+        String.fromCharCode(
+          65 + indexGroupe
         );
 
-      let matchOrder = 1;
+      for(const participant of groupe){
 
-      for(
-        let indexGroupe = 0;
-        indexGroupe < groupes.length;
-        indexGroupe++
-      ){
+        await run(
+          `
+          UPDATE participants
+          SET group_name=?
+          WHERE id=?
+            AND tournament_id=?
+          `,
+          [
+            groupName,
+            participant.id,
+            tournamentId
+          ]
+        );
 
-        const groupe =
-          groupes[indexGroupe];
+      }
 
-        const groupName =
-          String.fromCharCode(
-            65 + indexGroupe
-          );
+      const journees =
+        genererMatchsPoule(
+          groupe
+        );
 
-        for(const participant of groupe){
+      for(const journee of journees){
+
+        for(const match of journee){
 
           await run(
             `
-            UPDATE participants
-            SET group_name=?
-            WHERE id=?
-              AND tournament_id=?
+            INSERT INTO matches(
+              tournament_id,
+              round,
+              group_name,
+              match_order,
+              player1_id,
+              player2_id
+            )
+            VALUES(?,?,?,?,?,?)
             `,
             [
+              tournamentId,
+              "POULE",
               groupName,
-              participant.id,
-              tournamentId
+              matchOrder++,
+              match[0].id,
+              match[1].id
             ]
           );
 
         }
 
-        const journees =
-          genererMatchsPoule(
-            groupe
-          );
-
-        for(const journee of journees){
-
-          for(const match of journee){
-
-            await run(
-              `
-              INSERT INTO matches(
-                tournament_id,
-                round,
-                group_name,
-                match_order,
-                player1_id,
-                player2_id
-              )
-              VALUES(?,?,?,?,?,?)
-              `,
-              [
-                tournamentId,
-                "POULE",
-                groupName,
-                matchOrder++,
-                match[0].id,
-                match[1].id
-              ]
-            );
-
-          }
-
-        }
-
       }
-
-      await run(
-        `
-        UPDATE tournaments
-        SET status='started'
-        WHERE id=?
-        `,
-        [tournamentId]
-      );
-
-      await run("COMMIT");
-
-      /*
-        Les notifications sont envoyées après
-        la validation de la transaction.
-      */
-      for(const participant of participants){
-
-        if(!participant.user_id){
-          continue;
-        }
-
-        await notifierUtilisateur(
-          participant.user_id,
-          "🏆 Début du tournoi",
-          `Le tournoi "${tournoi.name}" vient de commencer.`,
-          `tournament:${tournamentId}`
-        );
-
-      }
-
-      return res.send(
-        tr(
-          req,
-          "Tirage poules généré",
-          "Group-stage draw generated"
-        )
-      );
-
-    }catch(errorTransaction){
-
-      try{
-        await run("ROLLBACK");
-      }catch(errorRollback){
-        console.error(
-          "Erreur ROLLBACK tirage :",
-          errorRollback
-        );
-      }
-
-      throw errorTransaction;
 
     }
 
-  }catch(error){
+    await run(
+      `
+      UPDATE tournaments
+      SET status='started'
+      WHERE id=?
+      `,
+      [tournamentId]
+    );
+
+  }
+);
+
+}catch(error){
+
+if(error.code === "TIRAGE_DEJA_GENERE"){
+
+  return res.status(409).send(
+    tr(
+      req,
+      "Les matchs de poule ont déjà été générés",
+      "Group-stage matches have already been generated"
+    )
+  );
+
+}
+
+  
 
     console.error(
       "Erreur tirage :",
@@ -8255,52 +8498,41 @@ console.log(
 
     }
 
-    await run("BEGIN TRANSACTION");
+    const resultat =
+  await executerTransaction(
+    async ({ get, run })=>{
 
-    try{
-
-      const resultat =
-        await creerPremierTourPhaseFinale(
-          tournamentId,
-          qualifies
-        );
-
-      await run("COMMIT");
-
-      if(!resultat.created){
-
-        return res.status(409).send(
-          tr(
-            req,
-            "La phase finale est déjà générée",
-            "The knockout stage has already been generated"
-          )
-        );
-
-      }
-
-      return res.send(
-        tr(
-          req,
-          `Phase finale générée : ${resultat.round}`,
-          `Knockout stage generated: ${resultat.round}`
-        )
+      return await creerPremierTourPhaseFinale(
+        tournamentId,
+        qualifies,
+        {
+          get,
+          run
+        }
       );
 
-    }catch(errorTransaction){
-
-      try{
-        await run("ROLLBACK");
-      }catch(errorRollback){
-        console.error(
-          "Erreur ROLLBACK phase finale :",
-          errorRollback
-        );
-      }
-
-      throw errorTransaction;
-
     }
+  );
+
+if(!resultat.created){
+
+  return res.status(409).send(
+    tr(
+      req,
+      "La phase finale est déjà générée",
+      "The knockout stage has already been generated"
+    )
+  );
+
+}
+
+return res.send(
+  tr(
+    req,
+    `Phase finale générée : ${resultat.round}`,
+    `Knockout stage generated: ${resultat.round}`
+  )
+);
 
   }catch(error){
 
@@ -9879,19 +10111,21 @@ app.get("/notifications", async (req,res)=>{
     }
 
     const rows = await all(
-      `
-      SELECT
-        id,
-        message,
-        seen,
-        created_at
-      FROM notifications
-      WHERE user_id=?
-      ORDER BY id DESC
-      LIMIT 50
-      `,
-      [req.session.userId]
-    );
+  `
+  SELECT
+    id,
+    message,
+    type,
+    highlight_id,
+    seen,
+    created_at
+  FROM notifications
+  WHERE user_id=?
+  ORDER BY id DESC
+  LIMIT 50
+  `,
+  [req.session.userId]
+);
 
     return res.json(rows);
 
@@ -9915,175 +10149,164 @@ app.get("/notifications", async (req,res)=>{
 
 });
 
-app.post("/delete-highlight", async (req,res)=>{
-
-  try{
-
-    if(!connected(req)){
-
-      return res.status(401).send(
-        tr(
-          req,
-          "Connecte-toi",
-          "Please log in"
-        )
-      );
-
-    }
-
-    const highlightId =
-      Number(req.body.id);
-
-    if(
-      !Number.isInteger(highlightId) ||
-      highlightId <= 0
-    ){
-
-      return res.status(400).send(
-        tr(
-          req,
-          "Vidéo invalide",
-          "Invalid video"
-        )
-      );
-
-    }
-
-    const highlight = await get(
-      `
-      SELECT id, user_id
-      FROM highlights
-      WHERE id=?
-      `,
-      [highlightId]
-    );
-
-    if(!highlight){
-
-      return res.status(404).send(
-        tr(
-          req,
-          "Vidéo introuvable",
-          "Video not found"
-        )
-      );
-
-    }
-
-    if(
-      Number(highlight.user_id) !==
-      Number(req.session.userId)
-    ){
-
-      return res.status(403).send(
-        tr(
-          req,
-          "Tu ne peux supprimer que tes vidéos",
-          "You can only delete your own videos"
-        )
-      );
-
-    }
-
-    await run("BEGIN TRANSACTION");
+app.post(
+  "/delete-highlight-comment",
+  async (req,res)=>{
 
     try{
 
-      await run(
-        `
-        DELETE FROM highlight_likes
-        WHERE highlight_id=?
-        `,
-        [highlightId]
-      );
+      if(!connected(req)){
+
+        return res
+          .status(401)
+          .send(
+            tr(
+              req,
+              "Connecte-toi",
+              "Please log in"
+            )
+          );
+
+      }
+
+      const userId =
+        Number(req.session.userId);
+
+      const commentId =
+        Number(req.body.comment_id);
+
+      if(
+        !Number.isInteger(commentId) ||
+        commentId <= 0
+      ){
+
+        return res
+          .status(400)
+          .send(
+            tr(
+              req,
+              "Commentaire invalide",
+              "Invalid comment"
+            )
+          );
+
+      }
+
+      const commentaire =
+        await get(
+          `
+          SELECT
+            hc.id,
+            hc.participant_id,
+            hc.parent_comment_id,
+            h.user_id AS video_owner_id
+          FROM highlight_comments hc
+
+          JOIN highlights h
+            ON h.id = hc.highlight_id
+
+          WHERE hc.id=?
+          LIMIT 1
+          `,
+          [commentId]
+        );
+
+      if(!commentaire){
+
+        return res
+          .status(404)
+          .send(
+            tr(
+              req,
+              "Commentaire introuvable",
+              "Comment not found"
+            )
+          );
+
+      }
+
+      const estAuteur =
+        Number(
+          commentaire.participant_id
+        ) === userId;
+
+      const estProprietaireVideo =
+        Number(
+          commentaire.video_owner_id
+        ) === userId;
+
+      if(
+        !estAuteur &&
+        !estProprietaireVideo
+      ){
+
+        return res
+          .status(403)
+          .send(
+            tr(
+              req,
+              "Tu ne peux pas supprimer ce commentaire",
+              "You cannot delete this comment"
+            )
+          );
+
+      }
+
+      /*
+        Si le commentaire principal est supprimé,
+        supprimer aussi toutes ses réponses.
+      */
+      if(
+        commentaire.parent_comment_id === null
+      ){
+
+        await run(
+          `
+          DELETE FROM highlight_comments
+          WHERE parent_comment_id=?
+          `,
+          [commentId]
+        );
+
+      }
 
       await run(
         `
         DELETE FROM highlight_comments
-        WHERE highlight_id=?
-        `,
-        [highlightId]
-      );
-
-      await run(
-        `
-        DELETE FROM video_favorites
-        WHERE highlight_id=?
-        `,
-        [highlightId]
-      );
-
-      await run(
-        `
-        DELETE FROM highlight_views
-        WHERE highlight_id=?
-        `,
-        [highlightId]
-      );
-
-      await run(
-        `
-        DELETE FROM video_watch_time
-        WHERE highlight_id=?
-        `,
-        [highlightId]
-      );
-
-      await run(
-        `
-        DELETE FROM warnings
-        WHERE video_id=?
-        `,
-        [highlightId]
-      );
-
-      await run(
-        `
-        DELETE FROM highlights
         WHERE id=?
-          AND user_id=?
         `,
-        [
-          highlightId,
-          req.session.userId
-        ]
+        [commentId]
       );
 
-      await run("COMMIT");
+      return res.send(
+        tr(
+          req,
+          "Commentaire supprimé",
+          "Comment deleted"
+        )
+      );
 
     }catch(error){
 
-      await run("ROLLBACK");
-      throw error;
+      console.error(
+        "Erreur suppression commentaire :",
+        error
+      );
+
+      return res
+        .status(500)
+        .send(
+          tr(
+            req,
+            "Impossible de supprimer le commentaire",
+            "Unable to delete comment"
+          )
+        );
 
     }
 
-    return res.send(
-      tr(
-        req,
-        "Vidéo supprimée",
-        "Video deleted"
-      )
-    );
-
-  }catch(error){
-
-    console.error(
-      "Erreur suppression vidéo :",
-      error
-    );
-
-    return res.status(500).send(
-      tr(
-        req,
-        "Erreur suppression vidéo",
-        "Failed to delete video"
-      )
-    );
-
   }
-
-});
+);
 
 app.get("/my-videos", async (req,res)=>{
 
@@ -11706,29 +11929,34 @@ app.get("/my-social-stats", async (req,res)=>{
   try{
 
     if(!connected(req)){
-      return res.json({
+
+      return res.status(401).json({
         followers:0,
         following:0,
         likes:0
       });
+
     }
+
+    const userId =
+      Number(req.session.userId);
 
     const followers = await get(
       `
       SELECT COUNT(*) AS total
-      FROM followers
-      WHERE following_id=?
+      FROM follows
+      WHERE following_participant_id=?
       `,
-      [req.session.userId]
+      [userId]
     );
 
     const following = await get(
       `
       SELECT COUNT(*) AS total
-      FROM followers
+      FROM follows
       WHERE follower_id=?
       `,
-      [req.session.userId]
+      [userId]
     );
 
     const likes = await get(
@@ -11737,20 +11965,23 @@ app.get("/my-social-stats", async (req,res)=>{
       FROM highlights
       WHERE user_id=?
       `,
-      [req.session.userId]
+      [userId]
     );
 
-    res.json({
-      followers: followers?.total || 0,
-      following: following?.total || 0,
-      likes: likes?.total || 0
+    return res.json({
+      followers:Number(followers?.total || 0),
+      following:Number(following?.total || 0),
+      likes:Number(likes?.total || 0)
     });
 
-  }catch(e){
+  }catch(error){
 
-    console.log(e);
+    console.error(
+      "Erreur statistiques sociales :",
+      error
+    );
 
-    res.json({
+    return res.status(500).json({
       followers:0,
       following:0,
       likes:0
@@ -11759,7 +11990,6 @@ app.get("/my-social-stats", async (req,res)=>{
   }
 
 });
-
 app.get("/my-profile-videos", async (req,res)=>{
 
   try{
@@ -11975,123 +12205,388 @@ app.post(
 
       if(!connected(req)){
 
-        return res.status(401).send(
-          tr(
-            req,
-            "Connecte-toi pour commenter",
-            "Log in to comment"
-          )
-        );
+        return res
+          .status(401)
+          .send(
+            tr(
+              req,
+              "Connecte-toi",
+              "Please log in"
+            )
+          );
 
       }
 
+      const userId =
+        Number(req.session.userId);
+
       const highlightId =
         Number(req.body.highlight_id);
+
+      const parentCommentId =
+        req.body.parent_comment_id !== null &&
+        req.body.parent_comment_id !== undefined &&
+        req.body.parent_comment_id !== ""
+          ? Number(req.body.parent_comment_id)
+          : null;
 
       const comment =
         String(req.body.comment || "")
           .trim();
 
       if(
+        !Number.isInteger(userId) ||
+        userId <= 0
+      ){
+
+        return res
+          .status(401)
+          .send(
+            tr(
+              req,
+              "Session invalide",
+              "Invalid session"
+            )
+          );
+
+      }
+
+      if(
         !Number.isInteger(highlightId) ||
         highlightId <= 0
       ){
 
-        return res.status(400).send(
-          tr(
-            req,
-            "Vidéo invalide",
-            "Invalid video"
-          )
-        );
+        return res
+          .status(400)
+          .send(
+            tr(
+              req,
+              "Vidéo invalide",
+              "Invalid video"
+            )
+          );
 
       }
 
       if(!comment){
 
-        return res.status(400).send(
-          tr(
-            req,
-            "Commentaire obligatoire",
-            "Comment is required"
-          )
-        );
+        return res
+          .status(400)
+          .send(
+            tr(
+              req,
+              "Commentaire obligatoire",
+              "Comment is required"
+            )
+          );
 
       }
 
       if(comment.length > 500){
 
-        return res.status(400).send(
-          tr(
-            req,
-            "Le commentaire ne doit pas dépasser 500 caractères",
-            "The comment must not exceed 500 characters"
-          )
-        );
+        return res
+          .status(400)
+          .send(
+            tr(
+              req,
+              "Le commentaire ne doit pas dépasser 500 caractères",
+              "The comment must not exceed 500 characters"
+            )
+          );
 
       }
 
-      if(containsBadWords(comment)){
-
-        return res.status(400).send(
-          tr(
-            req,
-            "Contenu interdit détecté",
-            "Forbidden content detected"
-          )
+      /*
+        Vérifier que la vidéo existe.
+      */
+      const highlight =
+        await get(
+          `
+          SELECT
+            id,
+            user_id
+          FROM highlights
+          WHERE id=?
+          LIMIT 1
+          `,
+          [highlightId]
         );
-
-      }
-
-      const highlight = await get(
-        `
-        SELECT id, user_id
-        FROM highlights
-        WHERE id=?
-        `,
-        [highlightId]
-      );
 
       if(!highlight){
 
-        return res.status(404).send(
-          tr(
-            req,
-            "Vidéo introuvable",
-            "Video not found"
-          )
-        );
+        return res
+          .status(404)
+          .send(
+            tr(
+              req,
+              "Vidéo introuvable",
+              "Video not found"
+            )
+          );
 
       }
 
-      await run(
-        `
-        INSERT INTO highlight_comments(
-          highlight_id,
-          user_id,
-          comment
-        )
-        VALUES(?,?,?)
-        `,
-        [
-          highlightId,
-          req.session.userId,
-          comment
-        ]
-      );
+      /*
+        Vérifier le commentaire parent.
+      */
+      let parentComment = null;
 
+      if(parentCommentId !== null){
+
+        if(
+          !Number.isInteger(parentCommentId) ||
+          parentCommentId <= 0
+        ){
+
+          return res
+            .status(400)
+            .send(
+              tr(
+                req,
+                "Commentaire parent invalide",
+                "Invalid parent comment"
+              )
+            );
+
+        }
+
+        parentComment =
+          await get(
+            `
+            SELECT
+              id,
+              participant_id,
+              parent_comment_id
+            FROM highlight_comments
+            WHERE id=?
+              AND highlight_id=?
+            LIMIT 1
+            `,
+            [
+              parentCommentId,
+              highlightId
+            ]
+          );
+
+        if(!parentComment){
+
+          return res
+            .status(404)
+            .send(
+              tr(
+                req,
+                "Commentaire parent introuvable",
+                "Parent comment not found"
+              )
+            );
+
+        }
+
+        /*
+          Toutes les réponses sont rattachées
+          au commentaire principal.
+
+          Si l'utilisateur répond à une réponse,
+          on récupère le parent principal.
+        */
+        if(parentComment.parent_comment_id){
+
+          parentCommentId =
+            Number(
+              parentComment.parent_comment_id
+            );
+
+          parentComment =
+            await get(
+              `
+              SELECT
+                id,
+                participant_id,
+                parent_comment_id
+              FROM highlight_comments
+              WHERE id=?
+                AND highlight_id=?
+              LIMIT 1
+              `,
+              [
+                parentCommentId,
+                highlightId
+              ]
+            );
+
+          if(!parentComment){
+
+            return res
+              .status(404)
+              .send(
+                tr(
+                  req,
+                  "Commentaire principal introuvable",
+                  "Main comment not found"
+                )
+              );
+
+          }
+
+        }
+
+      }
+
+      /*
+        Empêcher plusieurs commentaires
+        identiques pendant 10 secondes.
+      */
+      const commentaireRecent =
+        await get(
+          `
+          SELECT id
+          FROM highlight_comments
+          WHERE highlight_id=?
+            AND participant_id=?
+            AND comment=?
+            AND created_at >= datetime(
+              'now',
+              '-10 seconds'
+            )
+          LIMIT 1
+          `,
+          [
+            highlightId,
+            userId,
+            comment
+          ]
+        );
+
+      if(commentaireRecent){
+
+        return res
+          .status(429)
+          .send(
+            tr(
+              req,
+              "Commentaire déjà envoyé",
+              "Comment already sent"
+            )
+          );
+
+      }
+
+      /*
+        participant_id contient ici
+        l'identifiant users.id de la session.
+      */
+      const result =
+        await run(
+          `
+          INSERT INTO highlight_comments(
+            highlight_id,
+            participant_id,
+            comment,
+            parent_comment_id,
+            created_at
+          )
+          VALUES(
+            ?, ?, ?, ?, CURRENT_TIMESTAMP
+          )
+          `,
+          [
+            highlightId,
+            userId,
+            comment,
+            parentCommentId
+          ]
+        );
+
+      /*
+        Notification au propriétaire
+        de la vidéo.
+      */
       if(
-        highlight.user_id &&
-        Number(highlight.user_id) !==
-        Number(req.session.userId)
+        Number(highlight.user_id) !== userId
       ){
 
-        await notifierUtilisateur(
-          highlight.user_id,
-          "💬 Nouveau commentaire",
-          "Quelqu'un a commenté ta vidéo",
-          `video:${highlightId}`
-        );
+        await run(
+  `
+  INSERT INTO notifications(
+    user_id,
+    type,
+    message,
+    highlight_id,
+    created_at
+  )
+  VALUES(
+    ?, ?, ?, ?, CURRENT_TIMESTAMP
+  )
+  `,
+  [
+    Number(highlight.user_id),
+    "comment",
+    "Un joueur a commenté votre vidéo",
+    highlightId
+  ]
+).catch(error=>{
+
+  console.error(
+    "Erreur notification commentaire :",
+    error
+  );
+
+});
+
+      }
+
+      /*
+        Notification au propriétaire
+        du commentaire parent.
+      */
+      if(
+        parentComment &&
+        Number(
+          parentComment.participant_id
+        ) !== userId
+      ){
+
+        /*
+          Éviter une deuxième notification
+          identique lorsque le propriétaire
+          du commentaire est aussi le
+          propriétaire de la vidéo.
+        */
+        if(
+          Number(
+            parentComment.participant_id
+          ) !== Number(highlight.user_id)
+        ){
+
+          await run(
+  `
+  INSERT INTO notifications(
+    user_id,
+    type,
+    message,
+    highlight_id,
+    created_at
+  )
+  VALUES(
+    ?, ?, ?, ?, CURRENT_TIMESTAMP
+  )
+  `,
+  [
+    Number(parentComment.participant_id),
+    "comment_reply",
+    "Un joueur a répondu à votre commentaire",
+    highlightId
+  ]
+).catch(error=>{
+
+  console.error(
+    "Erreur notification réponse :",
+    error
+  );
+
+});
+
+        }
 
       }
 
@@ -12110,51 +12605,178 @@ app.post(
         error
       );
 
-      return res.status(500).send(
-        tr(
-          req,
-          "Erreur commentaire",
-          "Failed to add comment"
-        )
-      );
+      return res
+        .status(500)
+        .send(
+          tr(
+            req,
+            "Impossible d'ajouter le commentaire",
+            "Unable to add comment"
+          )
+        );
 
     }
 
   }
 );
 
-app.get("/highlight-comments/:id", async (req,res)=>{
+app.get(
+  "/highlight-comments/:id",
+  async (req,res)=>{
 
-  try{
+    try{
 
-    const rows = await all(
-      `
-      SELECT
-        highlight_comments.*,
-        highlight_comments.user_id,
-        users.name,
-        users.username,
-        users.profile_photo
-      FROM highlight_comments
-      LEFT JOIN users
-      ON users.id = highlight_comments.user_id
-      WHERE highlight_comments.highlight_id=?
-      ORDER BY highlight_comments.id DESC
-      `,
-      [req.params.id]
-    );
+      const highlightId =
+        Number(req.params.id);
 
-    res.json(rows);
+      if(
+        !Number.isInteger(highlightId) ||
+        highlightId <= 0
+      ){
 
-  }catch(e){
+        return res
+          .status(400)
+          .json([]);
 
-    console.log(e);
-    res.json([]);
+      }
+
+      const rows =
+  await all(
+    `
+    SELECT
+
+      hc.id,
+      hc.highlight_id,
+      hc.participant_id,
+      hc.participant_id AS user_id,
+      hc.comment,
+      hc.parent_comment_id,
+      hc.created_at,
+
+      h.user_id AS video_owner_id,
+
+      COALESCE(
+        u.name,
+        u.username,
+        'Joueur'
+      ) AS name,
+
+      COALESCE(
+        u.username,
+        ''
+      ) AS username,
+
+      COALESCE(
+        u.profile_photo,
+        ''
+      ) AS profile_photo
+
+    FROM highlight_comments hc
+
+    LEFT JOIN users u
+      ON u.id = hc.participant_id
+
+    LEFT JOIN highlights h
+      ON h.id = hc.highlight_id
+
+    WHERE hc.highlight_id=?
+
+    ORDER BY
+      CASE
+        WHEN hc.parent_comment_id IS NULL
+        THEN hc.id
+        ELSE hc.parent_comment_id
+      END DESC,
+
+      CASE
+        WHEN hc.parent_comment_id IS NULL
+        THEN 0
+        ELSE 1
+      END ASC,
+
+      hc.id ASC
+    `,
+    [highlightId]
+  );
+
+      const commentairesPrincipaux = [];
+      const commentairesParId = new Map();
+
+      /*
+        Créer d'abord tous les commentaires
+        principaux.
+      */
+      for(const row of rows){
+
+        if(row.parent_comment_id === null){
+
+          const commentaire = {
+            ...row,
+            replies:[],
+            replies_count:0
+          };
+
+          commentairesPrincipaux.push(
+            commentaire
+          );
+
+          commentairesParId.set(
+            Number(row.id),
+            commentaire
+          );
+
+        }
+
+      }
+
+      /*
+        Ranger ensuite chaque réponse sous
+        son commentaire principal.
+      */
+      for(const row of rows){
+
+        if(row.parent_comment_id !== null){
+
+          const parent =
+            commentairesParId.get(
+              Number(row.parent_comment_id)
+            );
+
+          if(parent){
+
+            parent.replies.push({
+              ...row,
+              replies:[]
+            });
+
+            parent.replies_count =
+              parent.replies.length;
+
+          }
+
+        }
+
+      }
+
+      return res.json(
+        commentairesPrincipaux
+      );
+
+    }catch(error){
+
+      console.error(
+        "Erreur lecture commentaires :",
+        error
+      );
+
+      return res
+        .status(500)
+        .json([]);
+
+    }
 
   }
-
-});
-
+);
 app.post("/delete-highlight-comment", async (req,res)=>{
 
   try{
@@ -13601,6 +14223,15 @@ function determinerPremierTourFinal(
 
 }
 
+app.get("/app-ads.txt", (req, res) => {
+
+  res.type("text/plain");
+
+  res.send(
+    "google.com, pub-9714357792942805, DIRECT, f08c47fec0942fa0"
+  );
+
+});
 
 app.listen(PORT, () => {
 
