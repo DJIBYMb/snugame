@@ -3432,7 +3432,8 @@ max-height:none;
   position:relative;
 
   width:100%;
-  height:100%;
+   height:100%;
+
 
   max-width:none;
 
@@ -3443,359 +3444,8 @@ max-height:none;
   box-sizing:border-box;
 }
 
-/* =========================================
-   CARTE JOUEUR MOBILE
-========================================= */
 
-@media(max-width:850px){
-
-  .sunu-player-card{
-    width:100%;
-    height:100%;
-
-    max-width:none;
-
-    margin:0;
-    padding:6px;
-
-    border-radius:16px;
-
-    box-sizing:border-box;
-    overflow:hidden;
-
-    transform:none !important;
-
-    display:grid;
-    grid-template-rows:auto minmax(0,1fr);
-    gap:5px;
-  }
-
-  /* En-tête compact */
-
-  .sunu-legend-header{
-    grid-template-columns:42px minmax(0,1fr) 46px;
-
-    min-height:52px;
-    height:52px;
-
-    padding:2px 4px;
-    gap:3px;
-
-    overflow:hidden;
-  }
-
-  .sunu-legend-logo{
-    width:38px;
-    height:43px;
-  }
-
-  .sunu-legend-logo strong{
-    font-size:18px;
-    line-height:18px;
-  }
-
-  .sunu-legend-logo span{
-    font-size:4px;
-  }
-
-  .sunu-legend-title h1{
-    font-size:clamp(18px,5vw,27px);
-    line-height:1;
-    margin:0;
-  }
-
-  .sunu-legend-title p{
-    font-size:5px;
-    letter-spacing:1px;
-    margin:2px 0 0;
-  }
-
-  .sunu-legend-crown{
-    font-size:17px;
-  }
-
-  .sunu-legend-rank-logo i{
-    font-size:22px;
-  }
-
-  .sunu-legend-rank-logo strong{
-    font-size:6px;
-  }
-
-  /* Les deux parties restent côte à côte */
-
-  .sunu-legend-body{
-    grid-template-columns:minmax(0,1.15fr) minmax(0,0.85fr);
-
-    gap:5px;
-
-    min-height:0;
-    height:100%;
-
-    overflow:hidden;
-  }
-
-  /* Partie photo */
-
-  .sunu-main-player-frame{
-    width:100%;
-    height:100%;
-
-    min-height:0;
-
-    padding:4px 5px;
-
-    overflow:hidden;
-    box-sizing:border-box;
-  }
-
-  .sunu-main-photo-zone{
-    min-height:0;
-  }
-
-  .sunu-main-photo{
-    width:min(205px,74%);
-    height:26vh;
-
-    max-height:220px;
-    min-height:130px;
-
-    object-fit:cover;
-  }
-
-  .sunu-main-rating{
-    width:57px;
-    left:7px;
-    top:5px;
-  }
-
-  .sunu-main-rating strong{
-    font-size:37px;
-    line-height:35px;
-  }
-
-  .sunu-main-rating span{
-    font-size:10px;
-  }
-
-  .sunu-main-identity{
-    margin-top:0;
-  }
-
-  .sunu-main-identity h2{
-    font-size:19px;
-    line-height:1.05;
-    margin:1px 0;
-  }
-
-  .sunu-main-style{
-    font-size:10px;
-    padding:2px 5px;
-  }
-
-  .sunu-main-attributes{
-    gap:1px;
-    margin-top:2px;
-  }
-
-  .sunu-main-attribute{
-    padding:2px 1px;
-  }
-
-  .sunu-main-attribute strong{
-    font-size:14px;
-    line-height:15px;
-  }
-
-  .sunu-main-attribute span{
-    font-size:7px;
-    line-height:8px;
-  }
-
-  /* Partie informations */
-
-  .sunu-info-panel{
-    padding:5px;
-
-    min-height:0;
-    overflow:hidden;
-
-    border-radius:10px;
-  }
-
-  .sunu-level-row{
-    grid-template-columns:55px minmax(0,1fr) 55px;
-
-    gap:3px;
-    margin:2px 0;
-  }
-
-  .sunu-level-box{
-    padding:3px 1px;
-  }
-
-  .sunu-level-box strong{
-    font-size:20px;
-    line-height:20px;
-  }
-
-  .sunu-level-box span{
-    font-size:6px;
-  }
-
-  .sunu-rank-box{
-    padding:3px 1px;
-  }
-
-  .sunu-rank-box strong{
-    font-size:9px;
-  }
-
-  .sunu-rank-box span{
-    font-size:6px;
-  }
-
-  .sunu-xp-title{
-    font-size:12px;
-    margin:2px 0;
-  }
-
-  .sunu-badges-grid{
-    gap:2px;
-    margin-top:2px;
-  }
-
-  .sunu-badge-item{
-    padding:3px 1px;
-    min-height:0;
-  }
-
-  .sunu-badge-item i{
-    font-size:14px;
-  }
-
-  .sunu-badge-item strong{
-    font-size:7px;
-  }
-
-  .sunu-badge-item span{
-    font-size:5px;
-  }
-
-}
-
-
-/* =========================================
-   TRÈS PETITS TÉLÉPHONES
-========================================= */
-
-@media(max-width:390px){
-
-  #pageCarteJoueur > .card{
-    padding:40px 3px 3px;
-  }
-
-  .sunu-player-card{
-    padding:4px;
-    gap:3px;
-  }
-
-  .sunu-legend-header{
-    grid-template-columns:36px minmax(0,1fr) 39px;
-
-    min-height:46px;
-    height:46px;
-  }
-
-  .sunu-legend-logo{
-    width:32px;
-    height:37px;
-  }
-
-  .sunu-legend-logo strong{
-    font-size:16px;
-  }
-
-  .sunu-legend-title h1{
-    font-size:17px;
-  }
-
-  .sunu-legend-body{
-    grid-template-columns:minmax(0,1.18fr) minmax(0,0.82fr);
-    gap:3px;
-  }
-
-  .sunu-main-player-frame{
-    padding:3px;
-  }
-
-  .sunu-main-photo{
-    width:72%;
-    height:23vh;
-
-    min-height:115px;
-    max-height:185px;
-  }
-
-  .sunu-main-rating{
-    width:48px;
-    left:4px;
-  }
-
-  .sunu-main-rating strong{
-    font-size:32px;
-  }
-
-  .sunu-main-rating span{
-    font-size:8px;
-  }
-
-  .sunu-main-identity h2{
-    font-size:16px;
-  }
-
-  .sunu-main-style{
-    font-size:8px;
-  }
-
-  .sunu-main-attribute strong{
-    font-size:12px;
-  }
-
-  .sunu-main-attribute span{
-    font-size:6px;
-  }
-
-  .sunu-info-panel{
-    padding:3px;
-  }
-
-  .sunu-level-row{
-    grid-template-columns:46px minmax(0,1fr) 46px;
-    gap:2px;
-  }
-
-  .sunu-level-box strong{
-    font-size:17px;
-  }
-
-  .sunu-rank-box strong{
-    font-size:7px;
-  }
-
-  .sunu-xp-title{
-    font-size:10px;
-  }
-
-  .sunu-badge-item{
-    padding:2px 0;
-  }
-
-  .sunu-badge-item i{
-    font-size:12px;
-  }
-
-  .sunu-photo-trophy{
+.sunu-photo-trophy{
   width:28px;
   height:28px;
 }
@@ -3836,6 +3486,542 @@ max-height:none;
 .sunu-photo-trophy i{
   font-size:18px;
   color:#3d2200;
+}
+
+
+
+
+
+/* =====================================================
+   CARTE JOUEUR MOBILE — VERSION UNIQUE SANS DÉFILEMENT
+===================================================== */
+@media(max-width:850px){
+
+  #pageCarteJoueur{
+    position:fixed;
+    inset:0;
+    width:100vw;
+    height:100dvh;
+    padding:0;
+    margin:0;
+    overflow:hidden;
+    background:#050816;
+    z-index:999999;
+  }
+
+  #pageCarteJoueur > .card{
+    position:relative;
+    width:100%;
+    height:100%;
+    max-width:none;
+    margin:0;
+    padding:42px 3px 4px;
+    overflow:hidden;
+    box-sizing:border-box;
+  }
+
+  #pageCarteJoueur > .card > h2{
+    display:none;
+  }
+
+  .sunu-player-card{
+    width:100%;
+    height:100%;
+    max-width:none;
+    max-height:100%;
+    margin:0;
+    padding:4px;
+    border-radius:15px;
+    overflow:hidden;
+    box-sizing:border-box;
+    transform:none !important;
+    display:grid;
+    grid-template-rows:44px minmax(0,1fr);
+    gap:3px;
+  }
+
+  .sunu-player-card::after{
+    inset:4px;
+    border-radius:11px;
+  }
+
+  .sunu-legend-header{
+    grid-template-columns:minmax(0,1fr) 38px;
+    min-height:44px;
+    height:44px;
+    margin:0;
+    padding:1px 4px 3px;
+    gap:2px;
+    overflow:hidden;
+  }
+
+  .sunu-legend-crown{
+    margin:0 auto -2px;
+    font-size:15px;
+  }
+
+  .sunu-legend-title h1{
+    margin:0;
+    font-size:clamp(17px,5vw,23px);
+    line-height:1;
+  }
+
+  .sunu-legend-title p{
+    margin:1px 0 0;
+    font-size:4px;
+    letter-spacing:.8px;
+    line-height:1;
+  }
+
+  .sunu-legend-rank-logo{
+    width:38px;
+  }
+
+  .sunu-legend-rank-logo i{
+    font-size:20px;
+  }
+
+  .sunu-legend-rank-logo strong{
+    min-height:0;
+    margin-top:0;
+    font-size:5px;
+    line-height:6px;
+  }
+
+  .sunu-legend-body{
+    grid-template-columns:minmax(0,1.12fr) minmax(0,.88fr);
+    align-items:stretch;
+    gap:3px;
+    width:100%;
+    height:100%;
+    min-height:0;
+    overflow:hidden;
+  }
+
+  .sunu-legend-left,
+  .sunu-legend-right{
+    min-width:0;
+    min-height:0;
+    gap:3px;
+    overflow:hidden;
+  }
+
+  .sunu-main-player-frame{
+    width:100%;
+    height:100%;
+    min-height:0;
+    padding:3px;
+    border-radius:13px 13px 18px 18px;
+    overflow:hidden;
+    box-sizing:border-box;
+  }
+
+  .sunu-main-player-frame::before{
+    inset:4px;
+    border-radius:10px 10px 16px 16px;
+  }
+
+  .sunu-main-photo-zone{
+    min-height:0;
+    height:clamp(110px,24dvh,170px);
+    padding-top:2px;
+    flex:0 0 auto;
+  }
+
+  .sunu-main-photo-glow{
+    width:190px;
+    height:190px;
+    top:0;
+  }
+
+  .sunu-main-photo{
+    width:min(190px,72%);
+    height:100%;
+    min-height:0;
+    max-height:none;
+    object-fit:cover;
+    object-position:center top;
+  }
+
+  .sunu-main-photo-zone::after{
+    left:5%;
+    right:5%;
+    bottom:-3px;
+    height:50px;
+  }
+
+  .sunu-main-rating{
+    top:4px;
+    left:4px;
+    width:43px;
+  }
+
+  .sunu-main-rating strong{
+    font-size:29px;
+    line-height:27px;
+  }
+
+  .sunu-main-rating span{
+    margin-top:2px;
+    font-size:7px;
+    line-height:8px;
+  }
+
+  .sunu-main-position{
+    margin-top:1px;
+    font-size:6px;
+  }
+
+  .sunu-main-country{
+    gap:2px;
+    margin-top:2px;
+    font-size:11px;
+  }
+
+  .sunu-main-identity{
+    margin-top:-3px;
+    padding:0 2px;
+  }
+
+  .sunu-main-identity h2{
+    margin:0;
+    font-size:14px;
+    line-height:15px;
+  }
+
+  .sunu-main-identity .username{
+    margin-top:1px;
+    font-size:7px;
+    line-height:8px;
+  }
+
+  .sunu-main-style{
+    margin:2px auto 0;
+    padding:2px 2px 0;
+    font-size:6px;
+    line-height:7px;
+    letter-spacing:.2px;
+  }
+
+  .sunu-main-style small{
+    margin-bottom:1px;
+    font-size:4px;
+    letter-spacing:.5px;
+  }
+
+  .sunu-main-attributes{
+    grid-template-columns:repeat(3,minmax(0,1fr));
+    gap:1px;
+    margin-top:2px;
+    padding:3px 1px 1px;
+  }
+
+  .sunu-main-attribute{
+    min-height:0;
+    padding:1px 0;
+    border-radius:4px;
+  }
+
+  .sunu-main-attribute span{
+    font-size:5px;
+    line-height:6px;
+    letter-spacing:0;
+  }
+
+  .sunu-main-attribute strong{
+    margin-top:1px;
+    font-size:11px;
+    line-height:11px;
+  }
+
+  .sunu-level-row{
+    grid-template-columns:40px minmax(0,1fr) 40px;
+    gap:2px;
+    margin-top:2px;
+  }
+
+  .sunu-level-box,
+  .sunu-rank-box{
+    min-height:0;
+    padding:2px 1px;
+    border-width:1px;
+    border-radius:7px;
+  }
+
+  .sunu-level-box span,
+  .sunu-rank-box span{
+    font-size:4px;
+    line-height:5px;
+  }
+
+  .sunu-level-box strong{
+    margin-top:1px;
+    font-size:14px;
+    line-height:14px;
+  }
+
+  .sunu-rank-box strong{
+    margin-top:2px;
+    font-size:6px;
+    line-height:7px;
+  }
+
+  .sunu-xp-title{
+    margin-bottom:1px;
+    font-size:8px;
+    line-height:9px;
+  }
+
+  .sunu-xp-track{
+    height:6px;
+  }
+
+  .sunu-xp-text{
+    margin-top:1px;
+    font-size:4px;
+    line-height:5px;
+  }
+
+  .sunu-legend-right{
+    display:grid;
+    grid-template-rows:repeat(4,minmax(0,auto)) minmax(0,1fr);
+    align-content:start;
+  }
+
+  .sunu-info-panel{
+    min-height:0;
+    margin:0;
+    padding:3px;
+    border-radius:7px;
+    overflow:hidden;
+  }
+
+  .sunu-panel-title{
+    gap:2px;
+    margin-bottom:2px;
+    padding-bottom:2px;
+    font-size:7px;
+    line-height:8px;
+    letter-spacing:.2px;
+  }
+
+  .sunu-panel-title i{
+    width:14px;
+    height:14px;
+    border-radius:4px;
+    font-size:7px;
+  }
+
+  .sunu-panel-line{
+    grid-template-columns:minmax(0,1fr) auto;
+    gap:2px;
+    min-height:0;
+    padding:1px 0;
+    font-size:5px;
+    line-height:6px;
+  }
+
+  .sunu-panel-line span{
+    font-size:5px;
+    line-height:6px;
+  }
+
+  .sunu-panel-line strong{
+    font-size:6px;
+    line-height:6px;
+  }
+
+  .sunu-trophy-grid{
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:2px;
+  }
+
+  .sunu-trophy i{
+    width:22px;
+    height:22px;
+    font-size:11px;
+  }
+
+  .sunu-trophy strong{
+    margin-top:1px;
+    font-size:6px;
+    line-height:7px;
+  }
+
+  .sunu-badges-panel{
+    margin-top:2px;
+    padding:3px 2px;
+    border-radius:7px;
+    overflow:hidden;
+  }
+
+  .sunu-badges-title{
+    margin-bottom:2px;
+    font-size:8px;
+    line-height:9px;
+  }
+
+  .sunu-badges-grid{
+    grid-template-columns:repeat(5,minmax(0,1fr));
+    gap:1px;
+  }
+
+  .sunu-badge-item{
+    min-width:0;
+    padding:2px 0;
+    border-radius:4px;
+  }
+
+  .sunu-badge-item i{
+    font-size:10px;
+  }
+
+  .sunu-badge-item span{
+    margin-top:1px;
+    font-size:3.5px;
+    line-height:4px;
+    overflow-wrap:anywhere;
+  }
+
+  .sunu-photo-trophy{
+    width:22px;
+    height:22px;
+    margin-top:1px;
+    border-width:1px;
+  }
+
+  .sunu-photo-trophy i{
+    font-size:11px;
+  }
+
+  .sunu-legend-quote,
+  .sunu-legend-bottom{
+    display:none;
+  }
+
+  .sunu-card-download-zone{
+    position:absolute;
+    right:7px;
+    bottom:7px;
+    z-index:50;
+    width:auto;
+    margin:0;
+  }
+
+  .sunu-card-download-btn{
+    min-width:0 !important;
+    width:38px !important;
+    height:38px;
+    padding:0 !important;
+    gap:0;
+    border-radius:50% !important;
+    font-size:0;
+  }
+
+  .sunu-card-download-btn i{
+    font-size:15px;
+  }
+}
+
+
+@media(max-width:850px){
+  /* ===== INFOS JOUEUR : VERSION MOBILE COMPACTE ===== */
+  .sunu-legend-right > .sunu-info-panel:first-child{
+    padding:2px 3px;
+    border-radius:7px;
+    max-height:24dvh;
+    overflow:hidden;
+  }
+
+  .sunu-legend-right > .sunu-info-panel:first-child .sunu-panel-title{
+    min-height:13px;
+    margin:0 0 1px;
+    padding:0 0 1px;
+    gap:2px;
+    font-size:6.5px;
+    line-height:7px;
+    letter-spacing:.15px;
+  }
+
+  .sunu-legend-right > .sunu-info-panel:first-child .sunu-panel-title i{
+    width:12px;
+    height:12px;
+    border-radius:4px;
+    font-size:6px;
+  }
+
+  .sunu-legend-right > .sunu-info-panel:first-child .sunu-panel-line{
+    min-height:0;
+    padding:1px 0;
+    gap:2px;
+    font-size:4.7px;
+    line-height:5.5px;
+  }
+
+  .sunu-legend-right > .sunu-info-panel:first-child .sunu-panel-line span{
+    font-size:4.7px;
+    line-height:5.5px;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+
+  .sunu-legend-right > .sunu-info-panel:first-child .sunu-panel-line strong{
+    max-width:55%;
+    font-size:5.5px;
+    line-height:5.5px;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+
+  /* L'espace gagné est réservé aux badges et aux trophées */
+  .sunu-legend-right .sunu-badges-panel{
+    flex-shrink:0;
+  }
+
+  .sunu-legend-right .sunu-trophy-grid{
+    align-items:start;
+  }
+}
+
+
+@media(max-width:390px){
+  #pageCarteJoueur > .card{
+    padding-top:39px;
+  }
+
+  .sunu-player-card{
+    grid-template-rows:40px minmax(0,1fr);
+    padding:3px;
+  }
+
+  .sunu-legend-header{
+    min-height:40px;
+    height:40px;
+  }
+
+  .sunu-main-photo-zone{
+    height:clamp(100px,21dvh,145px);
+  }
+
+  .sunu-main-identity h2{
+    font-size:12px;
+    line-height:13px;
+  }
+
+  .sunu-main-attribute strong{
+    font-size:10px;
+  }
+
+  .sunu-panel-line,
+  .sunu-panel-line span{
+    font-size:4.5px;
+  }
+
+  .sunu-panel-line strong{
+    font-size:5.5px;
+  }
 }
 
 </style>
