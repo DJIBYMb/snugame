@@ -3454,8 +3454,6 @@ max-height:none;
   font-size:15px;
 }
 
-}
-
 .sunu-photo-trophy{
   display:flex;
   align-items:center;
@@ -4982,7 +4980,7 @@ class="hidden">
 
 <button
 class="back-btn"
-onclick="ouvrirProfilCompte()">
+onclick="retourPage()">
 ‹
 </button>
 
@@ -5049,7 +5047,7 @@ class="hidden">
 
 <button
 class="back-btn"
-onclick="setPage('pageModifierProfil')">
+onclick="retourPage()">
 ‹
 </button>
 
@@ -5084,7 +5082,7 @@ class="hidden">
 
 <button
 class="back-btn"
-onclick="ouvrirModeVideos()">
+onclick="retourPage()">
 ‹
 </button>
 
@@ -7384,15 +7382,53 @@ async function post(url, data = {}){
 
     const res = await fetch(url,{
       method:"POST",
+
       headers:{
         "Content-Type":"application/json",
         "x-language":langueApp
       },
+
       credentials:"same-origin",
+
       body:JSON.stringify(data)
     });
 
+    /*
+      On récupère d'abord la réponse en texte.
+
+      Cela permet de conserver la compatibilité
+      avec les anciennes routes backend.
+    */
+
     const text = await res.text();
+
+    /*
+      On essaie ensuite de transformer le texte
+      en objet JSON.
+
+      Si ce n'est pas du JSON,
+      on conserve simplement le texte.
+    */
+
+    let resultat = text;
+
+    if(text){
+
+      try{
+
+        resultat = JSON.parse(text);
+
+      }catch(error){
+
+        resultat = text;
+
+      }
+
+    }
+
+    /* =========================
+       SESSION EXPIRÉE
+    ========================= */
 
     if(res.status === 401){
 
@@ -7400,34 +7436,92 @@ async function post(url, data = {}){
         Ne pas relancer la protection
         lorsque la route appelée est logout.
       */
+
       if(url !== "/logout"){
         await gererSessionExpiree();
       }
 
-      return text;
+      /*
+        On lance une vraie erreur pour empêcher
+        le code suivant de continuer.
+      */
+
+      const sessionError =
+        new Error(
+          typeof resultat === "object"
+            ? resultat.message ||
+              "Session expirée"
+            : resultat ||
+              "Session expirée"
+        );
+
+      sessionError.status = 401;
+      sessionError.data = resultat;
+
+      throw sessionError;
+
     }
 
+    /* =========================
+       AUTRE ERREUR BACKEND
+    ========================= */
+
     if(!res.ok){
+
+      const erreurMessage =
+        typeof resultat === "object"
+          ? resultat.message ||
+            resultat.error ||
+            "Une erreur est survenue."
+          : resultat ||
+            "Une erreur est survenue.";
 
       console.error(
         "Erreur POST :",
         url,
         res.status,
-        text
+        resultat
       );
 
       if(message){
         message.textContent =
-          text ||
-          "Une erreur est survenue.";
+          erreurMessage;
       }
 
-      return text;
+      const backendError =
+        new Error(erreurMessage);
+
+      backendError.status =
+        res.status;
+
+      backendError.data =
+        resultat;
+
+      throw backendError;
+
     }
 
-    return text;
+    /* =========================
+       RÉPONSE RÉUSSIE
+    ========================= */
+
+    return resultat;
 
   }catch(error){
+
+    /*
+      Si l'erreur possède déjà un statut HTTP,
+      cela veut dire que le serveur a répondu.
+
+      On ne doit donc pas afficher :
+      "Impossible de contacter le serveur".
+    */
+
+    if(error?.status){
+
+      throw error;
+
+    }
 
     console.error(
       "Erreur réseau POST :",
@@ -7442,12 +7536,19 @@ async function post(url, data = {}){
 
     }
 
-    return "ERREUR_RESEAU";
+    const networkError =
+      new Error(
+        "Impossible de contacter le serveur."
+      );
+
+    networkError.code =
+      "ERREUR_RESEAU";
+
+    throw networkError;
 
   }
 
 }
-
 async function get(url){
 
   try{
@@ -7651,14 +7752,95 @@ function closeRegister(){
 
 let pageStack = [];
 
+/*
+  Historique complet de navigation.
+  Chaque entrée conserve la page, le panneau et la position exacte.
+*/
+function capturerEtatNavigation(){
+
+  return {
+    page:currentPageName || "pageDashboard",
+    panel:currentPanelName || localStorage.getItem("lastPanel") || null,
+    scrollX:window.scrollX || 0,
+    scrollY:window.scrollY || 0
+  };
+
+}
+
+function memeEtatNavigation(a,b){
+
+  if(!a || !b){
+    return false;
+  }
+
+  return (
+    a.page === b.page &&
+    (a.panel || null) === (b.panel || null)
+  );
+
+}
+
+async function restaurerEtatNavigation(etat){
+
+  if(!etat){
+    retourPage();
+    return;
+  }
+
+  stopAllVideos();
+
+  document.body.classList.remove(
+    "video-mode",
+    "video-profil-mode"
+  );
+
+  document
+    .querySelector("header")
+    ?.classList.remove("hidden");
+
+  document
+    .querySelector(".bottom-nav")
+    ?.classList.remove("hidden");
+
+  if(etat.page === "pageDashboard"){
+
+    setPage("pageDashboard", false);
+
+    await ouvrirPanel(
+      etat.panel ||
+      localStorage.getItem("lastPanel") ||
+      "panelTournoi"
+    );
+
+  }else{
+
+    setPage(etat.page, false);
+
+    if(etat.page === "pagePublicProfil"){
+      document.querySelector("header")?.classList.add("hidden");
+      document.querySelector(".bottom-nav")?.classList.add("hidden");
+      document.getElementById("messageCard")?.classList.add("hidden");
+    }
+
+  }
+
+  requestAnimationFrame(()=>{
+    window.scrollTo(
+      etat.scrollX || 0,
+      etat.scrollY || 0
+    );
+  });
+
+}
+
 function setPage(page, enregistrerHistorique = true){
 
   const anciennePage =
     currentPageName;
 
   /*
-    On enregistre la page d'où vient
-    l'utilisateur avant d'ouvrir la nouvelle.
+    On enregistre l'état complet d'où vient
+    l'utilisateur avant d'ouvrir la nouvelle page.
   */
   if(
     enregistrerHistorique === true &&
@@ -7668,14 +7850,14 @@ function setPage(page, enregistrerHistorique = true){
     page !== "pageVideoProfil"
   ){
 
-    const dernierePage =
+    const ancienEtat =
+      capturerEtatNavigation();
+
+    const dernierEtat =
       pageStack[pageStack.length - 1];
 
-    /*
-      Évite d'ajouter deux fois la même page.
-    */
-    if(dernierePage !== anciennePage){
-      pageStack.push(anciennePage);
+    if(!memeEtatNavigation(dernierEtat, ancienEtat)){
+      pageStack.push(ancienEtat);
     }
 
   }
@@ -7720,61 +7902,55 @@ function ouvrirPage(page){
 
 }
 
-function retourPage(){
+async function retourPage(){
 
-  let pagePrecedente =
+  let etatPrecedent =
     pageStack.pop();
 
   /*
-    La page des vidéos ne doit jamais
-    devenir la destination d'un Retour.
+    Compatibilité avec un ancien historique
+    qui contenait seulement le nom de la page.
   */
+  if(typeof etatPrecedent === "string"){
+    etatPrecedent = {
+      page:etatPrecedent,
+      panel:
+        etatPrecedent === "pageDashboard"
+        ? (
+            localStorage.getItem("lastPanel") ||
+            "panelTournoi"
+          )
+        : null,
+      scrollX:0,
+      scrollY:0
+    };
+  }
+
   while(
-    pagePrecedente === "pageVideoProfil"
+    etatPrecedent &&
+    etatPrecedent.page === "pageVideoProfil"
   ){
-    pagePrecedente =
+    etatPrecedent =
       pageStack.pop();
   }
 
-  if(pagePrecedente){
+  if(etatPrecedent){
 
-    /*
-      false empêche le bouton Retour
-      de réenregistrer la page actuelle.
-    */
-    setPage(
-      pagePrecedente,
-      false
+    await restaurerEtatNavigation(
+      etatPrecedent
     );
-
-    if(
-      pagePrecedente ===
-      "pageDashboard"
-    ){
-
-      const dernierPanel =
-        localStorage.getItem(
-          "lastPanel"
-        ) || "panelTournoi";
-
-      ouvrirPanel(
-        dernierPanel
-      );
-
-    }
 
     return;
   }
 
-  setPage(
-    "pageDashboard",
-    false
-  );
-
-  ouvrirPanel(
-    localStorage.getItem("lastPanel") ||
-    "panelTournoi"
-  );
+  await restaurerEtatNavigation({
+    page:"pageDashboard",
+    panel:
+      localStorage.getItem("lastPanel") ||
+      "panelTournoi",
+    scrollX:0,
+    scrollY:0
+  });
 
 }
 
@@ -7814,13 +7990,23 @@ function ouvrirCompetitionBloc(id){
 
 let followListFrom = "profile";
 let followListOwnerId = null;
+let etatsAvantFollowList = [];
 
 async function ouvrirListeFollow(type, userId, from = "profile"){
 
   followListFrom = from;
   followListOwnerId = userId;
 
-  ouvrirPage("pageFollowList");
+  /*
+    La liste Abonnés/Suivis conserve sa propre origine.
+    Elle ne dépend donc plus du dernier panneau mémorisé
+    dans l'historique général.
+  */
+  etatsAvantFollowList.push(
+    capturerEtatNavigation()
+  );
+
+  setPage("pageFollowList", false);
 
   followListTitle.textContent =
     type === "followers"
@@ -7867,13 +8053,49 @@ async function ouvrirListeFollow(type, userId, from = "profile"){
     `).join("")
     : "<p class='small'>Aucun utilisateur.</p>";
 }
-function retourDepuisFollowList(){
+async function retourDepuisFollowList(){
 
-  retourPage();
+  stopAllVideos();
+
+  const etatRetour =
+    etatsAvantFollowList.pop();
+
+  if(etatRetour){
+
+    /*
+      Supprime seulement un éventuel doublon ancien,
+      sans retirer l'origine réelle de la liste.
+    */
+    const dernierEtat =
+      pageStack[pageStack.length - 1];
+
+    if(memeEtatNavigation(dernierEtat, etatRetour)){
+      pageStack.pop();
+    }
+
+    await restaurerEtatNavigation(etatRetour);
+    return;
+  }
+
+  /*
+    Sécurité : une liste ouverte depuis le profil personnel
+    revient au profil, jamais au panneau Tournoi.
+  */
+  if(followListFrom === "profile"){
+    setPage("pageProfil", false);
+    document.querySelector("header")?.classList.remove("hidden");
+    document.querySelector(".bottom-nav")?.classList.remove("hidden");
+    return;
+  }
+
+  await retourPage();
 
 }
 
 let panelAvantProfilPublic = null;
+let etatsAvantProfilPublic = [];
+let etatAvantVideoProfil = null;
+let scrollAvantVideoPublique = 0;
 
 async function ouvrirProfilPublic(userId){
 
@@ -7882,13 +8104,23 @@ async function ouvrirProfilPublic(userId){
   publicProfilContent.style.opacity = "1";
 
   currentPublicUserId = userId;
-panelAvantProfilPublic =
-  currentPanelName ||
-  localStorage.getItem("lastPanel") ||
-  null;
 
+  etatsAvantProfilPublic.push(
+    capturerEtatNavigation()
+  );
 
-  ouvrirPage("pagePublicProfil");
+  panelAvantProfilPublic =
+    currentPanelName ||
+    localStorage.getItem("lastPanel") ||
+    null;
+
+  /*
+    Le profil public possède son propre historique dans
+    etatsAvantProfilPublic. On ne l'ajoute donc pas une
+    deuxième fois dans pageStack. Cela garantit :
+    Profil → Abonnés → Profil public → retour Abonnés → retour Profil.
+  */
+  setPage("pagePublicProfil", false);
 
   publicProfilContent.innerHTML = `
   <div class="skeleton skeleton-card"></div>
@@ -8044,6 +8276,8 @@ function retourDepuisVideoPublique(){
 
   stopAllVideos();
 
+  window.fromPublicProfileVideo = false;
+
   document.body.classList.remove("video-mode");
 
   panelHighlights.classList.add("hidden");
@@ -8057,13 +8291,15 @@ function retourDepuisVideoPublique(){
   document.querySelector("header")?.classList.add("hidden");
   document.querySelector(".bottom-nav")?.classList.add("hidden");
 
+  requestAnimationFrame(()=>{
+    window.scrollTo(0, scrollAvantVideoPublique || 0);
+  });
+
 }
 
-function retourProfilPublic(){
+async function retourProfilPublic(){
 
   stopAllVideos();
-
-  
 
   document.body.classList.remove("video-mode");
 
@@ -8082,19 +8318,33 @@ function retourProfilPublic(){
     .querySelector(".bottom-nav")
     ?.classList.remove("hidden");
 
-   const panelRetour =
-  panelAvantProfilPublic ||
-  localStorage.getItem("lastPanel") ||
-  "panelTournoi";
+  const etatRetour =
+    etatsAvantProfilPublic.pop() || {
+      page:"pageDashboard",
+      panel:
+        panelAvantProfilPublic ||
+        localStorage.getItem("lastPanel") ||
+        "panelTournoi",
+      scrollX:0,
+      scrollY:0
+    };
 
-panelAvantProfilPublic = null;
+  panelAvantProfilPublic = null;
 
-setPage(
-  "pageDashboard",
-  false
-);
+  /*
+    Sécurité pour les anciennes navigations déjà empilées :
+    si le même écran se trouve au sommet de pageStack, on le
+    retire afin que le prochain Retour remonte réellement
+    vers l'écran précédent (par exemple Mon profil).
+  */
+  const dernierEtatNavigation =
+    pageStack[pageStack.length - 1];
 
-ouvrirPanel(panelRetour);
+  if(memeEtatNavigation(dernierEtatNavigation, etatRetour)){
+    pageStack.pop();
+  }
+
+  await restaurerEtatNavigation(etatRetour);
 
 }
 
@@ -9666,6 +9916,9 @@ async function prechargerDonneesUtilisateur(){
 
  async function ouvrirVideoDepuisProfil(videoId){
 
+  etatAvantVideoProfil =
+    capturerEtatNavigation();
+
   stopAllVideos();
 
   const videos =
@@ -9784,19 +10037,42 @@ async function afficherClassementSelonType(){
 
 }
 
-function retourProfilDepuisVideo(){
+async function retourProfilDepuisVideo(){
 
-  document.querySelector("header")?.classList.remove("hidden");
-document.querySelector(".bottom-nav")?.classList.remove("hidden");
-document.body.classList.remove("video-profil-mode");
+  stopAllVideos();
+
+  document
+    .querySelector("header")
+    ?.classList.remove("hidden");
+
+  document
+    .querySelector(".bottom-nav")
+    ?.classList.remove("hidden");
+
+  document.body.classList.remove(
+    "video-profil-mode"
+  );
 
   videoProfilContent.innerHTML = "";
 
-  ouvrirProfilCompte();
+  const etatRetour =
+    etatAvantVideoProfil || {
+      page:"pageProfil",
+      panel:null,
+      scrollX:0,
+      scrollY:0
+    };
+
+  etatAvantVideoProfil = null;
+
+  await restaurerEtatNavigation(etatRetour);
 
 }
 
 async function ouvrirVideoPublique(videoId, userId){
+
+  scrollAvantVideoPublique =
+    window.scrollY || 0;
 
   window.fromPublicProfileVideo = true;
 
@@ -10766,6 +11042,7 @@ async function chargerMesFavoris(){
 
 }
 
+
 async function creerTournoi(){
 
   if(window.creationTournoiEnCours){
@@ -10776,10 +11053,25 @@ async function creerTournoi(){
 
   try{
 
-    if(!tournoiNom.value.trim()){
+    const nomTournoi =
+      tournoiNom.value.trim();
+
+    if(!nomTournoi){
 
       message.textContent =
         "Nom tournoi obligatoire";
+
+      return;
+
+    }
+
+    if(
+      nomTournoi.length < 3 ||
+      nomTournoi.length > 60
+    ){
+
+      message.textContent =
+        "Le nom du tournoi doit contenir entre 3 et 60 caractères";
 
       return;
 
@@ -10799,26 +11091,87 @@ async function creerTournoi(){
 
     }
 
-    const maxTeams =
-      typeTournoi === "rapide"
-        ? 32
-        : Number(tournoiMax.value);
-
-    if(maxTeams < 6 || maxTeams > 100){
+    if(
+      typeTournoi !== "poule" &&
+      typeTournoi !== "rapide"
+    ){
 
       message.textContent =
-        "Le nombre d'équipes doit être entre 6 et 100";
+        "Type de tournoi invalide";
 
       return;
 
     }
 
-    await post("/tournoi",{
-      name:tournoiNom.value.trim(),
-      max_teams:maxTeams,
-      group_link:tournoiGroupLink.value.trim(),
-      type:typeTournoi
-    });
+    const maxTeams =
+      typeTournoi === "rapide"
+        ? 32
+        : Number(tournoiMax.value);
+
+    if(
+      !Number.isInteger(maxTeams) ||
+      maxTeams < 6 ||
+      maxTeams > 100
+    ){
+
+      message.textContent =
+        "Le nombre d'équipes doit être un nombre entier entre 6 et 100";
+
+      return;
+
+    }
+
+    const groupLink =
+      tournoiGroupLink.value.trim();
+
+    if(
+      groupLink &&
+      !/^https?:\/\/[^\s]+$/i.test(groupLink)
+    ){
+
+      message.textContent =
+        "Le lien du groupe doit commencer par http:// ou https://";
+
+      return;
+
+    }
+
+    message.textContent =
+      "Création du tournoi...";
+
+    const resultat =
+      await post(
+        "/tournoi",
+        {
+          name:nomTournoi,
+          max_teams:maxTeams,
+          group_link:groupLink,
+          type:typeTournoi
+        }
+      );
+
+    /*
+      Le backend doit normalement renvoyer :
+
+      {
+        ok: true,
+        message: "Tournoi créé",
+        tournament_id: 15,
+        join_code: "ABC12DEF"
+      }
+    */
+
+    if(
+      !resultat ||
+      resultat.ok !== true
+    ){
+
+      throw new Error(
+        resultat?.message ||
+        "La création du tournoi a échoué"
+      );
+
+    }
 
     tournoiNom.value = "";
     tournoiGroupLink.value = "";
@@ -10826,7 +11179,19 @@ async function creerTournoi(){
     await chargerTournois();
 
     message.textContent =
+      resultat.message ||
       "Tournoi créé avec succès";
+
+    console.log(
+      "Tournoi créé :",
+      {
+        tournamentId:
+          resultat.tournament_id,
+
+        joinCode:
+          resultat.join_code
+      }
+    );
 
   }catch(error){
 
@@ -10836,6 +11201,7 @@ async function creerTournoi(){
     );
 
     message.textContent =
+      error?.message ||
       "Impossible de créer le tournoi pour le moment";
 
   }finally{
@@ -10845,7 +11211,6 @@ async function creerTournoi(){
   }
 
 }
-
 
 async function chargerTournois(){
 
@@ -14127,15 +14492,15 @@ function retourDashboard(){
 
   document
     .getElementById("messageCard")
-    .classList.remove("hidden");
+    ?.classList.remove("hidden");
 
-  setPage("pageDashboard");
+  retourPage();
 
 }
 
 function fermerNotifications(){
 
-  ouvrirProfilCompte();
+  retourPage();
 
 }
 
@@ -14145,7 +14510,7 @@ function fermerProfilJoueur(){
     "hidden"
   );
 
-  setPage("pageDashboard");
+  retourPage();
 
 }
 
@@ -16584,17 +16949,25 @@ function retourGeneral(){
     return;
   }
 
-  if(!pagePublicProfil.classList.contains("hidden")){
-    retourProfilPublic();
-    return;
-  }
-
   if(!pageVideoProfil.classList.contains("hidden")){
     retourProfilDepuisVideo();
     return;
   }
 
-  setPage("pageDashboard");
+  if(
+    document.body.classList.contains("video-mode") &&
+    window.fromPublicProfileVideo === true
+  ){
+    retourDepuisVideoPublique();
+    return;
+  }
+
+  if(!pagePublicProfil.classList.contains("hidden")){
+    retourProfilPublic();
+    return;
+  }
+
+  retourPage();
 
 }
 

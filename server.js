@@ -1917,30 +1917,59 @@ function generateJoinCode(){
 
 }
 
-app.post("/tournoi", async (req,res)=>{
+app.post("/tournoi", async (req, res) => {
 
-  try{
+  try {
 
-    if(!connected(req)){
-      return res.send(
-  tr(req,"Connecte-toi d'abord","Please log in first")
-);
+    /* =========================
+       1. VÉRIFIER LA CONNEXION
+    ========================= */
+
+    if (!connected(req)) {
+
+      return res.status(401).send(
+        tr(
+          req,
+          "Connecte-toi d'abord",
+          "Please log in first"
+        )
+      );
+
     }
+
+    /* =========================
+       2. RÉCUPÉRER L'UTILISATEUR
+    ========================= */
 
     const user = await get(
       `
-      SELECT *
+      SELECT
+        id,
+        abonnement
       FROM users
       WHERE id=?
       `,
       [req.session.userId]
     );
 
-    if(!user){
-      return res.send(
-  tr(req,"Utilisateur introuvable","User not found")
-);
+    if (!user) {
+
+      return res.status(404).send(
+        tr(
+          req,
+          "Utilisateur introuvable",
+          "User not found"
+        )
+      );
+
     }
+
+    const estAbonne =
+      Number(user.abonnement) === 1;
+
+    /* =========================
+       3. RÉCUPÉRER LES DONNÉES
+    ========================= */
 
     const {
       name,
@@ -1950,189 +1979,402 @@ app.post("/tournoi", async (req,res)=>{
     } = req.body;
 
     const cleanName =
-  String(name || "")
-    .trim();
+      String(name || "")
+        .trim()
+        .replace(/\s+/g, " ");
 
-if(!cleanName){
+    const cleanGroupLink =
+      String(group_link || "")
+        .trim();
 
-  return res.status(400).send(
-    tr(
-      req,
-      "Nom tournoi obligatoire",
-      "Tournament name is required"
-    )
-  );
-
-}
-
-if(
-  cleanName.length < 3 ||
-  cleanName.length > 60
-){
-
-  return res.status(400).send(
-    tr(
-      req,
-      "Le nom du tournoi doit contenir entre 3 et 60 caractères",
-      "The tournament name must contain between 3 and 60 characters"
-    )
-  );
-
-}
+    const tournamentType =
+      String(type || "poule")
+        .trim()
+        .toLowerCase();
 
     const maxTeams =
-  Number(max_teams);
+      Number(max_teams);
 
-if(
-  !Number.isInteger(maxTeams) ||
-  maxTeams < 6 ||
-  maxTeams > 100
-){
+    /* =========================
+       4. VÉRIFIER LE NOM
+    ========================= */
 
-  return res.status(400).send(
-    tr(
-      req,
-      "Le nombre d'équipes doit être un nombre entier entre 6 et 100",
-      "The number of teams must be an integer between 6 and 100"
-    )
-  );
+    if (!cleanName) {
 
-}
+      return res.status(400).send(
+        tr(
+          req,
+          "Nom du tournoi obligatoire",
+          "Tournament name is required"
+        )
+      );
 
-const tournamentType =
-  String(type || "poule")
-    .trim()
-    .toLowerCase();
+    }
 
-if(
-  tournamentType !== "poule" &&
-  tournamentType !== "rapide"
-){
+    if (
+      cleanName.length < 3 ||
+      cleanName.length > 60
+    ) {
 
-  return res.status(400).send(
-    tr(
-      req,
-      "Type de tournoi invalide",
-      "Invalid tournament type"
-    )
-  );
+      return res.status(400).send(
+        tr(
+          req,
+          "Le nom du tournoi doit contenir entre 3 et 60 caractères",
+          "The tournament name must contain between 3 and 60 characters"
+        )
+      );
 
-}
+    }
 
-if(
-  tournamentType === "rapide" &&
-  maxTeams !== 32
-){
+    /* =========================
+       5. VÉRIFIER LE LIEN GROUPE
+    ========================= */
 
-  return res.status(400).send(
-    tr(
-      req,
-      "Le tournoi rapide exige exactement 32 équipes",
-      "The quick tournament requires exactly 32 teams"
-    )
-  );
+    if (cleanGroupLink.length > 500) {
 
-}
+      return res.status(400).send(
+        tr(
+          req,
+          "Le lien du groupe est trop long",
+          "The group link is too long"
+        )
+      );
 
-    if(
+    }
+
+    if (
+      cleanGroupLink &&
+      !/^https?:\/\/[^\s]+$/i.test(cleanGroupLink)
+    ) {
+
+      return res.status(400).send(
+        tr(
+          req,
+          "Le lien du groupe doit commencer par http:// ou https://",
+          "The group link must start with http:// or https://"
+        )
+      );
+
+    }
+
+    /* =========================
+       6. VÉRIFIER LE NOMBRE
+       DE PARTICIPANTS
+    ========================= */
+
+    if (
+      !Number.isInteger(maxTeams) ||
+      maxTeams < 6 ||
+      maxTeams > 100
+    ) {
+
+      return res.status(400).send(
+        tr(
+          req,
+          "Le nombre d'équipes doit être un nombre entier entre 6 et 100",
+          "The number of teams must be an integer between 6 and 100"
+        )
+      );
+
+    }
+
+    /* =========================
+       7. VÉRIFIER LE TYPE
+    ========================= */
+
+    if (
+      tournamentType !== "poule" &&
+      tournamentType !== "rapide"
+    ) {
+
+      return res.status(400).send(
+        tr(
+          req,
+          "Type de tournoi invalide",
+          "Invalid tournament type"
+        )
+      );
+
+    }
+
+    if (
+      tournamentType === "rapide" &&
+      maxTeams !== 32
+    ) {
+
+      return res.status(400).send(
+        tr(
+          req,
+          "Le tournoi rapide exige exactement 32 équipes",
+          "The quick tournament requires exactly 32 teams"
+        )
+      );
+
+    }
+
+    /* =========================
+       8. VÉRIFIER L'ABONNEMENT
+    ========================= */
+
+    if (
       maxTeams > 33 &&
-      user.abonnement !== 1
-    ){
-      return res.send(
+      !estAbonne
+    ) {
+
+      return res.status(403).send(
         tr(
           req,
           "Abonnement requis pour créer un tournoi de plus de 33 équipes",
           "Subscription required to create a tournament with more than 33 teams"
         )
       );
+
     }
 
-    const actifs = await get(
-      `
-      SELECT COUNT(*) AS total
-      FROM tournaments
-      WHERE user_id=?
-      AND status!='finished'
-      `,
-      [req.session.userId]
-    );
+    /* =========================
+       9. CRÉATION SÉCURISÉE
+       DANS UNE TRANSACTION
+    ========================= */
 
-    if(
-      user.abonnement !== 1 &&
-      actifs.total >= 1
-    ){
-      return res.send(
-        "Abonnement requis pour organiser plusieurs tournois en même temps"
+    const resultat =
+      await executerTransaction(
+        async transaction => {
+
+          const actifs =
+            await transaction.get(
+              `
+              SELECT COUNT(*) AS total
+              FROM tournaments
+              WHERE user_id=?
+                AND status!='finished'
+              `,
+              [req.session.userId]
+            );
+
+          if (
+            !estAbonne &&
+            Number(actifs?.total || 0) >= 1
+          ) {
+
+            const erreur =
+              new Error("ACTIVE_TOURNAMENT_LIMIT");
+
+            erreur.code =
+              "ACTIVE_TOURNAMENT_LIMIT";
+
+            throw erreur;
+
+          }
+
+          /*
+            LOWER(name) évite par exemple :
+
+            Coupe Afrique
+            coupe afrique
+            COUPE AFRIQUE
+          */
+
+          const dejaOuvert =
+            await transaction.get(
+              `
+              SELECT id
+              FROM tournaments
+              WHERE user_id=?
+                AND status!='finished'
+                AND LOWER(TRIM(name))=
+                    LOWER(TRIM(?))
+              LIMIT 1
+              `,
+              [
+                req.session.userId,
+                cleanName
+              ]
+            );
+
+          if (dejaOuvert) {
+
+            const erreur =
+              new Error("DUPLICATE_TOURNAMENT");
+
+            erreur.code =
+              "DUPLICATE_TOURNAMENT";
+
+            throw erreur;
+
+          }
+
+          /* =========================
+             10. GÉNÉRER UN CODE UNIQUE
+          ========================= */
+
+          let joinCode = "";
+          let codeExiste = true;
+          let tentatives = 0;
+
+          while (
+            codeExiste &&
+            tentatives < 10
+          ) {
+
+            joinCode =
+              Math.random()
+                .toString(36)
+                .slice(2, 10)
+                .toUpperCase();
+
+            const tournoiAvecCode =
+              await transaction.get(
+                `
+                SELECT id
+                FROM tournaments
+                WHERE join_code=?
+                LIMIT 1
+                `,
+                [joinCode]
+              );
+
+            codeExiste =
+              Boolean(tournoiAvecCode);
+
+            tentatives++;
+
+          }
+
+          if (
+            !joinCode ||
+            codeExiste
+          ) {
+
+            const erreur =
+              new Error("JOIN_CODE_ERROR");
+
+            erreur.code =
+              "JOIN_CODE_ERROR";
+
+            throw erreur;
+
+          }
+
+          /* =========================
+             11. ENREGISTRER LE TOURNOI
+          ========================= */
+
+          const insertion =
+            await transaction.run(
+              `
+              INSERT INTO tournaments(
+                user_id,
+                name,
+                max_teams,
+                status,
+                join_code,
+                group_link,
+                type
+              )
+              VALUES(?,?,?,?,?,?,?)
+              `,
+              [
+                req.session.userId,
+                cleanName,
+                maxTeams,
+                "open",
+                joinCode,
+                cleanGroupLink,
+                tournamentType
+              ]
+            );
+
+          return {
+            tournamentId:
+              insertion.lastID,
+
+            joinCode
+          };
+
+        }
       );
+
+    /* =========================
+       12. RÉPONSE DE SUCCÈS
+    ========================= */
+
+    return res.status(201).json({
+      ok: true,
+
+      message:
+        tr(
+          req,
+          "Tournoi créé",
+          "Tournament created"
+        ),
+
+      tournament_id:
+        resultat.tournamentId,
+
+      join_code:
+        resultat.joinCode
+    });
+
+  } catch (error) {
+
+    if (
+      error.code ===
+      "ACTIVE_TOURNAMENT_LIMIT"
+    ) {
+
+      return res.status(403).send(
+        tr(
+          req,
+          "Abonnement requis pour organiser plusieurs tournois en même temps",
+          "A subscription is required to organize multiple tournaments at the same time"
+        )
+      );
+
     }
 
-    const dejaOuvert = await get(
-  `
-  SELECT id
-  FROM tournaments
-  WHERE user_id=?
-    AND status='open'
-    AND name=?
-  LIMIT 1
-  `,
-  [
-    req.session.userId,
-    cleanName
-  ]
-);
+    if (
+      error.code ===
+      "DUPLICATE_TOURNAMENT"
+    ) {
 
-if(dejaOuvert){
+      return res.status(409).send(
+        tr(
+          req,
+          "Un tournoi portant ce nom existe déjà et n'est pas terminé",
+          "A tournament with this name already exists and is not finished"
+        )
+      );
 
-  return res.status(409).send(
-    tr(
-      req,
-      "Un tournoi portant ce nom est déjà ouvert",
-      "A tournament with this name is already open"
-    )
-  );
+    }
 
-}
+    if (
+      error.code ===
+      "JOIN_CODE_ERROR"
+    ) {
 
-    const joinCode =
-      Math.random()
-      .toString(36)
-      .substring(2,10);
+      return res.status(500).send(
+        tr(
+          req,
+          "Impossible de générer le code d'invitation",
+          "Unable to generate the invitation code"
+        )
+      );
 
-    await run(
-      `
-      INSERT INTO tournaments(
-        user_id,
-        name,
-        max_teams,
-        status,
-        join_code,
-        group_link,
-        type
-      )
-      VALUES(?,?,?,?,?,?,?)
-      `,
-      [
-        req.session.userId,
-        cleanName,
-        maxTeams,
-        "open",
-        joinCode,
-        group_link || "",
-        tournamentType
-      ]
+    }
+
+    console.error(
+      "Erreur création tournoi :",
+      error
     );
 
-    res.send(
-  tr(req,"Tournoi créé","Tournament created")
-);
+    return res.status(500).send(
+      tr(
+        req,
+        "Erreur création tournoi",
+        "Tournament creation failed"
+      )
+    );
 
-  }catch(e){
-
-    console.log(e);
-    
-res.send(
-  tr(req,"Erreur création tournoi","Tournament creation failed")
-);
   }
 
 });
@@ -2170,15 +2412,30 @@ app.get("/tournois", async (req,res)=>{
 
 });
 
-app.post("/participant", async (req,res)=>{
+app.post("/participant", async (req, res) => {
 
-  try{
+  try {
 
-    if(!connected(req)){
-      return res.send(
-  tr(req,"Connecte-toi","Please log in")
-);
+    /* =========================
+       1. VÉRIFIER LA CONNEXION
+    ========================= */
+
+    if (!connected(req)) {
+
+      return res.status(401).send(
+        tr(
+          req,
+          "Connecte-toi",
+          "Please log in"
+        )
+      );
+
     }
+
+    /* =========================
+       2. RÉCUPÉRER ET NETTOYER
+       LES DONNÉES
+    ========================= */
 
     const {
       tournament_id,
@@ -2187,174 +2444,487 @@ app.post("/participant", async (req,res)=>{
       club_logo
     } = req.body;
 
-    if(!tournament_id || !participantUsername){
-      return res.send(
-  tr(req,"Tournoi et nom utilisateur obligatoires","Tournament and username are required")
-);
-    }
-
-    const tournoi = await get(
-      `
-      SELECT *
-      FROM tournaments
-      WHERE id=?
-      `,
-      [tournament_id]
-    );
-
-    if(!tournoi){
-      return res.send(
-  tr(req,"Tournoi introuvable","Tournament not found")
-);
-    }
-
-    if(
-  tournoi.status === "started" ||
-  tournoi.status === "finished"
-){
-
-  return res.status(409).send(
-    tr(
-      req,
-      "Impossible d'ajouter un participant : le tournoi a déjà commencé",
-      "A participant cannot be added because the tournament has already started"
-    )
-  );
-
-}
-    const ownerCheck =
-  await verifierProprietaireTournoi(req, tournament_id);
-
-if(!ownerCheck.ok){
-  return res.send(ownerCheck.message);
-}
-
-    const count = await get(
-      `
-      SELECT COUNT(*) AS total
-      FROM participants
-      WHERE tournament_id=?
-      `,
-      [tournament_id]
-    );
-
-    if(count.total >= tournoi.max_teams){
-
-  return res.status(409).send(
-    tr(
-      req,
-      `Maximum de ${tournoi.max_teams} équipes atteint`,
-      `Maximum of ${tournoi.max_teams} teams reached`
-    )
-  );
-
-}
+    const tournamentId =
+      Number(tournament_id);
 
     const cleanUsername =
-  String(participantUsername || "")
-    .trim()
-    .replace(/^@+/, "")
-    .toLowerCase();
+      String(participantUsername || "")
+        .trim()
+        .replace(/^@+/, "")
+        .toLowerCase();
 
-    if(!cleanUsername){
+    const cleanTelephone =
+      String(telephone || "")
+        .trim()
+        .slice(0, 30);
 
-  return res.status(400).send(
-    tr(
-      req,
-      "Nom utilisateur invalide",
-      "Invalid username"
-    )
-  );
+    const cleanClubLogo =
+      String(club_logo || "")
+        .trim()
+        .slice(0, 1000);
 
-}
+    /* =========================
+       3. VÉRIFIER LE TOURNOI
+    ========================= */
 
-    const user = await get(
-      `
-      SELECT *
-      FROM users
-      WHERE username=?
-      `,
-      [cleanUsername]
-    );
+    if (
+      !Number.isInteger(tournamentId) ||
+      tournamentId <= 0
+    ) {
 
-    if(!user){
-      return res.send(
-  tr(req,"Compte SNUGAME introuvable","SNUGAME account not found")
-  );
-      
+      return res.status(400).send(
+        tr(
+          req,
+          "Tournoi invalide",
+          "Invalid tournament"
+        )
+      );
+
     }
 
-    const already = await get(
-      `
-      SELECT id
-      FROM participants
-      WHERE tournament_id=?
-      AND user_id=?
-      `,
-      [
-        tournament_id,
-        user.id
-      ]
-    );
+    /* =========================
+       4. VÉRIFIER LE NOM
+       D'UTILISATEUR
+    ========================= */
 
-    if(already){
-      return res.send(
-  tr(req,"Ce joueur est déjà dans ce tournoi","This player is already in this tournament")
-);
+    if (!cleanUsername) {
+
+      return res.status(400).send(
+        tr(
+          req,
+          "Nom utilisateur obligatoire",
+          "Username is required"
+        )
+      );
+
     }
 
-    const prenom =
-      user.name || user.username;
+    if (
+      cleanUsername.length < 2 ||
+      cleanUsername.length > 50
+    ) {
 
-    const result = await run(
-      `
-      INSERT INTO participants(
-        tournament_id,
-        prenom,
-        user_id,
-        username,
-        telephone,
-        club_logo
-      )
-      VALUES(?,?,?,?,?,?)
-      `,
-      [
-        tournament_id,
-        prenom,
-        user.id,
-        user.username || "",
-        telephone || "",
-        club_logo || ""
-      ]
+      return res.status(400).send(
+        tr(
+          req,
+          "Nom utilisateur invalide",
+          "Invalid username"
+        )
+      );
+
+    }
+
+    /* =========================
+       5. VÉRIFIER LE PROPRIÉTAIRE
+    ========================= */
+
+    const ownerCheck =
+      await verifierProprietaireTournoi(
+        req,
+        tournamentId
+      );
+
+    if (!ownerCheck.ok) {
+
+      return res.status(403).send(
+        ownerCheck.message
+      );
+
+    }
+
+    /* =========================
+       6. AJOUT SÉCURISÉ
+       DANS UNE TRANSACTION
+    ========================= */
+
+    const resultat =
+      await executerTransaction(
+        async transaction => {
+
+          /*
+            On relit le tournoi dans la transaction
+            pour avoir son état le plus récent.
+          */
+
+          const tournoi =
+            await transaction.get(
+              `
+              SELECT
+                id,
+                name,
+                max_teams,
+                status
+              FROM tournaments
+              WHERE id=?
+              `,
+              [tournamentId]
+            );
+
+          if (!tournoi) {
+
+            const erreur =
+              new Error("TOURNOI_INTROUVABLE");
+
+            erreur.code =
+              "TOURNOI_INTROUVABLE";
+
+            throw erreur;
+
+          }
+
+          if (
+            tournoi.status === "started" ||
+            tournoi.status === "finished"
+          ) {
+
+            const erreur =
+              new Error("TOURNOI_DEJA_COMMENCE");
+
+            erreur.code =
+              "TOURNOI_DEJA_COMMENCE";
+
+            throw erreur;
+
+          }
+
+          /*
+            Retrouver le compte SNUGAME.
+            LOWER permet d'éviter les problèmes
+            de majuscules et minuscules.
+          */
+
+          const user =
+            await transaction.get(
+              `
+              SELECT
+                id,
+                name,
+                username
+              FROM users
+              WHERE LOWER(username)=LOWER(?)
+              LIMIT 1
+              `,
+              [cleanUsername]
+            );
+
+          if (!user) {
+
+            const erreur =
+              new Error("UTILISATEUR_INTROUVABLE");
+
+            erreur.code =
+              "UTILISATEUR_INTROUVABLE";
+
+            throw erreur;
+
+          }
+
+          /* =========================
+             7. VÉRIFIER LES DOUBLONS
+          ========================= */
+
+          const already =
+            await transaction.get(
+              `
+              SELECT id
+              FROM participants
+              WHERE tournament_id=?
+                AND user_id=?
+              LIMIT 1
+              `,
+              [
+                tournamentId,
+                user.id
+              ]
+            );
+
+          if (already) {
+
+            const erreur =
+              new Error("PARTICIPANT_DEJA_PRESENT");
+
+            erreur.code =
+              "PARTICIPANT_DEJA_PRESENT";
+
+            throw erreur;
+
+          }
+
+          /* =========================
+             8. VÉRIFIER LES PLACES
+          ========================= */
+
+          const count =
+            await transaction.get(
+              `
+              SELECT COUNT(*) AS total
+              FROM participants
+              WHERE tournament_id=?
+              `,
+              [tournamentId]
+            );
+
+          const totalParticipants =
+            Number(count?.total || 0);
+
+          const maximum =
+            Number(tournoi.max_teams || 0);
+
+          if (
+            maximum <= 0 ||
+            totalParticipants >= maximum
+          ) {
+
+            const erreur =
+              new Error("TOURNOI_COMPLET");
+
+            erreur.code =
+              "TOURNOI_COMPLET";
+
+            erreur.maximum =
+              maximum;
+
+            throw erreur;
+
+          }
+
+          /* =========================
+             9. INSÉRER LE PARTICIPANT
+          ========================= */
+
+          const prenom =
+            String(
+              user.name ||
+              user.username ||
+              cleanUsername
+            ).trim();
+
+          const insertion =
+            await transaction.run(
+              `
+              INSERT INTO participants(
+                tournament_id,
+                prenom,
+                user_id,
+                username,
+                telephone,
+                club_logo
+              )
+              VALUES(?,?,?,?,?,?)
+              `,
+              [
+                tournamentId,
+                prenom,
+                user.id,
+                user.username || cleanUsername,
+                cleanTelephone,
+                cleanClubLogo
+              ]
+            );
+
+          const participantId =
+            insertion.lastID;
+
+          if (!participantId) {
+
+            const erreur =
+              new Error("ERREUR_INSERTION_PARTICIPANT");
+
+            erreur.code =
+              "ERREUR_INSERTION_PARTICIPANT";
+
+            throw erreur;
+
+          }
+
+          /* =========================
+             10. CRÉER LES STATISTIQUES
+          ========================= */
+
+          await transaction.run(
+            `
+            INSERT OR IGNORE INTO player_stats(
+              participant_id
+            )
+            VALUES(?)
+            `,
+            [participantId]
+          );
+
+          return {
+            participantId,
+            userId:user.id,
+            username:
+              user.username || cleanUsername,
+            tournamentName:
+              tournoi.name || ""
+          };
+
+        }
+      );
+
+    /* =========================
+       11. ENVOYER LA NOTIFICATION
+       APRÈS LA TRANSACTION
+    ========================= */
+
+    try {
+
+      await notifierUtilisateur(
+        resultat.userId,
+        "📢 Invitation tournoi",
+        "Tu as été ajouté au tournoi : " +
+          resultat.tournamentName,
+        "tournament:" + tournamentId
+      );
+
+    } catch (notificationError) {
+
+      /*
+        Le participant est bien ajouté même si
+        la notification rencontre un problème.
+      */
+
+      console.error(
+        "Erreur notification participant :",
+        notificationError
+      );
+
+    }
+
+    /* =========================
+       12. RÉPONSE DE SUCCÈS
+    ========================= */
+
+    return res.status(201).json({
+      ok:true,
+
+      message:
+        tr(
+          req,
+          "Participant ajouté",
+          "Participant added"
+        ),
+
+      participant_id:
+        resultat.participantId,
+
+      user_id:
+        resultat.userId,
+
+      username:
+        resultat.username
+    });
+
+  } catch (error) {
+
+    /* =========================
+       TOURNOI INTROUVABLE
+    ========================= */
+
+    if (
+      error.code ===
+      "TOURNOI_INTROUVABLE"
+    ) {
+
+      return res.status(404).send(
+        tr(
+          req,
+          "Tournoi introuvable",
+          "Tournament not found"
+        )
+      );
+
+    }
+
+    /* =========================
+       TOURNOI DÉJÀ COMMENCÉ
+    ========================= */
+
+    if (
+      error.code ===
+      "TOURNOI_DEJA_COMMENCE"
+    ) {
+
+      return res.status(409).send(
+        tr(
+          req,
+          "Impossible d'ajouter un participant : le tournoi a déjà commencé",
+          "A participant cannot be added because the tournament has already started"
+        )
+      );
+
+    }
+
+    /* =========================
+       UTILISATEUR INTROUVABLE
+    ========================= */
+
+    if (
+      error.code ===
+      "UTILISATEUR_INTROUVABLE"
+    ) {
+
+      return res.status(404).send(
+        tr(
+          req,
+          "Compte SNUGAME introuvable",
+          "SNUGAME account not found"
+        )
+      );
+
+    }
+
+    /* =========================
+       PARTICIPANT DÉJÀ PRÉSENT
+    ========================= */
+
+    if (
+      error.code ===
+      "PARTICIPANT_DEJA_PRESENT"
+    ) {
+
+      return res.status(409).send(
+        tr(
+          req,
+          "Ce joueur est déjà dans ce tournoi",
+          "This player is already in this tournament"
+        )
+      );
+
+    }
+
+    /* =========================
+       TOURNOI COMPLET
+    ========================= */
+
+    if (
+      error.code ===
+      "TOURNOI_COMPLET"
+    ) {
+
+      return res.status(409).send(
+        tr(
+          req,
+          `Maximum de ${error.maximum || 0} équipes atteint`,
+          `Maximum of ${error.maximum || 0} teams reached`
+        )
+      );
+
+    }
+
+    console.error(
+      "Erreur ajout participant :",
+      error
     );
 
-    await run(
-      `
-      INSERT OR IGNORE INTO player_stats(
-        participant_id
+    return res.status(500).send(
+      tr(
+        req,
+        "Erreur lors de l'ajout du participant",
+        "Failed to add participant"
       )
-      VALUES(?)
-      `,
-      [result.lastID]
     );
-
-    await notifierUtilisateur(
-  user.id,
-  "📢 Invitation tournoi",
-  "Tu as été ajouté au tournoi : " + (tournoi.name || ""),
-  "tournament:" + tournament_id
-);
-
-    res.send(
-  tr(req,"Participant ajouté","Participant added")
-);
-
-  }catch(e){
-
-    console.log(e);
-    res.send(
-  tr(req,"Erreur ajout participant : ","Failed to add participant: ") + e.message
-);
 
   }
 
@@ -9052,6 +9622,41 @@ Envoyer code email
 Créer compte et participer
 </button>
 
+<div
+  style="
+    margin:24px 0;
+    border-top:1px solid #334155;
+  ">
+</div>
+
+<h3 style="text-align:center;">
+J’ai déjà un compte SUNUGAME
+</h3>
+
+<p class="small" style="text-align:center;">
+Connecte-toi avec ton compte pour participer automatiquement au tournoi.
+</p>
+
+<input
+  id="existingUsername"
+  placeholder="Username"
+  autocomplete="username"
+>
+
+<input
+  id="existingPassword"
+  type="password"
+  placeholder="Mot de passe"
+  autocomplete="current-password"
+>
+
+<button
+  class="secondary"
+  onclick="joinWithExistingAccount()"
+>
+Se connecter et participer
+</button>
+
 <p id="msg"></p>
 
 </div>
@@ -9123,6 +9728,58 @@ async function joinTournament(){
   }
 
   msg.innerHTML = result;
+
+}
+
+async function joinWithExistingAccount(){
+
+  const username =
+    document
+      .getElementById("existingUsername")
+      .value
+      .trim();
+
+  const password =
+    document
+      .getElementById("existingPassword")
+      .value;
+
+  if(!username || !password){
+
+    msg.textContent =
+      "Username et mot de passe obligatoires";
+
+    return;
+
+  }
+
+  msg.textContent =
+    "Connexion et inscription au tournoi...";
+
+  const result = await post(
+    "/join-tournament-existing-account",
+    {
+      join_code:"${escapeHtml(req.params.code)}",
+      username,
+      password
+    }
+  );
+
+  if(
+    result.startsWith("dashboardUrl:")
+  ){
+
+    window.location.href =
+      result.replace(
+        "dashboardUrl:",
+        ""
+      );
+
+    return;
+
+  }
+
+  msg.textContent = result;
 
 }
 
@@ -14230,6 +14887,370 @@ app.get("/app-ads.txt", (req, res) => {
   res.send(
     "google.com, pub-9714357792942805, DIRECT, f08c47fec0942fa0"
   );
+
+});
+
+app.post(
+  "/join-tournament-existing-account",
+  loginLimiter,
+  async (req,res)=>{
+
+  try{
+
+    const joinCode =
+      String(req.body.join_code || "")
+        .trim();
+
+    const username =
+      String(req.body.username || "")
+        .trim();
+
+    const password =
+      String(req.body.password || "");
+
+    if(
+      !joinCode ||
+      !username ||
+      !password
+    ){
+
+      return res.status(400).send(
+        tr(
+          req,
+          "Username et mot de passe obligatoires",
+          "Username and password are required"
+        )
+      );
+
+    }
+
+    /*
+      1. Vérifier le tournoi grâce au lien
+    */
+
+    const tournoi = await get(
+      `
+      SELECT *
+      FROM tournaments
+      WHERE join_code=?
+      `,
+      [joinCode]
+    );
+
+    if(!tournoi){
+
+      return res.status(404).send(
+        tr(
+          req,
+          "Lien d'inscription invalide",
+          "Invalid registration link"
+        )
+      );
+
+    }
+
+    /*
+      2. Vérifier que les inscriptions
+         sont toujours ouvertes
+    */
+
+    if(
+      tournoi.status === "started" ||
+      tournoi.status === "finished"
+    ){
+
+      return res.status(400).send(
+        tr(
+          req,
+          "Les inscriptions sont fermées. Le tirage a commencé.",
+          "Registration is closed. The draw has already started."
+        )
+      );
+
+    }
+
+    /*
+      3. Rechercher le compte existant
+         avec son username
+    */
+
+    const user = await get(
+      `
+      SELECT *
+      FROM users
+      WHERE LOWER(username)=LOWER(?)
+      `,
+      [username]
+    );
+
+    if(!user){
+
+      return res.status(401).send(
+        tr(
+          req,
+          "Username ou mot de passe incorrect",
+          "Incorrect username or password"
+        )
+      );
+
+    }
+
+    /*
+      4. Vérifier si le compte est banni
+    */
+
+    if(Number(user.banned) === 1){
+
+      return res.status(403).send(
+        tr(
+          req,
+          "Ce compte est suspendu",
+          "This account is suspended"
+        )
+      );
+
+    }
+
+    /*
+      5. Vérifier son vrai mot de passe
+    */
+
+    const passwordCorrect =
+      await bcrypt.compare(
+        password,
+        user.password
+      );
+
+    if(!passwordCorrect){
+
+      return res.status(401).send(
+        tr(
+          req,
+          "Username ou mot de passe incorrect",
+          "Incorrect username or password"
+        )
+      );
+
+    }
+
+    /*
+      6. Vérifier s'il participe déjà
+    */
+
+    const alreadyParticipant = await get(
+      `
+      SELECT id
+      FROM participants
+      WHERE tournament_id=?
+      AND user_id=?
+      `,
+      [
+        tournoi.id,
+        user.id
+      ]
+    );
+
+    if(alreadyParticipant){
+
+      /*
+        Il est déjà participant :
+        on connecte simplement son propre compte.
+      */
+
+      req.session.userId = user.id;
+
+      return req.session.save(error=>{
+
+        if(error){
+
+          console.error(
+            "Erreur sauvegarde session :",
+            error
+          );
+
+          return res.status(500).send(
+            tr(
+              req,
+              "Impossible de connecter le compte",
+              "Unable to log in"
+            )
+          );
+
+        }
+
+        return res.send(
+          "dashboardUrl:/app"
+        );
+
+      });
+
+    }
+
+    /*
+      7. Vérifier les places disponibles
+    */
+
+    const count = await get(
+      `
+      SELECT COUNT(*) AS total
+      FROM participants
+      WHERE tournament_id=?
+      `,
+      [tournoi.id]
+    );
+
+    if(
+      Number(count?.total || 0) >=
+      Number(tournoi.max_teams)
+    ){
+
+      return res.status(400).send(
+        tr(
+          req,
+          "Tournoi complet. Les inscriptions sont fermées.",
+          "Tournament is full. Registration is closed."
+        )
+      );
+
+    }
+
+    /*
+      8. Ajouter ce compte comme participant.
+         Aucun nouveau compte n'est créé.
+    */
+
+    const participant = await run(
+      `
+      INSERT INTO participants(
+        tournament_id,
+        prenom,
+        email,
+        user_id,
+        username,
+        telephone,
+        numero_serie,
+        club_logo,
+        preuve
+      )
+      VALUES(?,?,?,?,?,?,?,?,?)
+      `,
+      [
+        tournoi.id,
+        user.name || user.username,
+        user.email || "",
+        user.id,
+        user.username,
+        "",
+        "",
+        "",
+        "Inscription compte existant"
+      ]
+    );
+
+    /*
+      9. Créer ses statistiques du tournoi
+    */
+
+    await run(
+      `
+      INSERT OR IGNORE INTO player_stats(
+        participant_id
+      )
+      VALUES(?)
+      `,
+      [participant.lastID]
+    );
+
+    /*
+      10. Connecter le joueur à son propre compte
+    */
+
+    req.session.userId = user.id;
+
+    req.session.save(error=>{
+
+      if(error){
+
+        console.error(
+          "Erreur sauvegarde session :",
+          error
+        );
+
+        return res.status(500).send(
+          tr(
+            req,
+            "Participation enregistrée, mais la connexion a échoué",
+            "Registration succeeded, but login failed"
+          )
+        );
+
+      }
+
+      /*
+        On revient simplement dans son compte.
+        Le bouton Tableau de bord existant
+        continuera de fonctionner normalement.
+      */
+
+      return res.send(
+        "dashboardUrl:/app"
+      );
+
+    });
+
+  }catch(error){
+
+    console.error(
+      "Erreur participation compte existant :",
+      error
+    );
+
+    return res.status(500).send(
+      tr(
+        req,
+        "Impossible de rejoindre le tournoi pour le moment",
+        "Unable to join the tournament right now"
+      )
+    );
+
+  }
+
+});
+
+app.get("/join-fresh/:code", async (req,res)=>{
+
+  const joinCode =
+    String(req.params.code || "").trim();
+
+  if(!joinCode){
+
+    return res.redirect("/app");
+
+  }
+
+  /*
+    Déconnecter uniquement la session actuelle.
+    Le tournoi et son lien restent inchangés.
+  */
+
+  req.session.destroy(error=>{
+
+    if(error){
+
+      console.error(
+        "Erreur déconnexion inscription suivante :",
+        error
+      );
+
+    }
+
+    res.clearCookie("connect.sid");
+
+    return res.redirect(
+      "/join/" + encodeURIComponent(joinCode)
+    );
+
+  });
 
 });
 
