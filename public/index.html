@@ -2432,13 +2432,21 @@ button:active{
 .sunu-legend-header{
   position:relative;
   display:grid;
-  grid-template-columns:90px 1fr 110px;
+  grid-template-columns:1fr 110px;
   align-items:center;
   gap:12px;
   min-height:100px;
   margin-bottom:14px;
   padding:8px 12px 12px;
   border-bottom:1px solid rgba(255,205,70,.45);
+}
+
+.sunu-legend-title{
+  grid-column:1;
+}
+
+.sunu-legend-rank-logo{
+  grid-column:2;
 }
 
 .sunu-legend-logo{
@@ -2465,10 +2473,17 @@ button:active{
 }
 
 .sunu-legend-logo span{
-  margin-top:5px;
+  margin-top:0;
   font-size:9px;
   font-weight:900;
   letter-spacing:.8px;
+
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  width:100%;
+  height:100%;
+  text-align:center;
 }
 
 .sunu-legend-title{
@@ -3480,6 +3495,47 @@ max-height:340px;
     font-size:12px;
   }
 
+  .sunu-photo-trophy{
+  width:28px;
+  height:28px;
+}
+
+.sunu-photo-trophy i{
+  font-size:15px;
+}
+
+}
+
+.sunu-photo-trophy{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+
+  width:34px;
+  height:34px;
+
+  margin:2px auto 0;
+
+  border-radius:50%;
+
+  background:
+    linear-gradient(
+      145deg,
+      #fff4a8,
+      #d99b17 55%,
+      #7a4300
+    );
+
+  border:2px solid #ffe67a;
+
+  box-shadow:
+    0 0 8px rgba(255,210,64,.75),
+    inset 0 1px 2px rgba(255,255,255,.7);
+}
+
+.sunu-photo-trophy i{
+  font-size:18px;
+  color:#3d2200;
 }
 
 </style>
@@ -7775,10 +7831,7 @@ const photo =
 
       <div class="sunu-legend-header">
 
-        <div class="sunu-legend-logo">
-          <strong>S</strong>
-          <span>SUNUGAME</span>
-        </div>
+      <div></div>
 
         <div class="sunu-legend-title">
 
@@ -7799,9 +7852,7 @@ const photo =
 
           <i class="fa-solid fa-trophy"></i>
 
-          <strong>
-            ${rang}
-          </strong>
+          <strong>-</strong>
 
         </div>
 
@@ -7827,14 +7878,6 @@ const photo =
                 ${position}
               </span>
 
-              <div class="sunu-main-position">
-                ${nomCategorie}
-              </div>
-
-              <div class="sunu-main-country">
-                ${drapeau}
-              </div>
-
             </div>
 
             <div class="sunu-main-photo-zone">
@@ -7857,6 +7900,10 @@ const photo =
     this.src='/default-avatar.png?v=' + Date.now();
   "
 >
+
+<div class="sunu-photo-trophy">
+  <i class="fa-solid fa-trophy"></i>
+</div>
 
             </div>
 
@@ -7950,16 +7997,6 @@ const photo =
               <div class="sunu-xp-text">
                 ${xpDansNiveau} / ${xpNiveau} XP
               </div>
-
-            </div>
-
-            <div class="sunu-rank-box">
-
-              <span>RANG</span>
-
-              <strong>
-                ${rang}
-              </strong>
 
             </div>
 
@@ -8119,15 +8156,7 @@ const photo =
                 <strong>${tournoisGagnes}</strong>
               </div>
 
-              <div class="sunu-trophy">
-                <i class="fa-solid fa-star"></i>
-                <strong>${notePalmares}</strong>
-              </div>
-
-              <div class="sunu-trophy">
-                <i class="fa-solid fa-crown"></i>
-                <strong>${rang}</strong>
-              </div>
+              
 
             </div>
 
