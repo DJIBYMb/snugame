@@ -7767,192 +7767,368 @@ app.get("/highlights", async (req,res)=>{
 
 });
 
-app.post("/like-highlight", async (req,res)=>{
+app.post("/like-highlight", async (req, res) => {
 
-  try{
+  try {
 
-    if(!connected(req)){
+    /* =========================
+       1. VÉRIFIER LA CONNEXION
+    ========================= */
 
-      return res.status(401).send(
-        tr(
-          req,
-          "Connecte-toi",
-          "Please log in"
-        )
-      );
+    if (!connected(req)) {
+
+      return res.status(401).json({
+        ok:false,
+
+        message:
+          tr(
+            req,
+            "Connecte-toi",
+            "Please log in"
+          )
+      });
 
     }
+
+    const userId =
+      Number(req.session.userId);
 
     const highlightId =
       Number(req.body.id);
 
-    if(
+    /* =========================
+       2. VÉRIFIER LA VIDÉO
+    ========================= */
+
+    if (
       !Number.isInteger(highlightId) ||
       highlightId <= 0
-    ){
+    ) {
 
-      return res.status(400).send(
-        tr(
-          req,
-          "Vidéo invalide",
-          "Invalid video"
-        )
-      );
+      return res.status(400).json({
+        ok:false,
 
-    }
-
-    const video = await get(
-      `
-      SELECT
-        h.id,
-        h.user_id,
-        h.titre,
-        u.username,
-        u.name
-      FROM highlights h
-      LEFT JOIN users u
-        ON u.id=?
-      WHERE h.id=?
-      `,
-      [
-        req.session.userId,
-        highlightId
-      ]
-    );
-
-    if(!video){
-
-      return res.status(404).send(
-        tr(
-          req,
-          "Vidéo introuvable",
-          "Video not found"
-        )
-      );
-
-    }
-
-    const dejaLike = await get(
-      `
-      SELECT id
-      FROM highlight_likes
-      WHERE highlight_id=?
-        AND user_id=?
-      `,
-      [
-        highlightId,
-        req.session.userId
-      ]
-    );
-
-    await run("BEGIN TRANSACTION");
-
-    try{
-
-      if(dejaLike){
-
-        await run(
-          `
-          DELETE FROM highlight_likes
-          WHERE highlight_id=?
-            AND user_id=?
-          `,
-          [
-            highlightId,
-            req.session.userId
-          ]
-        );
-
-        await run(
-          `
-          UPDATE highlights
-          SET likes=MAX(likes-1,0)
-          WHERE id=?
-          `,
-          [highlightId]
-        );
-
-        await run("COMMIT");
-
-        return res.send(
+        message:
           tr(
             req,
-            "Like retiré",
-            "Like removed"
+            "Vidéo invalide",
+            "Invalid video"
           )
+      });
+
+    }
+
+    /* =========================
+       3. LIKE SÉCURISÉ
+       DANS UNE TRANSACTION
+    ========================= */
+
+    const resultat =
+      await executerTransaction(
+        async transaction => {
+
+          const video =
+            await transaction.get(
+              `
+              SELECT
+                id,
+                user_id,
+                titre
+              FROM highlights
+              WHERE id=?
+              `,
+              [highlightId]
+            );
+
+          if (!video) {
+
+            const erreur =
+              new Error("VIDEO_INTROUVABLE");
+
+            erreur.code =
+              "VIDEO_INTROUVABLE";
+
+            throw erreur;
+
+          }
+
+          /*
+            Cette vérification doit être faite
+            dans la transaction.
+          */
+
+          const dejaLike =
+            await transaction.get(
+              `
+              SELECT id
+              FROM highlight_likes
+              WHERE highlight_id=?
+                AND user_id=?
+              LIMIT 1
+              `,
+              [
+                highlightId,
+                userId
+              ]
+            );
+
+          /* =========================
+             4. RETIRER LE LIKE
+          ========================= */
+
+          if (dejaLike) {
+
+            await transaction.run(
+              `
+              DELETE FROM highlight_likes
+              WHERE highlight_id=?
+                AND user_id=?
+              `,
+              [
+                highlightId,
+                userId
+              ]
+            );
+
+            /*
+              On recompte directement les likes
+              réels dans la table.
+
+              C'est plus fiable que likes-1.
+            */
+
+            const compteur =
+              await transaction.get(
+                `
+                SELECT COUNT(*) AS total
+                FROM highlight_likes
+                WHERE highlight_id=?
+                `,
+                [highlightId]
+              );
+
+            const totalLikes =
+              Number(compteur?.total || 0);
+
+            await transaction.run(
+              `
+              UPDATE highlights
+              SET likes=?
+              WHERE id=?
+              `,
+              [
+                totalLikes,
+                highlightId
+              ]
+            );
+
+            return {
+              liked:false,
+              likes:totalLikes,
+              ownerId:
+                Number(video.user_id)
+            };
+
+          }
+
+          /* =========================
+             5. AJOUTER LE LIKE
+          ========================= */
+
+          await transaction.run(
+            `
+            INSERT INTO highlight_likes(
+              highlight_id,
+              user_id
+            )
+            VALUES(?,?)
+            `,
+            [
+              highlightId,
+              userId
+            ]
+          );
+
+          /*
+            On recompte la vérité dans
+            highlight_likes.
+          */
+
+          const compteur =
+            await transaction.get(
+              `
+              SELECT COUNT(*) AS total
+              FROM highlight_likes
+              WHERE highlight_id=?
+              `,
+              [highlightId]
+            );
+
+          const totalLikes =
+            Number(compteur?.total || 0);
+
+          await transaction.run(
+            `
+            UPDATE highlights
+            SET likes=?
+            WHERE id=?
+            `,
+            [
+              totalLikes,
+              highlightId
+            ]
+          );
+
+          return {
+            liked:true,
+            likes:totalLikes,
+            ownerId:
+              Number(video.user_id)
+          };
+
+        }
+      );
+
+    /* =========================
+       6. NOTIFICATION
+       UNIQUEMENT POUR UN NOUVEAU LIKE
+    ========================= */
+
+    if (
+      resultat.liked === true &&
+      resultat.ownerId &&
+      resultat.ownerId !== userId
+    ) {
+
+      try {
+
+        const utilisateur =
+          await get(
+            `
+            SELECT
+              name,
+              username
+            FROM users
+            WHERE id=?
+            `,
+            [userId]
+          );
+
+        const nomUtilisateur =
+          utilisateur?.name ||
+          utilisateur?.username ||
+          "Un joueur";
+
+        await notifierUtilisateur(
+          resultat.ownerId,
+          "❤️ Nouveau like",
+          `${nomUtilisateur} a aimé ta vidéo`,
+          `video:${highlightId}`
+        );
+
+      } catch (notificationError) {
+
+        /*
+          Une erreur de notification ne doit
+          jamais annuler le like.
+        */
+
+        console.error(
+          "Erreur notification like :",
+          notificationError
         );
 
       }
 
-      await run(
-        `
-        INSERT INTO highlight_likes(
-          highlight_id,
-          user_id
-        )
-        VALUES(?,?)
-        `,
-        [
-          highlightId,
-          req.session.userId
-        ]
-      );
+    }
 
-      await run(
-        `
-        UPDATE highlights
-        SET likes=likes+1
-        WHERE id=?
-        `,
-        [highlightId]
-      );
+    /* =========================
+       7. RÉPONSE JSON
+    ========================= */
 
-      await run("COMMIT");
+    return res.json({
+      ok:true,
 
-    }catch(error){
+      liked:
+        resultat.liked,
 
-      await run("ROLLBACK");
-      throw error;
+      likes:
+        resultat.likes,
+
+      message:
+        resultat.liked
+          ? tr(
+              req,
+              "Like ajouté",
+              "Like added"
+            )
+          : tr(
+              req,
+              "Like retiré",
+              "Like removed"
+            )
+    });
+
+  } catch (error) {
+
+    if (
+      error.code ===
+      "VIDEO_INTROUVABLE"
+    ) {
+
+      return res.status(404).json({
+        ok:false,
+
+        message:
+          tr(
+            req,
+            "Vidéo introuvable",
+            "Video not found"
+          )
+      });
 
     }
 
-    if(
-      video.user_id &&
-      Number(video.user_id) !==
-      Number(req.session.userId)
-    ){
+    /*
+      Cette erreur peut arriver si deux
+      requêtes tentent malgré tout d'insérer
+      exactement le même like.
+    */
 
-      await notifierUtilisateur(
-        video.user_id,
-        "❤️ Nouveau like",
-        `${video.username || video.name || "Un joueur"} a aimé ta vidéo`,
-        `video:${highlightId}`
-      );
+    if (
+      error.code === "SQLITE_CONSTRAINT" ||
+      String(error.message || "")
+        .includes("UNIQUE constraint")
+    ) {
+
+      return res.status(409).json({
+        ok:false,
+
+        message:
+          tr(
+            req,
+            "Le like est déjà enregistré",
+            "The like is already registered"
+          )
+      });
 
     }
-
-    return res.send(
-      tr(
-        req,
-        "Like ajouté",
-        "Like added"
-      )
-    );
-
-  }catch(error){
 
     console.error(
       "Erreur like vidéo :",
       error
     );
 
-    return res.status(500).send(
-      tr(
-        req,
-        "Erreur like",
-        "Failed to like video"
-      )
-    );
+    return res.status(500).json({
+      ok:false,
+
+      message:
+        tr(
+          req,
+          "Erreur like",
+          "Failed to like video"
+        )
+    });
 
   }
 

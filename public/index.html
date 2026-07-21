@@ -13171,27 +13171,97 @@ if(firstVideo){
 
 async function likeHighlight(id, btn){
 
-  const result = await post("/like-highlight",{
-    id:id
-  });
-
-  const icon = btn.querySelector("i");
-  const countBox = btn.nextElementSibling;
-
-  let count = Number(countBox.textContent) || 0;
-
-  if(result.includes("ajouté")){
-    icon.className = "fa-solid fa-heart";
-    count++;
-  }else{
-    icon.className = "fa-regular fa-heart";
-    count = Math.max(count - 1, 0);
+  if(
+    !btn ||
+    btn.dataset.loading === "1"
+  ){
+    return;
   }
 
-  countBox.textContent = count;
+  btn.dataset.loading = "1";
+  btn.disabled = true;
+
+  try{
+
+    const result =
+      await post(
+        "/like-highlight",
+        {
+          id:Number(id)
+        }
+      );
+
+    if(
+      !result ||
+      result.ok !== true
+    ){
+
+      throw new Error(
+        result?.message ||
+        "Impossible de modifier le like"
+      );
+
+    }
+
+    const icon =
+      btn.querySelector("i");
+
+    const countBox =
+      btn.nextElementSibling;
+
+    if(icon){
+
+      icon.className =
+        result.liked
+          ? "fa-solid fa-heart"
+          : "fa-regular fa-heart";
+
+    }
+
+    if(countBox){
+
+      countBox.textContent =
+        String(
+          Number(result.likes) || 0
+        );
+
+    }
+
+    btn.classList.toggle(
+      "liked",
+      result.liked === true
+    );
+
+    btn.setAttribute(
+      "aria-pressed",
+      result.liked
+        ? "true"
+        : "false"
+    );
+
+  }catch(error){
+
+    console.error(
+      "Erreur like vidéo :",
+      error
+    );
+
+    if(message){
+
+      message.textContent =
+        error?.message ||
+        "Impossible de modifier le like";
+
+    }
+
+  }finally{
+
+    btn.dataset.loading = "0";
+    btn.disabled = false;
+
+  }
 
 }
-
 async function toggleFavoriVideo(id, btn){
 
   const result =
