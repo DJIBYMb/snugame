@@ -16031,6 +16031,188 @@ function escapeHtml(value){
 
 }
 
+async function recupererVideoNotification(
+  highlightId
+){
+
+  const id = Number(highlightId);
+
+  if(
+    !Number.isInteger(id) ||
+    id <= 0
+  ){
+    return null;
+  }
+
+  const videos =
+    await get("/highlights");
+
+  if(!Array.isArray(videos)){
+    return null;
+  }
+
+  return videos.find(
+    video =>
+      Number(video.id) === id
+  ) || null;
+}
+
+window.ouvrirDepuisNotificationAndroid =
+async function(data){
+
+  try{
+
+    const type =
+      String(data?.type || "")
+        .toLowerCase()
+        .trim();
+
+    const highlightId =
+      Number(data?.highlight_id);
+
+    const userId =
+      Number(data?.user_id);
+
+    const tournamentId =
+      Number(data?.tournament_id);
+
+    if(
+      type === "follow" ||
+      type === "abonnement" ||
+      type === "follower"
+    ){
+
+      if(
+        Number.isInteger(userId) &&
+        userId > 0
+      ){
+        await ouvrirProfilPublic(userId);
+      }
+
+      return;
+    }
+
+    if(
+      type === "like" ||
+      type === "comment" ||
+      type === "commentaire"
+    ){
+
+      if(
+        !Number.isInteger(highlightId) ||
+        highlightId <= 0
+      ){
+        return;
+      }
+
+      const video =
+        await recupererVideoNotification(
+          highlightId
+        );
+
+      if(!video){
+        showNotif(
+          "Cette vidéo n'est plus disponible."
+        );
+        return;
+      }
+
+      ouvrirVideoProfil(
+        video.video_url ||
+        video.url,
+        video.id,
+        video.user_id,
+        video.thumbnail_url ||
+        ""
+      );
+
+      if(
+        type === "comment" ||
+        type === "commentaire"
+      ){
+
+        setTimeout(()=>{
+
+          ouvrirCommentaires(
+            video.id
+          );
+
+        }, 500);
+
+      }
+
+      return;
+    }
+
+    if(
+      type === "tournament" ||
+      type === "tournoi"
+    ){
+
+      if(
+        !Number.isInteger(tournamentId) ||
+        tournamentId <= 0
+      ){
+        return;
+      }
+
+      window.location.href =
+        "/app?tournament=" +
+        tournamentId;
+
+    }
+
+  }catch(error){
+
+    console.error(
+      "Erreur notification Android :",
+      error
+    );
+
+  }
+
+};
+
+async function traiterNotificationAndroidEnAttente(){
+
+  const notification =
+    localStorage.getItem(
+      "notificationAndroidEnAttente"
+    );
+
+  if(!notification){
+    return;
+  }
+
+  try{
+
+    const data =
+      JSON.parse(notification);
+
+    localStorage.removeItem(
+      "notificationAndroidEnAttente"
+    );
+
+    await window
+      .ouvrirDepuisNotificationAndroid(
+        data
+      );
+
+  }catch(error){
+
+    localStorage.removeItem(
+      "notificationAndroidEnAttente"
+    );
+
+    console.error(
+      "Notification Android invalide :",
+      error
+    );
+
+  }
+
+}
+
 async function ouvrirCommentaires(videoId){
 
   const id = Number(videoId);
@@ -17755,7 +17937,29 @@ onclick="ouvrirProfilCompte()">
 </div>
 
 <script>
-demarrerApplication();
+
+(async ()=>{
+
+  try{
+
+    await demarrerApplication();
+
+    await traiterNotificationAndroidEnAttente();
+
+  }catch(error){
+
+    console.error(
+      "Erreur au démarrage de SNUGAME :",
+      error
+    );
+
+    document.body.classList.remove(
+      "app-loading"
+    );
+
+  }
+
+})();
 
 </script>
 
