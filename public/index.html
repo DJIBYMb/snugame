@@ -16062,13 +16062,44 @@ async function(data){
 
   try{
 
-    const type =
-      String(data?.type || "")
+    const action =
+      String(data?.action || "")
+        .trim();
+
+    let type =
+      String(
+        data?.notification_type ||
+        data?.type ||
+        ""
+      )
         .toLowerCase()
         .trim();
 
-    const highlightId =
-      Number(data?.highlight_id);
+    let highlightId =
+      Number(
+        data?.highlight_id ||
+        data?.highlightId
+      );
+
+    if(
+      action.startsWith("video:")
+    ){
+
+      type = type || "like";
+
+      const actionHighlightId =
+        Number(
+          action.split(":")[1]
+        );
+
+      if(
+        Number.isInteger(actionHighlightId) &&
+        actionHighlightId > 0
+      ){
+        highlightId = actionHighlightId;
+      }
+
+    }
 
     const userId =
       Number(data?.user_id);
@@ -16827,7 +16858,8 @@ async function envoyerCommentaire(){
       );
 
     if(
-      result !== "Commentaire ajouté"
+      result !== "Commentaire ajouté" &&
+      result !== "Comment added"
     ){
 
       if(

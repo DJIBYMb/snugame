@@ -479,28 +479,83 @@ function run(sql,params=[]){
   });
 
 }
-
-async function envoyerNotificationPush(token, titre, message){
+async function envoyerNotificationPush(
+  token,
+  titre,
+  message,
+  action = ""
+){
 
   try{
 
+    const data = {
+      action:String(action || "")
+    };
+
+    /*
+      Exemple reçu :
+      action = "video:123"
+
+      On sépare aussi les informations pour Android.
+    */
+    if(action.startsWith("video:")){
+
+      const highlightId =
+        action.split(":")[1] || "";
+
+      data.notification_type = "video";
+      data.highlight_id =
+        String(highlightId);
+
+    }else if(action.startsWith("profil:")){
+
+      const userId =
+        action.split(":")[1] || "";
+
+      data.notification_type = "profile";
+      data.user_id =
+        String(userId);
+
+    }else if(action.startsWith("tournoi:")){
+
+      const tournamentId =
+        action.split(":")[1] || "";
+
+      data.notification_type = "tournament";
+      data.tournament_id =
+        String(tournamentId);
+
+    }
+
     await getMessaging().send({
+
       token,
+
       notification:{
-        title:titre,
-        body:message
+        title:String(titre || ""),
+        body:String(message || "")
       },
+
+      data,
+
       android:{
+
         priority:"high",
+
         notification:{
           sound:"default"
         }
+
       }
+
     });
 
   }catch(e){
 
-    console.log("Erreur FCM :", e);
+    console.log(
+      "Erreur FCM :",
+      e
+    );
 
   }
 
@@ -14307,7 +14362,12 @@ app.get("/notifications-unread-count", async (req,res)=>{
   }
 
 });
-async function notifierUtilisateur(userId, titre, message, action = ""){
+async function notifierUtilisateur(
+  userId,
+  titre,
+  message,
+  action = ""
+){
 
   try{
 
@@ -14339,17 +14399,26 @@ async function notifierUtilisateur(userId, titre, message, action = ""){
       [userId]
     );
 
-    if(tokenRow && tokenRow.token){
+    if(
+      tokenRow &&
+      tokenRow.token
+    ){
+
       await envoyerNotificationPush(
         tokenRow.token,
         titre,
-        message
+        message,
+        action
       );
+
     }
 
   }catch(e){
 
-    console.log("Erreur notifierUtilisateur :", e);
+    console.log(
+      "Erreur notifierUtilisateur :",
+      e
+    );
 
   }
 
