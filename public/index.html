@@ -14675,76 +14675,98 @@ async function chargerNotifications(){
           .split("|");
 
       const text =
-        parts[0] || "";
+        parts.shift() || "";
 
       const action =
-        parts[1] || "";
+        parts.join("|").trim();
 
-      let onclick = "";
+      const type =
+        String(n.type || "")
+          .toLowerCase()
+          .trim();
 
-      if(action.startsWith("profile:")){
+      let actionNotification = "";
 
-        const userId =
-          Number(
-            action.replace(
-              "profile:",
-              ""
-            )
-          );
+      /* Profil */
+      if(
+        action.startsWith("profile:") ||
+        action.startsWith("profil:")
+      ){
 
-        if(
-          Number.isInteger(userId) &&
-          userId > 0
-        ){
+        const userId = Number(
+          action.split(":")[1]
+        );
 
-          onclick =
+        if(Number.isInteger(userId) && userId > 0){
+          actionNotification =
             `onclick="ouvrirProfilPublic(${userId})"`;
-
         }
-
       }
 
-      let actionNotification = onclick;
+      /* Vidéo : like, commentaire ou favori */
+      if(
+        action.startsWith("video:") ||
+        action.startsWith("like:") ||
+        action.startsWith("comment:") ||
+        action.startsWith("commentaire:")
+      ){
 
-if(
-  (
-    n.type === "comment" ||
-    n.type === "comment_reply"
-  ) &&
-  Number(n.highlight_id) > 0
-){
+        const highlightId = Number(
+          action.split(":")[1]
+        );
 
-  actionNotification =
-  `onclick="ouvrirNotificationVideo(${Number(n.highlight_id)}, true, ${Number(n.id)})"`;
+        if(Number.isInteger(highlightId) && highlightId > 0){
 
- }
+          const ouvrirCommentairesAuto =
+            action.startsWith("comment:") ||
+            action.startsWith("commentaire:") ||
+            type === "comment" ||
+            type === "comment_reply";
 
-        return `
-  <div
-    class="notification"
-    ${actionNotification}
-    style="
-      cursor:${actionNotification ? "pointer" : "default"};
-    "
-  >
+          actionNotification =
+            `onclick="ouvrirNotificationVideo(${highlightId}, ${ouvrirCommentairesAuto}, ${Number(n.id) || 0})"`;
+        }
+      }
 
-    <div class="notification-icon">
-      ${iconeNotification(n.type)}
-    </div>
+      /* Compatibilité avec les anciennes notifications */
+      if(
+        !actionNotification &&
+        Number(n.highlight_id) > 0 &&
+        (
+          type === "like" ||
+          type === "favorite" ||
+          type === "comment" ||
+          type === "comment_reply"
+        )
+      ){
 
-    <div class="notification-content">
+        const ouvrirCommentairesAuto =
+          type === "comment" ||
+          type === "comment_reply";
 
-      <div class="notification-message">
-        ${escapeHtml(text)}
-      </div>
+        actionNotification =
+          `onclick="ouvrirNotificationVideo(${Number(n.highlight_id)}, ${ouvrirCommentairesAuto}, ${Number(n.id) || 0})"`;
+      }
 
-    </div>
+      return `
+        <div
+          class="notification"
+          ${actionNotification}
+          style="cursor:${actionNotification ? "pointer" : "default"};"
+        >
+          <div class="notification-icon">
+            ${iconeNotification(type)}
+          </div>
 
-  </div>
-`;  
+          <div class="notification-content">
+            <div class="notification-message">
+              ${escapeHtml(text)}
+            </div>
+          </div>
+        </div>
+      `;
 
     }).join("");
-
 }
 
 async function ouvrirNotifications(){
@@ -16062,44 +16084,13 @@ async function(data){
 
   try{
 
-    const action =
-      String(data?.action || "")
-        .trim();
-
-    let type =
-      String(
-        data?.notification_type ||
-        data?.type ||
-        ""
-      )
+    const type =
+      String(data?.type || "")
         .toLowerCase()
         .trim();
 
-    let highlightId =
-      Number(
-        data?.highlight_id ||
-        data?.highlightId
-      );
-
-    if(
-      action.startsWith("video:")
-    ){
-
-      type = type || "like";
-
-      const actionHighlightId =
-        Number(
-          action.split(":")[1]
-        );
-
-      if(
-        Number.isInteger(actionHighlightId) &&
-        actionHighlightId > 0
-      ){
-        highlightId = actionHighlightId;
-      }
-
-    }
+    const highlightId =
+      Number(data?.highlight_id);
 
     const userId =
       Number(data?.user_id);
@@ -16783,52 +16774,37 @@ async function envoyerCommentaire(){
   }
 
   const input =
-    document.getElementById(
-      "commentInput"
-    );
+    document.getElementById("commentInput");
 
   const bouton =
-    document.querySelector(
-      ".comment-send-btn"
-    );
+    document.querySelector(".comment-send-btn");
 
   if(!input){
+    showNotif("Zone de commentaire introuvable.");
     return;
   }
 
-  const texte =
-    input.value.trim();
+  const texte = input.value.trim();
+  const highlightId = Number(currentCommentVideoId);
 
-  const highlightId =
-    Number(currentCommentVideoId);
-
-  if(
-    !Number.isInteger(highlightId) ||
-    highlightId <= 0
-  ){
-    showNotif(
-      "Vidéo introuvable."
-    );
+  if(!Number.isInteger(highlightId) || highlightId <= 0){
+    showNotif("Vidéo introuvable.");
     return;
   }
 
   if(!currentUserId){
-
     await gererSessionExpiree();
     return;
-
   }
 
   if(!texte){
+    showNotif("Écris un commentaire.");
+    input.focus();
     return;
   }
 
   if(texte.length > 500){
-
-    showNotif(
-      "Le commentaire ne doit pas dépasser 500 caractères."
-    );
-
+    showNotif("Le commentaire ne doit pas dépasser 500 caractères.");
     return;
   }
 
@@ -16840,47 +16816,56 @@ async function envoyerCommentaire(){
 
   try{
 
-    const result =
-      await post(
-        "/add-highlight-comment",
-        {
-          highlight_id:highlightId,
-          comment:texte,
+    const result = await post(
+      "/add-highlight-comment",
+      {
+        highlight_id:highlightId,
+        comment:texte,
+        parent_comment_id:commentaireParentId || null
+      }
+    );
 
-          /*
-            Le backend utilisera cette valeur
-            lorsque le système de réponse
-            sera ajouté.
-          */
-          parent_comment_id:
-            commentaireParentId
-        }
+    const messageResultat =
+      typeof result === "string"
+        ? result
+        : String(
+            result?.message ||
+            result?.success ||
+            ""
+          );
+
+    const reussi =
+      result?.ok === true ||
+      /commentaire ajouté|comment added/i.test(
+        messageResultat
       );
 
-    if(
-      result !== "Commentaire ajouté" &&
-      result !== "Comment added"
-    ){
-
-      if(
-        result !== "ERREUR_RESEAU"
-      ){
-        showNotif(
-          result ||
-          "Impossible d'ajouter le commentaire."
-        );
-      }
-
+    if(!reussi){
+      showNotif(
+        messageResultat ||
+        "Impossible d'ajouter le commentaire."
+      );
       return;
     }
 
     input.value = "";
-
     commentaireParentId = null;
     nomUtilisateurRepondu = "";
 
-    await ouvrirCommentaires(
-      highlightId
+    showNotif("Commentaire ajouté.");
+
+    await ouvrirCommentaires(highlightId);
+
+  }catch(error){
+
+    console.error(
+      "Erreur ajout commentaire :",
+      error
+    );
+
+    showNotif(
+      error?.message ||
+      "Impossible d'ajouter le commentaire."
     );
 
   }finally{
@@ -16890,9 +16875,7 @@ async function envoyerCommentaire(){
     if(bouton){
       bouton.disabled = false;
     }
-
   }
-
 }
 
 async function compterVue(videoId){
