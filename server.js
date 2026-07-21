@@ -242,25 +242,61 @@ const upload = multer({
 });
 
 
-app.use(session({
+const sessionStore =
+  new SQLiteStore({
 
-  store:new SQLiteStore({
     db:"sessions.sqlite",
-    dir:DATA_DIR
-  }),
 
-  secret: SESSION_SECRET,
+    dir:DATA_DIR,
 
-  resave:false,
-  saveUninitialized:false,
+    table:"sessions",
 
-  cookie:{
-    maxAge:
-      1000 * 60 * 60 * 24 * 30,
-    sameSite:"lax"
-  }
+    concurrentDB:true
 
-}));
+  });
+
+app.use(
+  session({
+
+    name:"snugame.sid",
+
+    store:sessionStore,
+
+    secret:SESSION_SECRET,
+
+    resave:false,
+
+    saveUninitialized:false,
+
+    rolling:true,
+
+    proxy:
+      process.env.NODE_ENV ===
+      "production",
+
+    cookie:{
+
+      path:"/",
+
+      httpOnly:true,
+
+      secure:
+        process.env.NODE_ENV ===
+        "production",
+
+      sameSite:"lax",
+
+      maxAge:
+        1000 *
+        60 *
+        60 *
+        24 *
+        30
+
+    }
+
+  })
+);
 
 function connected(req){
 
@@ -1675,13 +1711,34 @@ app.post("/register", async (req,res)=>{
 
         req.session.userId = userId;
 
-        res.send(
-  tr(
-    req,
-    "Compte créé",
-    "Account created"
-  )
-);
+req.session.save(saveError=>{
+
+  if(saveError){
+
+    console.error(
+      "Erreur sauvegarde session inscription :",
+      saveError
+    );
+
+    return res.status(500).send(
+      tr(
+        req,
+        "Compte créé, mais la connexion a échoué",
+        "Account created, but login failed"
+      )
+    );
+
+  }
+
+  return res.send(
+    tr(
+      req,
+      "Compte créé",
+      "Account created"
+    )
+  );
+
+});
 
       }
     );
@@ -1773,13 +1830,34 @@ app.post("/login", loginLimiter, (req,res)=>{
 
         req.session.userId = user.id;
 
-        res.send(
-  tr(
-    req,
-    "Connexion réussie",
-    "Login successful"
-  )
-);
+req.session.save(saveError=>{
+
+  if(saveError){
+
+    console.error(
+      "Erreur sauvegarde session connexion :",
+      saveError
+    );
+
+    return res.status(500).send(
+      tr(
+        req,
+        "Impossible de sauvegarder la connexion",
+        "Unable to save login session"
+      )
+    );
+
+  }
+
+  return res.send(
+    tr(
+      req,
+      "Connexion réussie",
+      "Login successful"
+    )
+  );
+
+});
 
       });
 
@@ -1808,14 +1886,45 @@ const uploadLimiter = rateLimit({
 
 app.post("/logout",(req,res)=>{
 
-  req.session.destroy(()=>{
-    res.send(
-  tr(
-    req,
-    "Déconnecté",
-    "Logged out"
-  )
-);
+  req.session.destroy(error=>{
+
+    if(error){
+
+      console.error(
+        "Erreur déconnexion :",
+        error
+      );
+
+      return res.status(500).send(
+        tr(
+          req,
+          "Impossible de se déconnecter",
+          "Unable to log out"
+        )
+      );
+
+    }
+
+    res.clearCookie(
+      "snugame.sid",
+      {
+        path:"/",
+        httpOnly:true,
+        secure:
+          process.env.NODE_ENV ===
+          "production",
+        sameSite:"lax"
+      }
+    );
+
+    return res.send(
+      tr(
+        req,
+        "Déconnecté",
+        "Logged out"
+      )
+    );
+
   });
 
 });
@@ -10172,9 +10281,30 @@ VALUES(?,?,?,?,?,?,?,?,?)
 
     req.session.userId = user.id;
 
-    res.send(
-  "dashboardUrl:/app"
-);
+req.session.save(saveError=>{
+
+  if(saveError){
+
+    console.error(
+      "Erreur sauvegarde session inscription tournoi :",
+      saveError
+    );
+
+    return res.status(500).send(
+      tr(
+        req,
+        "Inscription réussie, mais la connexion a échoué",
+        "Registration succeeded, but login failed"
+      )
+    );
+
+  }
+
+  return res.send(
+    "dashboardUrl:/app"
+  );
+
+});
 
   }catch(e){
 
@@ -15420,7 +15550,17 @@ app.get("/join-fresh/:code", async (req,res)=>{
 
     }
 
-    res.clearCookie("connect.sid");
+    res.clearCookie(
+  "snugame.sid",
+  {
+    path:"/",
+    httpOnly:true,
+    secure:
+      process.env.NODE_ENV ===
+      "production",
+    sameSite:"lax"
+  }
+);
 
     return res.redirect(
       "/join/" + encodeURIComponent(joinCode)
