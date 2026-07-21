@@ -13362,32 +13362,40 @@ async function voirHighlight(id,url){
 
 async function commentHighlight(id){
 
-  const comment =
+  const input =
     document.getElementById(
       "comment_" + id
-    ).value;
+    );
 
-  const participant_id =
-    document.getElementById(
-      "commentPlayer_" + id
-    ).value;
+  const comment =
+    String(input?.value || "").trim();
 
-  if(!comment || !participant_id){
+  if(!comment){
     message.textContent =
-      "ID joueur et commentaire obligatoires";
+      "Commentaire obligatoire";
     return;
   }
 
-  await post(
-    "/comment-highlight",
+  const result = await post(
+    "/add-highlight-comment",
     {
       highlight_id:id,
-      participant_id,
-      comment
+      comment,
+      parent_comment_id:null
     }
   );
 
-  chargerHighlights();
+  message.textContent =
+    typeof result === "string"
+      ? result
+      : result?.message ||
+        "Commentaire ajouté";
+
+  if(input){
+    input.value = "";
+  }
+
+  await chargerHighlights();
 
 }
 

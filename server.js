@@ -1366,6 +1366,16 @@ CREATE TABLE IF NOT EXISTS highlight_views(
   UNIQUE(user_id, highlight_id)
 )
 `);
+db.run(`CREATE INDEX IF NOT EXISTS idx_highlights_user_id ON highlights(user_id)`);
+db.run(`CREATE INDEX IF NOT EXISTS idx_highlight_comments_highlight_id ON highlight_comments(highlight_id)`);
+db.run(`CREATE INDEX IF NOT EXISTS idx_highlight_likes_highlight_id ON highlight_likes(highlight_id)`);
+db.run(`CREATE INDEX IF NOT EXISTS idx_video_favorites_highlight_id ON video_favorites(highlight_id)`);
+db.run(`CREATE INDEX IF NOT EXISTS idx_video_watch_time_highlight_id ON video_watch_time(highlight_id)`);
+db.run(`CREATE INDEX IF NOT EXISTS idx_highlight_views_highlight_id ON highlight_views(highlight_id)`);
+db.run(`CREATE INDEX IF NOT EXISTS idx_notifications_user_seen ON notifications(user_id,seen)`);
+db.run(`CREATE INDEX IF NOT EXISTS idx_follows_follower_id ON follows(follower_id)`);
+db.run(`CREATE INDEX IF NOT EXISTS idx_follows_following_id ON follows(following_participant_id)`);
+
 db.run(
   `
   DELETE FROM notifications
@@ -7778,7 +7788,7 @@ app.post("/highlight", async (req,res)=>{
   try{
 
     if(!req.session.userId){
-      return res.send("Connecte-toi");
+      return res.status(401).send("Connecte-toi");
     }
 
     const {
@@ -7822,6 +7832,61 @@ app.post("/highlight", async (req,res)=>{
     console.log(e);
     res.send("Erreur ajout vidéo");
 
+  }
+
+});
+
+app.post("/delete-highlight", async (req,res)=>{
+
+  try{
+    if(!connected(req)){
+      return res.status(401).send(tr(req,"Connecte-toi","Please log in"));
+    }
+
+    const highlightId = Number(req.body.highlight_id);
+    if(!Number.isInteger(highlightId) || highlightId <= 0){
+      return res.status(400).send(tr(req,"Vidéo invalide","Invalid video"));
+    }
+
+    const resultat = await executerTransaction(async transaction=>{
+      const highlight = await transaction.get(
+        `SELECT id,user_id FROM highlights WHERE id=? LIMIT 1`,
+        [highlightId]
+      );
+
+      if(!highlight){
+        const error = new Error("HIGHLIGHT_NOT_FOUND");
+        error.code = "HIGHLIGHT_NOT_FOUND";
+        throw error;
+      }
+
+      if(Number(highlight.user_id) !== Number(req.session.userId)){
+        const error = new Error("HIGHLIGHT_FORBIDDEN");
+        error.code = "HIGHLIGHT_FORBIDDEN";
+        throw error;
+      }
+
+      await transaction.run(`DELETE FROM highlight_comments WHERE highlight_id=?`,[highlightId]);
+      await transaction.run(`DELETE FROM highlight_likes WHERE highlight_id=?`,[highlightId]);
+      await transaction.run(`DELETE FROM video_favorites WHERE highlight_id=?`,[highlightId]);
+      await transaction.run(`DELETE FROM highlight_views WHERE highlight_id=?`,[highlightId]);
+      await transaction.run(`DELETE FROM video_watch_time WHERE highlight_id=?`,[highlightId]);
+      await transaction.run(`DELETE FROM notifications WHERE highlight_id=?`,[highlightId]);
+      await transaction.run(`DELETE FROM highlights WHERE id=?`,[highlightId]);
+      return true;
+    });
+
+    return res.json({ok:Boolean(resultat),message:tr(req,"Vidéo supprimée","Video deleted")});
+
+  }catch(error){
+    if(error.code === "HIGHLIGHT_NOT_FOUND"){
+      return res.status(404).send(tr(req,"Vidéo introuvable","Video not found"));
+    }
+    if(error.code === "HIGHLIGHT_FORBIDDEN"){
+      return res.status(403).send(tr(req,"Tu ne peux supprimer que ta propre vidéo","You can only delete your own video"));
+    }
+    console.error("Erreur suppression vidéo :",error);
+    return res.status(500).send(tr(req,"Impossible de supprimer la vidéo","Unable to delete video"));
   }
 
 });
@@ -13215,8 +13280,7 @@ app.post("/reset-password", loginLimiter, async (req,res)=>{
 
 });
 
-app.post(
-  "/add-highlight-comment",
+const ajouterCommentaireHighlight =
   async (req,res)=>{
 
     try{
@@ -13635,7 +13699,16 @@ app.post(
 
     }
 
-  }
+  };
+
+app.post(
+  "/add-highlight-comment",
+  ajouterCommentaireHighlight
+);
+
+app.post(
+  "/comment-highlight",
+  ajouterCommentaireHighlight
 );
 
 app.get(
@@ -13795,57 +13868,7 @@ app.get(
 
   }
 );
-app.post("/delete-highlight-comment", async (req,res)=>{
-
-  try{
-
-    if(!req.session.userId){
-      return res.send("Connecte-toi");
-    }
-
-    const { comment_id } = req.body;
-
-    if(!comment_id){
-      return res.send("Commentaire introuvable");
-    }
-
-    const comment = await get(
-      `
-      SELECT *
-      FROM highlight_comments
-      WHERE id=?
-      `,
-      [comment_id]
-    );
-
-    if(!comment){
-      return res.send("Commentaire introuvable");
-    }
-
-    if(Number(comment.user_id) !== Number(req.session.userId)){
-      return res.send("Tu ne peux supprimer que ton commentaire");
-    }
-
-    await run(
-      `
-      DELETE FROM highlight_comments
-      WHERE id=?
-      `,
-      [comment_id]
-    );
-
-    res.send("Commentaire supprimé");
-
-  }catch(e){
-
-    console.log(e);
-    res.send("Erreur suppression commentaire");
-
-  }
-
-});
-
- app.get("/public-profile/:id", async (req,res)=>{
+app.get("/public-profile/:id", async (req,res)=>{
 
   try{
 
@@ -14423,6 +14446,35 @@ async function notifierUtilisateur(
   }
 
 }
+
+app.post("/notification-lue", async (req,res)=>{
+
+  try{
+    if(!connected(req)){
+      return res.status(401).json({ok:false,message:tr(req,"Connecte-toi","Please log in")});
+    }
+
+    const notificationId = Number(req.body.notification_id);
+    if(!Number.isInteger(notificationId) || notificationId <= 0){
+      return res.status(400).json({ok:false,message:tr(req,"Notification invalide","Invalid notification")});
+    }
+
+    const result = await run(
+      `UPDATE notifications SET seen=1 WHERE id=? AND user_id=?`,
+      [notificationId,req.session.userId]
+    );
+
+    if(Number(result.changes || 0) === 0){
+      return res.status(404).json({ok:false,message:tr(req,"Notification introuvable","Notification not found")});
+    }
+
+    return res.json({ok:true,updated:1});
+  }catch(error){
+    console.error("Erreur lecture notification :",error);
+    return res.status(500).json({ok:false,message:tr(req,"Erreur notification","Notification error")});
+  }
+
+});
 
 app.post("/notifications-read", async (req,res)=>{
 
