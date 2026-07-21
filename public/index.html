@@ -7780,12 +7780,115 @@ let pageStack = [];
 */
 function capturerEtatNavigation(){
 
+  const feedVideos =
+    document.querySelector("#panelHighlights .tiktok-feed");
+
+  const videoActive = feedVideos
+    ? Array.from(
+        feedVideos.querySelectorAll(".tiktok-video video")
+      ).find(video=>!video.paused)
+    : null;
+
+  const carteVideoActive =
+    videoActive?.closest(".tiktok-video");
+
   return {
     page:currentPageName || "pageDashboard",
     panel:currentPanelName || localStorage.getItem("lastPanel") || null,
     scrollX:window.scrollX || 0,
-    scrollY:window.scrollY || 0
+    scrollY:window.scrollY || 0,
+
+    /*
+      Conserve exactement l'état du flux Vidéos avant
+      l'ouverture d'un profil public.
+    */
+    videoFeedScrollTop:
+      feedVideos?.scrollTop || 0,
+    videoActiveId:
+      carteVideoActive?.dataset?.highlightId ||
+      carteVideoActive?.dataset?.id ||
+      null,
+    videoActiveTime:
+      videoActive?.currentTime || 0,
+    videoActiveEtaitEnLecture:
+      !!videoActive && !videoActive.paused
   };
+
+}
+
+function restaurerEtatFluxVideos(etat){
+
+  if(
+    !etat ||
+    etat.panel !== "panelHighlights"
+  ){
+    return;
+  }
+
+  const restaurer = ()=>{
+
+    const feed =
+      document.querySelector("#panelHighlights .tiktok-feed");
+
+    if(!feed){
+      return;
+    }
+
+    feed.scrollTop =
+      Number(etat.videoFeedScrollTop || 0);
+
+    const cartes = Array.from(
+      feed.querySelectorAll(".tiktok-video")
+    );
+
+    const carteActive = cartes.find(carte=>
+      String(
+        carte.dataset.highlightId ||
+        carte.dataset.id ||
+        ""
+      ) === String(etat.videoActiveId || "")
+    );
+
+    const video =
+      carteActive?.querySelector("video");
+
+    if(!video){
+      initTikTokAutoplay();
+      return;
+    }
+
+    stopAllVideosExcept(video);
+
+    const remettreTemps = ()=>{
+      try{
+        video.currentTime =
+          Number(etat.videoActiveTime || 0);
+      }catch(e){}
+    };
+
+    if(video.readyState >= 1){
+      remettreTemps();
+    }else{
+      video.addEventListener(
+        "loadedmetadata",
+        remettreTemps,
+        {once:true}
+      );
+    }
+
+    video.muted = !window.videoSoundEnabled;
+    video.volume = 1;
+
+    if(etat.videoActiveEtaitEnLecture){
+      video.play().catch(()=>{});
+    }
+
+    initTikTokAutoplay();
+  };
+
+  requestAnimationFrame(()=>{
+    requestAnimationFrame(restaurer);
+  });
 
 }
 
@@ -7852,6 +7955,8 @@ async function restaurerEtatNavigation(etat){
       etat.scrollY || 0
     );
   });
+
+  restaurerEtatFluxVideos(etat);
 
 }
 
@@ -8144,6 +8249,12 @@ async function ouvrirProfilPublic(userId){
   */
   setPage("pagePublicProfil", false);
 
+  /*
+    Le flux reste chargé en mémoire, mais le mode plein écran
+    est désactivé pendant l'affichage du profil public.
+  */
+  document.body.classList.remove("video-mode");
+
   publicProfilContent.innerHTML = `
   <div class="skeleton skeleton-card"></div>
   <div class="skeleton skeleton-card"></div>
@@ -8326,7 +8437,11 @@ async function retourProfilPublic(){
   document.body.classList.remove("video-mode");
 
   panelHighlights.classList.add("hidden");
-  highlightsList.innerHTML = "";
+
+  /*
+    Ne jamais vider highlightsList ici : son contenu, sa position
+    et la vidéo active doivent être retrouvés au retour.
+  */
 
   document
     .getElementById("btnAddVideo")
