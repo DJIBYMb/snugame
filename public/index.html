@@ -14997,10 +14997,13 @@ async function supprimerHighlight(id){
 
   const result = await post(
     "/delete-highlight",
-    { id }
+    { highlight_id:id }
   );
 
-  message.textContent = result;
+  message.textContent =
+    typeof result === "object"
+      ? result.message || "Vidéo supprimée"
+      : result;
 
   document
     .querySelectorAll(`.profile-video-item`)

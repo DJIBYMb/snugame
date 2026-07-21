@@ -14952,11 +14952,10 @@ textarea{
 <div id="videos"></div>
 
 <script>
-const ADMIN_PASSWORD = new URLSearchParams(location.search).get("admin");
 
 async function chargerVideos(){
 
-  const res = await fetch("/admin/videos?admin=" + ADMIN_PASSWORD);
+  const res = await fetch("/admin/videos");
   const videos = await res.json();
 
   document.getElementById("videos").innerHTML =
@@ -15001,9 +15000,7 @@ async function supprimerVideo(id){
     return;
   }
 
-  const res = await fetch(
-    "/admin/delete-video-warning?admin=" + ADMIN_PASSWORD,
-    {
+  const res = await fetch("/admin/delete-video-warning", {
       method:"POST",
       headers:{
         "Content-Type":"application/json"
