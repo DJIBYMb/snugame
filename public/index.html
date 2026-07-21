@@ -4022,6 +4022,25 @@ max-height:none;
   }
 }
 
+
+
+.form-message{
+  margin-top:12px;
+  min-height:22px;
+  text-align:center;
+  font-size:14px;
+  font-weight:600;
+  color:#ff4d4d;
+}
+
+.form-message.success{
+  color:#22c55e;
+}
+
+.form-message.error{
+  color:#ff4d4d;
+}
+
 </style>
 
 <link
@@ -4226,6 +4245,11 @@ data-i18n="changePassword"
 onclick="resetPassword()">
 Changer mot de passe
 </button>
+
+<div
+id="forgotPasswordMessage"
+class="form-message">
+</div>
 
 </div>
 
@@ -5674,8 +5698,6 @@ class="hidden video-profile-menu">
 </div>
 
 <script>
-
-  
 
   function iconeNotification(type){
 
@@ -13808,6 +13830,22 @@ function ouvrirMotDePasseOublie(){
     "fullscreen-forgot"
   );
 
+  const messageBox =
+    document.getElementById(
+      "forgotPasswordMessage"
+    );
+
+  if(messageBox){
+
+    messageBox.textContent = "";
+
+    messageBox.classList.remove(
+      "success",
+      "error"
+    );
+
+  }
+
 }
 
 function closeForgotPassword(){
@@ -13826,41 +13864,208 @@ function closeForgotPassword(){
 
 async function envoyerCodeReset(){
 
-  const result = await post(
-    "/send-reset-code",
-    {
-      email:forgotEmail.value
-    }
-  );
+  const messageBox =
+    document.getElementById(
+      "forgotPasswordMessage"
+    );
 
-  messageShow(result);
+  const email =
+    forgotEmail.value.trim();
+
+  function afficherMessage(
+    texte,
+    type = "error"
+  ){
+
+    if(!messageBox){
+      return;
+    }
+
+    messageBox.textContent = texte;
+
+    messageBox.classList.remove(
+      "success",
+      "error"
+    );
+
+    if(texte){
+      messageBox.classList.add(type);
+    }
+
+  }
+
+  afficherMessage("");
+
+  if(!email){
+
+    afficherMessage(
+      "Entre ton adresse email"
+    );
+
+    return;
+  }
+
+  try{
+
+    const result = await post(
+      "/send-reset-code",
+      {
+        email
+      }
+    );
+
+    const texte =
+      result?.message ||
+      result ||
+      "Code envoyé";
+
+    afficherMessage(
+      texte,
+      "success"
+    );
+
+  }catch(error){
+
+    console.error(
+      "Erreur envoyerCodeReset :",
+      error
+    );
+
+    afficherMessage(
+      error.message ||
+      "Impossible d’envoyer le code"
+    );
+
+  }
 
 }
 
 async function resetPassword(){
 
-  const result = await post(
-    "/reset-password",
-    {
-      email:forgotEmail.value,
-      code:forgotCode.value,
-      password:newPassword.value
+  const messageBox =
+    document.getElementById(
+      "forgotPasswordMessage"
+    );
+
+  const email =
+    forgotEmail.value.trim();
+
+  const code =
+    forgotCode.value.trim();
+
+  const password =
+    newPassword.value;
+
+  function afficherMessage(
+    texte,
+    type = "error"
+  ){
+
+    if(!messageBox){
+      return;
     }
-  );
 
-  messageShow(result);
+    messageBox.textContent = texte;
+
+    messageBox.classList.remove(
+      "success",
+      "error"
+    );
+
+    if(texte){
+      messageBox.classList.add(type);
+    }
+
+  }
+
+  afficherMessage("");
+
+  if(!email || !code || !password){
+
+    afficherMessage(
+      "Tous les champs sont obligatoires"
+    );
+
+    return;
+  }
+
+  if(code.length < 4){
+
+    afficherMessage(
+      "Le code saisi est incorrect"
+    );
+
+    return;
+  }
+
+  if(password.length < 8){
+
+    afficherMessage(
+      "Le mot de passe doit contenir au moins 8 caractères"
+    );
+
+    return;
+  }
+
+  try{
+
+    const result = await post(
+      "/reset-password",
+      {
+        email,
+        code,
+        password
+      }
+    );
+
+    afficherMessage(
+      result?.message ||
+      result ||
+      "Mot de passe changé avec succès",
+      "success"
+    );
+
+    forgotEmail.value = "";
+    forgotCode.value = "";
+    newPassword.value = "";
+
+    sessionStorage.removeItem(
+      "appDejaOuverte"
+    );
+
+    localStorage.removeItem(
+      "lastPage"
+    );
+
+    setTimeout(()=>{
+
+      afficherMessage("");
+
+      closeForgotPassword();
+
+      setPage(
+        "pageAuth",
+        false
+      );
+
+    },1000);
+
+  }catch(error){
+
+    console.error(
+      "Erreur resetPassword :",
+      error
+    );
+
+    afficherMessage(
+      error.message ||
+      "Impossible de changer le mot de passe"
+    );
+
+  }
 
 }
 
-if("serviceWorker" in navigator){
-
-  window.addEventListener("load",()=>{
-
-    navigator.serviceWorker.register("/sw.js");
-
-  });
-
-}
 async function banUser(userId){
 
   if(!confirm("Bannir cet utilisateur ?")){
