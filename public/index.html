@@ -4059,6 +4059,7 @@ section.page-show{
   opacity:1;
   transform:translateY(0);
 }
+
 </style>
 
 <link
@@ -15668,6 +15669,7 @@ async function deleteOldVideos(){
 
 }
 
+
 let panelEnCours = false;
 let tournoisDejaCharges = false;
 
@@ -15681,10 +15683,6 @@ async function ouvrirPanel(id){
 
   if(panelEnCours) return;
 
-  if(currentPanelName === id){
-  return;
-}
-
   panelEnCours = true;
 
   try{
@@ -15693,17 +15691,10 @@ async function ouvrirPanel(id){
 
     currentPanelName = id;
 
-    localStorage.setItem(
-  "lastPanel",
-  id
-);
-
     document.body.classList.remove("video-mode");
 
-    
-if(currentPageName !== "pageDashboard"){
-  setPage("pageDashboard");
-}
+    setPage("pageDashboard");
+
     document
       .querySelectorAll(".bottom-nav button")
       .forEach(b=>b.classList.remove("active"));
@@ -15712,18 +15703,11 @@ if(currentPageName !== "pageDashboard"){
       .querySelectorAll(".panel")
       .forEach(p=>p.classList.add("hidden"));
 
-    const panel =
-  document.getElementById(id);
+    const panel = document.getElementById(id);
 
-if(!panel){
-  console.error(
-    "Panel introuvable :",
-    id
-  );
-  return;
-}
-
-panel.classList.remove("hidden");
+    if(panel){
+      panel.classList.remove("hidden");
+    }
 
    if(
   id === "panelOrganisateur" ||
@@ -15815,7 +15799,6 @@ panel.classList.remove("hidden");
   }
 
 }
-
 function masquerBoutonsOrganisateurVisiteur(){
 
   document
