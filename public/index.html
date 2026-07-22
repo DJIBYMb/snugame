@@ -730,11 +730,22 @@ button:disabled{
   z-index:5;
 }
 
+
+
+/* =========================================================
+   CORRECTION VIDÉOS — FORMAT ORIGINAL CONSERVÉ
+   Les vidéos verticales, horizontales et carrées gardent
+   leurs proportions, sans zoom forcé ni recadrage.
+========================================================= */
 .tiktok-video video{
   position:absolute;
-  inset:0;
+  top:50%;
+  left:50%;
+  right:auto;
+  bottom:auto;
   z-index:1;
   pointer-events:auto;
+  transform:translate(-50%,-50%);
 }
 
 .video-delete-overlay{
@@ -769,9 +780,11 @@ button:disabled{
 }
 
 .tiktok-video video{
-  width:100vw;
-  height:100vh;
-  object-fit:cover;
+  width:auto;
+  height:auto;
+  max-width:100%;
+  max-height:100%;
+  object-fit:contain;
   display:block;
   background:#000;
 }
@@ -1161,11 +1174,97 @@ body.video-mode .tiktok-video{
   overflow:hidden!important;
 }
 
-body.video-mode .tiktok-video video{
-  width:100%!important;
-  height:100%!important;
-  object-fit:cover!important;
+/* VIDÉOS PLEIN ÉCRAN COMME TIKTOK */
+
+body.video-mode .tiktok-video{
+  position:relative !important;
+  width:100vw !important;
+  height:100dvh !important;
+  overflow:hidden !important;
+  background:#000 !important;
 }
+
+body.video-mode .tiktok-video video,
+body.video-mode .tiktok-video .highlight-video{
+  position:absolute !important;
+  top:0 !important;
+  left:0 !important;
+  right:0 !important;
+  bottom:0 !important;
+  inset:0 !important;
+
+  width:100% !important;
+  height:100% !important;
+
+  max-width:none !important;
+  max-height:none !important;
+
+  object-fit:cover !important;
+  object-position:center center !important;
+
+  transform:none !important;
+  margin:0 !important;
+
+  display:block !important;
+  background:#000 !important;
+}
+
+/* Image affichée avant le lancement de la vidéo */
+
+body.video-mode .video-panel-cover{
+  position:absolute !important;
+  inset:0 !important;
+
+  width:100% !important;
+  height:100% !important;
+
+  max-width:none !important;
+  max-height:none !important;
+
+  object-fit:cover !important;
+  object-position:center center !important;
+
+  transform:none !important;
+  margin:0 !important;
+}
+
+body.video-mode .tiktok-video{
+  position:relative !important;
+  width:100% !important;
+  height:100dvh !important;
+
+  display:flex !important;
+  justify-content:center !important;
+  align-items:center !important;
+
+  overflow:hidden !important;
+  background:#000 !important;
+}
+
+body.video-mode .tiktok-video video,
+body.video-mode .tiktok-video .highlight-video{
+  position:relative !important;
+  inset:auto !important;
+  top:auto !important;
+  left:auto !important;
+
+  width:100% !important;
+  height:100% !important;
+
+  max-width:100% !important;
+  max-height:100dvh !important;
+
+  object-fit:contain !important;
+  object-position:center center !important;
+
+  transform:none !important;
+  margin:0 !important;
+
+  display:block !important;
+  background:#000 !important;
+  touch-action:pan-y !important;
+}
+
 .like-count,
 .comment-count{
   color:white;
@@ -1499,10 +1598,17 @@ video{
 
 .tiktok-video .highlight-video{
   position:absolute;
-  inset:0;
-  width:100%;
-  height:100%;
-  object-fit:cover;
+  top:50%;
+  left:50%;
+  right:auto;
+  bottom:auto;
+  inset:auto;
+  width:auto;
+  height:auto;
+  max-width:100%;
+  max-height:100%;
+  object-fit:contain;
+  transform:translate(-50%,-50%);
   background:#000;
   display:block;
   z-index:1;
@@ -1512,10 +1618,17 @@ video{
 
 .video-panel-cover{
   position:absolute;
-  inset:0;
-  width:100%;
-  height:100%;
-  object-fit:cover;
+  top:50%;
+  left:50%;
+  right:auto;
+  bottom:auto;
+  inset:auto;
+  width:auto;
+  height:auto;
+  max-width:100%;
+  max-height:100%;
+  object-fit:contain;
+  transform:translate(-50%,-50%);
   background:#000;
   z-index:3;
   pointer-events:none;
@@ -1523,10 +1636,17 @@ video{
 
 .highlight-video{
   position:absolute;
-  inset:0;
-  width:100%;
-  height:100%;
-  object-fit:cover;
+  top:50%;
+  left:50%;
+  right:auto;
+  bottom:auto;
+  inset:auto;
+  width:auto;
+  height:auto;
+  max-width:100%;
+  max-height:100%;
+  object-fit:contain;
+  transform:translate(-50%,-50%);
   background:#000;
   z-index:1;
 }
@@ -6811,7 +6931,8 @@ sessionStorage.setItem("hideBottomNavOrg", "oui");
 }
 async function afficherArbreTournoi(){
 
-  ouvrirCompetitionBloc("blocArbreTournoi");
+  // Ne pas ouvrir automatiquement le bloc ici.
+  // Cette fonction met seulement à jour le contenu de l'arbre.
 
   if(!tournoiSelect.value){
     message.textContent = tr("selectTournament");
@@ -7136,7 +7257,8 @@ function drawWorldCupLines(){
 }
 async function afficherArbreOrganisateur(){
 
-  ouvrirCompetitionBlocOrg("blocArbreTournoiOrg");
+  // Ne pas ouvrir automatiquement le bloc ici.
+  // Cette fonction met seulement à jour le contenu de l'arbre organisateur.
 
   const tournoiId = getTournoiOrganisateurId();
   
@@ -12767,7 +12889,7 @@ async function afficherClassementOrganisateur(){
 
 async function afficherBracketPro(){
 
-  ouvrirCompetitionBloc("blocArbreTournoi");
+  // Mise à jour silencieuse du bracket sans changer le bloc affiché.
 
   const data = await get(
     "/tirage/" + tournoiSelect.value
@@ -13296,8 +13418,6 @@ async function chargerHighlights(){
           </div>
 
         </div>
-
-      </div>
 
     </div>
 
@@ -15278,6 +15398,8 @@ async function chargerMesVideos(){
 
 function quitterVideos(){
 
+  cacherBoutonAjouterVideo();
+
   document.body.classList.remove("video-mode");
 
   messageCard.classList.remove("hidden");
@@ -15305,22 +15427,129 @@ function prepareVideoUpload(){
 async function ouvrirModeVideos(options = {}){
 
   if(window.favorisChanged){
-  highlightsList.innerHTML = "";
-  window.favorisChanged = false;
-}
 
-  window.openingProfileVideo = !!options.fromProfile;
+    highlightsList.innerHTML = "";
+    window.favorisChanged = false;
 
-  ouvrirPanel("panelHighlights");
+  }
 
-  document
-  .getElementById("btnAddVideo")
-  ?.style.removeProperty("display");
+  window.openingProfileVideo =
+    !!options.fromProfile;
+
+  /*
+    Important : attendre l’ouverture complète
+    du panneau vidéo.
+  */
+  await ouvrirPanel("panelHighlights");
 
   document.body.classList.add("video-mode");
 
-  messageCard.classList.add("hidden");
+  messageCard?.classList.add("hidden");
 
+  const videoTabs =
+    document.querySelector(
+      "#panelHighlights .video-tabs"
+    ) ||
+    document.querySelector(
+      "body > .video-tabs"
+    );
+
+  const btnAddVideo =
+    document.getElementById("btnAddVideo");
+
+  /*
+    Sortir le bouton du panneau vidéo.
+    Il sera directement dans body et ne pourra
+    plus être caché derrière le flux.
+  */
+  if(videoTabs){
+
+    document.body.appendChild(videoTabs);
+
+    videoTabs.classList.remove("hidden");
+
+    videoTabs.style.setProperty(
+      "display",
+      "flex",
+      "important"
+    );
+
+    videoTabs.style.setProperty(
+      "visibility",
+      "visible",
+      "important"
+    );
+
+    videoTabs.style.setProperty(
+      "opacity",
+      "1",
+      "important"
+    );
+
+    videoTabs.style.setProperty(
+      "position",
+      "fixed",
+      "important"
+    );
+
+    videoTabs.style.setProperty(
+      "left",
+      "50%",
+      "important"
+    );
+
+    videoTabs.style.setProperty(
+      "bottom",
+      "90px",
+      "important"
+    );
+
+    videoTabs.style.setProperty(
+      "transform",
+      "translateX(-50%)",
+      "important"
+    );
+
+    videoTabs.style.setProperty(
+      "z-index",
+      "2147483647",
+      "important"
+    );
+
+    videoTabs.style.setProperty(
+      "pointer-events",
+      "auto",
+      "important"
+    );
+
+  }
+
+  if(btnAddVideo){
+
+    btnAddVideo.classList.remove("hidden");
+
+    btnAddVideo.style.cssText = `
+      display:flex !important;
+      visibility:visible !important;
+      opacity:1 !important;
+      pointer-events:auto !important;
+      position:relative !important;
+      width:58px !important;
+      height:58px !important;
+      min-width:58px !important;
+      padding:0 !important;
+      margin:0 !important;
+      border-radius:50% !important;
+      align-items:center !important;
+      justify-content:center !important;
+      background:#1455ff !important;
+      color:white !important;
+      border:2px solid white !important;
+      font-size:30px !important;
+      z-index:2147483647 !important;
+    `;
+
+  }
   if(options.skipFirstPlay){
     return;
   }
@@ -15357,6 +15586,25 @@ async function ouvrirModeVideos(options = {}){
 }
 
   }); 
+
+}
+
+function cacherBoutonAjouterVideo(){
+
+  const videoTabs =
+    document.querySelector(
+      "body > .video-tabs"
+    );
+
+  if(videoTabs){
+
+    videoTabs.style.setProperty(
+      "display",
+      "none",
+      "important"
+    );
+
+  }
 
 }
 
@@ -15785,10 +16033,50 @@ async function ouvrirPanel(id){
 
     if(id === "panelHighlights"){
 
-  document.body.classList.add("video-mode");
+  document.body.classList.add(
+    "video-mode"
+  );
+
+  /*
+    Réafficher le bouton + lorsqu’on ouvre
+    le flux vidéo principal.
+  */
+  const btnAddVideo =
+    document.getElementById("btnAddVideo");
+
+  if(btnAddVideo){
+
+    btnAddVideo.style.removeProperty(
+      "display"
+    );
+
+    btnAddVideo.classList.remove(
+      "hidden"
+    );
+
+  }
+
+  const videoTabs =
+    document.querySelector(
+      "#panelHighlights .video-tabs"
+    );
+
+  if(videoTabs){
+
+    videoTabs.classList.remove(
+      "hidden"
+    );
+
+    videoTabs.style.removeProperty(
+      "display"
+    );
+
+  }
 
   if(!window.openingProfileVideo){
+
     await chargerHighlights();
+
   }
 
   document
@@ -17129,6 +17417,15 @@ async function ouvrirModeVideosAvecSon(){
 
 
   function stopAllVideos(){
+
+  if(tiktokObserver){
+
+    tiktokObserver.disconnect();
+    tiktokObserver = null;
+
+  }
+
+  derniereVideoComptee = null;
 
   document
     .querySelectorAll("#panelHighlights .tiktok-video video")
