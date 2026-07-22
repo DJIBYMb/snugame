@@ -7961,7 +7961,25 @@ function capturerEtatNavigation(){
     videoActiveTime:
       videoActive?.currentTime || 0,
     videoActiveEtaitEnLecture:
-      !!videoActive && !videoActive.paused
+      !!videoActive && !videoActive.paused,
+
+    /* État précis des écrans sociaux pour pouvoir les reconstruire. */
+    publicUserId:
+      currentPageName === "pagePublicProfil"
+        ? Number(currentPublicUserId || 0) || null
+        : null,
+    followType:
+      currentPageName === "pageFollowList"
+        ? (followListType || null)
+        : null,
+    followOwnerId:
+      currentPageName === "pageFollowList"
+        ? Number(followListOwnerId || 0) || null
+        : null,
+    followFrom:
+      currentPageName === "pageFollowList"
+        ? (followListFrom || "profile")
+        : null
   };
 
 }
@@ -8042,6 +8060,57 @@ function restaurerEtatFluxVideos(etat){
 
 }
 
+function mettreAJourVisibiliteBoutonVideoPlus(){
+
+  const btnAddVideo =
+    document.getElementById("btnAddVideo");
+
+  const videoTabs =
+    document.querySelector(".video-tabs");
+
+  const commentsSheetElement =
+    document.getElementById("commentsSheet");
+
+  const commentairesOuverts =
+    !!commentsSheetElement &&
+    !commentsSheetElement.classList.contains("hidden");
+
+  const panelVideosPrincipalOuvert =
+    currentPageName === "pageDashboard" &&
+    currentPanelName === "panelHighlights" &&
+    document.body.classList.contains("video-mode") &&
+    !window.fromPublicProfileVideo &&
+    !window.openingProfileVideo &&
+    !commentairesOuverts;
+
+  if(videoTabs){
+    videoTabs.classList.toggle(
+      "hidden",
+      !panelVideosPrincipalOuvert
+    );
+
+    videoTabs.style.setProperty(
+      "display",
+      panelVideosPrincipalOuvert ? "flex" : "none",
+      "important"
+    );
+  }
+
+  if(btnAddVideo){
+    btnAddVideo.classList.toggle(
+      "hidden",
+      !panelVideosPrincipalOuvert
+    );
+
+    btnAddVideo.style.setProperty(
+      "display",
+      panelVideosPrincipalOuvert ? "flex" : "none",
+      "important"
+    );
+  }
+
+}
+
 function memeEtatNavigation(a,b){
 
   if(!a || !b){
@@ -8087,15 +8156,32 @@ async function restaurerEtatNavigation(etat){
       "panelTournoi"
     );
 
+  }else if(
+    etat.page === "pagePublicProfil" &&
+    etat.publicUserId
+  ){
+
+    await ouvrirProfilPublic(
+      etat.publicUserId,
+      {skipHistory:true}
+    );
+
+  }else if(
+    etat.page === "pageFollowList" &&
+    etat.followOwnerId &&
+    etat.followType
+  ){
+
+    await ouvrirListeFollow(
+      etat.followType,
+      etat.followOwnerId,
+      etat.followFrom || "profile",
+      {skipHistory:true}
+    );
+
   }else{
 
     setPage(etat.page, false);
-
-    if(etat.page === "pagePublicProfil"){
-      document.querySelector("header")?.classList.add("hidden");
-      document.querySelector(".bottom-nav")?.classList.add("hidden");
-      document.getElementById("messageCard")?.classList.add("hidden");
-    }
 
   }
 
@@ -8107,6 +8193,7 @@ async function restaurerEtatNavigation(etat){
   });
 
   restaurerEtatFluxVideos(etat);
+  mettreAJourVisibiliteBoutonVideoPlus();
 
 }
 
@@ -8144,6 +8231,7 @@ function setPage(page, enregistrerHistorique = true){
   }
 
   currentPageName = page;
+  mettreAJourVisibiliteBoutonVideoPlus();
 
   if(
     typeof fermerCommentaires === "function" &&
@@ -8282,21 +8370,27 @@ function ouvrirCompetitionBloc(id){
 
 let followListFrom = "profile";
 let followListOwnerId = null;
+let followListType = null;
 let etatsAvantFollowList = [];
 
-async function ouvrirListeFollow(type, userId, from = "profile"){
+async function ouvrirListeFollow(
+  type,
+  userId,
+  from = "profile",
+  options = {}
+){
+
+  if(!options.skipHistory){
+    const origine = capturerEtatNavigation();
+    const dernier = pageStack[pageStack.length - 1];
+    if(!memeEtatNavigation(dernier, origine)){
+      pageStack.push(origine);
+    }
+  }
 
   followListFrom = from;
   followListOwnerId = userId;
-
-  /*
-    La liste Abonnés/Suivis conserve sa propre origine.
-    Elle ne dépend donc plus du dernier panneau mémorisé
-    dans l'historique général.
-  */
-  etatsAvantFollowList.push(
-    capturerEtatNavigation()
-  );
+  followListType = type;
 
   setPage("pageFollowList", false);
 
@@ -8348,38 +8442,6 @@ async function ouvrirListeFollow(type, userId, from = "profile"){
 async function retourDepuisFollowList(){
 
   stopAllVideos();
-
-  const etatRetour =
-    etatsAvantFollowList.pop();
-
-  if(etatRetour){
-
-    /*
-      Supprime seulement un éventuel doublon ancien,
-      sans retirer l'origine réelle de la liste.
-    */
-    const dernierEtat =
-      pageStack[pageStack.length - 1];
-
-    if(memeEtatNavigation(dernierEtat, etatRetour)){
-      pageStack.pop();
-    }
-
-    await restaurerEtatNavigation(etatRetour);
-    return;
-  }
-
-  /*
-    Sécurité : une liste ouverte depuis le profil personnel
-    revient au profil, jamais au panneau Tournoi.
-  */
-  if(followListFrom === "profile"){
-    setPage("pageProfil", false);
-    document.querySelector("header")?.classList.remove("hidden");
-    document.querySelector(".bottom-nav")?.classList.remove("hidden");
-    return;
-  }
-
   await retourPage();
 
 }
@@ -8389,17 +8451,24 @@ let etatsAvantProfilPublic = [];
 let etatAvantVideoProfil = null;
 let scrollAvantVideoPublique = 0;
 
-async function ouvrirProfilPublic(userId){
+async function ouvrirProfilPublic(
+  userId,
+  options = {}
+){
 
   verifierPubliciteProfils();
 
   publicProfilContent.style.opacity = "1";
 
-  currentPublicUserId = userId;
+  if(!options.skipHistory){
+    const origine = capturerEtatNavigation();
+    const dernier = pageStack[pageStack.length - 1];
+    if(!memeEtatNavigation(dernier, origine)){
+      pageStack.push(origine);
+    }
+  }
 
-  etatsAvantProfilPublic.push(
-    capturerEtatNavigation()
-  );
+  currentPublicUserId = userId;
 
   panelAvantProfilPublic =
     currentPanelName ||
@@ -8419,6 +8488,7 @@ async function ouvrirProfilPublic(userId){
     est désactivé pendant l'affichage du profil public.
   */
   document.body.classList.remove("video-mode");
+  mettreAJourVisibiliteBoutonVideoPlus();
 
   publicProfilContent.innerHTML = `
   <div class="skeleton skeleton-card"></div>
@@ -8570,83 +8640,34 @@ color:white!important;
 `;
 }
 
-function retourDepuisVideoPublique(){
+async function retourDepuisVideoPublique(){
 
   stopAllVideos();
-
   window.fromPublicProfileVideo = false;
-
   document.body.classList.remove("video-mode");
-
   panelHighlights.classList.add("hidden");
-
   highlightsList.innerHTML = "";
 
-  pagePublicProfil.classList.remove("hidden");
+  const etatRetour = etatAvantVideoProfil;
+  etatAvantVideoProfil = null;
 
-  publicProfilContent.style.display = "block";
+  if(etatRetour){
+    await restaurerEtatNavigation(etatRetour);
+  }else{
+    await retourPage();
+  }
 
-  document.querySelector("header")?.classList.add("hidden");
-  document.querySelector(".bottom-nav")?.classList.add("hidden");
-
-  requestAnimationFrame(()=>{
-    window.scrollTo(0, scrollAvantVideoPublique || 0);
-  });
+  mettreAJourVisibiliteBoutonVideoPlus();
 
 }
 
 async function retourProfilPublic(){
 
   stopAllVideos();
-
   document.body.classList.remove("video-mode");
-
   panelHighlights.classList.add("hidden");
-
-  /*
-    Ne jamais vider highlightsList ici : son contenu, sa position
-    et la vidéo active doivent être retrouvés au retour.
-  */
-
-  document
-    .getElementById("btnAddVideo")
-    ?.style.removeProperty("display");
-
-  document
-    .querySelector("header")
-    ?.classList.remove("hidden");
-
-  document
-    .querySelector(".bottom-nav")
-    ?.classList.remove("hidden");
-
-  const etatRetour =
-    etatsAvantProfilPublic.pop() || {
-      page:"pageDashboard",
-      panel:
-        panelAvantProfilPublic ||
-        localStorage.getItem("lastPanel") ||
-        "panelTournoi",
-      scrollX:0,
-      scrollY:0
-    };
-
-  panelAvantProfilPublic = null;
-
-  /*
-    Sécurité pour les anciennes navigations déjà empilées :
-    si le même écran se trouve au sommet de pageStack, on le
-    retire afin que le prochain Retour remonte réellement
-    vers l'écran précédent (par exemple Mon profil).
-  */
-  const dernierEtatNavigation =
-    pageStack[pageStack.length - 1];
-
-  if(memeEtatNavigation(dernierEtatNavigation, etatRetour)){
-    pageStack.pop();
-  }
-
-  await restaurerEtatNavigation(etatRetour);
+  await retourPage();
+  mettreAJourVisibiliteBoutonVideoPlus();
 
 }
 
@@ -10373,10 +10394,13 @@ async function retourProfilDepuisVideo(){
 
 async function ouvrirVideoPublique(videoId, userId){
 
+  etatAvantVideoProfil = capturerEtatNavigation();
+
   scrollAvantVideoPublique =
     window.scrollY || 0;
 
   window.fromPublicProfileVideo = true;
+  mettreAJourVisibiliteBoutonVideoPlus();
 
   currentPublicUserId = userId;
 
@@ -15550,6 +15574,9 @@ async function ouvrirModeVideos(options = {}){
     `;
 
   }
+
+  mettreAJourVisibiliteBoutonVideoPlus();
+
   if(options.skipFirstPlay){
     return;
   }
@@ -15785,6 +15812,9 @@ function ouvrirVideoProfil(
     thumbnailUrl
   );
 
+  window.openingProfileVideo = true;
+  mettreAJourVisibiliteBoutonVideoPlus();
+
   setPage("pageDashboard");
 
   document.body.classList.add(
@@ -15949,6 +15979,7 @@ async function ouvrirPanel(id){
     currentPanelName = id;
 
     document.body.classList.remove("video-mode");
+    mettreAJourVisibiliteBoutonVideoPlus();
 
     setPage("pageDashboard");
 
@@ -16930,6 +16961,7 @@ async function ouvrirCommentaires(videoId){
   }
 
   sheet.classList.remove("hidden");
+  mettreAJourVisibiliteBoutonVideoPlus();
 
   list.innerHTML = `
     <p class="small">
@@ -17574,6 +17606,10 @@ function fermerCommentaires(){
   commentsSheet.classList.add("hidden");
 
   currentCommentVideoId = null;
+
+  requestAnimationFrame(()=>{
+    mettreAJourVisibiliteBoutonVideoPlus();
+  });
 
 }
 
@@ -18613,9 +18649,9 @@ onclick="ouvrirPanel('panelClassementProprietaire')">
 id="btnVideos"
 onclick="ouvrirModeVideos()">
 <i class="fa-solid fa-video"></i>
-<span data-i18n-text></span>
+<span data-i18n-text></span
 
-</button>
+  </button>
 
 <button
 id="btnProfil"
