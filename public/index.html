@@ -4041,6 +4041,24 @@ max-height:none;
   color:#ff4d4d;
 }
 
+
+
+section{
+  opacity:0;
+  transform:translateY(8px);
+  transition:
+    opacity .18s ease,
+    transform .18s ease;
+}
+
+section.hidden{
+  display:none;
+}
+
+section.page-show{
+  opacity:1;
+  transform:translateY(0);
+}
 </style>
 
 <link
@@ -7962,6 +7980,10 @@ async function restaurerEtatNavigation(etat){
 
 function setPage(page, enregistrerHistorique = true){
 
+  if(currentPageName === page){
+  return;
+}
+
   const anciennePage =
     currentPageName;
 
@@ -8009,14 +8031,25 @@ function setPage(page, enregistrerHistorique = true){
   }
 
   document
-    .querySelectorAll("section")
-    .forEach(section=>{
-      section.classList.add("hidden");
-    });
+  .querySelectorAll("section")
+  .forEach(section=>{
+    section.classList.add("hidden");
+  });
 
-  document
-    .getElementById(page)
-    ?.classList.remove("hidden");
+const nouvellePage =
+  document.getElementById(page);
+
+if(nouvellePage){
+
+  nouvellePage.classList.remove("hidden");
+
+  nouvellePage.classList.remove("page-show");
+
+  requestAnimationFrame(()=>{
+    nouvellePage.classList.add("page-show");
+  });
+
+}
 
     ajouterMessagesAideBoutons();
    mettreAJourMessagesAide();
@@ -15648,6 +15681,10 @@ async function ouvrirPanel(id){
 
   if(panelEnCours) return;
 
+  if(currentPanelName === id){
+  return;
+}
+
   panelEnCours = true;
 
   try{
@@ -15656,10 +15693,17 @@ async function ouvrirPanel(id){
 
     currentPanelName = id;
 
+    localStorage.setItem(
+  "lastPanel",
+  id
+);
+
     document.body.classList.remove("video-mode");
 
-    setPage("pageDashboard");
-
+    
+if(currentPageName !== "pageDashboard"){
+  setPage("pageDashboard");
+}
     document
       .querySelectorAll(".bottom-nav button")
       .forEach(b=>b.classList.remove("active"));
@@ -15668,11 +15712,18 @@ async function ouvrirPanel(id){
       .querySelectorAll(".panel")
       .forEach(p=>p.classList.add("hidden"));
 
-    const panel = document.getElementById(id);
+    const panel =
+  document.getElementById(id);
 
-    if(panel){
-      panel.classList.remove("hidden");
-    }
+if(!panel){
+  console.error(
+    "Panel introuvable :",
+    id
+  );
+  return;
+}
+
+panel.classList.remove("hidden");
 
    if(
   id === "panelOrganisateur" ||
