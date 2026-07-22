@@ -14993,36 +14993,196 @@ function prepareVideoUpload(){
   preview.load();
 
 }
-async function supprimerHighlight(id){
 
-  const result = await post(
-    "/delete-highlight",
-    { highlight_id:id }
-  );
+async function supprimerHighlight(
+  highlightId,
+  bouton = null
+){
 
-  message.textContent =
-    typeof result === "object"
-      ? result.message || "Vidéo supprimée"
-      : result;
+  const id =
+    Number(highlightId);
 
-  document
-    .querySelectorAll(`.profile-video-item`)
-    .forEach(item=>{
+  if(
+    !Number.isInteger(id) ||
+    id <= 0
+  ){
 
-      const btn =
-        item.querySelector(
-          `.video-menu-btn[onclick*="${id}"]`
-        );
+    alert("Vidéo invalide");
+    return;
 
-      if(btn){
-        item.remove();
-      }
+  }
 
-    });
+  const confirmation =
+    confirm(
+      "Voulez-vous vraiment supprimer définitivement cette vidéo ?"
+    );
 
-  document
-    .querySelectorAll(`.tiktok-video[data-id="${id}"]`)
-    .forEach(v=>v.remove());
+  if(!confirmation){
+    return;
+  }
+
+  if(bouton){
+
+    bouton.disabled = true;
+
+    bouton.textContent =
+      "Suppression...";
+
+  }
+
+  try{
+
+    const response =
+      await fetch(
+        "/delete-highlight",
+        {
+          method:"POST",
+
+          headers:{
+            "Content-Type":
+              "application/json"
+          },
+
+          credentials:"include",
+
+          body:JSON.stringify({
+            highlight_id:id
+          })
+        }
+      );
+
+    const contentType =
+      response.headers.get(
+        "content-type"
+      ) || "";
+
+    const resultat =
+      contentType.includes(
+        "application/json"
+      )
+        ? await response.json()
+        : await response.text();
+
+    if(!response.ok){
+
+      const message =
+        typeof resultat === "object"
+          ? resultat.message
+          : resultat;
+
+      throw new Error(
+        message ||
+        "Impossible de supprimer la vidéo"
+      );
+
+    }
+
+    /*
+      Arrêter la vidéo avant de retirer
+      son élément HTML.
+    */
+    const video =
+      document.querySelector(
+        `.tiktok-video[data-highlight-id="${id}"] video`
+      );
+
+    if(video){
+
+      video.pause();
+
+      video.removeAttribute("src");
+
+      video.load();
+
+    }
+
+    const carteVideo =
+      document.querySelector(
+        `[data-highlight-id="${id}"]`
+      );
+
+    if(carteVideo){
+      carteVideo.remove();
+    }
+
+    /*
+      Sortir complètement du mode vidéo.
+    */
+    document.body.classList.remove(
+      "video-mode"
+    );
+
+    /*
+      Vider l'ancien lecteur.
+    */
+    if(
+      typeof highlightsList !==
+      "undefined" &&
+      highlightsList
+    ){
+
+      highlightsList.innerHTML = "";
+
+    }
+
+    /*
+      Ton profil s'appelle pageProfil,
+      pas panelProfil.
+    */
+    setPage("pageProfil");
+
+    /*
+      Recharger les informations du profil
+      et la grille de vidéos.
+    */
+    if(
+      typeof chargerProfil ===
+      "function"
+    ){
+
+      await chargerProfil();
+
+    }else if(
+      typeof ouvrirProfilCompte ===
+      "function"
+    ){
+
+      await ouvrirProfilCompte();
+
+    }
+
+    const message =
+      typeof resultat === "object"
+        ? resultat.message
+        : resultat;
+
+    alert(
+      message ||
+      "Vidéo supprimée"
+    );
+
+  }catch(error){
+
+    console.error(
+      "Erreur suppression vidéo :",
+      error
+    );
+
+    alert(
+      error.message ||
+      "Impossible de supprimer la vidéo"
+    );
+
+    if(bouton){
+
+      bouton.disabled = false;
+
+      bouton.textContent =
+        "🗑️ Supprimer";
+
+    }
+
+  }
 
 }
 async function chargerMesVideos(){
@@ -15322,97 +15482,146 @@ async function chargerVideosUtilisateur(userId){
   `;
 }
 
-function ouvrirVideoProfil(url,id,userId,thumbnailUrl){
+function ouvrirVideoProfil(
+  url,
+  id,
+  userId,
+  thumbnailUrl
+){
 
-  console.log("thumbnail reçu =", thumbnailUrl);
+  console.log(
+    "thumbnail reçu =",
+    thumbnailUrl
+  );
 
   setPage("pageDashboard");
 
-  document.body.classList.add("video-mode");
+  document.body.classList.add(
+    "video-mode"
+  );
 
   document
     .querySelectorAll(".panel")
-    .forEach(p=>p.classList.add("hidden"));
+    .forEach(
+      p => p.classList.add("hidden")
+    );
 
-  panelHighlights.classList.remove("hidden");
+  panelHighlights.classList.remove(
+    "hidden"
+  );
 
   if(messageCard){
     messageCard.classList.add("hidden");
   }
 
+  const imageMiniature =
+    thumbnailUrl
+      ? `
+        <img
+          src="${thumbnailUrl}"
+          class="video-start-cover"
+          alt=""
+        >
+      `
+      : "";
+
   highlightsList.innerHTML = `
-  <div class="tiktok-video">
+    <div
+      class="tiktok-video"
+      data-highlight-id="${id}"
+    >
 
-   <img
-  src="${thumbnailUrl}"
-  class="video-start-cover">
+      ${imageMiniature}
 
-<video
-  src="${url}"
-  class="highlight-video"
-  muted
-  playsinline
-  preload="auto">
-</video>
+      <video
+        src="${url}"
+        class="highlight-video"
+        muted
+        playsinline
+        preload="auto">
+      </video>
 
-
-            ${
-        Number(userId) === Number(currentUserId)
-        ? `
-          <button
-            type="button"
-            onclick="event.stopPropagation(); supprimerHighlight(${id});"
-            style="
-              position:fixed!important;
-              top:50px!important;
-              left:50px!important;
-              z-index:999999999!important;
-              width:auto!important;
-              min-width:190px!important;
-              height:60px!important;
-              background:#ef4444!important;
-              color:#ffffff!important;
-              font-size:22px!important;
-              font-weight:900!important;
-              padding:12px 20px!important;
-              border:3px solid #ffffff!important;
-              border-radius:999px!important;
-              display:flex!important;
-              align-items:center!important;
-              justify-content:center!important;
-              text-align:center!important;
-            ">
-            Supprimer
-          </button>
-        `
-        : ""
+      ${
+        Number(userId) ===
+        Number(currentUserId)
+          ? `
+            <button
+              type="button"
+              onclick="
+                event.stopPropagation();
+                supprimerHighlight(
+                  ${id},
+                  this
+                );
+              "
+              style="
+                position:fixed!important;
+                top:50px!important;
+                left:50px!important;
+                z-index:999999999!important;
+                width:auto!important;
+                min-width:190px!important;
+                height:60px!important;
+                background:#ef4444!important;
+                color:#ffffff!important;
+                font-size:22px!important;
+                font-weight:900!important;
+                padding:12px 20px!important;
+                border:3px solid #ffffff!important;
+                border-radius:999px!important;
+                display:flex!important;
+                align-items:center!important;
+                justify-content:center!important;
+                text-align:center!important;
+                cursor:pointer!important;
+              ">
+              🗑️ Supprimer
+            </button>
+          `
+          : ""
       }
-
-    
-
 
     </div>
   `;
 
   const video =
-  highlightsList.querySelector("video");
+    highlightsList.querySelector(
+      "video"
+    );
 
-const cover =
-  highlightsList.querySelector(".video-start-cover");
+  const cover =
+    highlightsList.querySelector(
+      ".video-start-cover"
+    );
 
-video.addEventListener("loadeddata",()=>{
+  video.addEventListener(
+    "loadeddata",
+    ()=>{
 
-  cover.style.opacity = "0";
+      if(cover){
 
-  setTimeout(()=>{
-    cover.remove();
-  },150);
+        cover.style.opacity = "0";
 
-  video.play().catch(()=>{});
+        setTimeout(
+          ()=>{
+            cover.remove();
+          },
+          150
+        );
 
- },{ once:true });
+      }
+
+      video
+        .play()
+        .catch(()=>{});
+
+    },
+    {
+      once:true
+    }
+  );
+
 }
-
 async function deleteOldVideos(){
 
   const result =

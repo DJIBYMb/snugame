@@ -61,7 +61,8 @@ for(const key of requiredR2){
 
 const {
   S3Client,
-  PutObjectCommand
+  PutObjectCommand,
+  DeleteObjectCommand
 } = require("@aws-sdk/client-s3");
 
 const r2 = new S3Client({
@@ -73,6 +74,129 @@ const r2 = new S3Client({
     secretAccessKey:process.env.R2_SECRET_ACCESS_KEY
   }
 });
+
+function extraireCleR2DepuisUrl(urlFichier){
+
+  const url =
+    String(urlFichier || "").trim();
+
+  if(!url){
+    return null;
+  }
+
+  const r2PublicUrl =
+    String(
+      process.env.R2_PUBLIC_URL || ""
+    )
+      .trim()
+      .replace(/\/+$/,"");
+
+  /*
+    Sécurité :
+
+    On refuse de supprimer un fichier
+    qui ne vient pas du domaine R2
+    configuré pour SNUGAME.
+  */
+  if(
+    !r2PublicUrl ||
+    !url.startsWith(r2PublicUrl + "/")
+  ){
+    return null;
+  }
+
+  try{
+
+    const urlComplete =
+      new URL(url);
+
+    /*
+      Exemple :
+
+      https://media.snugame.com/123-video.mp4
+
+      devient :
+
+      123-video.mp4
+    */
+    const cle =
+      decodeURIComponent(
+        urlComplete.pathname
+      )
+        .replace(/^\/+/,"");
+
+    if(!cle){
+      return null;
+    }
+
+    /*
+      Protection supplémentaire contre
+      les chemins suspects.
+    */
+    if(
+      cle.includes("..") ||
+      cle.startsWith("/")
+    ){
+      return null;
+    }
+
+    return cle;
+
+  }catch(error){
+
+    console.error(
+      "URL R2 invalide :",
+      error
+    );
+
+    return null;
+
+  }
+
+}
+
+
+async function supprimerFichierR2(urlFichier){
+
+  const cle =
+    extraireCleR2DepuisUrl(
+      urlFichier
+    );
+
+  /*
+    Une URL vide n'est pas une erreur.
+
+    Certaines anciennes vidéos peuvent ne
+    pas avoir de miniature.
+  */
+  if(!cle){
+
+    return {
+      ok:false,
+      ignore:true,
+      raison:"CLE_R2_ABSENTE"
+    };
+
+  }
+
+  await r2.send(
+    new DeleteObjectCommand({
+      Bucket:process.env.R2_BUCKET,
+      Key:cle
+    })
+  );
+
+  console.log(
+    "Fichier supprimé de R2 :",
+    cle
+  );
+
+  return {
+    ok:true,
+    cle
+  };
+
+}
 
 const app = express();
 
@@ -3441,96 +3565,79 @@ app.post(
 
     }
 
-    await run("BEGIN TRANSACTION");
+    await executerTransaction(
+  async ({ run })=>{
 
-    try{
+    await run(
+      `
+      DELETE FROM matches
+      WHERE tournament_id=?
+      `,
+      [tournamentId]
+    );
 
-      await run(
-        `
-        DELETE FROM matches
+    await run(
+      `
+      DELETE FROM rapid_qualifiers
+      WHERE tournament_id=?
+      `,
+      [tournamentId]
+    );
+
+    await run(
+      `
+      DELETE FROM player_stats
+      WHERE participant_id IN (
+        SELECT id
+        FROM participants
         WHERE tournament_id=?
-        `,
-        [tournamentId]
-      );
+      )
+      `,
+      [tournamentId]
+    );
 
-      await run(
-        `
-        DELETE FROM rapid_qualifiers
-        WHERE tournament_id=?
-        `,
-        [tournamentId]
-      );
+    await run(
+      `
+      DELETE FROM participants
+      WHERE tournament_id=?
+      `,
+      [tournamentId]
+    );
 
-      await run(
-        `
-        DELETE FROM player_stats
-        WHERE participant_id IN (
-          SELECT id
-          FROM participants
-          WHERE tournament_id=?
-        )
-        `,
-        [tournamentId]
-      );
+    await run(
+      `
+      DELETE FROM counted_tournaments
+      WHERE tournament_id=?
+      `,
+      [tournamentId]
+    );
 
-      await run(
-        `
-        DELETE FROM participants
-        WHERE tournament_id=?
-        `,
-        [tournamentId]
-      );
+    await run(
+      `
+      DELETE FROM user_trophies
+      WHERE tournament_id=?
+      `,
+      [tournamentId]
+    );
 
-      await run(
-        `
-        DELETE FROM counted_tournaments
-        WHERE tournament_id=?
-        `,
-        [tournamentId]
-      );
+    await run(
+      `
+      DELETE FROM tournaments
+      WHERE id=?
+      `,
+      [tournamentId]
+    );
 
-      await run(
-        `
-        DELETE FROM user_trophies
-        WHERE tournament_id=?
-        `,
-        [tournamentId]
-      );
+  }
+);
 
-      await run(
-        `
-        DELETE FROM tournaments
-        WHERE id=?
-        `,
-        [tournamentId]
-      );
-
-      await run("COMMIT");
-
-      return res.send(
-        tr(
-          req,
-          "Tournoi supprimé",
-          "Tournament deleted"
-        )
-      );
-
-    }catch(errorTransaction){
-
-      try{
-        await run("ROLLBACK");
-      }catch(errorRollback){
-
-        console.error(
-          "Erreur ROLLBACK suppression tournoi :",
-          errorRollback
-        );
-
-      }
-
-      throw errorTransaction;
-
-    }
+return res.send(
+  tr(
+    req,
+    "Tournoi supprimé",
+    "Tournament deleted"
+  )
+);
 
   }catch(error){
 
@@ -5559,8 +5666,26 @@ async function creerPremierTourPhaseFinale(
 
 async function genererTourSuivantPhaseFinale(
   tournamentId,
-  round
+  round,
+  transaction = null
 ){
+
+  /*
+    Si une transaction est transmise par la route,
+    cette fonction utilise ses propres méthodes.
+
+    Sinon, elle continue d'utiliser les fonctions
+    normales run, get et all comme avant.
+  */
+
+  const runTransaction =
+    transaction?.run || run;
+
+  const getTransaction =
+    transaction?.get || get;
+
+  const allTransaction =
+    transaction?.all || all;
 
   const nextRound =
     getNextRoundRapide(round);
@@ -5574,19 +5699,20 @@ async function genererTourSuivantPhaseFinale(
 
   }
 
-  const matchs = await all(
-    `
-    SELECT *
-    FROM matches
-    WHERE tournament_id=?
-      AND round=?
-    ORDER BY match_order ASC, id ASC
-    `,
-    [
-      tournamentId,
-      round
-    ]
-  );
+  const matchs =
+    await allTransaction(
+      `
+      SELECT *
+      FROM matches
+      WHERE tournament_id=?
+        AND round=?
+      ORDER BY match_order ASC, id ASC
+      `,
+      [
+        tournamentId,
+        round
+      ]
+    );
 
   if(matchs.length === 0){
 
@@ -5602,7 +5728,9 @@ async function genererTourSuivantPhaseFinale(
 
     const ordreDuel =
       Math.ceil(
-        Number(match.match_order || 1) / 2
+        Number(
+          match.match_order || 1
+        ) / 2
       );
 
     if(!duels.has(ordreDuel)){
@@ -5659,23 +5787,40 @@ async function genererTourSuivantPhaseFinale(
     }
 
     const player1 =
-      Number(duel.aller.player1_id);
+      Number(
+        duel.aller.player1_id
+      );
 
     const player2 =
-      Number(duel.aller.player2_id);
+      Number(
+        duel.aller.player2_id
+      );
 
-    function scoreDuJoueur(match, playerId){
+    function scoreDuJoueur(
+      match,
+      playerId
+    ){
 
       if(
-        Number(match.player1_id) === playerId
+        Number(match.player1_id) ===
+        playerId
       ){
-        return Number(match.score1 || 0);
+
+        return Number(
+          match.score1 || 0
+        );
+
       }
 
       if(
-        Number(match.player2_id) === playerId
+        Number(match.player2_id) ===
+        playerId
       ){
-        return Number(match.score2 || 0);
+
+        return Number(
+          match.score2 || 0
+        );
+
       }
 
       return 0;
@@ -5765,21 +5910,31 @@ async function genererTourSuivantPhaseFinale(
       a.ordreDuel - b.ordreDuel
   );
 
-  const dejaCree = await get(
-    `
-    SELECT COUNT(*) AS total
-    FROM matches
-    WHERE tournament_id=?
-      AND round=?
-    `,
-    [
-      tournamentId,
-      nextRound
-    ]
-  );
+  /*
+    Vérification faite avec la même transaction.
+
+    Cela empêche deux clics rapides de créer
+    deux fois le même tour.
+  */
+
+  const dejaCree =
+    await getTransaction(
+      `
+      SELECT COUNT(*) AS total
+      FROM matches
+      WHERE tournament_id=?
+        AND round=?
+      `,
+      [
+        tournamentId,
+        nextRound
+      ]
+    );
 
   if(
-    Number(dejaCree?.total || 0) > 0
+    Number(
+      dejaCree?.total || 0
+    ) > 0
   ){
 
     return {
@@ -5808,7 +5963,7 @@ async function genererTourSuivantPhaseFinale(
       continue;
     }
 
-    await run(
+    await runTransaction(
       `
       INSERT INTO matches(
         tournament_id,
@@ -5830,7 +5985,7 @@ async function genererTourSuivantPhaseFinale(
       ]
     );
 
-    await run(
+    await runTransaction(
       `
       INSERT INTO matches(
         tournament_id,
@@ -7545,43 +7700,35 @@ app.post(
 
       }
 
-      await run("BEGIN TRANSACTION");
+      await executerTransaction(
+  async ({ run })=>{
 
-      try{
+    await run(
+      `
+      UPDATE users
+      SET abonnement=1,
+          abonnement_expire_at=
+            datetime('now','+30 days')
+      WHERE id=?
+      `,
+      [user_id]
+    );
 
-        await run(
-          `
-          UPDATE users
-          SET abonnement=1,
-              abonnement_expire_at=
-                datetime('now','+30 days')
-          WHERE id=?
-          `,
-          [user_id]
-        );
+    await run(
+      `
+      UPDATE payments
+      SET status='approved'
+      WHERE id=?
+        AND user_id=?
+      `,
+      [
+        payment_id,
+        user_id
+      ]
+    );
 
-        await run(
-          `
-          UPDATE payments
-          SET status='approved'
-          WHERE id=?
-          AND user_id=?
-          `,
-          [
-            payment_id,
-            user_id
-          ]
-        );
-
-        await run("COMMIT");
-
-      }catch(error){
-
-        await run("ROLLBACK");
-
-        throw error;
-
-      }
+  }
+);
 
       return res.redirect(
         "/admin-payments?admin=" +
@@ -7836,60 +7983,300 @@ app.post("/highlight", async (req,res)=>{
 
 });
 
-app.post("/delete-highlight", async (req,res)=>{
+app.post(
+  "/delete-highlight",
+  async (req,res)=>{
 
-  try{
-    if(!connected(req)){
-      return res.status(401).send(tr(req,"Connecte-toi","Please log in"));
-    }
+    try{
 
-    const highlightId = Number(req.body.highlight_id);
-    if(!Number.isInteger(highlightId) || highlightId <= 0){
-      return res.status(400).send(tr(req,"Vidéo invalide","Invalid video"));
-    }
+      /* =========================
+         1. VÉRIFIER LA CONNEXION
+      ========================= */
 
-    const resultat = await executerTransaction(async transaction=>{
-      const highlight = await transaction.get(
-        `SELECT id,user_id FROM highlights WHERE id=? LIMIT 1`,
-        [highlightId]
+      if(!connected(req)){
+
+        return res.status(401).send(
+          tr(
+            req,
+            "Connecte-toi",
+            "Please log in"
+          )
+        );
+
+      }
+
+      const userId =
+        Number(req.session.userId);
+
+      const highlightId =
+        Number(req.body.highlight_id);
+
+      /* =========================
+         2. VÉRIFIER L'IDENTIFIANT
+      ========================= */
+
+      if(
+        !Number.isInteger(highlightId) ||
+        highlightId <= 0
+      ){
+
+        return res.status(400).send(
+          tr(
+            req,
+            "Vidéo invalide",
+            "Invalid video"
+          )
+        );
+
+      }
+
+      /* =========================
+         3. SUPPRIMER LES DONNÉES
+         DANS SQLITE
+      ========================= */
+
+      const videoSupprimee =
+        await executerTransaction(
+          async transaction =>{
+
+            const highlight =
+              await transaction.get(
+                `
+                SELECT
+                  id,
+                  user_id,
+                  media_url,
+                  thumbnail_url
+                FROM highlights
+                WHERE id=?
+                LIMIT 1
+                `,
+                [highlightId]
+              );
+
+            if(!highlight){
+
+              const error =
+                new Error(
+                  "HIGHLIGHT_NOT_FOUND"
+                );
+
+              error.code =
+                "HIGHLIGHT_NOT_FOUND";
+
+              throw error;
+
+            }
+
+            /*
+              Règle essentielle :
+
+              seul le propriétaire de la vidéo
+              peut utiliser cette route.
+            */
+            if(
+              Number(highlight.user_id) !==
+              userId
+            ){
+
+              const error =
+                new Error(
+                  "HIGHLIGHT_FORBIDDEN"
+                );
+
+              error.code =
+                "HIGHLIGHT_FORBIDDEN";
+
+              throw error;
+
+            }
+
+            await transaction.run(
+              `
+              DELETE FROM highlight_comments
+              WHERE highlight_id=?
+              `,
+              [highlightId]
+            );
+
+            await transaction.run(
+              `
+              DELETE FROM highlight_likes
+              WHERE highlight_id=?
+              `,
+              [highlightId]
+            );
+
+            await transaction.run(
+              `
+              DELETE FROM video_favorites
+              WHERE highlight_id=?
+              `,
+              [highlightId]
+            );
+
+            await transaction.run(
+              `
+              DELETE FROM highlight_views
+              WHERE highlight_id=?
+              `,
+              [highlightId]
+            );
+
+            await transaction.run(
+              `
+              DELETE FROM video_watch_time
+              WHERE highlight_id=?
+              `,
+              [highlightId]
+            );
+
+            await transaction.run(
+              `
+              DELETE FROM notifications
+              WHERE highlight_id=?
+              `,
+              [highlightId]
+            );
+
+            await transaction.run(
+              `
+              DELETE FROM highlights
+              WHERE id=?
+                AND user_id=?
+              `,
+              [
+                highlightId,
+                userId
+              ]
+            );
+
+            /*
+              On retourne les URL avant que
+              la transaction soit terminée.
+            */
+            return {
+              mediaUrl:
+                String(
+                  highlight.media_url || ""
+                ),
+
+              thumbnailUrl:
+                String(
+                  highlight.thumbnail_url || ""
+                )
+            };
+
+          }
+        );
+
+      /* =========================
+         4. SUPPRIMER LES FICHIERS
+         DANS CLOUDFLARE R2
+      ========================= */
+
+      const suppressionsR2 =
+        await Promise.allSettled([
+
+          supprimerFichierR2(
+            videoSupprimee.mediaUrl
+          ),
+
+          supprimerFichierR2(
+            videoSupprimee.thumbnailUrl
+          )
+
+        ]);
+
+      /*
+        Une erreur R2 ne remet pas la vidéo
+        dans SQLite.
+
+        Elle est enregistrée dans les logs
+        pour pouvoir être contrôlée.
+      */
+      const erreursR2 =
+        suppressionsR2.filter(
+          resultat =>
+            resultat.status ===
+            "rejected"
+        );
+
+      if(erreursR2.length > 0){
+
+        console.error(
+          "La vidéo a été supprimée de la base, mais certains fichiers R2 n'ont pas pu être supprimés :",
+          erreursR2.map(
+            resultat =>
+              resultat.reason
+          )
+        );
+
+      }
+
+      return res.json({
+        ok:true,
+
+        message:
+          tr(
+            req,
+            "Vidéo supprimée",
+            "Video deleted"
+          ),
+
+        fichiers_r2_supprimes:
+          erreursR2.length === 0
+      });
+
+    }catch(error){
+
+      if(
+        error.code ===
+        "HIGHLIGHT_NOT_FOUND"
+      ){
+
+        return res.status(404).send(
+          tr(
+            req,
+            "Vidéo introuvable",
+            "Video not found"
+          )
+        );
+
+      }
+
+      if(
+        error.code ===
+        "HIGHLIGHT_FORBIDDEN"
+      ){
+
+        return res.status(403).send(
+          tr(
+            req,
+            "Tu ne peux supprimer que ta propre vidéo",
+            "You can only delete your own video"
+          )
+        );
+
+      }
+
+      console.error(
+        "Erreur suppression vidéo :",
+        error
       );
 
-      if(!highlight){
-        const error = new Error("HIGHLIGHT_NOT_FOUND");
-        error.code = "HIGHLIGHT_NOT_FOUND";
-        throw error;
-      }
+      return res.status(500).send(
+        tr(
+          req,
+          "Impossible de supprimer la vidéo",
+          "Unable to delete video"
+        )
+      );
 
-      if(Number(highlight.user_id) !== Number(req.session.userId)){
-        const error = new Error("HIGHLIGHT_FORBIDDEN");
-        error.code = "HIGHLIGHT_FORBIDDEN";
-        throw error;
-      }
-
-      await transaction.run(`DELETE FROM highlight_comments WHERE highlight_id=?`,[highlightId]);
-      await transaction.run(`DELETE FROM highlight_likes WHERE highlight_id=?`,[highlightId]);
-      await transaction.run(`DELETE FROM video_favorites WHERE highlight_id=?`,[highlightId]);
-      await transaction.run(`DELETE FROM highlight_views WHERE highlight_id=?`,[highlightId]);
-      await transaction.run(`DELETE FROM video_watch_time WHERE highlight_id=?`,[highlightId]);
-      await transaction.run(`DELETE FROM notifications WHERE highlight_id=?`,[highlightId]);
-      await transaction.run(`DELETE FROM highlights WHERE id=?`,[highlightId]);
-      return true;
-    });
-
-    return res.json({ok:Boolean(resultat),message:tr(req,"Vidéo supprimée","Video deleted")});
-
-  }catch(error){
-    if(error.code === "HIGHLIGHT_NOT_FOUND"){
-      return res.status(404).send(tr(req,"Vidéo introuvable","Video not found"));
     }
-    if(error.code === "HIGHLIGHT_FORBIDDEN"){
-      return res.status(403).send(tr(req,"Tu ne peux supprimer que ta propre vidéo","You can only delete your own video"));
-    }
-    console.error("Erreur suppression vidéo :",error);
-    return res.status(500).send(tr(req,"Impossible de supprimer la vidéo","Unable to delete video"));
+
   }
-
-});
+);
 
 app.get("/highlights", async (req,res)=>{
 
@@ -8964,65 +9351,77 @@ app.post(
 
     }
 
-    await run("BEGIN TRANSACTION");
+    await executerTransaction(
+  async ({ run, get })=>{
 
-    try{
+    /*
+      Vérification dans la transaction pour
+      empêcher deux générations simultanées.
+    */
 
-      let matchOrder = 1;
-
-      for(const match of tirage.matchs){
-
-        await run(
-          `
-          INSERT INTO matches(
-            tournament_id,
-            round,
-            match_order,
-            journee,
-            player1_id,
-            player2_id
-          )
-          VALUES(?,?,?,?,?,?)
-          `,
-          [
-            tournamentId,
-            match.round,
-            matchOrder++,
-            match.leg,
-            match.player1.id,
-            match.player2.id
-          ]
-        );
-
-      }
-
-      await run(
+    const matchsExistants =
+      await get(
         `
-        UPDATE tournaments
-        SET status='started'
-        WHERE id=?
+        SELECT COUNT(*) AS total
+        FROM matches
+        WHERE tournament_id=?
         `,
         [tournamentId]
       );
 
-      await run("COMMIT");
+    if(
+      Number(matchsExistants?.total || 0) > 0
+    ){
 
-    }catch(errorTransaction){
+      const erreur =
+        new Error("TIRAGE_DEJA_GENERE");
 
-      try{
-        await run("ROLLBACK");
-      }catch(errorRollback){
+      erreur.code =
+        "TIRAGE_DEJA_GENERE";
 
-        console.error(
-          "Erreur ROLLBACK tirage rapide :",
-          errorRollback
-        );
-
-      }
-
-      throw errorTransaction;
+      throw erreur;
 
     }
+
+    let matchOrder = 1;
+
+    for(const match of tirage.matchs){
+
+      await run(
+        `
+        INSERT INTO matches(
+          tournament_id,
+          round,
+          match_order,
+          journee,
+          player1_id,
+          player2_id
+        )
+        VALUES(?,?,?,?,?,?)
+        `,
+        [
+          tournamentId,
+          match.round,
+          matchOrder++,
+          match.leg,
+          match.player1.id,
+          match.player2.id
+        ]
+      );
+
+    }
+
+    await run(
+      `
+      UPDATE tournaments
+      SET status='started'
+      WHERE id=?
+      `,
+      [tournamentId]
+    );
+
+  }
+);
 
     for(const participant of participants){
 
@@ -9617,115 +10016,142 @@ app.post(
 
     }
 
-    await run("BEGIN TRANSACTION");
+    const resultat =
+  await executerTransaction(
+    async transaction => {
 
-    try{
-
-      const resultat =
+      const resultatTransaction =
         await genererTourSuivantPhaseFinale(
           tournamentId,
-          round
+          round,
+          transaction
         );
 
-      if(resultat.incomplete){
+      if(resultatTransaction.incomplete){
 
-        await run("ROLLBACK");
+        const erreur =
+          new Error("TOUR_INCOMPLET");
 
-        return res.status(409).send(
-          tr(
-            req,
-            "Tous les matchs de ce tour doivent être terminés",
-            "All matches in this round must be completed"
-          )
-        );
+        erreur.code =
+          "TOUR_INCOMPLET";
+
+        throw erreur;
 
       }
 
-      if(resultat.penaltiesMissing){
+      if(resultatTransaction.penaltiesMissing){
 
-        await run("ROLLBACK");
+        const erreur =
+          new Error("TIRS_AU_BUT_MANQUANTS");
 
-        return res.status(409).send(
-          tr(
-            req,
-            "Des tirs au but sont nécessaires pour départager un duel",
-            "Penalty shootout scores are required to decide a tie"
-          )
-        );
+        erreur.code =
+          "TIRS_AU_BUT_MANQUANTS";
+
+        throw erreur;
 
       }
 
-      if(resultat.alreadyCreated){
+      if(resultatTransaction.alreadyCreated){
 
-        await run("ROLLBACK");
+        const erreur =
+          new Error("TOUR_DEJA_GENERE");
 
-        return res.status(409).send(
-          tr(
-            req,
-            "Le tour suivant est déjà généré",
-            "The next round has already been generated"
-          )
-        );
+        erreur.code =
+          "TOUR_DEJA_GENERE";
+
+        throw erreur;
 
       }
 
-      if(resultat.finished){
+      if(resultatTransaction.finished){
 
-        await run("ROLLBACK");
+        const erreur =
+          new Error("AUCUN_TOUR_SUIVANT");
 
-        return res.status(400).send(
-          tr(
-            req,
-            "Aucun tour suivant après la finale",
-            "There is no round after the final"
-          )
-        );
+        erreur.code =
+          "AUCUN_TOUR_SUIVANT";
+
+        throw erreur;
 
       }
 
-      await run("COMMIT");
-
-      return res.send(
-        tr(
-          req,
-          `Tour suivant généré : ${resultat.round}`,
-          `Next round generated: ${resultat.round}`
-        )
-      );
-
-    }catch(errorTransaction){
-
-      try{
-        await run("ROLLBACK");
-      }catch(errorRollback){
-
-        console.error(
-          "Erreur ROLLBACK tour suivant :",
-          errorRollback
-        );
-
-      }
-
-      throw errorTransaction;
+      return resultatTransaction;
 
     }
+  );
+
+return res.send(
+  tr(
+    req,
+    `Tour suivant généré : ${resultat.round}`,
+    `Next round generated: ${resultat.round}`
+  )
+);
 
   }catch(error){
 
-    console.error(
-      "Erreur génération tour suivant :",
-      error
-    );
+  if(error.code === "TOUR_INCOMPLET"){
 
-    return res.status(500).send(
+    return res.status(409).send(
       tr(
         req,
-        "Erreur pendant la génération du tour suivant",
-        "Failed to generate the next round"
+        "Tous les matchs de ce tour doivent être terminés",
+        "All matches in this round must be completed"
       )
     );
 
   }
+
+  if(error.code === "TIRS_AU_BUT_MANQUANTS"){
+
+    return res.status(409).send(
+      tr(
+        req,
+        "Des tirs au but sont nécessaires pour départager un duel",
+        "Penalty shootout scores are required to decide a tie"
+      )
+    );
+
+  }
+
+  if(error.code === "TOUR_DEJA_GENERE"){
+
+    return res.status(409).send(
+      tr(
+        req,
+        "Le tour suivant est déjà généré",
+        "The next round has already been generated"
+      )
+    );
+
+  }
+
+  if(error.code === "AUCUN_TOUR_SUIVANT"){
+
+    return res.status(400).send(
+      tr(
+        req,
+        "Aucun tour suivant après la finale",
+        "There is no round after the final"
+      )
+    );
+
+  }
+
+  console.error(
+    "Erreur génération tour suivant :",
+    error
+  );
+
+  return res.status(500).send(
+    tr(
+      req,
+      "Erreur pendant la génération du tour suivant",
+      "Failed to generate the next round"
+    )
+  );
+
+}
 
 });
 
@@ -12869,38 +13295,65 @@ app.post(
 
       }
 
-      await run("BEGIN TRANSACTION");
+      await executerTransaction(
+  async ({ run, get })=>{
 
-      try{
+    /*
+      Vérification dans la transaction.
+      Elle évite qu'un autre utilisateur
+      prenne la même adresse e-mail entre
+      la vérification et la mise à jour.
+    */
 
-        await run(
-          `
-          UPDATE users
-          SET email=?
-          WHERE id=?
-          `,
-          [
-            cleanEmail,
-            req.session.userId
-          ]
-        );
+    const emailDejaUtilise =
+      await get(
+        `
+        SELECT id
+        FROM users
+        WHERE email=?
+          AND id<>?
+        LIMIT 1
+        `,
+        [
+          cleanEmail,
+          req.session.userId
+        ]
+      );
 
-        await run(
-          `
-          DELETE FROM email_codes
-          WHERE email=?
-          `,
-          [cleanEmail]
-        );
+    if(emailDejaUtilise){
 
-        await run("COMMIT");
+      const erreur =
+        new Error("EMAIL_DEJA_UTILISE");
 
-      }catch(error){
+      erreur.code =
+        "EMAIL_DEJA_UTILISE";
 
-        await run("ROLLBACK");
-        throw error;
+      throw erreur;
 
-      }
+    }
+
+    await run(
+      `
+      UPDATE users
+      SET email=?
+      WHERE id=?
+      `,
+      [
+        cleanEmail,
+        req.session.userId
+      ]
+    );
+
+    await run(
+      `
+      DELETE FROM email_codes
+      WHERE email=?
+      `,
+      [cleanEmail]
+    );
+
+  }
+);
 
       return res.send(
         tr(
@@ -12912,20 +13365,32 @@ app.post(
 
     }catch(error){
 
-      console.error(
-        "Erreur changement email :",
-        error
-      );
+  if(error.code === "EMAIL_DEJA_UTILISE"){
 
-      return res.status(500).send(
-        tr(
-          req,
-          "Erreur changement email",
-          "Failed to change email"
-        )
-      );
+    return res.status(409).send(
+      tr(
+        req,
+        "Email déjà utilisé",
+        "Email already used"
+      )
+    );
 
-    }
+  }
+
+  console.error(
+    "Erreur changement email :",
+    error
+  );
+
+  return res.status(500).send(
+    tr(
+      req,
+      "Erreur changement email",
+      "Failed to change email"
+    )
+  );
+
+}
 
   }
 );
@@ -13220,38 +13685,65 @@ app.post("/reset-password", loginLimiter, async (req,res)=>{
     const hashedPassword =
       await bcrypt.hash(password, 10);
 
-    await run("BEGIN TRANSACTION");
+    await executerTransaction(
+  async ({ run, get })=>{
 
-    try{
+    /*
+      On vérifie une nouvelle fois dans la
+      transaction que l'adresse n'est pas
+      utilisée par un autre compte.
+    */
 
-      await run(
+    const emailDejaUtilise =
+      await get(
         `
-        UPDATE users
-        SET password=?
-        WHERE id=?
+        SELECT id
+        FROM users
+        WHERE email=?
+          AND id<>?
+        LIMIT 1
         `,
         [
-          hashedPassword,
-          user.id
+          cleanEmail,
+          req.session.userId
         ]
       );
 
-      await run(
-        `
-        DELETE FROM email_codes
-        WHERE email=?
-        `,
-        [email]
-      );
+    if(emailDejaUtilise){
 
-      await run("COMMIT");
+      const erreur =
+        new Error("EMAIL_DEJA_UTILISE");
 
-    }catch(error){
+      erreur.code =
+        "EMAIL_DEJA_UTILISE";
 
-      await run("ROLLBACK");
-      throw error;
+      throw erreur;
 
     }
+
+    await run(
+      `
+      UPDATE users
+      SET email=?
+      WHERE id=?
+      `,
+      [
+        cleanEmail,
+        req.session.userId
+      ]
+    );
+
+    await run(
+      `
+      DELETE FROM email_codes
+      WHERE email=?
+      `,
+      [cleanEmail]
+    );
+
+  }
+);
+
 
     return res.send(
       tr(
@@ -13262,6 +13754,18 @@ app.post("/reset-password", loginLimiter, async (req,res)=>{
     );
 
   }catch(e){
+
+    if(error.code === "EMAIL_DEJA_UTILISE"){
+
+  return res.status(409).send(
+    tr(
+      req,
+      "Email déjà utilisé",
+      "Email already used"
+    )
+  );
+
+}
 
     console.error(
       "Erreur reset password :",
@@ -15039,6 +15543,49 @@ app.post("/video-watch-time", async (req,res)=>{
       percent
     } = req.body;
 
+    // 👇 Ajoute ces 3 lignes ici
+    const highlightId = Number(highlight_id);
+    const watchSeconds = Number(seconds);
+    const watchPercent = Number(percent);
+
+    if(
+  !Number.isInteger(highlightId) ||
+  highlightId <= 0
+){
+  return res.status(400).send("Vidéo invalide");
+}
+
+if(
+  !Number.isFinite(watchSeconds) ||
+  watchSeconds < 0 ||
+  watchSeconds > 3600
+){
+  return res.status(400).send("Temps de visionnage invalide");
+}
+
+if(
+  !Number.isFinite(watchPercent) ||
+  watchPercent < 0 ||
+  watchPercent > 100
+){
+  return res.status(400).send("Pourcentage invalide");
+}
+
+const video = await get(
+  `
+  SELECT id
+  FROM highlights
+  WHERE id=?
+  `,
+  [highlightId]
+);
+
+if(!video){
+  return res.status(404).send("Vidéo introuvable");
+}
+
+    // Ici viendront ensuite les vérifications
+
     await run(
       `
       INSERT INTO video_watch_time(
@@ -15051,9 +15598,9 @@ app.post("/video-watch-time", async (req,res)=>{
       `,
       [
         req.session.userId,
-        highlight_id,
-        seconds || 0,
-        percent || 0
+        highlightId,
+        watchSeconds || 0,
+        watchPercent || 0
       ]
     );
 
