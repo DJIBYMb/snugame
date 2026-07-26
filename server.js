@@ -365,17 +365,16 @@ const upload = multer({
 
 });
 
-
 const sessionStore =
   new SQLiteStore({
 
-    db:"sessions.sqlite",
+    db: "sessions.sqlite",
 
-    dir:DATA_DIR,
+    dir: DATA_DIR,
 
-    table:"sessions",
+    table: "sessions",
 
-    concurrentDB:true
+    concurrentDB: true
 
   });
 
