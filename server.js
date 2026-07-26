@@ -365,12 +365,39 @@ const upload = multer({
 
 });
 
+const sessionDbPath =
+  path.join(
+    DATA_DIR,
+    "sessions.sqlite"
+  );
+
+const sessionDb =
+  new sqlite3.Database(
+    sessionDbPath,
+    (error) => {
+
+      if(error){
+
+        console.error(
+          "Erreur ouverture base sessions :",
+          error
+        );
+
+      }else{
+
+        console.log(
+          "Base des sessions SQLite connectée"
+        );
+
+      }
+
+    }
+  );
+
 const sessionStore =
   new SQLiteStore({
 
-    db: "sessions.sqlite",
-
-    dir: DATA_DIR,
+    db: sessionDb,
 
     table: "sessions",
 
@@ -381,33 +408,33 @@ const sessionStore =
 app.use(
   session({
 
-    name:"snugame.sid",
+    name: "snugame.sid",
 
-    store:sessionStore,
+    store: sessionStore,
 
-    secret:SESSION_SECRET,
+    secret: SESSION_SECRET,
 
-    resave:false,
+    resave: false,
 
-    saveUninitialized:false,
+    saveUninitialized: false,
 
-    rolling:true,
+    rolling: true,
 
     proxy:
       process.env.NODE_ENV ===
       "production",
 
-    cookie:{
+    cookie: {
 
-      path:"/",
+      path: "/",
 
-      httpOnly:true,
+      httpOnly: true,
 
       secure:
         process.env.NODE_ENV ===
         "production",
 
-      sameSite:"lax",
+      sameSite: "lax",
 
       maxAge:
         1000 *
@@ -420,6 +447,7 @@ app.use(
 
   })
 );
+
 
 function connected(req){
 
