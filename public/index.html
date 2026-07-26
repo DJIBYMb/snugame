@@ -5389,7 +5389,7 @@ placeholder="Nombre équipes">
 placeholder="Lien groupe WhatsApp / Telegram / Discord">
 
   <button
-class="owner-only"
+class=""
 data-i18n="createTournament"
 onclick="creerTournoi()">
 Créer tournoi
@@ -5412,21 +5412,21 @@ onclick="toggleGestionTournoi()">
 <div id="gestionTournoiBox" class="hidden">
 
   <button
-  class="danger owner-only"
+  class="danger"
   data-i18n="deleteTournament"
   onclick="supprimerTournoiComplet()">
   Supprimer tournoi
   </button>
 
   <button
-  class="warning owner-only"
+  class="warning"
   data-i18n="resetTournament"
   onclick="resetTournoi()">
   Réinitialiser
   </button>
 
   <button
-  class="secondary owner-only"
+  class="secondary"
   data-i18n="publicLink"
   onclick="creerLienPublic()">
   Créer lien public
@@ -5459,7 +5459,7 @@ class="panel hidden">
 </h2>
 
 <button
-class="secondary owner-only"
+class="secondary"
 data-i18n="addParticipant"
 onclick="afficherBlocParticipants('blocAjouterParticipant')">
 ➕ Ajouter participant
@@ -5473,7 +5473,7 @@ onclick="afficherBlocParticipants('blocListeParticipants'); chargerParticipants(
 </button>
 
 <button
-class="danger owner-only"
+class="danger"
 data-i18n="manageParticipants"
 onclick="afficherBlocParticipants('blocGestionParticipants'); chargerParticipants()">
 🗑️ Gestion participants
@@ -5496,7 +5496,7 @@ placeholder="@username SNUGAME">
 
 
 <button
-class="owner-only"
+class="secondary"
 data-i18n="addParticipant"
 onclick="ajouterParticipant()">
 Ajouter participant
@@ -5537,7 +5537,7 @@ Tout décocher
 </button>
 
 <button
-class="danger owner-only"
+class="danger"
 data-i18n="delete"
 onclick="supprimerParticipantsCoches()">
 Supprimer
@@ -5580,7 +5580,7 @@ class="panel hidden">
 
 <button
 id="btnTirageRapide"
-class="owner-only"
+class="secondary"
 data-i18n="draw"
 onclick="customAutoDraw()">
    🎲   <span data-i18n-text>Générer / continuer tirage</span>
@@ -6831,21 +6831,12 @@ function getTournoiOrganisateurId(){
 
 async function quitterPanelClassementOrganisateur(){
 
-  modeOrganisateurDepuisProfil = false;
-  tournoiOrganisateurId = null;
-
-  history.replaceState({}, "", "/app");
-
-  sessionStorage.removeItem("modeOrganisateurTemp");
-  sessionStorage.removeItem("tournoiOrganisateurId");
-  sessionStorage.removeItem("hideBottomNavOrg");
-  sessionStorage.removeItem("tournoiExterne");
+  nettoyerContexteOrganisateurExterne();
 
   localStorage.removeItem("lastPanel");
   localStorage.setItem("lastPage", "pageProfil");
 
-  afficherBottomNav();
-
+  await chargerTournois();
   await ouvrirProfilCompte();
 
 }
@@ -6900,7 +6891,10 @@ sessionStorage.setItem("hideBottomNavOrg", "oui");
     return;
   }
 
-  if(tournoiUrl && estProprietaire === false){
+  if(
+    tournoiUrl &&
+    estContexteOrganisateurExterne()
+  ){
     btn.classList.remove("hidden");
   }else{
     btn.classList.add("hidden");
@@ -15960,7 +15954,66 @@ async function deleteOldVideos(){
 let panelEnCours = false;
 let tournoisDejaCharges = false;
 
+function estContexteOrganisateurExterne(){
+
+  const params =
+    new URLSearchParams(window.location.search);
+
+  return (
+    modeOrganisateurDepuisProfil === true ||
+    sessionStorage.getItem("modeOrganisateurTemp") === "oui" ||
+    sessionStorage.getItem("tournoiOrganisateurId") ||
+    sessionStorage.getItem("tournoiExterne") ||
+    params.has("tournament")
+  );
+
+}
+
+function nettoyerContexteOrganisateurExterne(){
+
+  modeOrganisateurDepuisProfil = false;
+  tournoiOrganisateurId = null;
+  estProprietaire = false;
+
+  history.replaceState({}, "", "/app");
+
+  sessionStorage.removeItem("modeOrganisateurTemp");
+  sessionStorage.removeItem("tournoiOrganisateurId");
+  sessionStorage.removeItem("hideBottomNavOrg");
+  sessionStorage.removeItem("tournoiExterne");
+
+  cacheTirage = null;
+  cacheTournoiId = null;
+  tournoisDejaCharges = false;
+
+  if(typeof tournoiSelect !== "undefined" && tournoiSelect){
+    tournoiSelect.value = "";
+  }
+
+  document
+    .querySelectorAll("#panelClassementOrganisateur .competition-bloc")
+    .forEach(bloc=>bloc.classList.add("hidden"));
+
+  afficherBottomNav();
+
+}
+
 async function ouvrirPanel(id){
+
+  const panneauxPersonnels = new Set([
+    "panelProprietaire",
+    "panelParticipants",
+    "panelClassementProprietaire",
+    "panelHighlights"
+  ]);
+
+  if(
+    panneauxPersonnels.has(id) &&
+    estContexteOrganisateurExterne()
+  ){
+    nettoyerContexteOrganisateurExterne();
+    await chargerTournois();
+  }
 
   if(id === "panelProprietaire"){
     verifierPubliciteDashboard();
@@ -16491,7 +16544,10 @@ if(tournoiUrl){
 
   if(sessionStorage.getItem("modeOrganisateurTemp") === "oui"){
     modeOrganisateurDepuisProfil = true;
-    sessionStorage.removeItem("modeOrganisateurTemp");
+    tournoiOrganisateurId = tournoiUrl;
+    sessionStorage.setItem("tournoiOrganisateurId", tournoiUrl);
+    sessionStorage.setItem("tournoiExterne", tournoiUrl);
+    cacherBottomNav();
     await ouvrirPanel("panelClassementOrganisateur");
 
   }else{
@@ -18516,18 +18572,27 @@ async function verifierProprietaire(){
 }
 function appliquerDroitsProprietaire(){
 
+  const contexteExterne =
+    estContexteOrganisateurExterne();
+
   document.querySelectorAll(".owner-only").forEach(el=>{
 
-    if(modeOrganisateurDepuisProfil){
-      el.style.display = "none";
-    }else{
-      el.style.display = "";
-    }
+    const autorise =
+      estProprietaire === true &&
+      contexteExterne === false;
+
+    el.style.display = autorise ? "" : "none";
+    el.classList.toggle("hidden", !autorise);
 
   });
 
   document.querySelectorAll(".organizer-only").forEach(el=>{
-    el.style.display = "";
+
+    const autorise = contexteExterne === true;
+
+    el.style.display = autorise ? "" : "none";
+    el.classList.toggle("hidden", !autorise);
+
   });
 
   verifierBoutonRetourTournoiExterne();
@@ -18550,14 +18615,15 @@ async function ouvrirDashboardTournoiParticipant(){
 
 }
 async function retourProfilDepuisTournoiExterne(){
-modeOrganisateurDepuisProfil = false;
 
-  history.replaceState({}, "", "/app");
-  sessionStorage.removeItem("tournoiExterne");
-  sessionStorage.removeItem("modeOrganisateurTemp");
+  nettoyerContexteOrganisateurExterne();
+
   localStorage.setItem("lastPage", "pageProfil");
   localStorage.removeItem("lastPanel");
+
+  await chargerTournois();
   await ouvrirProfilCompte();
+
 }
 async function ouvrirMonPanelTournoi(){
 
@@ -18595,24 +18661,12 @@ async function ouvrirMonTableauDeBord(){
 }
 async function ouvrirTableauProprietaire(){
 
-  modeOrganisateurDepuisProfil = false;
-  tournoiOrganisateurId = null;
-  estProprietaire = true;
+  nettoyerContexteOrganisateurExterne();
 
-  history.replaceState({}, "", "/app");
-
-  sessionStorage.removeItem("modeOrganisateurTemp");
-  sessionStorage.removeItem("tournoiOrganisateurId");
-  sessionStorage.removeItem("hideBottomNavOrg");
-  sessionStorage.removeItem("tournoiExterne");
-
-  afficherBottomNav();
+  localStorage.setItem("lastPage", "pageDashboard");
+  localStorage.setItem("lastPanel", "panelProprietaire");
 
   await chargerTournois();
-  await verifierProprietaire();
-
-  appliquerDroitsProprietaire();
-
   await ouvrirPanel("panelProprietaire");
 
 }
