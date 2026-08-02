@@ -5572,7 +5572,7 @@ class="panel hidden">
 <button
   id="btnTirageMatchsPoules"
   type="button"
-  class="secondary"
+  class="secondary hidden"
   onclick="tirageAutomatiquePoulePro()"
 >
    🎲   Générer les matchs de poule
@@ -5987,6 +5987,11 @@ async function creer100ParticipantsTest(){
   const typeTournoi =
     optionSelectionnee?.dataset.type || "";
 
+  const btnTirageMatchsPoules =
+    document.getElementById(
+      "btnTirageMatchsPoules"
+    );
+
   const btnTirageRapide =
     document.getElementById(
       "btnTirageRapide"
@@ -6008,6 +6013,9 @@ async function creer100ParticipantsTest(){
   */
   if(!tournoiSelect.value){
 
+    btnTirageMatchsPoules
+      ?.classList.add("hidden");
+
     btnTirageRapide
       ?.classList.add("hidden");
 
@@ -6026,6 +6034,9 @@ async function creer100ParticipantsTest(){
   */
   if(typeTournoi === "rapide"){
 
+    btnTirageMatchsPoules
+      ?.classList.add("hidden");
+
     btnTirageRapide
       ?.classList.remove("hidden");
 
@@ -6040,9 +6051,13 @@ async function creer100ParticipantsTest(){
 
   /*
     Tournoi poule :
+    afficher le bouton des matchs de poules,
     cacher le tirage rapide et afficher
     les deux boutons de phase finale.
   */
+  btnTirageMatchsPoules
+    ?.classList.remove("hidden");
+
   btnTirageRapide
     ?.classList.add("hidden");
 
