@@ -1114,8 +1114,11 @@ body{
   text-align:center;
 }
 
-*{
+/* Les animations restent désactivées uniquement pendant le chargement initial.
+   Les pages et panneaux peuvent ensuite s'afficher sans clignotement. */
+body.app-loading *{
   animation:none!important;
+  transition:none!important;
 }
 
 button,
@@ -1123,9 +1126,12 @@ input,
 textarea,
 select,
 .card,
-.panel,
 .tiktok-video video{
   transition:none!important;
+}
+
+.panel{
+  transition:opacity .16s ease, transform .16s ease!important;
 }
 
 body.app-loading .container,
@@ -8270,13 +8276,12 @@ const nouvellePage =
 
 if(nouvellePage){
 
+  /*
+    Afficher la nouvelle page dans la même image évite
+    l'écran vide qui provoquait un clignotement au retour.
+  */
+  nouvellePage.classList.add("page-show");
   nouvellePage.classList.remove("hidden");
-
-  nouvellePage.classList.remove("page-show");
-
-  requestAnimationFrame(()=>{
-    nouvellePage.classList.add("page-show");
-  });
 
 }
 
@@ -10729,6 +10734,111 @@ async function register(){
   message.textContent = result;
 }
 
+function reinitialiserDonneesCompteFrontend(){
+
+  /* Données liées à l'ancien compte. */
+  cachedMe = null;
+  cachedSocialStats = null;
+  cachedNotificationsCount = null;
+
+  currentUserId = null;
+  currentPublicUserId = null;
+  currentCommentVideoId = null;
+  commentaireParentId = null;
+  utilisateurAbonne = false;
+
+  cacheTirage = null;
+  cacheTournoiId = null;
+  tournoisDejaCharges = false;
+  estProprietaire = false;
+
+  currentPanelName = null;
+  pageStack = [];
+  pageHistory = [];
+  panelHistory = [];
+
+  modeOrganisateurDepuisProfil = false;
+  tournoiOrganisateurId = null;
+
+  window.favorisChanged = false;
+  window.openingProfileVideo = false;
+  window.fromPublicProfileVideo = false;
+
+  stopAllVideosSecurise();
+
+  if(tiktokObserver){
+    tiktokObserver.disconnect();
+    tiktokObserver = null;
+  }
+
+  derniereVideoComptee = null;
+
+  document.body.classList.remove(
+    "video-mode",
+    "video-profil-mode"
+  );
+
+  document.getElementById("commentsSheet")
+    ?.classList.add("hidden");
+
+  [
+    "highlightsList",
+    "profileVideosGrid",
+    "publicProfilContent",
+    "notificationsList",
+    "followListContent",
+    "participants",
+    "participantsCheckbox",
+    "participantsCount",
+    "pouleProResult",
+    "classementsResult",
+    "phaseFinaleResult",
+    "championResult",
+    "arbreTournoiResult"
+  ].forEach(id=>{
+    const element = document.getElementById(id);
+    if(element){
+      element.innerHTML = "";
+    }
+  });
+
+  if(typeof tournoiSelect !== "undefined" && tournoiSelect){
+    tournoiSelect.innerHTML = "";
+    tournoiSelect.value = "";
+  }
+
+  document.getElementById("notifBadge")
+    ?.classList.add("hidden");
+
+  document.getElementById("topProfilePhoto")
+    ?.setAttribute("src", "/default-avatar.png");
+
+}
+
+async function synchroniserCompteConnecte(){
+
+  const compte = await get("/me?v=" + Date.now());
+
+  if(!compte || compte.connected === false || !compte.id){
+    return null;
+  }
+
+  currentUserId = Number(compte.id);
+
+  const photo =
+    compte.profile_photo ||
+    "/default-avatar.png";
+
+  const topPhoto =
+    document.getElementById("topProfilePhoto");
+
+  if(topPhoto){
+    topPhoto.src = photo;
+  }
+
+  return compte;
+}
+
 async function login(){
 
   
@@ -10759,6 +10869,7 @@ async function login(){
   });
 if(result.includes("Connexion")){
 
+  reinitialiserDonneesCompteFrontend();
   sessionStorage.clear();
 
   localStorage.setItem("lastPanel", "panelProprietaire");
@@ -10768,6 +10879,17 @@ if(result.includes("Connexion")){
   tournoiOrganisateurId = null;
 
   history.replaceState({}, "", "/app");
+
+  const compteActuel =
+    await synchroniserCompteConnecte();
+
+  if(!compteActuel){
+    msgLoginGeneral.textContent =
+      "Impossible de charger le nouveau compte.";
+    msgLoginGeneral.className =
+      "form-message error";
+    return;
+  }
 
   await ouvrirTableauProprietaire();
 
@@ -10894,6 +11016,7 @@ async function logout(){
 
   }finally{
 
+    reinitialiserDonneesCompteFrontend();
     sessionStorage.clear();
 
     currentUserId = null;
@@ -16531,7 +16654,13 @@ async function demarrerApplication(){
     return;
   }
 
-  currentUserId = data.id;
+  currentUserId = Number(data.id);
+
+  /*
+    Une fermeture/réouverture conserve la session grâce au cookie serveur.
+    Une désinstallation efface les données WebView : une reconnexion est donc normale.
+  */
+  document.body.classList.remove("app-loading");
 
   utilisateurAbonne = false;
 
@@ -17005,6 +17134,14 @@ async function traiterNotificationAndroidEnAttente(){
 
 async function ouvrirCommentaires(videoId){
 
+  /*
+    Recharge l'identité courante avant de calculer les droits.
+    Cela évite de garder l'identifiant du compte précédent après une reconnexion.
+  */
+  if(!Number.isInteger(Number(currentUserId)) || Number(currentUserId) <= 0){
+    await synchroniserCompteConnecte();
+  }
+
   const id = Number(videoId);
 
   if(
@@ -17096,16 +17233,29 @@ async function ouvrirCommentaires(videoId){
           "/default-avatar.png"
         );
 
-        const proprietaireCommentaire =
-  userId === Number(currentUserId);
+      const utilisateurActuelId =
+        Number(currentUserId);
 
-const proprietaireVideo =
-  Number(c.video_owner_id) ===
-  Number(currentUserId);
+      const proprietaireCommentaire =
+        Number.isInteger(utilisateurActuelId) &&
+        utilisateurActuelId > 0 &&
+        Number.isInteger(userId) &&
+        userId > 0 &&
+        userId === utilisateurActuelId;
 
-const peutSupprimer =
-  proprietaireCommentaire ||
-  proprietaireVideo;
+      const videoOwnerId =
+        Number(c.video_owner_id);
+
+      const proprietaireVideo =
+        Number.isInteger(utilisateurActuelId) &&
+        utilisateurActuelId > 0 &&
+        Number.isInteger(videoOwnerId) &&
+        videoOwnerId > 0 &&
+        videoOwnerId === utilisateurActuelId;
+
+      const peutSupprimer =
+        proprietaireCommentaire ||
+        proprietaireVideo;
       
       const replies =
         Array.isArray(c.replies)
@@ -17138,15 +17288,25 @@ const peutSupprimer =
             );
 
           const replyOwner =
-  replyUserId === Number(currentUserId);
+            Number.isInteger(utilisateurActuelId) &&
+            utilisateurActuelId > 0 &&
+            Number.isInteger(replyUserId) &&
+            replyUserId > 0 &&
+            replyUserId === utilisateurActuelId;
 
-const replyVideoOwner =
-  Number(reply.video_owner_id) ===
-  Number(currentUserId);
+          const replyVideoOwnerId =
+            Number(reply.video_owner_id);
 
-const peutSupprimerReponse =
-  replyOwner ||
-  replyVideoOwner;
+          const replyVideoOwner =
+            Number.isInteger(utilisateurActuelId) &&
+            utilisateurActuelId > 0 &&
+            Number.isInteger(replyVideoOwnerId) &&
+            replyVideoOwnerId > 0 &&
+            replyVideoOwnerId === utilisateurActuelId;
+
+          const peutSupprimerReponse =
+            replyOwner ||
+            replyVideoOwner;
 
           return `
             <div
@@ -18196,7 +18356,13 @@ document.addEventListener("touchend", e=>{
 
 });
 
-function retourGeneral(){
+let retourGeneralEnCours = false;
+
+async function retourGeneral(){
+
+  if(retourGeneralEnCours){
+    return;
+  }
 
   if(!commentsSheet.classList.contains("hidden")){
     fermerCommentaires();
@@ -18221,7 +18387,15 @@ function retourGeneral(){
     return;
   }
 
-  retourPage();
+  retourGeneralEnCours = true;
+
+  try{
+    await retourPage();
+  }finally{
+    requestAnimationFrame(()=>{
+      retourGeneralEnCours = false;
+    });
+  }
 
 }
 
