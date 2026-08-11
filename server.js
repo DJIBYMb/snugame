@@ -13622,194 +13622,159 @@ app.get("/my-profile-videos", async (req,res)=>{
 
 });
 
-app.post("/reset-password", loginLimiter, async (req,res)=>{
+app.post(
+  "/reset-password",
+  loginLimiter,
+  async (req,res)=>{
 
-  try{
+    try{
 
-    const email =
-      String(req.body.email || "")
-        .trim()
-        .toLowerCase();
+      const email =
+        String(req.body.email || "")
+          .trim()
+          .toLowerCase();
 
-    const code =
-      String(req.body.code || "")
-        .trim();
+      const code =
+        String(req.body.code || "")
+          .trim();
 
-    const password =
-      String(req.body.password || "");
+      const password =
+        String(req.body.password || "");
 
-    if(!email || !code || !password){
+      if(
+        !email ||
+        !code ||
+        !password
+      ){
 
-      return res.status(400).send(
-        tr(
-          req,
-          "Tous les champs sont obligatoires",
-          "All fields are required"
-        )
-      );
+        return res.status(400).send(
+          tr(
+            req,
+            "Tous les champs sont obligatoires",
+            "All fields are required"
+          )
+        );
 
-    }
+      }
 
-    if(password.length < 8){
+      if(password.length < 8){
 
-      return res.status(400).send(
-        tr(
-          req,
-          "Mot de passe minimum 8 caractères",
-          "Password must contain at least 8 characters"
-        )
-      );
+        return res.status(400).send(
+          tr(
+            req,
+            "Mot de passe minimum 8 caractères",
+            "Password must contain at least 8 characters"
+          )
+        );
 
-    }
+      }
 
-    const user = await get(
-      `
-      SELECT id
-      FROM users
-      WHERE email=?
-      `,
-      [email]
-    );
+      const user =
+        await get(
+          `
+          SELECT id
+          FROM users
+          WHERE email=?
+          LIMIT 1
+          `,
+          [email]
+        );
 
-    if(!user){
+      if(!user){
 
-      return res.status(404).send(
-        tr(
-          req,
-          "Email introuvable",
-          "Email not found"
-        )
-      );
+        return res.status(404).send(
+          tr(
+            req,
+            "Email introuvable",
+            "Email not found"
+          )
+        );
 
-    }
+      }
 
-    const codeRow = await get(
-      `
-      SELECT id
-      FROM email_codes
-      WHERE email=?
-        AND code=?
-        AND datetime(created_at)
-            >= datetime('now','-15 minutes')
-      ORDER BY id DESC
-      LIMIT 1
-      `,
-      [email, code]
-    );
+      const codeRow =
+        await get(
+          `
+          SELECT id
+          FROM email_codes
+          WHERE email=?
+            AND code=?
+            AND datetime(created_at)
+                >= datetime('now','-15 minutes')
+          ORDER BY id DESC
+          LIMIT 1
+          `,
+          [
+            email,
+            code
+          ]
+        );
 
-    if(!codeRow){
+      if(!codeRow){
 
-      return res.status(400).send(
-        tr(
-          req,
-          "Code incorrect ou expiré",
-          "Invalid or expired code"
-        )
-      );
+        return res.status(400).send(
+          tr(
+            req,
+            "Code incorrect ou expiré",
+            "Invalid or expired code"
+          )
+        );
 
-    }
+      }
 
-    const hashedPassword =
-      await bcrypt.hash(password, 10);
+      const hashedPassword =
+        await bcrypt.hash(
+          password,
+          10
+        );
 
-    await executerTransaction(
-  async ({ run, get })=>{
-
-    /*
-      On vérifie une nouvelle fois dans la
-      transaction que l'adresse n'est pas
-      utilisée par un autre compte.
-    */
-
-    const emailDejaUtilise =
-      await get(
+      await run(
         `
-        SELECT id
-        FROM users
-        WHERE email=?
-          AND id<>?
-        LIMIT 1
+        UPDATE users
+        SET password=?
+        WHERE id=?
         `,
         [
-          cleanEmail,
-          req.session.userId
+          hashedPassword,
+          user.id
         ]
       );
 
-    if(emailDejaUtilise){
+      await run(
+        `
+        DELETE FROM email_codes
+        WHERE email=?
+        `,
+        [email]
+      );
 
-      const erreur =
-        new Error("EMAIL_DEJA_UTILISE");
+      return res.send(
+        tr(
+          req,
+          "Mot de passe changé",
+          "Password changed"
+        )
+      );
 
-      erreur.code =
-        "EMAIL_DEJA_UTILISE";
+    }catch(e){
 
-      throw erreur;
+      console.error(
+        "Erreur reset password :",
+        e
+      );
+
+      return res.status(500).send(
+        tr(
+          req,
+          "Erreur réinitialisation du mot de passe",
+          "Password reset failed"
+        )
+      );
 
     }
 
-    await run(
-      `
-      UPDATE users
-      SET email=?
-      WHERE id=?
-      `,
-      [
-        cleanEmail,
-        req.session.userId
-      ]
-    );
-
-    await run(
-      `
-      DELETE FROM email_codes
-      WHERE email=?
-      `,
-      [cleanEmail]
-    );
-
   }
 );
-
-
-    return res.send(
-      tr(
-        req,
-        "Mot de passe changé",
-        "Password changed"
-      )
-    );
-
-  }catch(e){
-
-    if(error.code === "EMAIL_DEJA_UTILISE"){
-
-  return res.status(409).send(
-    tr(
-      req,
-      "Email déjà utilisé",
-      "Email already used"
-    )
-  );
-
-}
-
-    console.error(
-      "Erreur reset password :",
-      e
-    );
-
-    return res.status(500).send(
-      tr(
-        req,
-        "Erreur réinitialisation du mot de passe",
-        "Password reset failed"
-      )
-    );
-
-  }
-
-});
 
 const ajouterCommentaireHighlight =
   async (req,res)=>{
