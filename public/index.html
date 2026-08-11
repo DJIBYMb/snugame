@@ -1149,6 +1149,13 @@ body.video-mode #messageCard{
   display:none!important;
 }
 
+/* Panel Compétition :
+   cache uniquement le header bleu SUNUGAME pendant
+   l'affichage de la compétition propriétaire ou organisateur. */
+body.competition-mode header{
+  display:none !important;
+}
+
 body.video-mode .container{
   max-width:none!important;
   padding:0!important;
@@ -1717,6 +1724,38 @@ video{
 
   padding-top:120px !important;
 
+}
+
+/* Inscription mobile/iPhone : le header principal est masqué
+   uniquement pendant la création du compte afin de libérer la hauteur. */
+body.register-mode header{
+  display:none !important;
+}
+
+body.register-mode .fullscreen-register{
+  height:100dvh !important;
+  min-height:100dvh !important;
+  padding-top:max(18px, env(safe-area-inset-top)) !important;
+  padding-bottom:max(24px, env(safe-area-inset-bottom)) !important;
+  overflow-y:auto !important;
+  -webkit-overflow-scrolling:touch;
+}
+
+/* Mot de passe oublié mobile/iPhone :
+   même comportement que la création de compte. */
+body.forgot-mode header{
+  display:none !important;
+}
+
+body.forgot-mode .fullscreen-forgot{
+  height:100dvh !important;
+  min-height:100dvh !important;
+  padding-top:max(18px, env(safe-area-inset-top)) !important;
+  padding-left:20px !important;
+  padding-right:20px !important;
+  padding-bottom:max(24px, env(safe-area-inset-bottom)) !important;
+  overflow-y:auto !important;
+  -webkit-overflow-scrolling:touch;
 }
 
 .texte-rouge{
@@ -7523,7 +7562,9 @@ async function gererSessionExpiree(){
 
   document.body.classList.remove(
     "video-mode",
-    "video-profil-mode"
+    "video-profil-mode",
+    "register-mode",
+    "forgot-mode"
   );
 
   document
@@ -7532,7 +7573,7 @@ async function gererSessionExpiree(){
 
   sessionStorage.clear();
 
-  setPage("pageAuth");
+  afficherConnexionPropre();
 
   const msg =
     document.getElementById(
@@ -7909,17 +7950,97 @@ function drawWorldCupLinesOrg(){
   }
 }
 
+function afficherConnexionPropre(){
+
+  /*
+    Cette fonction remet uniquement l'écran de connexion
+    dans son état normal. Elle évite qu'un ancien mode vidéo,
+    inscription ou mot de passe oublié modifie sa mise en page.
+  */
+
+  stopAllVideosSecurise();
+
+  document.body.classList.remove(
+    "video-mode",
+    "video-profil-mode",
+    "register-mode",
+    "forgot-mode"
+  );
+
+  window.openingProfileVideo = false;
+  window.fromPublicProfileVideo = false;
+
+  document
+    .getElementById("commentsSheet")
+    ?.classList.add("hidden");
+
+  document
+    .querySelectorAll(".panel")
+    .forEach(panel=>{
+      panel.classList.add("hidden");
+    });
+
+  registerBox?.classList.add("hidden");
+  registerBox?.classList.remove("fullscreen-register");
+
+  forgotBox?.classList.add("hidden");
+  forgotBox?.classList.remove("fullscreen-forgot");
+
+  document
+    .querySelector("#pageAuth > .card")
+    ?.classList.remove("hidden");
+
+  document
+    .querySelector("header")
+    ?.classList.remove("hidden");
+
+  /*
+    Hors connexion, la barre de navigation de l'application
+    ne doit pas rester au-dessus de la page de connexion.
+  */
+  document
+    .querySelector(".bottom-nav")
+    ?.classList.add("hidden");
+
+  document
+    .getElementById("messageCard")
+    ?.classList.remove("hidden");
+
+  setPage("pageAuth", false);
+
+  window.scrollTo(0,0);
+}
+
 function showRegister(){
+
+  document.body.classList.remove(
+    "forgot-mode"
+  );
+
+  document
+    .querySelector(".bottom-nav")
+    ?.classList.add("hidden");
 
   document
     .querySelector("#pageAuth > .card")
     .classList.add("hidden");
+
+  forgotBox.classList.add("hidden");
+  forgotBox.classList.remove("fullscreen-forgot");
 
   registerBox.classList.remove("hidden");
 
   registerBox.classList.add(
     "fullscreen-register"
   );
+
+  /* Cache seulement le header SUNUGAME pendant l'inscription. */
+  document.body.classList.add(
+    "register-mode"
+  );
+
+  /* Toujours commencer en haut du formulaire sur iPhone. */
+  registerBox.scrollTop = 0;
 
 }
 
@@ -7931,9 +8052,11 @@ function closeRegister(){
     "fullscreen-register"
   );
 
-  document
-    .querySelector("#pageAuth > .card")
-    .classList.remove("hidden");
+  document.body.classList.remove(
+    "register-mode"
+  );
+
+  afficherConnexionPropre();
 
 }
 
@@ -8213,6 +8336,14 @@ async function restaurerEtatNavigation(etat){
 }
 
 function setPage(page, enregistrerHistorique = true){
+
+  if(
+    page !== "pageDashboard"
+  ){
+    document.body.classList.remove(
+      "competition-mode"
+    );
+  }
 
   if(currentPageName === page){
   return;
@@ -8656,22 +8787,12 @@ color:white!important;
 
 async function retourDepuisVideoPublique(){
 
-  stopAllVideos();
-  window.fromPublicProfileVideo = false;
-  document.body.classList.remove("video-mode");
-  panelHighlights.classList.add("hidden");
-  highlightsList.innerHTML = "";
+  const userId =
+    Number(currentPublicUserId);
 
-  const etatRetour = etatAvantVideoProfil;
-  etatAvantVideoProfil = null;
-
-  if(etatRetour){
-    await restaurerEtatNavigation(etatRetour);
-  }else{
-    await retourPage();
-  }
-
-  mettreAJourVisibiliteBoutonVideoPlus();
+  await revenirProfilPublicDepuisVideo(
+    userId
+  );
 
 }
 
@@ -10406,6 +10527,80 @@ async function retourProfilDepuisVideo(){
 
 }
 
+async function revenirProfilPublicDepuisVideo(userId){
+
+  const idJoueur =
+    Number(
+      userId ||
+      currentPublicUserId
+    );
+
+  if(
+    !Number.isInteger(idJoueur) ||
+    idJoueur <= 0
+  ){
+    await retourPage();
+    return;
+  }
+
+  stopAllVideos();
+
+  window.fromPublicProfileVideo = false;
+  window.openingProfileVideo = false;
+
+  document.body.classList.remove(
+    "video-mode",
+    "video-profil-mode"
+  );
+
+  panelHighlights?.classList.add(
+    "hidden"
+  );
+
+  /*
+    Important :
+    on ne vide PAS publicProfilContent.
+
+    Le profil public était déjà chargé
+    avant l'ouverture de la vidéo.
+    Il réapparaît donc immédiatement.
+  */
+
+  setPage(
+    "pagePublicProfil",
+    false
+  );
+
+  document
+    .querySelector("header")
+    ?.classList.add("hidden");
+
+  document
+    .querySelector(".bottom-nav")
+    ?.classList.add("hidden");
+
+  messageCard
+    ?.classList.add("hidden");
+
+  /*
+    Remet la position du profil public
+    exactement où l'utilisateur était.
+  */
+  requestAnimationFrame(()=>{
+
+    window.scrollTo(
+      0,
+      Number(
+        scrollAvantVideoPublique || 0
+      )
+    );
+
+  });
+
+  mettreAJourVisibiliteBoutonVideoPlus();
+
+}
+
 async function ouvrirVideoPublique(videoId, userId){
 
   etatAvantVideoProfil = capturerEtatNavigation();
@@ -10449,7 +10644,9 @@ async function ouvrirVideoPublique(videoId, userId){
   video.vues =
   (video.vues || 0) + 1;
 
-  setPage("pageDashboard");
+  /* Le profil public est déjà mémorisé dans etatAvantVideoProfil.
+     Ne pas l'ajouter une deuxième fois dans pageStack. */
+  setPage("pageDashboard", false);
 
   document
     .querySelectorAll(".panel")
@@ -10501,9 +10698,15 @@ async function ouvrirVideoPublique(videoId, userId){
 
         <div class="tiktok-left">
 
-          <div class="tiktok-user">
-            @${data.username || ""}
-          </div>
+          <div
+class="tiktok-user"
+style="cursor:pointer;"
+onclick="
+  event.stopPropagation();
+  revenirProfilPublicDepuisVideo(${userId});
+">
+  @${data.username || ""}
+</div>
 
           <div class="tiktok-title">
             ${video.titre || ""}
@@ -10712,6 +10915,13 @@ async function register(){
 
   if(result.includes("Compte créé")){
 
+    document.body.classList.remove(
+      "register-mode",
+      "forgot-mode"
+    );
+
+    afficherBottomNav();
+
     sessionStorage.clear();
 
     localStorage.setItem("lastPanel", "panelProprietaire");
@@ -10723,6 +10933,8 @@ async function register(){
     history.replaceState({}, "", "/app");
 
     registerBox.classList.add("hidden");
+    registerBox.classList.remove("fullscreen-register");
+    document.body.classList.remove("register-mode");
 
     await ouvrirTableauProprietaire();
 
@@ -10868,6 +11080,13 @@ async function login(){
     password:loginPassword.value
   });
 if(result.includes("Connexion")){
+
+  document.body.classList.remove(
+    "register-mode",
+    "forgot-mode"
+  );
+
+  afficherBottomNav();
 
   reinitialiserDonneesCompteFrontend();
   sessionStorage.clear();
@@ -11105,7 +11324,7 @@ async function checkStatus(){
 }
 
   if(!data || data.connected === false){
-    setPage("pageAuth");
+    afficherConnexionPropre();
     return;
   }
 
@@ -11167,9 +11386,22 @@ async function ouvrirProfilCompte(){
   const data = await get("/me");
 
 if(!data || data.connected === false){
-  setPage("pageAuth");
-  message.textContent =
-    tr("loginToSeeProfile");
+
+  afficherConnexionPropre();
+
+  const msg =
+    document.getElementById(
+      "msgLoginGeneral"
+    );
+
+  if(msg){
+    msg.textContent =
+      tr("loginToSeeProfile");
+
+    msg.className =
+      "form-message info";
+  }
+
   return;
 }
 
@@ -14264,13 +14496,36 @@ document
 
 function ouvrirMotDePasseOublie(){
 
+  document.body.classList.remove(
+    "register-mode"
+  );
+
+  document.body.classList.add(
+    "forgot-mode"
+  );
+
+  document
+    .querySelector(".bottom-nav")
+    ?.classList.add("hidden");
+
+  document
+    .querySelector("#pageAuth > .card")
+    ?.classList.add("hidden");
+
   registerBox.classList.add("hidden");
+  registerBox.classList.remove("fullscreen-register");
 
   forgotBox.classList.remove("hidden");
 
   forgotBox.classList.add(
     "fullscreen-forgot"
   );
+
+  /*
+    Toujours commencer en haut du formulaire,
+    notamment sur iPhone/WebView.
+  */
+  forgotBox.scrollTop = 0;
 
   const messageBox =
     document.getElementById(
@@ -14298,9 +14553,11 @@ function closeForgotPassword(){
     "fullscreen-forgot"
   );
 
-  document
-    .querySelector("#pageAuth > .card")
-    .classList.remove("hidden");
+  document.body.classList.remove(
+    "forgot-mode"
+  );
+
+  afficherConnexionPropre();
 
 }
 
@@ -16169,7 +16426,24 @@ async function ouvrirPanel(id){
 
     currentPanelName = id;
 
-    document.body.classList.remove("video-mode");
+    document.body.classList.remove(
+      "video-mode",
+      "competition-mode"
+    );
+
+    /*
+      Le header bleu SUNUGAME est caché uniquement
+      dans les deux panels Compétition.
+    */
+    if(
+      id === "panelClassementProprietaire" ||
+      id === "panelClassementOrganisateur"
+    ){
+      document.body.classList.add(
+        "competition-mode"
+      );
+    }
+
     mettreAJourVisibiliteBoutonVideoPlus();
 
     setPage("pageDashboard");
@@ -16337,17 +16611,81 @@ function masquerBoutonsOrganisateurVisiteur(){
 }
 function toggleGestionTournoi(){
 
-  document
-    .getElementById("gestionTournoiBox")
-    .classList.toggle("hidden");
+  const gestionBox =
+    document.getElementById(
+      "gestionTournoiBox"
+    );
+
+  const creationBox =
+    document.getElementById(
+      "creationTournoiBox"
+    );
+
+  if(!gestionBox){
+    return;
+  }
+
+  const vaOuvrir =
+    gestionBox.classList.contains(
+      "hidden"
+    );
+
+  /*
+    Si Gestion tournoi va s'ouvrir,
+    on ferme automatiquement Création tournoi.
+  */
+  if(
+    vaOuvrir &&
+    creationBox
+  ){
+    creationBox.classList.add(
+      "hidden"
+    );
+  }
+
+  gestionBox.classList.toggle(
+    "hidden"
+  );
 
 }
 
 function toggleCreationTournoi(){
 
-  document
-    .getElementById("creationTournoiBox")
-    .classList.toggle("hidden");
+  const creationBox =
+    document.getElementById(
+      "creationTournoiBox"
+    );
+
+  const gestionBox =
+    document.getElementById(
+      "gestionTournoiBox"
+    );
+
+  if(!creationBox){
+    return;
+  }
+
+  const vaOuvrir =
+    creationBox.classList.contains(
+      "hidden"
+    );
+
+  /*
+    Si Création tournoi va s'ouvrir,
+    on ferme automatiquement Gestion tournoi.
+  */
+  if(
+    vaOuvrir &&
+    gestionBox
+  ){
+    gestionBox.classList.add(
+      "hidden"
+    );
+  }
+
+  creationBox.classList.toggle(
+    "hidden"
+  );
 
 }
 
@@ -16649,8 +16987,13 @@ async function demarrerApplication(){
   const data = await get("/me");
 
   if(!data || data.connected === false){
-    setPage("pageAuth");
-    document.body.classList.remove("app-loading");
+
+    document.body.classList.remove(
+      "app-loading"
+    );
+
+    afficherConnexionPropre();
+
     return;
   }
 
