@@ -1056,6 +1056,16 @@ body{
   transform:scale(1.15);
 }
 
+/* La barre du bas réagit immédiatement au bouton touché,
+   sans animation concurrente entre plusieurs boutons. */
+.bottom-nav button{
+  transition:opacity .08s linear, transform .08s linear !important;
+}
+
+.bottom-nav button:not(.active){
+  transform:none !important;
+}
+
 .bottom-nav i{
   font-size:24px;
   color:white;
@@ -8616,17 +8626,43 @@ function setPage(page, enregistrerHistorique = true){
     );
   }
 
-  if(
-    page !== "pageProfil"
-  ){
+  /*
+    Le mode Profil dépend maintenant directement
+    de la page affichée.
+
+    Ainsi, même si on revient au Profil depuis :
+    Paramètres, Abonnés, Suivis, Notifications,
+    Carte joueur, profil public, etc.,
+    le header bleu SUNUGAME reste toujours caché.
+  */
+  if(page === "pageProfil"){
+
+    document.body.classList.add(
+      "profile-mode"
+    );
+
+  }else{
+
     document.body.classList.remove(
       "profile-mode"
     );
+
   }
 
   if(currentPageName === page){
-  return;
-}
+
+    /*
+      Même si la page est déjà pageProfil,
+      on garantit l'état visuel correct.
+    */
+    if(page === "pageProfil"){
+      document.body.classList.add(
+        "profile-mode"
+      );
+    }
+
+    return;
+  }
 
   const anciennePage =
     currentPageName;
@@ -11806,13 +11842,14 @@ if(data.abonnement_expire_at){
     .querySelectorAll(".panel")
     .forEach(p=>p.classList.add("hidden"));
 
-  document
-    .querySelectorAll(".bottom-nav button")
-    .forEach(b=>b.classList.remove("active"));
-
-  document
-    .getElementById("btnProfil")
-    ?.classList.add("active");
+  /*
+    Le clic sur Profil peut venir de la barre du bas
+    ou d'un retour interne. On garantit simplement
+    que Profil est le seul bouton actif.
+  */
+  activerBoutonBottomNav(
+    "btnProfil"
+  );
 
   document.body.classList.add(
     "profile-mode"
@@ -16789,6 +16826,137 @@ function nettoyerContexteOrganisateurExterne(){
 
 }
 
+let navigationBottomEnCours = false;
+let navigationBottomEnAttente = null;
+
+function activerBoutonBottomNav(buttonId){
+
+  document
+    .querySelectorAll(
+      ".bottom-nav button"
+    )
+    .forEach(btn=>{
+      btn.classList.remove(
+        "active"
+      );
+    });
+
+  document
+    .getElementById(buttonId)
+    ?.classList.add(
+      "active"
+    );
+
+}
+
+async function executerDestinationBottomNav(destination){
+
+  if(destination === "tournoi"){
+    await ouvrirPanel(
+      "panelProprietaire"
+    );
+    return;
+  }
+
+  if(destination === "participants"){
+    await ouvrirPanel(
+      "panelParticipants"
+    );
+    return;
+  }
+
+  if(destination === "competition"){
+    await ouvrirPanel(
+      "panelClassementProprietaire"
+    );
+    return;
+  }
+
+  if(destination === "videos"){
+    await ouvrirModeVideos();
+    return;
+  }
+
+  if(destination === "profil"){
+    await ouvrirProfilCompte();
+    return;
+  }
+
+}
+
+async function naviguerBottom(
+  destination,
+  buttonId
+){
+
+  /*
+    Réaction visuelle immédiate :
+    seul le bouton réellement touché devient actif.
+  */
+  activerBoutonBottomNav(
+    buttonId
+  );
+
+  /*
+    Si un ancien clic est encore en chargement,
+    on ne lance PAS plusieurs navigations en parallèle.
+
+    On mémorise uniquement le dernier bouton demandé.
+    Dès que l'action actuelle se termine, cette dernière
+    destination s'ouvre.
+  */
+  if(navigationBottomEnCours){
+
+    navigationBottomEnAttente = {
+      destination,
+      buttonId
+    };
+
+    return;
+  }
+
+  navigationBottomEnCours = true;
+
+  try{
+
+    let demande = {
+      destination,
+      buttonId
+    };
+
+    while(demande){
+
+      navigationBottomEnAttente = null;
+
+      activerBoutonBottomNav(
+        demande.buttonId
+      );
+
+      await executerDestinationBottomNav(
+        demande.destination
+      );
+
+      demande =
+        navigationBottomEnAttente;
+
+    }
+
+  }catch(error){
+
+    console.error(
+      "Erreur navigation barre du bas :",
+      error
+    );
+
+  }finally{
+
+    navigationBottomEnCours = false;
+    navigationBottomEnAttente = null;
+
+  }
+
+}
+
 async function ouvrirPanel(id){
 
   const panneauxPersonnels = new Set([
@@ -16860,9 +17028,12 @@ async function ouvrirPanel(id){
 
     setPage("pageDashboard");
 
-    document
-      .querySelectorAll(".bottom-nav button")
-      .forEach(b=>b.classList.remove("active"));
+    /*
+      Ne pas effacer ici l'état actif de la barre du bas :
+      naviguerBottom() l'a déjà mis à jour immédiatement.
+      Les branches ci-dessous gardent leur classList.add("active")
+      comme sécurité pour les ouvertures provenant d'ailleurs.
+    */
 
     document
       .querySelectorAll(".panel")
@@ -19780,28 +19951,28 @@ appliquerLangue();
 
 <button
 id="btnTournoi"
-onclick="ouvrirPanel('panelProprietaire')">
+onclick="naviguerBottom('tournoi','btnTournoi')">
 <i class="fa-solid fa-house"></i>
 <span data-i18n-text></span>
 </button>
 
 <button
 id="btnParticipants"
-onclick="ouvrirPanel('panelParticipants')">
+onclick="naviguerBottom('participants','btnParticipants')">
 <i class="fa-solid fa-users"></i>
 <span data-i18n-text></span>
 </button>
 
 <button
 id="btnClassement"
-onclick="ouvrirPanel('panelClassementProprietaire')">
+onclick="naviguerBottom('competition','btnClassement')">
 <i class="fa-solid fa-ranking-star"></i>
 <span data-i18n-text></span>
 </button>
 
 <button
 id="btnVideos"
-onclick="ouvrirModeVideos()">
+onclick="naviguerBottom('videos','btnVideos')">
 <i class="fa-solid fa-video"></i>
 <span data-i18n-text></span
 
@@ -19809,7 +19980,7 @@ onclick="ouvrirModeVideos()">
 
 <button
 id="btnProfil"
-onclick="ouvrirProfilCompte()">
+onclick="naviguerBottom('profil','btnProfil')">
 <i class="fa-solid fa-user"></i>
 <span data-i18n-text></span>
 </button>
