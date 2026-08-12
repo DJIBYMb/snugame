@@ -4234,6 +4234,34 @@ section.page-show{
   transform:translateY(0);
 }
 
+/* Barre de progression vidéo : discrète, tactile et utilisable
+   dans le flux Vidéos et dans une vidéo de profil public. */
+.video-progress{
+  position:absolute !important;
+  left:12px !important;
+  right:12px !important;
+  bottom:76px !important;
+  width:calc(100% - 24px) !important;
+  height:22px !important;
+  margin:0 !important;
+  padding:0 !important;
+  z-index:999999 !important;
+  background:transparent !important;
+  border:none !important;
+  box-shadow:none !important;
+  cursor:pointer !important;
+  pointer-events:auto !important;
+  touch-action:pan-x !important;
+  accent-color:#ffffff;
+  opacity:.92;
+}
+
+/* Pendant une restauration d'historique, on réaffiche directement
+   l'écran déjà chargé afin d'éviter le clignotement. */
+body.navigation-restoring section{
+  transition:none !important;
+}
+
 </style>
 
 <link
@@ -8072,9 +8100,16 @@ function capturerEtatNavigation(){
     document.querySelector("#panelHighlights .tiktok-feed");
 
   const videoActive = feedVideos
-    ? Array.from(
-        feedVideos.querySelectorAll(".tiktok-video video")
-      ).find(video=>!video.paused)
+    ? (
+        Array.from(
+          feedVideos.querySelectorAll(".tiktok-video video")
+        ).find(video=>!video.paused) ||
+        (
+          typeof getCurrentVisibleVideo === "function"
+            ? getCurrentVisibleVideo()
+            : null
+        )
+      )
     : null;
 
   const carteVideoActive =
@@ -8117,7 +8152,27 @@ function capturerEtatNavigation(){
     followFrom:
       currentPageName === "pageFollowList"
         ? (followListFrom || "profile")
-        : null
+        : null,
+
+    /*
+      Instantané de l'écran social déjà chargé.
+      Au retour, on peut le remettre immédiatement sans refaire
+      un aller-retour réseau ni afficher de skeleton.
+    */
+    publicProfileHtml:
+      currentPageName === "pagePublicProfil"
+        ? (publicProfilContent?.innerHTML || "")
+        : "",
+    followListHtml:
+      currentPageName === "pageFollowList"
+        ? (followListContent?.innerHTML || "")
+        : "",
+    followListTitle:
+      currentPageName === "pageFollowList"
+        ? (followListTitle?.textContent || "")
+        : "",
+
+    finNavigationSociale:false
   };
 
 }
@@ -8257,8 +8312,115 @@ function memeEtatNavigation(a,b){
 
   return (
     a.page === b.page &&
-    (a.panel || null) === (b.panel || null)
+    (a.panel || null) === (b.panel || null) &&
+    Number(a.publicUserId || 0) ===
+      Number(b.publicUserId || 0) &&
+    (a.followType || null) ===
+      (b.followType || null) &&
+    Number(a.followOwnerId || 0) ===
+      Number(b.followOwnerId || 0) &&
+    (a.followFrom || null) ===
+      (b.followFrom || null)
   );
+
+}
+
+function restaurerProfilPublicDepuisHistorique(etat){
+
+  const userId =
+    Number(etat?.publicUserId || 0);
+
+  if(
+    !Number.isInteger(userId) ||
+    userId <= 0
+  ){
+    return false;
+  }
+
+  currentPublicUserId = userId;
+
+  setPage(
+    "pagePublicProfil",
+    false
+  );
+
+  document.body.classList.remove(
+    "video-mode",
+    "video-profil-mode"
+  );
+
+  document
+    .querySelector("header")
+    ?.classList.add("hidden");
+
+  document
+    .querySelector(".bottom-nav")
+    ?.classList.add("hidden");
+
+  messageCard
+    ?.classList.add("hidden");
+
+  if(etat.publicProfileHtml){
+    publicProfilContent.innerHTML =
+      etat.publicProfileHtml;
+  }
+
+  publicProfilContent.style.opacity = "1";
+
+  return true;
+
+}
+
+function restaurerListeFollowDepuisHistorique(etat){
+
+  if(
+    !etat?.followOwnerId ||
+    !etat?.followType
+  ){
+    return false;
+  }
+
+  followListFrom =
+    etat.followFrom || "profile";
+
+  followListOwnerId =
+    Number(etat.followOwnerId);
+
+  followListType =
+    etat.followType;
+
+  setPage(
+    "pageFollowList",
+    false
+  );
+
+  if(etat.followListTitle){
+    followListTitle.textContent =
+      etat.followListTitle;
+  }else{
+    followListTitle.textContent =
+      etat.followType === "followers"
+        ? "Abonnés"
+        : "Suivis";
+  }
+
+  if(etat.followListHtml){
+    followListContent.innerHTML =
+      etat.followListHtml;
+  }
+
+  document
+    .querySelector("header")
+    ?.classList.add("hidden");
+
+  document
+    .querySelector(".bottom-nav")
+    ?.classList.add("hidden");
+
+  messageCard
+    ?.classList.add("hidden");
+
+  return true;
 
 }
 
@@ -8268,6 +8430,10 @@ async function restaurerEtatNavigation(etat){
     retourPage();
     return;
   }
+
+  document.body.classList.add(
+    "navigation-restoring"
+  );
 
   stopAllVideos();
 
@@ -8288,21 +8454,47 @@ async function restaurerEtatNavigation(etat){
 
     setPage("pageDashboard", false);
 
-    await ouvrirPanel(
+    const panelDestination =
       etat.panel ||
       localStorage.getItem("lastPanel") ||
-      "panelTournoi"
-    );
+      "panelProprietaire";
+
+    if(panelDestination === "panelHighlights"){
+
+      window.fromPublicProfileVideo = false;
+      window.openingProfileVideo = false;
+
+      await ouvrirModeVideos({
+        skipFirstPlay:true
+      });
+
+    }else{
+
+      await ouvrirPanel(
+        panelDestination
+      );
+
+    }
 
   }else if(
     etat.page === "pagePublicProfil" &&
     etat.publicUserId
   ){
 
-    await ouvrirProfilPublic(
-      etat.publicUserId,
-      {skipHistory:true}
-    );
+    const restaure =
+      restaurerProfilPublicDepuisHistorique(
+        etat
+      );
+
+    /*
+      Compatibilité avec un ancien état sans instantané.
+    */
+    if(!restaure || !etat.publicProfileHtml){
+      await ouvrirProfilPublic(
+        etat.publicUserId,
+        {skipHistory:true}
+      );
+    }
 
   }else if(
     etat.page === "pageFollowList" &&
@@ -8310,12 +8502,19 @@ async function restaurerEtatNavigation(etat){
     etat.followType
   ){
 
-    await ouvrirListeFollow(
-      etat.followType,
-      etat.followOwnerId,
-      etat.followFrom || "profile",
-      {skipHistory:true}
-    );
+    const restaure =
+      restaurerListeFollowDepuisHistorique(
+        etat
+      );
+
+    if(!restaure || !etat.followListHtml){
+      await ouvrirListeFollow(
+        etat.followType,
+        etat.followOwnerId,
+        etat.followFrom || "profile",
+        {skipHistory:true}
+      );
+    }
 
   }else{
 
@@ -8332,6 +8531,50 @@ async function restaurerEtatNavigation(etat){
 
   restaurerEtatFluxVideos(etat);
   mettreAJourVisibiliteBoutonVideoPlus();
+
+  requestAnimationFrame(()=>{
+    requestAnimationFrame(()=>{
+      document.body.classList.remove(
+        "navigation-restoring"
+      );
+    });
+  });
+
+}
+
+function ajouterEtatHistorique(etat){
+
+  if(!etat){
+    return;
+  }
+
+  const dernierEtat =
+    pageStack[
+      pageStack.length - 1
+    ];
+
+  if(
+    memeEtatNavigation(
+      dernierEtat,
+      etat
+    )
+  ){
+    return;
+  }
+
+  pageStack.push(etat);
+
+  /*
+    Large marge pour permettre de parcourir
+    de très longues chaînes de profils sans
+    laisser la mémoire grossir indéfiniment.
+  */
+  if(pageStack.length > 120){
+    pageStack.splice(
+      0,
+      pageStack.length - 120
+    );
+  }
 
 }
 
@@ -8367,12 +8610,9 @@ function setPage(page, enregistrerHistorique = true){
     const ancienEtat =
       capturerEtatNavigation();
 
-    const dernierEtat =
-      pageStack[pageStack.length - 1];
-
-    if(!memeEtatNavigation(dernierEtat, ancienEtat)){
-      pageStack.push(ancienEtat);
-    }
+    ajouterEtatHistorique(
+      ancienEtat
+    );
 
   }
 
@@ -8461,9 +8701,23 @@ async function retourPage(){
 
   if(etatPrecedent){
 
+    const destinationFinaleSociale =
+      etatPrecedent.finNavigationSociale === true;
+
     await restaurerEtatNavigation(
       etatPrecedent
     );
+
+    /*
+      Une fois revenu exactement à l'endroit d'où la chaîne
+      Profil public / Abonnés / Suivis avait commencé,
+      on oublie l'ancien historique situé derrière.
+      Ainsi, un retour supplémentaire ne repart pas vers
+      une ancienne page ou une ancienne vidéo.
+    */
+    if(destinationFinaleSociale){
+      pageStack.length = 0;
+    }
 
     return;
   }
@@ -8518,6 +8772,41 @@ let followListOwnerId = null;
 let followListType = null;
 let etatsAvantFollowList = [];
 
+function estPageNavigationSociale(page){
+
+  return (
+    page === "pagePublicProfil" ||
+    page === "pageFollowList"
+  );
+
+}
+
+function preparerEtatOrigineSociale(etat){
+
+  if(!etat){
+    return etat;
+  }
+
+  /*
+    La première entrée dans Profil public / Abonnés / Suivis
+    devient la destination finale de cette chaîne de navigation.
+
+    Exemple :
+    Panel Vidéos -> Profil A -> Abonnés -> Profil B -> ...
+    Le dernier Retour doit s'arrêter exactement au Panel Vidéos.
+  */
+  if(
+    !estPageNavigationSociale(
+      etat.page
+    )
+  ){
+    etat.finNavigationSociale = true;
+  }
+
+  return etat;
+
+}
+
 async function ouvrirListeFollow(
   type,
   userId,
@@ -8526,11 +8815,16 @@ async function ouvrirListeFollow(
 ){
 
   if(!options.skipHistory){
-    const origine = capturerEtatNavigation();
-    const dernier = pageStack[pageStack.length - 1];
-    if(!memeEtatNavigation(dernier, origine)){
-      pageStack.push(origine);
-    }
+
+    const origine =
+      preparerEtatOrigineSociale(
+        capturerEtatNavigation()
+      );
+
+    ajouterEtatHistorique(
+      origine
+    );
+
   }
 
   followListFrom = from;
@@ -8594,6 +8888,7 @@ async function retourDepuisFollowList(){
 let panelAvantProfilPublic = null;
 let etatsAvantProfilPublic = [];
 let etatAvantVideoProfil = null;
+let etatAvantVideoPublique = null;
 let scrollAvantVideoPublique = 0;
 
 async function ouvrirProfilPublic(
@@ -8606,11 +8901,16 @@ async function ouvrirProfilPublic(
   publicProfilContent.style.opacity = "1";
 
   if(!options.skipHistory){
-    const origine = capturerEtatNavigation();
-    const dernier = pageStack[pageStack.length - 1];
-    if(!memeEtatNavigation(dernier, origine)){
-      pageStack.push(origine);
-    }
+
+    const origine =
+      preparerEtatOrigineSociale(
+        capturerEtatNavigation()
+      );
+
+    ajouterEtatHistorique(
+      origine
+    );
+
   }
 
   currentPublicUserId = userId;
@@ -10558,6 +10858,30 @@ async function revenirProfilPublicDepuisVideo(userId){
   );
 
   /*
+    IMPORTANT :
+    ouvrirVideoPublique() remplace temporairement highlightsList
+    par une seule vidéo avec le bouton "Retour".
+
+    Cette vidéo temporaire ne doit jamais rester dans le vrai
+    panel Vidéos. On la détruit dès qu'on quitte la vidéo publique.
+
+    Si l'utilisateur revenait ensuite au panel Vidéos,
+    chargerHighlights() rechargera le vrai flux, puis
+    restaurerEtatFluxVideos() remettra la position et le temps
+    de lecture mémorisés.
+  */
+  if(highlightsList){
+    highlightsList.innerHTML = "";
+  }
+
+  if(tiktokObserver){
+    tiktokObserver.disconnect();
+    tiktokObserver = null;
+  }
+
+  derniereVideoComptee = null;
+
+  /*
     Important :
     on ne vide PAS publicProfilContent.
 
@@ -10599,11 +10923,19 @@ async function revenirProfilPublicDepuisVideo(userId){
 
   mettreAJourVisibiliteBoutonVideoPlus();
 
+  /*
+    La vidéo publique n'est jamais une étape de l'historique.
+    Après être revenu au profil public, un nouveau Retour
+    repart donc vers l'écran qui précédait ce profil.
+  */
+  etatAvantVideoPublique = null;
+
 }
 
 async function ouvrirVideoPublique(videoId, userId){
 
-  etatAvantVideoProfil = capturerEtatNavigation();
+  etatAvantVideoPublique =
+    capturerEtatNavigation();
 
   scrollAvantVideoPublique =
     window.scrollY || 0;
@@ -10644,7 +10976,7 @@ async function ouvrirVideoPublique(videoId, userId){
   video.vues =
   (video.vues || 0) + 1;
 
-  /* Le profil public est déjà mémorisé dans etatAvantVideoProfil.
+  /* Le profil public est déjà mémorisé dans etatAvantVideoPublique.
      Ne pas l'ajouter une deuxième fois dans pageStack. */
   setPage("pageDashboard", false);
 
@@ -10663,7 +10995,11 @@ async function ouvrirVideoPublique(videoId, userId){
 
   highlightsList.innerHTML = `
 
-    <div class="tiktok-video">
+    <div
+      class="tiktok-video public-profile-video-temp"
+      data-public-profile-video-temp="1"
+      data-highlight-id="${video.id}"
+    >
 
       <div
       onclick="retourDepuisVideoPublique()"
@@ -10742,6 +11078,8 @@ onclick="
 
     </div>
   `;
+
+  initialiserBarresProgressionVideos();
 
   const videoPublique =
   videoProfilContent.querySelector(
@@ -13811,6 +14149,8 @@ async function chargerHighlights(){
 
    `).join("");
 
+   initialiserBarresProgressionVideos();
+
    prepareFirstPanelVideo();
 
    document
@@ -15839,6 +16179,22 @@ function prepareVideoUpload(){
 
 async function ouvrirModeVideos(options = {}){
 
+  /*
+    Sécurité :
+    une vidéo ouverte depuis un profil public est un lecteur temporaire.
+    Elle ne doit jamais devenir le contenu du vrai panel Vidéos.
+  */
+  if(
+    highlightsList?.querySelector(
+      '[data-public-profile-video-temp="1"]'
+    )
+  ){
+    stopAllVideos();
+    highlightsList.innerHTML = "";
+  }
+
+  window.fromPublicProfileVideo = false;
+
   if(window.favorisChanged){
 
     highlightsList.innerHTML = "";
@@ -16425,6 +16781,18 @@ async function ouvrirPanel(id){
     stopAllVideos();
 
     currentPanelName = id;
+
+    if(
+      id === "panelProprietaire" ||
+      id === "panelParticipants" ||
+      id === "panelClassementProprietaire" ||
+      id === "panelHighlights"
+    ){
+      localStorage.setItem(
+        "lastPanel",
+        id
+      );
+    }
 
     document.body.classList.remove(
       "video-mode",
@@ -18712,32 +19080,36 @@ async function retourGeneral(){
     return;
   }
 
-  if(!pageVideoProfil.classList.contains("hidden")){
-    retourProfilDepuisVideo();
-    return;
-  }
-
-  if(
-    document.body.classList.contains("video-mode") &&
-    window.fromPublicProfileVideo === true
-  ){
-    retourDepuisVideoPublique();
-    return;
-  }
-
-  if(!pagePublicProfil.classList.contains("hidden")){
-    retourProfilPublic();
-    return;
-  }
-
   retourGeneralEnCours = true;
 
   try{
+
+    if(!pageVideoProfil.classList.contains("hidden")){
+      await retourProfilDepuisVideo();
+      return;
+    }
+
+    if(
+      document.body.classList.contains("video-mode") &&
+      window.fromPublicProfileVideo === true
+    ){
+      await retourDepuisVideoPublique();
+      return;
+    }
+
+    if(!pagePublicProfil.classList.contains("hidden")){
+      await retourProfilPublic();
+      return;
+    }
+
     await retourPage();
+
   }finally{
+
     requestAnimationFrame(()=>{
       retourGeneralEnCours = false;
     });
+
   }
 
 }
@@ -18945,6 +19317,158 @@ async function enregistrerTempsVideoPanel(videoEl){
     seconds,
     percent
   });
+
+}
+
+function initialiserProgressionVideo(video){
+
+  if(!video){
+    return;
+  }
+
+  const carte =
+    video.closest(".tiktok-video");
+
+  if(!carte){
+    return;
+  }
+
+  let barre =
+    carte.querySelector(
+      ".video-progress"
+    );
+
+  if(!barre){
+
+    barre =
+      document.createElement("input");
+
+    barre.type = "range";
+    barre.min = "0";
+    barre.max = "1000";
+    barre.step = "1";
+    barre.value = "0";
+    barre.className =
+      "video-progress";
+
+    barre.setAttribute(
+      "aria-label",
+      "Avancer ou reculer la vidéo"
+    );
+
+    carte.appendChild(
+      barre
+    );
+
+    /*
+      Empêche le clic sur la barre de mettre
+      la vidéo en pause ou d'ouvrir une autre action.
+    */
+    [
+      "click",
+      "pointerdown",
+      "touchstart"
+    ].forEach(type=>{
+
+      barre.addEventListener(
+        type,
+        event=>{
+          event.stopPropagation();
+        }
+      );
+
+    });
+
+    barre.addEventListener(
+      "input",
+      ()=>{
+
+        const duree =
+          Number(video.duration);
+
+        if(
+          !Number.isFinite(duree) ||
+          duree <= 0
+        ){
+          return;
+        }
+
+        video.currentTime =
+          (
+            Number(barre.value) /
+            1000
+          ) * duree;
+
+      }
+    );
+
+  }
+
+  const synchroniser = ()=>{
+
+    const duree =
+      Number(video.duration);
+
+    if(
+      !Number.isFinite(duree) ||
+      duree <= 0
+    ){
+      barre.value = "0";
+      return;
+    }
+
+    barre.value =
+      String(
+        Math.max(
+          0,
+          Math.min(
+            1000,
+            Math.round(
+              (
+                Number(video.currentTime || 0) /
+                duree
+              ) * 1000
+            )
+          )
+        )
+      );
+
+  };
+
+  if(video.dataset.progressionInit !== "1"){
+
+    video.dataset.progressionInit = "1";
+
+    video.addEventListener(
+      "timeupdate",
+      synchroniser
+    );
+
+    video.addEventListener(
+      "loadedmetadata",
+      synchroniser
+    );
+
+    video.addEventListener(
+      "durationchange",
+      synchroniser
+    );
+
+  }
+
+  synchroniser();
+
+}
+
+function initialiserBarresProgressionVideos(){
+
+  document
+    .querySelectorAll(
+      "#panelHighlights .tiktok-video video"
+    )
+    .forEach(
+      initialiserProgressionVideo
+    );
 
 }
 
