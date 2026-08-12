@@ -821,6 +821,7 @@ button:disabled{
 
 .tiktok-title.collapsed{
   display:-webkit-box;
+  line-clamp:2;
   -webkit-line-clamp:2;
   -webkit-box-orient:vertical;
   overflow:hidden;
@@ -1439,6 +1440,66 @@ body.video-mode .tiktok-video .highlight-video{
   display:flex!important;
   align-items:center!important;
   justify-content:center!important;
+}
+
+/* Petit profil sous Favoris dans le panel Vidéos */
+.video-mini-profile{
+  position:relative;
+  width:48px;
+  height:48px;
+  margin-top:2px;
+  flex:0 0 48px;
+}
+
+.video-mini-profile-photo{
+  width:44px;
+  height:44px;
+  display:block;
+  object-fit:cover;
+  border-radius:50%;
+  border:2px solid rgba(255,255,255,.95);
+  background:#111827;
+  cursor:pointer;
+}
+
+.video-mini-follow-btn{
+  position:absolute !important;
+  right:-1px !important;
+  bottom:-2px !important;
+
+  width:20px !important;
+  height:20px !important;
+  min-width:20px !important;
+
+  display:flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+
+  margin:0 !important;
+  padding:0 !important;
+
+  border-radius:50% !important;
+  border:2px solid #ffffff !important;
+
+  background:#22c55e !important;
+  color:#ffffff !important;
+
+  font-size:15px !important;
+  line-height:1 !important;
+  font-weight:1000 !important;
+
+  box-shadow:0 2px 8px rgba(0,0,0,.45) !important;
+  z-index:4 !important;
+}
+
+.video-mini-follow-btn.following{
+  background:#111827 !important;
+  color:#ffffff !important;
+  font-size:13px !important;
+}
+
+.video-mini-follow-btn:disabled{
+  opacity:1 !important;
 }
 
 .like-count,
@@ -14289,6 +14350,87 @@ async function chargerHighlights(){
            ${h.favorites || 0}
           </div>
 
+          ${
+            Number(h.user_id) !== Number(currentUserId)
+              ? `
+                <div
+                  class="video-mini-profile"
+                  data-video-mini-user="${h.user_id}"
+                >
+                  <img
+                    class="video-mini-profile-photo"
+                    src="${h.profile_photo || '/default-avatar.png'}"
+                    alt="Profil @${h.username || ''}"
+                    onclick="
+                      event.stopPropagation();
+                      ouvrirProfilPublic(${h.user_id});
+                    "
+                    onerror="
+                      this.onerror=null;
+                      this.src='/default-avatar.png';
+                    "
+                  >
+
+                  <button
+                    type="button"
+                    class="video-mini-follow-btn ${
+                      (
+                        h.isFollowing === true ||
+                        Number(h.isFollowing) === 1 ||
+                        h.following === true ||
+                        Number(h.following) === 1 ||
+                        h.followed === true ||
+                        Number(h.followed) === 1
+                      )
+                        ? "following"
+                        : ""
+                    }"
+                    data-user-id="${h.user_id}"
+                    data-following="${
+                      (
+                        h.isFollowing === true ||
+                        Number(h.isFollowing) === 1 ||
+                        h.following === true ||
+                        Number(h.following) === 1 ||
+                        h.followed === true ||
+                        Number(h.followed) === 1
+                      )
+                        ? "1"
+                        : "0"
+                    }"
+                    onclick="
+                      event.stopPropagation();
+                      suivreDepuisVideo(${h.user_id}, this);
+                    "
+                    aria-label="${
+                      (
+                        h.isFollowing === true ||
+                        Number(h.isFollowing) === 1 ||
+                        h.following === true ||
+                        Number(h.following) === 1 ||
+                        h.followed === true ||
+                        Number(h.followed) === 1
+                      )
+                        ? "Ne plus suivre"
+                        : "Suivre"
+                    }"
+                  >${
+                    (
+                      h.isFollowing === true ||
+                      Number(h.isFollowing) === 1 ||
+                      h.following === true ||
+                      Number(h.following) === 1 ||
+                      h.followed === true ||
+                      Number(h.followed) === 1
+                    )
+                      ? "✓"
+                      : "+"
+                  }</button>
+                </div>
+              `
+              : ""
+          }
+
         </div>
 
     </div>
@@ -19243,6 +19385,195 @@ function chargerPolitiqueConfidentialite(){
 
 
 
+function synchroniserPetitsBoutonsSuivi(
+  userId,
+  suivi
+){
+
+  const id =
+    Number(userId);
+
+  document
+    .querySelectorAll(
+      `.video-mini-follow-btn[data-user-id="${id}"]`
+    )
+    .forEach(btn=>{
+
+      btn.dataset.following =
+        suivi ? "1" : "0";
+
+      btn.textContent =
+        suivi ? "✓" : "+";
+
+      btn.classList.toggle(
+        "following",
+        suivi
+      );
+
+      btn.setAttribute(
+        "aria-label",
+        suivi
+          ? "Ne plus suivre"
+          : "Suivre"
+      );
+
+    });
+
+}
+
+async function suivreDepuisVideo(
+  userId,
+  btn
+){
+
+  const idJoueur =
+    Number(userId);
+
+  if(
+    !btn ||
+    btn.dataset.loading === "1" ||
+    !Number.isInteger(idJoueur) ||
+    idJoueur <= 0
+  ){
+    return;
+  }
+
+  const etaitSuivi =
+    btn.dataset.following === "1";
+
+  const nouvelEtat =
+    !etaitSuivi;
+
+  /*
+    Réaction immédiate :
+    + vert -> ✓
+    ou ✓ -> + vert.
+  */
+  synchroniserPetitsBoutonsSuivi(
+    idJoueur,
+    nouvelEtat
+  );
+
+  btn.dataset.loading = "1";
+
+  try{
+
+    const result =
+      await post(
+        "/follow-player",
+        {
+          player_user_id:idJoueur
+        }
+      );
+
+    const texte =
+      String(result || "");
+
+    const serveurUnfollow =
+      result === "Unfollow" ||
+      /désabonn|unfollow/i.test(
+        texte
+      );
+
+    const serveurFollow =
+      !serveurUnfollow &&
+      (
+        /Abonnement réussi/i.test(texte) ||
+        /follow/i.test(texte)
+      );
+
+    if(serveurUnfollow){
+
+      synchroniserPetitsBoutonsSuivi(
+        idJoueur,
+        false
+      );
+
+    }else if(serveurFollow){
+
+      synchroniserPetitsBoutonsSuivi(
+        idJoueur,
+        true
+      );
+
+    }
+
+    /*
+      Met aussi à jour le compteur "Suivis"
+      de mon profil s'il est déjà présent en mémoire.
+    */
+    const mesSuivisBox =
+      document.getElementById(
+        "profilFollowing"
+      );
+
+    if(mesSuivisBox){
+
+      const valeur =
+        Math.max(
+          0,
+          Number(
+            mesSuivisBox.textContent
+          ) || 0
+        );
+
+      if(
+        !etaitSuivi &&
+        !serveurUnfollow
+      ){
+        mesSuivisBox.textContent =
+          String(valeur + 1);
+      }
+
+      if(
+        etaitSuivi &&
+        serveurUnfollow
+      ){
+        mesSuivisBox.textContent =
+          String(
+            Math.max(
+              valeur - 1,
+              0
+            )
+          );
+      }
+
+    }
+
+  }catch(error){
+
+    console.error(
+      "Erreur suivi depuis vidéo :",
+      error
+    );
+
+    /*
+      Si le serveur refuse, retour à l'état précédent.
+    */
+    synchroniserPetitsBoutonsSuivi(
+      idJoueur,
+      etaitSuivi
+    );
+
+    showNotif(
+      error?.message ||
+      "Impossible de modifier le suivi."
+    );
+
+  }finally{
+
+    document
+      .querySelectorAll(
+        `.video-mini-follow-btn[data-user-id="${idJoueur}"]`
+      )
+      .forEach(b=>{
+        b.dataset.loading = "0";
+      });
+
+  }
+
+}
+
 async function suivreDepuisProfilPublic(userId, event){
 
   const idJoueur =
@@ -19341,6 +19672,11 @@ async function suivreDepuisProfilPublic(userId, event){
 
   }
 
+  synchroniserPetitsBoutonsSuivi(
+    idJoueur,
+    vaSuivre
+  );
+
   btn.dataset.loading = "1";
 
   try{
@@ -19372,6 +19708,11 @@ async function suivreDepuisProfilPublic(userId, event){
       !serveurUnfollow;
 
     if(serveurUnfollow){
+
+      synchroniserPetitsBoutonsSuivi(
+        idJoueur,
+        false
+      );
 
       btn.innerHTML =
         '<i class="fa-solid fa-user-plus"></i>';
@@ -19410,6 +19751,11 @@ async function suivreDepuisProfilPublic(userId, event){
       }
 
     }else if(serveurFollow){
+
+      synchroniserPetitsBoutonsSuivi(
+        idJoueur,
+        true
+      );
 
       btn.innerHTML =
         '<i class="fa-solid fa-user-check"></i>';
@@ -19453,6 +19799,11 @@ async function suivreDepuisProfilPublic(userId, event){
     /*
       Annulation visuelle si le serveur refuse.
     */
+    synchroniserPetitsBoutonsSuivi(
+      idJoueur,
+      etaitSuivi
+    );
+
     btn.innerHTML =
       etaitSuivi
         ? '<i class="fa-solid fa-user-check"></i>'
