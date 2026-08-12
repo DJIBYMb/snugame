@@ -9054,7 +9054,9 @@ onclick="ouvrirListeFollow('followers', ${userId}, 'public')"
 style="cursor:pointer;">
 
   <span>Abonnés</span>
-  <b>${data.followers || 0}</b>
+  <b
+    data-public-followers-user-id="${userId}"
+  >${data.followers || 0}</b>
 
 </div>
 
@@ -9064,7 +9066,9 @@ onclick="ouvrirListeFollow('following', ${userId}, 'public')"
 style="cursor:pointer;">
 
   <span>Suivis</span>
-  <b>${data.following || 0}</b>
+  <b
+    data-public-following-user-id="${userId}"
+  >${data.following || 0}</b>
 
 </div>
 
@@ -9143,7 +9147,7 @@ color:white!important;
           border-radius:6px;
           text-align:center;
           ">
-             ${v.vues || 0} vues
+             <span data-view-count-id="${v.id}">${v.vues || 0}</span> vues
           </div>
 
         </div>
@@ -11030,23 +11034,31 @@ async function ouvrirVideoPublique(videoId, userId){
     return;
   }
 
-  const vueData =
-  await fetch("/view-highlight",{
-    method:"POST",
-    headers:{
-      "Content-Type":"application/json"
-    },
-    body:JSON.stringify({
-      id:videoId
-    })
-  }).then(r=>r.json());
-
-  if(vueData.ok){
-  video.vues = vueData.vues;
- }
+  /*
+    La vue réagit immédiatement.
+    La requête réseau continue ensuite et remet
+    la valeur exacte renvoyée par le serveur.
+  */
+  const vuesAvantOuverture =
+    Number(video.vues || 0);
 
   video.vues =
-  (video.vues || 0) + 1;
+    vuesAvantOuverture + 1;
+
+  mettreAJourCompteursVue(
+    videoId,
+    video.vues
+  );
+
+  compterVueOptimiste(
+    videoId,
+    vuesAvantOuverture
+  ).then(vuesExactes=>{
+
+    video.vues =
+      vuesExactes;
+
+  });
 
   /* Le profil public est déjà mémorisé dans etatAvantVideoPublique.
      Ne pas l'ajouter une deuxième fois dans pageStack. */
@@ -14274,6 +14286,127 @@ if(firstVideo){
  }
 }
 
+function mettreAJourCompteursVue(
+  videoId,
+  valeur
+){
+
+  const id =
+    Number(videoId);
+
+  const vues =
+    Math.max(
+      0,
+      Number(valeur) || 0
+    );
+
+  document
+    .querySelectorAll(
+      `[data-view-count-id="${id}"]`
+    )
+    .forEach(el=>{
+      el.textContent =
+        String(vues);
+    });
+
+}
+
+async function compterVueOptimiste(
+  videoId,
+  valeurActuelle = 0
+){
+
+  const id =
+    Number(videoId);
+
+  if(
+    !Number.isInteger(id) ||
+    id <= 0
+  ){
+    return Number(valeurActuelle) || 0;
+  }
+
+  const ancienneValeur =
+    Math.max(
+      0,
+      Number(valeurActuelle) || 0
+    );
+
+  const valeurOptimiste =
+    ancienneValeur + 1;
+
+  /*
+    Réaction immédiate à l'écran.
+  */
+  mettreAJourCompteursVue(
+    id,
+    valeurOptimiste
+  );
+
+  try{
+
+    const response =
+      await fetch(
+        "/view-highlight",
+        {
+          method:"POST",
+          headers:{
+            "Content-Type":"application/json"
+          },
+          credentials:"same-origin",
+          body:JSON.stringify({
+            id
+          })
+        }
+      );
+
+    if(!response.ok){
+      throw new Error(
+        "Impossible de compter la vue"
+      );
+    }
+
+    const data =
+      await response.json();
+
+    const valeurServeur =
+      data?.ok
+        ? Number(data.vues)
+        : NaN;
+
+    if(Number.isFinite(valeurServeur)){
+
+      mettreAJourCompteursVue(
+        id,
+        valeurServeur
+      );
+
+      return valeurServeur;
+    }
+
+    return valeurOptimiste;
+
+  }catch(error){
+
+    console.error(
+      "Erreur comptage vue :",
+      error
+    );
+
+    /*
+      Si le serveur refuse, on remet l'ancienne valeur.
+    */
+    mettreAJourCompteursVue(
+      id,
+      ancienneValeur
+    );
+
+    return ancienneValeur;
+
+  }
+
+}
+
 async function likeHighlight(id, btn){
 
   if(
@@ -14283,8 +14416,78 @@ async function likeHighlight(id, btn){
     return;
   }
 
+  const videoId =
+    Number(id);
+
+  const icon =
+    btn.querySelector("i");
+
+  const countBox =
+    btn.nextElementSibling;
+
+  const ancienIconClass =
+    icon?.className || "";
+
+  const ancienCount =
+    Math.max(
+      0,
+      Number(countBox?.textContent) || 0
+    );
+
+  /*
+    Détermine l'état actuel avant le clic.
+    fa-solid = déjà liké.
+  */
+  const etaitLike =
+    !!icon &&
+    icon.classList.contains(
+      "fa-solid"
+    );
+
+  const nouvelEtatLike =
+    !etaitLike;
+
+  const nouveauCount =
+    Math.max(
+      0,
+      ancienCount +
+      (
+        nouvelEtatLike
+          ? 1
+          : -1
+      )
+    );
+
+  /*
+    RÉACTION IMMÉDIATE :
+    on change le coeur et le nombre avant
+    même la réponse du serveur.
+  */
+  if(icon){
+    icon.className =
+      nouvelEtatLike
+        ? "fa-solid fa-heart"
+        : "fa-regular fa-heart";
+  }
+
+  if(countBox){
+    countBox.textContent =
+      String(nouveauCount);
+  }
+
+  btn.classList.toggle(
+    "liked",
+    nouvelEtatLike
+  );
+
+  btn.setAttribute(
+    "aria-pressed",
+    nouvelEtatLike
+      ? "true"
+      : "false"
+  );
+
   btn.dataset.loading = "1";
-  btn.disabled = true;
 
   try{
 
@@ -14292,7 +14495,7 @@ async function likeHighlight(id, btn){
       await post(
         "/like-highlight",
         {
-          id:Number(id)
+          id:videoId
         }
       );
 
@@ -14308,12 +14511,10 @@ async function likeHighlight(id, btn){
 
     }
 
-    const icon =
-      btn.querySelector("i");
-
-    const countBox =
-      btn.nextElementSibling;
-
+    /*
+      Le serveur reste la vérité finale :
+      on synchronise avec son résultat exact.
+    */
     if(icon){
 
       icon.className =
@@ -14327,7 +14528,10 @@ async function likeHighlight(id, btn){
 
       countBox.textContent =
         String(
-          Number(result.likes) || 0
+          Math.max(
+            0,
+            Number(result.likes) || 0
+          )
         );
 
     }
@@ -14351,6 +14555,32 @@ async function likeHighlight(id, btn){
       error
     );
 
+    /*
+      Si le serveur refuse, retour exact
+      à l'état qui existait avant le clic.
+    */
+    if(icon){
+      icon.className =
+        ancienIconClass;
+    }
+
+    if(countBox){
+      countBox.textContent =
+        String(ancienCount);
+    }
+
+    btn.classList.toggle(
+      "liked",
+      etaitLike
+    );
+
+    btn.setAttribute(
+      "aria-pressed",
+      etaitLike
+        ? "true"
+        : "false"
+    );
+
     if(message){
 
       message.textContent =
@@ -14362,11 +14592,11 @@ async function likeHighlight(id, btn){
   }finally{
 
     btn.dataset.loading = "0";
-    btn.disabled = false;
 
   }
 
 }
+
 async function toggleFavoriVideo(id, btn){
 
   const result =
@@ -18958,52 +19188,245 @@ function chargerPolitiqueConfidentialite(){
 
 async function suivreDepuisProfilPublic(userId, event){
 
-  const btn = event.currentTarget;
+  const idJoueur =
+    Number(userId);
 
-  const result = await post(
-    "/follow-player",
-    {
-      player_user_id:userId
-    }
-  );
+  const btn =
+    event?.currentTarget;
 
-  showNotif(result);
+  if(
+    !btn ||
+    btn.dataset.loading === "1" ||
+    !Number.isInteger(idJoueur) ||
+    idJoueur <= 0
+  ){
+    return;
+  }
 
   const followersBox =
     document.querySelector(
-      ".profile-mini-stats .mini-stat:first-child b"
+      `[data-public-followers-user-id="${idJoueur}"]`
     );
 
-  let followers =
-    Number(followersBox?.textContent) || 0;
+  const followersAvant =
+    Math.max(
+      0,
+      Number(
+        followersBox?.textContent
+      ) || 0
+    );
 
-  if(result === "Unfollow"){
+  const mesSuivisBox =
+    document.getElementById(
+      "profilFollowing"
+    );
 
-    btn.innerHTML =
-      '<i class="fa-solid fa-user-plus"></i>';
+  const mesSuivisAvant =
+    Math.max(
+      0,
+      Number(
+        mesSuivisBox?.textContent
+      ) || 0
+    );
 
-    btn.style.background =
-      "#22c55e";
+  const icon =
+    btn.querySelector("i");
 
-    if(followersBox){
-      followersBox.textContent =
-        Math.max(followers - 1, 0);
-    }
+  const etaitSuivi =
+    !!icon &&
+    icon.classList.contains(
+      "fa-user-check"
+    );
 
-  }else if(result.includes("Abonnement réussi")){
+  const vaSuivre =
+    !etaitSuivi;
 
-    btn.innerHTML =
-      '<i class="fa-solid fa-user-check"></i>';
+  /*
+    RÉACTION IMMÉDIATE :
+    bouton + compteur Abonnés du profil public
+    + compteur Suivis de mon propre profil.
+  */
+  btn.innerHTML =
+    vaSuivre
+      ? '<i class="fa-solid fa-user-check"></i>'
+      : '<i class="fa-solid fa-user-plus"></i>';
 
-    btn.style.background =
-      "rgba(255,255,255,.08)";
+  btn.style.background =
+    vaSuivre
+      ? "rgba(255,255,255,.08)"
+      : "#22c55e";
 
-    if(followersBox){
-      followersBox.textContent =
-        followers + 1;
-    }
+  if(followersBox){
+
+    followersBox.textContent =
+      String(
+        vaSuivre
+          ? followersAvant + 1
+          : Math.max(
+              followersAvant - 1,
+              0
+            )
+      );
 
   }
+
+  if(mesSuivisBox){
+
+    mesSuivisBox.textContent =
+      String(
+        vaSuivre
+          ? mesSuivisAvant + 1
+          : Math.max(
+              mesSuivisAvant - 1,
+              0
+            )
+      );
+
+  }
+
+  btn.dataset.loading = "1";
+
+  try{
+
+    const result =
+      await post(
+        "/follow-player",
+        {
+          player_user_id:idJoueur
+        }
+      );
+
+    showNotif(result);
+
+    /*
+      Synchronisation finale avec le sens
+      réellement renvoyé par le backend.
+    */
+    const serveurUnfollow =
+      result === "Unfollow" ||
+      /désabonn|unfollow/i.test(
+        String(result || "")
+      );
+
+    const serveurFollow =
+      /Abonnement réussi|follow/i.test(
+        String(result || "")
+      ) &&
+      !serveurUnfollow;
+
+    if(serveurUnfollow){
+
+      btn.innerHTML =
+        '<i class="fa-solid fa-user-plus"></i>';
+
+      btn.style.background =
+        "#22c55e";
+
+      if(followersBox){
+        followersBox.textContent =
+          String(
+            Math.max(
+              followersAvant -
+              (
+                etaitSuivi
+                  ? 1
+                  : 0
+              ),
+              0
+            )
+          );
+      }
+
+      if(mesSuivisBox){
+        mesSuivisBox.textContent =
+          String(
+            Math.max(
+              mesSuivisAvant -
+              (
+                etaitSuivi
+                  ? 1
+                  : 0
+              ),
+              0
+            )
+          );
+      }
+
+    }else if(serveurFollow){
+
+      btn.innerHTML =
+        '<i class="fa-solid fa-user-check"></i>';
+
+      btn.style.background =
+        "rgba(255,255,255,.08)";
+
+      if(followersBox){
+        followersBox.textContent =
+          String(
+            followersAvant +
+            (
+              etaitSuivi
+                ? 0
+                : 1
+            )
+          );
+      }
+
+      if(mesSuivisBox){
+        mesSuivisBox.textContent =
+          String(
+            mesSuivisAvant +
+            (
+              etaitSuivi
+                ? 0
+                : 1
+            )
+          );
+      }
+
+    }
+
+  }catch(error){
+
+    console.error(
+      "Erreur abonnement profil public :",
+      error
+    );
+
+    /*
+      Annulation visuelle si le serveur refuse.
+    */
+    btn.innerHTML =
+      etaitSuivi
+        ? '<i class="fa-solid fa-user-check"></i>'
+        : '<i class="fa-solid fa-user-plus"></i>';
+
+    btn.style.background =
+      etaitSuivi
+        ? "rgba(255,255,255,.08)"
+        : "#22c55e";
+
+    if(followersBox){
+      followersBox.textContent =
+        String(followersAvant);
+    }
+
+    if(mesSuivisBox){
+      mesSuivisBox.textContent =
+        String(mesSuivisAvant);
+    }
+
+    showNotif(
+      error?.message ||
+      "Impossible de modifier le suivi."
+    );
+
+  }finally{
+
+    btn.dataset.loading = "0";
+
+  }
+
 }
 
 
