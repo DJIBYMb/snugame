@@ -1156,6 +1156,34 @@ body.competition-mode header{
   display:none !important;
 }
 
+/* Compétition :
+   ajoute un espace en haut pour que les boutons
+   ne soient pas collés au bord de l'écran. */
+body.competition-mode .competition-layout{
+  padding-top:max(18px, env(safe-area-inset-top)) !important;
+}
+
+body.competition-mode .competition-sidebar{
+  margin-top:6px !important;
+}
+
+/* Profil :
+   le header bleu SUNUGAME est caché uniquement
+   pendant l'affichage de la page Profil. */
+body.profile-mode header{
+  display:none !important;
+}
+
+/* Petit espace supérieur sur le profil pour éviter
+   que la photo et les boutons touchent le bord de l'écran. */
+body.profile-mode #pageProfil{
+  padding-top:max(18px, env(safe-area-inset-top)) !important;
+}
+
+body.profile-mode #pageProfil > .card{
+  margin-top:0 !important;
+}
+
 body.video-mode .container{
   max-width:none!important;
   padding:0!important;
@@ -8588,6 +8616,14 @@ function setPage(page, enregistrerHistorique = true){
     );
   }
 
+  if(
+    page !== "pageProfil"
+  ){
+    document.body.classList.remove(
+      "profile-mode"
+    );
+  }
+
   if(currentPageName === page){
   return;
 }
@@ -11777,6 +11813,10 @@ if(data.abonnement_expire_at){
   document
     .getElementById("btnProfil")
     ?.classList.add("active");
+
+  document.body.classList.add(
+    "profile-mode"
+  );
 
   ouvrirPage("pageProfil");
 
@@ -16781,6 +16821,10 @@ async function ouvrirPanel(id){
     stopAllVideos();
 
     currentPanelName = id;
+
+    document.body.classList.remove(
+      "profile-mode"
+    );
 
     if(
       id === "panelProprietaire" ||
