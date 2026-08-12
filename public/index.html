@@ -1444,11 +1444,16 @@ body.video-mode .tiktok-video .highlight-video{
 
 /* Petit profil sous Favoris dans le panel Vidéos */
 .video-mini-profile{
-  position:relative;
+  position:absolute;
   width:48px;
   height:48px;
-  margin-top:2px;
-  flex:0 0 48px;
+
+  left:50%;
+  transform:translateX(-50%);
+
+  bottom:-58px;
+
+  margin:0;
 }
 
 .video-mini-profile-photo{
