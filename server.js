@@ -676,6 +676,18 @@ async function envoyerNotificationPush(
       data.tournament_id =
         String(tournamentId);
 
+    }else if(action.startsWith("message:")){
+
+      const parts = action.split(":");
+      const conversationId = parts[1] || "";
+      const senderId = parts[2] || "";
+
+      data.notification_type = "message";
+      data.conversation_id =
+        String(conversationId);
+      data.sender_id =
+        String(senderId);
+
     }
 
     await getMessaging().send({
@@ -706,6 +718,59 @@ async function envoyerNotificationPush(
     console.log(
       "Erreur FCM :",
       e
+    );
+
+  }
+
+}
+
+async function envoyerPushMessageUtilisateur(
+  userId,
+  senderId,
+  conversationId,
+  senderName,
+  body
+){
+
+  try{
+
+    const tokenRow = await get(
+      `
+      SELECT token
+      FROM fcm_tokens
+      WHERE user_id=?
+      ORDER BY id DESC
+      LIMIT 1
+      `,
+      [userId]
+    );
+
+    if(!tokenRow?.token){
+      return;
+    }
+
+    const nom =
+      String(senderName || "Joueur").trim() ||
+      "Joueur";
+
+    const apercu =
+      String(body || "")
+        .replace(/\s+/g," ")
+        .trim()
+        .slice(0,180);
+
+    await envoyerNotificationPush(
+      tokenRow.token,
+      nom,
+      apercu || "Nouveau message",
+      `message:${conversationId}:${senderId}`
+    );
+
+  }catch(error){
+
+    console.error(
+      "Erreur push message privé :",
+      error
     );
 
   }
@@ -1479,7 +1544,7 @@ CREATE TABLE IF NOT EXISTS fcm_tokens(
   created_at TEXT DEFAULT CURRENT_TIMESTAMP
 )
 `);
-db.run(`
+db.exec(`
 CREATE TABLE IF NOT EXISTS message_conversations(
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   user1_id INTEGER NOT NULL,
@@ -1491,10 +1556,8 @@ CREATE TABLE IF NOT EXISTS message_conversations(
   updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
   UNIQUE(user1_id,user2_id),
   CHECK(user1_id < user2_id)
-)
-`);
+);
 
-db.run(`
 CREATE TABLE IF NOT EXISTS direct_messages(
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   conversation_id INTEGER NOT NULL,
@@ -1504,8 +1567,34 @@ CREATE TABLE IF NOT EXISTS direct_messages(
   seen INTEGER DEFAULT 0,
   created_at TEXT DEFAULT CURRENT_TIMESTAMP,
   FOREIGN KEY(conversation_id) REFERENCES message_conversations(id)
-)
-`);
+);
+
+CREATE INDEX IF NOT EXISTS idx_message_conversations_user1
+ON message_conversations(user1_id);
+
+CREATE INDEX IF NOT EXISTS idx_message_conversations_user2
+ON message_conversations(user2_id);
+
+CREATE INDEX IF NOT EXISTS idx_message_conversations_status
+ON message_conversations(status);
+
+CREATE INDEX IF NOT EXISTS idx_direct_messages_conversation_id
+ON direct_messages(conversation_id,id);
+
+CREATE INDEX IF NOT EXISTS idx_direct_messages_receiver_seen
+ON direct_messages(receiver_id,seen);
+`, err=>{
+  if(err){
+    console.error(
+      "Erreur initialisation messagerie SQLite :",
+      err
+    );
+  }else{
+    console.log(
+      "Tables et index de messagerie SQLite prêts"
+    );
+  }
+});
 
 db.run(`
 CREATE TABLE IF NOT EXISTS rewards(
@@ -1554,11 +1643,6 @@ db.run(`CREATE INDEX IF NOT EXISTS idx_highlight_views_highlight_id ON highlight
 db.run(`CREATE INDEX IF NOT EXISTS idx_notifications_user_seen ON notifications(user_id,seen)`);
 db.run(`CREATE INDEX IF NOT EXISTS idx_follows_follower_id ON follows(follower_id)`);
 db.run(`CREATE INDEX IF NOT EXISTS idx_follows_following_id ON follows(following_participant_id)`);
-db.run(`CREATE INDEX IF NOT EXISTS idx_message_conversations_user1 ON message_conversations(user1_id)`);
-db.run(`CREATE INDEX IF NOT EXISTS idx_message_conversations_user2 ON message_conversations(user2_id)`);
-db.run(`CREATE INDEX IF NOT EXISTS idx_message_conversations_status ON message_conversations(status)`);
-db.run(`CREATE INDEX IF NOT EXISTS idx_direct_messages_conversation_id ON direct_messages(conversation_id,id)`);
-db.run(`CREATE INDEX IF NOT EXISTS idx_direct_messages_receiver_seen ON direct_messages(receiver_id,seen)`);
 
 db.run(
   `
@@ -16683,6 +16767,28 @@ app.post(
       }
     );
 
+    if(resultat.status === "active"){
+
+      const sender = await get(
+        `
+        SELECT name,username
+        FROM users
+        WHERE id=?
+        LIMIT 1
+        `,
+        [me]
+      );
+
+      await envoyerPushMessageUtilisateur(
+        targetUserId,
+        me,
+        resultat.conversation_id,
+        sender?.name || sender?.username || "Joueur",
+        body
+      );
+
+    }
+
     return res.status(201).json({
       ok:true,
       conversation_id:resultat.conversation_id,
@@ -17409,6 +17515,24 @@ app.post(
         return Number(insertion.lastID);
 
       }
+    );
+
+    const sender = await get(
+      `
+      SELECT name,username
+      FROM users
+      WHERE id=?
+      LIMIT 1
+      `,
+      [me]
+    );
+
+    await envoyerPushMessageUtilisateur(
+      receiverId,
+      me,
+      conversationId,
+      sender?.name || sender?.username || "Joueur",
+      body
     );
 
     return res.status(201).json({
