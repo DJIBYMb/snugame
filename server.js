@@ -1480,6 +1480,34 @@ CREATE TABLE IF NOT EXISTS fcm_tokens(
 )
 `);
 db.run(`
+CREATE TABLE IF NOT EXISTS message_conversations(
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user1_id INTEGER NOT NULL,
+  user2_id INTEGER NOT NULL,
+  status TEXT NOT NULL DEFAULT 'pending'
+    CHECK(status IN ('pending','active','rejected')),
+  requested_by INTEGER,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(user1_id,user2_id),
+  CHECK(user1_id < user2_id)
+)
+`);
+
+db.run(`
+CREATE TABLE IF NOT EXISTS direct_messages(
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  conversation_id INTEGER NOT NULL,
+  sender_id INTEGER NOT NULL,
+  receiver_id INTEGER NOT NULL,
+  body TEXT NOT NULL,
+  seen INTEGER DEFAULT 0,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY(conversation_id) REFERENCES message_conversations(id)
+)
+`);
+
+db.run(`
 CREATE TABLE IF NOT EXISTS rewards(
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   user_id INTEGER,
@@ -1526,6 +1554,11 @@ db.run(`CREATE INDEX IF NOT EXISTS idx_highlight_views_highlight_id ON highlight
 db.run(`CREATE INDEX IF NOT EXISTS idx_notifications_user_seen ON notifications(user_id,seen)`);
 db.run(`CREATE INDEX IF NOT EXISTS idx_follows_follower_id ON follows(follower_id)`);
 db.run(`CREATE INDEX IF NOT EXISTS idx_follows_following_id ON follows(following_participant_id)`);
+db.run(`CREATE INDEX IF NOT EXISTS idx_message_conversations_user1 ON message_conversations(user1_id)`);
+db.run(`CREATE INDEX IF NOT EXISTS idx_message_conversations_user2 ON message_conversations(user2_id)`);
+db.run(`CREATE INDEX IF NOT EXISTS idx_message_conversations_status ON message_conversations(status)`);
+db.run(`CREATE INDEX IF NOT EXISTS idx_direct_messages_conversation_id ON direct_messages(conversation_id,id)`);
+db.run(`CREATE INDEX IF NOT EXISTS idx_direct_messages_receiver_seen ON direct_messages(receiver_id,seen)`);
 
 db.run(
   `
@@ -16224,6 +16257,1485 @@ app.get("/join-fresh/:code", async (req,res)=>{
     );
 
   });
+
+});
+
+
+/* =========================================================
+   MESSAGERIE PRIVÉE — BLOC 2
+   Accès, ouverture de conversation et première demande.
+
+   Règles :
+   - aucun abonnement entre les deux comptes : messagerie refusée ;
+   - un seul sens d'abonnement : le premier message devient une demande ;
+   - abonnement mutuel : conversation active immédiatement ;
+   - une demande en attente ne peut contenir qu'un seul message du demandeur.
+========================================================= */
+
+const messageRequestLimiter = rateLimit({
+  windowMs:15 * 60 * 1000,
+  max:30,
+  standardHeaders:true,
+  legacyHeaders:false,
+  message:{
+    ok:false,
+    message:"Trop de tentatives de messagerie. Réessaie plus tard."
+  }
+});
+
+function normaliserPaireUtilisateurs(userA,userB){
+
+  const a = Number(userA);
+  const b = Number(userB);
+
+  return a < b
+    ? [a,b]
+    : [b,a];
+
+}
+
+async function lireRelationAbonnement(userA,userB){
+
+  const aSuitB = await get(
+    `
+    SELECT id
+    FROM follows
+    WHERE follower_id=?
+      AND following_participant_id=?
+    LIMIT 1
+    `,
+    [userA,userB]
+  );
+
+  const bSuitA = await get(
+    `
+    SELECT id
+    FROM follows
+    WHERE follower_id=?
+      AND following_participant_id=?
+    LIMIT 1
+    `,
+    [userB,userA]
+  );
+
+  return {
+    meSuitTarget:!!aSuitB,
+    targetSuitMe:!!bSuitA,
+    mutual:!!aSuitB && !!bSuitA,
+    any:!!aSuitB || !!bSuitA
+  };
+
+}
+
+app.get("/message-access/:id", async (req,res)=>{
+
+  try{
+
+    if(!connected(req)){
+      return res.status(401).json({
+        ok:false,
+        message:tr(req,"Connecte-toi","Please log in")
+      });
+    }
+
+    const me = Number(req.session.userId);
+    const targetUserId = Number(req.params.id);
+
+    if(
+      !Number.isInteger(targetUserId) ||
+      targetUserId <= 0 ||
+      targetUserId === me
+    ){
+      return res.status(400).json({
+        ok:false,
+        message:tr(req,"Utilisateur invalide","Invalid user")
+      });
+    }
+
+    const target = await get(
+      `
+      SELECT id,name,username,profile_photo
+      FROM users
+      WHERE id=?
+      `,
+      [targetUserId]
+    );
+
+    if(!target){
+      return res.status(404).json({
+        ok:false,
+        message:tr(req,"Utilisateur introuvable","User not found")
+      });
+    }
+
+    const relation = await lireRelationAbonnement(
+      me,
+      targetUserId
+    );
+
+    const [user1Id,user2Id] =
+      normaliserPaireUtilisateurs(
+        me,
+        targetUserId
+      );
+
+    const conversation = await get(
+      `
+      SELECT
+        id,
+        status,
+        requested_by,
+        created_at,
+        updated_at
+      FROM message_conversations
+      WHERE user1_id=?
+        AND user2_id=?
+      LIMIT 1
+      `,
+      [user1Id,user2Id]
+    );
+
+    let mode = "none";
+
+    if(relation.mutual){
+      mode = "direct";
+    }else if(relation.any){
+      mode = "request";
+    }
+
+    return res.json({
+      ok:true,
+      target,
+      can_message:relation.any,
+      mode,
+      me_follows_target:relation.meSuitTarget,
+      target_follows_me:relation.targetSuitMe,
+      mutual_follow:relation.mutual,
+      conversation:conversation
+        ? {
+            id:Number(conversation.id),
+            status:String(conversation.status || "pending"),
+            requested_by:Number(conversation.requested_by || 0),
+            is_my_request:
+              Number(conversation.requested_by || 0) === me
+          }
+        : null
+    });
+
+  }catch(error){
+
+    console.error(
+      "Erreur vérification accès messagerie :",
+      error
+    );
+
+    return res.status(500).json({
+      ok:false,
+      message:tr(
+        req,
+        "Impossible de vérifier la messagerie",
+        "Unable to check messaging access"
+      )
+    });
+
+  }
+
+});
+
+app.post(
+  "/message-conversation/start",
+  messageRequestLimiter,
+  async (req,res)=>{
+
+  try{
+
+    if(!connected(req)){
+      return res.status(401).json({
+        ok:false,
+        message:tr(req,"Connecte-toi","Please log in")
+      });
+    }
+
+    const me = Number(req.session.userId);
+    const targetUserId =
+      Number(req.body.target_user_id);
+
+    const body =
+      String(req.body.message || "")
+        .trim()
+        .replace(/\r\n/g,"\n");
+
+    if(
+      !Number.isInteger(targetUserId) ||
+      targetUserId <= 0 ||
+      targetUserId === me
+    ){
+      return res.status(400).json({
+        ok:false,
+        message:tr(req,"Utilisateur invalide","Invalid user")
+      });
+    }
+
+    if(!body){
+      return res.status(400).json({
+        ok:false,
+        message:tr(req,"Écris un message","Write a message")
+      });
+    }
+
+    if(body.length > 1000){
+      return res.status(400).json({
+        ok:false,
+        message:tr(
+          req,
+          "Le message ne doit pas dépasser 1000 caractères",
+          "The message must not exceed 1000 characters"
+        )
+      });
+    }
+
+    const target = await get(
+      `
+      SELECT id
+      FROM users
+      WHERE id=?
+      `,
+      [targetUserId]
+    );
+
+    if(!target){
+      return res.status(404).json({
+        ok:false,
+        message:tr(req,"Utilisateur introuvable","User not found")
+      });
+    }
+
+    const relation = await lireRelationAbonnement(
+      me,
+      targetUserId
+    );
+
+    if(!relation.any){
+      return res.status(403).json({
+        ok:false,
+        code:"NO_FOLLOW_RELATION",
+        message:tr(
+          req,
+          "La messagerie est disponible seulement entre comptes liés par un abonnement",
+          "Messaging is available only between accounts linked by a follow"
+        )
+      });
+    }
+
+    const [user1Id,user2Id] =
+      normaliserPaireUtilisateurs(
+        me,
+        targetUserId
+      );
+
+    const resultat = await executerTransaction(
+      async transaction => {
+
+        let conversation = await transaction.get(
+          `
+          SELECT *
+          FROM message_conversations
+          WHERE user1_id=?
+            AND user2_id=?
+          LIMIT 1
+          `,
+          [user1Id,user2Id]
+        );
+
+        /*
+          Si les deux comptes se suivent maintenant,
+          une ancienne demande pending peut devenir active.
+        */
+        if(conversation && relation.mutual){
+
+          await transaction.run(
+            `
+            UPDATE message_conversations
+            SET status='active',
+                updated_at=datetime('now')
+            WHERE id=?
+            `,
+            [conversation.id]
+          );
+
+          conversation = {
+            ...conversation,
+            status:"active"
+          };
+        }
+
+        if(conversation){
+
+          if(conversation.status === "rejected"){
+            const error = new Error("MESSAGE_REQUEST_REJECTED");
+            error.code = "MESSAGE_REQUEST_REJECTED";
+            throw error;
+          }
+
+          if(
+            conversation.status === "pending" &&
+            Number(conversation.requested_by) === me
+          ){
+
+            const dejaUnMessage = await transaction.get(
+              `
+              SELECT id
+              FROM direct_messages
+              WHERE conversation_id=?
+                AND sender_id=?
+              LIMIT 1
+              `,
+              [conversation.id,me]
+            );
+
+            if(dejaUnMessage){
+              const error = new Error("MESSAGE_REQUEST_ALREADY_SENT");
+              error.code = "MESSAGE_REQUEST_ALREADY_SENT";
+              throw error;
+            }
+          }
+
+          if(
+            conversation.status === "pending" &&
+            Number(conversation.requested_by) !== me
+          ){
+            const error = new Error("MESSAGE_REQUEST_WAITING_YOUR_DECISION");
+            error.code = "MESSAGE_REQUEST_WAITING_YOUR_DECISION";
+            throw error;
+          }
+
+        }else{
+
+          const status =
+            relation.mutual
+              ? "active"
+              : "pending";
+
+          const insertionConversation =
+            await transaction.run(
+              `
+              INSERT INTO message_conversations(
+                user1_id,
+                user2_id,
+                status,
+                requested_by,
+                created_at,
+                updated_at
+              )
+              VALUES(?,?,?,?,datetime('now'),datetime('now'))
+              `,
+              [
+                user1Id,
+                user2Id,
+                status,
+                relation.mutual ? null : me
+              ]
+            );
+
+          conversation = {
+            id:insertionConversation.lastID,
+            status,
+            requested_by:
+              relation.mutual ? null : me
+          };
+        }
+
+        const insertionMessage = await transaction.run(
+          `
+          INSERT INTO direct_messages(
+            conversation_id,
+            sender_id,
+            receiver_id,
+            body,
+            seen,
+            created_at
+          )
+          VALUES(?,?,?,?,0,datetime('now'))
+          `,
+          [
+            conversation.id,
+            me,
+            targetUserId,
+            body
+          ]
+        );
+
+        await transaction.run(
+          `
+          UPDATE message_conversations
+          SET updated_at=datetime('now')
+          WHERE id=?
+          `,
+          [conversation.id]
+        );
+
+        return {
+          conversation_id:Number(conversation.id),
+          message_id:Number(insertionMessage.lastID),
+          status:String(conversation.status)
+        };
+
+      }
+    );
+
+    return res.status(201).json({
+      ok:true,
+      conversation_id:resultat.conversation_id,
+      message_id:resultat.message_id,
+      status:resultat.status,
+      request_sent:
+        resultat.status === "pending",
+      message:tr(
+        req,
+        resultat.status === "pending"
+          ? "Demande de message envoyée"
+          : "Message envoyé",
+        resultat.status === "pending"
+          ? "Message request sent"
+          : "Message sent"
+      )
+    });
+
+  }catch(error){
+
+    if(error.code === "MESSAGE_REQUEST_ALREADY_SENT"){
+      return res.status(409).json({
+        ok:false,
+        code:error.code,
+        message:tr(
+          req,
+          "Ta demande a déjà été envoyée. Attends qu'elle soit acceptée.",
+          "Your request has already been sent. Wait for it to be accepted."
+        )
+      });
+    }
+
+    if(error.code === "MESSAGE_REQUEST_WAITING_YOUR_DECISION"){
+      return res.status(409).json({
+        ok:false,
+        code:error.code,
+        message:tr(
+          req,
+          "Cette personne t'a déjà envoyé une demande. Accepte ou refuse d'abord la demande.",
+          "This person already sent you a request. Accept or reject it first."
+        )
+      });
+    }
+
+    if(error.code === "MESSAGE_REQUEST_REJECTED"){
+      return res.status(403).json({
+        ok:false,
+        code:error.code,
+        message:tr(
+          req,
+          "Cette demande de message a été refusée",
+          "This message request was rejected"
+        )
+      });
+    }
+
+    console.error(
+      "Erreur démarrage conversation :",
+      error
+    );
+
+    return res.status(500).json({
+      ok:false,
+      message:tr(
+        req,
+        "Impossible d'envoyer le message",
+        "Unable to send the message"
+      )
+    });
+
+  }
+
+});
+
+
+/* =========================================================
+   MESSAGERIE PRIVÉE — BLOC 3
+   Liste des demandes reçues + accepter / refuser.
+
+   Sécurité :
+   - seul le destinataire réel de la demande peut décider ;
+   - l'expéditeur ne peut jamais accepter sa propre demande ;
+   - seules les conversations pending sont modifiables ici.
+========================================================= */
+
+app.get("/message-requests", async (req,res)=>{
+
+  try{
+
+    if(!connected(req)){
+      return res.status(401).json({
+        ok:false,
+        message:tr(req,"Connecte-toi","Please log in")
+      });
+    }
+
+    const me = Number(req.session.userId);
+
+    const demandes = await all(
+      `
+      SELECT
+        c.id AS conversation_id,
+        c.requested_by,
+        c.created_at,
+        c.updated_at,
+        u.id AS user_id,
+        u.name,
+        u.username,
+        u.profile_photo,
+        (
+          SELECT dm.body
+          FROM direct_messages dm
+          WHERE dm.conversation_id=c.id
+            AND dm.sender_id=c.requested_by
+          ORDER BY dm.id ASC
+          LIMIT 1
+        ) AS first_message,
+        (
+          SELECT dm.created_at
+          FROM direct_messages dm
+          WHERE dm.conversation_id=c.id
+            AND dm.sender_id=c.requested_by
+          ORDER BY dm.id ASC
+          LIMIT 1
+        ) AS message_created_at
+      FROM message_conversations c
+      JOIN users u
+        ON u.id=c.requested_by
+      WHERE c.status='pending'
+        AND c.requested_by IS NOT NULL
+        AND c.requested_by<>?
+        AND (c.user1_id=? OR c.user2_id=?)
+      ORDER BY datetime(c.updated_at) DESC, c.id DESC
+      `,
+      [me,me,me]
+    );
+
+    return res.json({
+      ok:true,
+      requests:demandes.map(row=>({
+        conversation_id:Number(row.conversation_id),
+        requested_by:Number(row.requested_by),
+        user:{
+          id:Number(row.user_id),
+          name:row.name || "",
+          username:row.username || "",
+          profile_photo:row.profile_photo || null
+        },
+        message:String(row.first_message || ""),
+        created_at:row.message_created_at || row.created_at || null
+      }))
+    });
+
+  }catch(error){
+
+    console.error(
+      "Erreur chargement demandes de messages :",
+      error
+    );
+
+    return res.status(500).json({
+      ok:false,
+      message:tr(
+        req,
+        "Impossible de charger les demandes de messages",
+        "Unable to load message requests"
+      )
+    });
+
+  }
+
+});
+
+app.post(
+  "/message-request/:id/accept",
+  messageRequestLimiter,
+  async (req,res)=>{
+
+  try{
+
+    if(!connected(req)){
+      return res.status(401).json({
+        ok:false,
+        message:tr(req,"Connecte-toi","Please log in")
+      });
+    }
+
+    const me = Number(req.session.userId);
+    const conversationId = Number(req.params.id);
+
+    if(
+      !Number.isInteger(conversationId) ||
+      conversationId <= 0
+    ){
+      return res.status(400).json({
+        ok:false,
+        message:tr(req,"Demande invalide","Invalid request")
+      });
+    }
+
+    const conversation = await get(
+      `
+      SELECT *
+      FROM message_conversations
+      WHERE id=?
+      LIMIT 1
+      `,
+      [conversationId]
+    );
+
+    if(!conversation){
+      return res.status(404).json({
+        ok:false,
+        message:tr(req,"Demande introuvable","Request not found")
+      });
+    }
+
+    const estParticipant =
+      Number(conversation.user1_id) === me ||
+      Number(conversation.user2_id) === me;
+
+    const estDestinataire =
+      estParticipant &&
+      Number(conversation.requested_by) !== me;
+
+    if(!estDestinataire){
+      return res.status(403).json({
+        ok:false,
+        message:tr(req,"Accès refusé","Access denied")
+      });
+    }
+
+    if(String(conversation.status) !== "pending"){
+      return res.status(409).json({
+        ok:false,
+        status:String(conversation.status || ""),
+        message:tr(
+          req,
+          "Cette demande a déjà été traitée",
+          "This request has already been processed"
+        )
+      });
+    }
+
+    const result = await run(
+      `
+      UPDATE message_conversations
+      SET status='active',
+          updated_at=datetime('now')
+      WHERE id=?
+        AND status='pending'
+      `,
+      [conversationId]
+    );
+
+    if(Number(result.changes || 0) === 0){
+      return res.status(409).json({
+        ok:false,
+        message:tr(
+          req,
+          "Cette demande a déjà été traitée",
+          "This request has already been processed"
+        )
+      });
+    }
+
+    return res.json({
+      ok:true,
+      conversation_id:conversationId,
+      status:"active",
+      message:tr(
+        req,
+        "Demande de message acceptée",
+        "Message request accepted"
+      )
+    });
+
+  }catch(error){
+
+    console.error(
+      "Erreur acceptation demande de message :",
+      error
+    );
+
+    return res.status(500).json({
+      ok:false,
+      message:tr(
+        req,
+        "Impossible d'accepter la demande",
+        "Unable to accept the request"
+      )
+    });
+
+  }
+
+});
+
+app.post(
+  "/message-request/:id/reject",
+  messageRequestLimiter,
+  async (req,res)=>{
+
+  try{
+
+    if(!connected(req)){
+      return res.status(401).json({
+        ok:false,
+        message:tr(req,"Connecte-toi","Please log in")
+      });
+    }
+
+    const me = Number(req.session.userId);
+    const conversationId = Number(req.params.id);
+
+    if(
+      !Number.isInteger(conversationId) ||
+      conversationId <= 0
+    ){
+      return res.status(400).json({
+        ok:false,
+        message:tr(req,"Demande invalide","Invalid request")
+      });
+    }
+
+    const conversation = await get(
+      `
+      SELECT *
+      FROM message_conversations
+      WHERE id=?
+      LIMIT 1
+      `,
+      [conversationId]
+    );
+
+    if(!conversation){
+      return res.status(404).json({
+        ok:false,
+        message:tr(req,"Demande introuvable","Request not found")
+      });
+    }
+
+    const estParticipant =
+      Number(conversation.user1_id) === me ||
+      Number(conversation.user2_id) === me;
+
+    const estDestinataire =
+      estParticipant &&
+      Number(conversation.requested_by) !== me;
+
+    if(!estDestinataire){
+      return res.status(403).json({
+        ok:false,
+        message:tr(req,"Accès refusé","Access denied")
+      });
+    }
+
+    if(String(conversation.status) !== "pending"){
+      return res.status(409).json({
+        ok:false,
+        status:String(conversation.status || ""),
+        message:tr(
+          req,
+          "Cette demande a déjà été traitée",
+          "This request has already been processed"
+        )
+      });
+    }
+
+    const result = await run(
+      `
+      UPDATE message_conversations
+      SET status='rejected',
+          updated_at=datetime('now')
+      WHERE id=?
+        AND status='pending'
+      `,
+      [conversationId]
+    );
+
+    if(Number(result.changes || 0) === 0){
+      return res.status(409).json({
+        ok:false,
+        message:tr(
+          req,
+          "Cette demande a déjà été traitée",
+          "This request has already been processed"
+        )
+      });
+    }
+
+    return res.json({
+      ok:true,
+      conversation_id:conversationId,
+      status:"rejected",
+      message:tr(
+        req,
+        "Demande de message refusée",
+        "Message request rejected"
+      )
+    });
+
+  }catch(error){
+
+    console.error(
+      "Erreur refus demande de message :",
+      error
+    );
+
+    return res.status(500).json({
+      ok:false,
+      message:tr(
+        req,
+        "Impossible de refuser la demande",
+        "Unable to reject the request"
+      )
+    });
+
+  }
+
+});
+
+
+/* =========================================================
+   MESSAGERIE PRIVÉE — BLOC 4
+   Historique + envoi dans conversation active + lu/non lu.
+
+   Sécurité :
+   - l'utilisateur connecté doit appartenir à la conversation ;
+   - seul le serveur détermine le destinataire ;
+   - seules les conversations active permettent l'envoi normal ;
+   - impossible de lire ou marquer comme lus les messages d'une autre conversation.
+========================================================= */
+
+app.get("/message-conversation/:id/messages", async (req,res)=>{
+
+  try{
+
+    if(!connected(req)){
+      return res.status(401).json({
+        ok:false,
+        message:tr(req,"Connecte-toi","Please log in")
+      });
+    }
+
+    const me = Number(req.session.userId);
+    const conversationId = Number(req.params.id);
+
+    if(
+      !Number.isInteger(conversationId) ||
+      conversationId <= 0
+    ){
+      return res.status(400).json({
+        ok:false,
+        message:tr(req,"Conversation invalide","Invalid conversation")
+      });
+    }
+
+    const conversation = await get(
+      `
+      SELECT
+        id,
+        user1_id,
+        user2_id,
+        status,
+        requested_by,
+        created_at,
+        updated_at
+      FROM message_conversations
+      WHERE id=?
+        AND (user1_id=? OR user2_id=?)
+      LIMIT 1
+      `,
+      [conversationId,me,me]
+    );
+
+    if(!conversation){
+      return res.status(404).json({
+        ok:false,
+        message:tr(req,"Conversation introuvable","Conversation not found")
+      });
+    }
+
+    if(String(conversation.status) !== "active"){
+      return res.status(403).json({
+        ok:false,
+        status:String(conversation.status || ""),
+        message:tr(
+          req,
+          "Cette conversation n'est pas encore active",
+          "This conversation is not active yet"
+        )
+      });
+    }
+
+    const otherUserId =
+      Number(conversation.user1_id) === me
+        ? Number(conversation.user2_id)
+        : Number(conversation.user1_id);
+
+    const otherUser = await get(
+      `
+      SELECT id,name,username,profile_photo
+      FROM users
+      WHERE id=?
+      LIMIT 1
+      `,
+      [otherUserId]
+    );
+
+    const messages = await all(
+      `
+      SELECT
+        id,
+        conversation_id,
+        sender_id,
+        receiver_id,
+        body,
+        seen,
+        created_at
+      FROM direct_messages
+      WHERE conversation_id=?
+        AND (
+          (sender_id=? AND receiver_id=?) OR
+          (sender_id=? AND receiver_id=?)
+        )
+      ORDER BY id ASC
+      LIMIT 1000
+      `,
+      [
+        conversationId,
+        me,
+        otherUserId,
+        otherUserId,
+        me
+      ]
+    );
+
+    return res.json({
+      ok:true,
+      conversation:{
+        id:Number(conversation.id),
+        status:"active",
+        other_user:otherUser
+          ? {
+              id:Number(otherUser.id),
+              name:otherUser.name || "",
+              username:otherUser.username || "",
+              profile_photo:otherUser.profile_photo || null
+            }
+          : null
+      },
+      messages:messages.map(message=>({
+        id:Number(message.id),
+        sender_id:Number(message.sender_id),
+        receiver_id:Number(message.receiver_id),
+        body:String(message.body || ""),
+        seen:Number(message.seen) === 1,
+        is_mine:Number(message.sender_id) === me,
+        created_at:message.created_at || null
+      }))
+    });
+
+  }catch(error){
+
+    console.error(
+      "Erreur historique conversation :",
+      error
+    );
+
+    return res.status(500).json({
+      ok:false,
+      message:tr(
+        req,
+        "Impossible de charger les messages",
+        "Unable to load messages"
+      )
+    });
+
+  }
+
+});
+
+app.post(
+  "/message-conversation/:id/send",
+  messageRequestLimiter,
+  async (req,res)=>{
+
+  try{
+
+    if(!connected(req)){
+      return res.status(401).json({
+        ok:false,
+        message:tr(req,"Connecte-toi","Please log in")
+      });
+    }
+
+    const me = Number(req.session.userId);
+    const conversationId = Number(req.params.id);
+    const body =
+      String(req.body.message || "")
+        .trim()
+        .replace(/\r\n/g,"\n");
+
+    if(
+      !Number.isInteger(conversationId) ||
+      conversationId <= 0
+    ){
+      return res.status(400).json({
+        ok:false,
+        message:tr(req,"Conversation invalide","Invalid conversation")
+      });
+    }
+
+    if(!body){
+      return res.status(400).json({
+        ok:false,
+        message:tr(req,"Écris un message","Write a message")
+      });
+    }
+
+    if(body.length > 1000){
+      return res.status(400).json({
+        ok:false,
+        message:tr(
+          req,
+          "Le message ne doit pas dépasser 1000 caractères",
+          "The message must not exceed 1000 characters"
+        )
+      });
+    }
+
+    const conversation = await get(
+      `
+      SELECT *
+      FROM message_conversations
+      WHERE id=?
+        AND (user1_id=? OR user2_id=?)
+      LIMIT 1
+      `,
+      [conversationId,me,me]
+    );
+
+    if(!conversation){
+      return res.status(404).json({
+        ok:false,
+        message:tr(req,"Conversation introuvable","Conversation not found")
+      });
+    }
+
+    if(String(conversation.status) !== "active"){
+      return res.status(403).json({
+        ok:false,
+        status:String(conversation.status || ""),
+        message:tr(
+          req,
+          "Tu ne peux pas encore envoyer de nouveau message dans cette conversation",
+          "You cannot send another message in this conversation yet"
+        )
+      });
+    }
+
+    const receiverId =
+      Number(conversation.user1_id) === me
+        ? Number(conversation.user2_id)
+        : Number(conversation.user1_id);
+
+    const receiver = await get(
+      `SELECT id FROM users WHERE id=? LIMIT 1`,
+      [receiverId]
+    );
+
+    if(!receiver){
+      return res.status(404).json({
+        ok:false,
+        message:tr(req,"Destinataire introuvable","Recipient not found")
+      });
+    }
+
+    const resultat = await executerTransaction(
+      async transaction => {
+
+        const verification = await transaction.get(
+          `
+          SELECT id,status,user1_id,user2_id
+          FROM message_conversations
+          WHERE id=?
+            AND status='active'
+            AND (user1_id=? OR user2_id=?)
+          LIMIT 1
+          `,
+          [conversationId,me,me]
+        );
+
+        if(!verification){
+          const error = new Error("CONVERSATION_NOT_ACTIVE");
+          error.code = "CONVERSATION_NOT_ACTIVE";
+          throw error;
+        }
+
+        const insertion = await transaction.run(
+          `
+          INSERT INTO direct_messages(
+            conversation_id,
+            sender_id,
+            receiver_id,
+            body,
+            seen,
+            created_at
+          )
+          VALUES(?,?,?,?,0,datetime('now'))
+          `,
+          [conversationId,me,receiverId,body]
+        );
+
+        await transaction.run(
+          `
+          UPDATE message_conversations
+          SET updated_at=datetime('now')
+          WHERE id=?
+          `,
+          [conversationId]
+        );
+
+        return Number(insertion.lastID);
+
+      }
+    );
+
+    return res.status(201).json({
+      ok:true,
+      conversation_id:conversationId,
+      message:{
+        id:resultat,
+        sender_id:me,
+        receiver_id:receiverId,
+        body,
+        seen:false
+      }
+    });
+
+  }catch(error){
+
+    if(error.code === "CONVERSATION_NOT_ACTIVE"){
+      return res.status(409).json({
+        ok:false,
+        message:tr(
+          req,
+          "La conversation n'est plus active",
+          "The conversation is no longer active"
+        )
+      });
+    }
+
+    console.error(
+      "Erreur envoi message privé :",
+      error
+    );
+
+    return res.status(500).json({
+      ok:false,
+      message:tr(
+        req,
+        "Impossible d'envoyer le message",
+        "Unable to send the message"
+      )
+    });
+
+  }
+
+});
+
+app.post("/message-conversation/:id/read", async (req,res)=>{
+
+  try{
+
+    if(!connected(req)){
+      return res.status(401).json({
+        ok:false,
+        message:tr(req,"Connecte-toi","Please log in")
+      });
+    }
+
+    const me = Number(req.session.userId);
+    const conversationId = Number(req.params.id);
+
+    if(
+      !Number.isInteger(conversationId) ||
+      conversationId <= 0
+    ){
+      return res.status(400).json({
+        ok:false,
+        message:tr(req,"Conversation invalide","Invalid conversation")
+      });
+    }
+
+    const conversation = await get(
+      `
+      SELECT id
+      FROM message_conversations
+      WHERE id=?
+        AND status='active'
+        AND (user1_id=? OR user2_id=?)
+      LIMIT 1
+      `,
+      [conversationId,me,me]
+    );
+
+    if(!conversation){
+      return res.status(404).json({
+        ok:false,
+        message:tr(req,"Conversation introuvable","Conversation not found")
+      });
+    }
+
+    const result = await run(
+      `
+      UPDATE direct_messages
+      SET seen=1
+      WHERE conversation_id=?
+        AND receiver_id=?
+        AND sender_id<>?
+        AND seen=0
+      `,
+      [conversationId,me,me]
+    );
+
+    return res.json({
+      ok:true,
+      conversation_id:conversationId,
+      updated:Number(result.changes || 0)
+    });
+
+  }catch(error){
+
+    console.error(
+      "Erreur lecture messages privés :",
+      error
+    );
+
+    return res.status(500).json({
+      ok:false,
+      message:tr(
+        req,
+        "Impossible de marquer les messages comme lus",
+        "Unable to mark messages as read"
+      )
+    });
+
+  }
+
+});
+
+
+/* =========================================================
+   MESSAGERIE PRIVÉE — BLOC 5
+   Liste des conversations actives + dernier message + non lus.
+
+   Sécurité :
+   - l'utilisateur connecté est toujours pris depuis la session ;
+   - seules ses propres conversations actives sont retournées ;
+   - le nombre de non lus compte uniquement les messages dont il est destinataire.
+========================================================= */
+
+app.get("/message-conversations", async (req,res)=>{
+
+  try{
+
+    if(!connected(req)){
+      return res.status(401).json({
+        ok:false,
+        message:tr(req,"Connecte-toi","Please log in")
+      });
+    }
+
+    const me = Number(req.session.userId);
+
+    const conversations = await all(
+      `
+      SELECT
+        c.id,
+        c.user1_id,
+        c.user2_id,
+        c.status,
+        c.updated_at,
+
+        u.id AS other_user_id,
+        u.name AS other_name,
+        u.username AS other_username,
+        u.profile_photo AS other_profile_photo,
+
+        (
+          SELECT dm.body
+          FROM direct_messages dm
+          WHERE dm.conversation_id=c.id
+          ORDER BY dm.id DESC
+          LIMIT 1
+        ) AS last_message,
+
+        (
+          SELECT dm.sender_id
+          FROM direct_messages dm
+          WHERE dm.conversation_id=c.id
+          ORDER BY dm.id DESC
+          LIMIT 1
+        ) AS last_sender_id,
+
+        (
+          SELECT dm.created_at
+          FROM direct_messages dm
+          WHERE dm.conversation_id=c.id
+          ORDER BY dm.id DESC
+          LIMIT 1
+        ) AS last_message_at,
+
+        (
+          SELECT COUNT(*)
+          FROM direct_messages dm
+          WHERE dm.conversation_id=c.id
+            AND dm.receiver_id=?
+            AND dm.seen=0
+        ) AS unread_count
+
+      FROM message_conversations c
+
+      JOIN users u
+        ON u.id = CASE
+          WHEN c.user1_id=? THEN c.user2_id
+          ELSE c.user1_id
+        END
+
+      WHERE c.status='active'
+        AND (c.user1_id=? OR c.user2_id=?)
+
+      ORDER BY
+        COALESCE(
+          (
+            SELECT dm.created_at
+            FROM direct_messages dm
+            WHERE dm.conversation_id=c.id
+            ORDER BY dm.id DESC
+            LIMIT 1
+          ),
+          c.updated_at
+        ) DESC,
+        c.id DESC
+      `,
+      [me,me,me,me]
+    );
+
+    const totalUnread = conversations.reduce(
+      (total,conversation)=>
+        total + Number(conversation.unread_count || 0),
+      0
+    );
+
+    return res.json({
+      ok:true,
+      unread_count:totalUnread,
+      conversations:conversations.map(conversation=>({
+        id:Number(conversation.id),
+        status:"active",
+        other_user:{
+          id:Number(conversation.other_user_id),
+          name:conversation.other_name || "",
+          username:conversation.other_username || "",
+          profile_photo:conversation.other_profile_photo || null
+        },
+        last_message:conversation.last_message !== null
+          ? String(conversation.last_message || "")
+          : "",
+        last_sender_id:conversation.last_sender_id !== null
+          ? Number(conversation.last_sender_id)
+          : null,
+        last_message_is_mine:conversation.last_sender_id !== null
+          ? Number(conversation.last_sender_id) === me
+          : false,
+        last_message_at:conversation.last_message_at || null,
+        unread_count:Number(conversation.unread_count || 0),
+        updated_at:conversation.updated_at || null
+      }))
+    });
+
+  }catch(error){
+
+    console.error(
+      "Erreur liste conversations privées :",
+      error
+    );
+
+    return res.status(500).json({
+      ok:false,
+      message:tr(
+        req,
+        "Impossible de charger les conversations",
+        "Unable to load conversations"
+      )
+    });
+
+  }
+
+});
+
+app.get("/messages-unread-count", async (req,res)=>{
+
+  try{
+
+    if(!connected(req)){
+      return res.status(401).json({
+        ok:false,
+        count:0,
+        message:tr(req,"Connecte-toi","Please log in")
+      });
+    }
+
+    const me = Number(req.session.userId);
+
+    const row = await get(
+      `
+      SELECT COUNT(*) AS total
+      FROM direct_messages dm
+      JOIN message_conversations c
+        ON c.id=dm.conversation_id
+      WHERE dm.receiver_id=?
+        AND dm.seen=0
+        AND c.status='active'
+        AND (c.user1_id=? OR c.user2_id=?)
+      `,
+      [me,me,me]
+    );
+
+    return res.json({
+      ok:true,
+      count:Number(row?.total || 0)
+    });
+
+  }catch(error){
+
+    console.error(
+      "Erreur compteur messages non lus :",
+      error
+    );
+
+    return res.status(500).json({
+      ok:false,
+      count:0,
+      message:tr(
+        req,
+        "Impossible de charger le compteur des messages",
+        "Unable to load the unread message count"
+      )
+    });
+
+  }
 
 });
 

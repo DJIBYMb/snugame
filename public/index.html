@@ -4389,6 +4389,268 @@ body.navigation-restoring section{
   transition:none !important;
 }
 
+
+/* ===============================
+   CENTRE NOTIFICATIONS + MESSAGES
+================================ */
+.messages-main-tabs,
+.messages-sub-tabs{
+  display:flex;
+  gap:8px;
+  margin:14px 0;
+}
+
+.messages-tab,
+.messages-sub-tab{
+  flex:1;
+  position:relative;
+  border:1px solid rgba(255,255,255,.12);
+  background:rgba(255,255,255,.05);
+  color:white;
+  border-radius:12px;
+  padding:11px 10px;
+  font-weight:700;
+}
+
+.messages-tab.active,
+.messages-sub-tab.active{
+  background:rgba(59,130,246,.22);
+  border-color:rgba(96,165,250,.65);
+}
+
+.messages-tab-badge{
+  min-width:18px;
+  height:18px;
+  padding:0 5px;
+  border-radius:999px;
+  background:#ef4444;
+  color:white;
+  font-size:11px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  margin-left:5px;
+  vertical-align:middle;
+}
+
+.message-list-item{
+  display:flex;
+  align-items:center;
+  gap:11px;
+  padding:12px 4px;
+  border-bottom:1px solid rgba(255,255,255,.08);
+}
+
+.message-list-avatar{
+  width:48px;
+  height:48px;
+  border-radius:50%;
+  object-fit:cover;
+  flex:0 0 48px;
+}
+
+.message-list-body{
+  flex:1;
+  min-width:0;
+}
+
+.message-list-name{
+  font-weight:800;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+.message-list-username,
+.message-list-preview{
+  font-size:13px;
+  opacity:.75;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+.message-unread-badge{
+  min-width:22px;
+  height:22px;
+  padding:0 6px;
+  border-radius:999px;
+  background:#2563eb;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:12px;
+  font-weight:800;
+}
+
+.message-request-actions{
+  display:flex;
+  gap:7px;
+  margin-top:8px;
+}
+
+.message-request-actions button{
+  width:auto;
+  min-width:92px;
+  padding:8px 10px;
+  border-radius:10px;
+}
+
+
+/* =========================================================
+   MESSAGERIE PRIVÉE — BLOC 8
+========================================================= */
+.private-chat-card{
+  width:min(720px,calc(100% - 20px));
+  margin:10px auto;
+  height:calc(100dvh - 20px);
+  min-height:520px;
+  display:flex;
+  flex-direction:column;
+  overflow:hidden;
+}
+.private-chat-header{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:8px 4px 14px;
+  border-bottom:1px solid rgba(255,255,255,.1);
+}
+.private-chat-header .back-btn{
+  position:static!important;
+  margin:0!important;
+  flex:0 0 auto;
+}
+.private-chat-avatar{
+  width:44px;
+  height:44px;
+  border-radius:50%;
+  object-fit:cover;
+  background:rgba(255,255,255,.08);
+}
+.private-chat-user{
+  min-width:0;
+  flex:1;
+}
+.private-chat-name{
+  font-weight:800;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.private-chat-username{
+  font-size:12px;
+  opacity:.7;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.private-chat-messages{
+  flex:1;
+  min-height:0;
+  overflow-y:auto;
+  padding:16px 4px;
+  display:flex;
+  flex-direction:column;
+  gap:9px;
+  scroll-behavior:smooth;
+}
+.private-message-row{
+  display:flex;
+  width:100%;
+}
+.private-message-row.mine{
+  justify-content:flex-end;
+}
+.private-message-row.theirs{
+  justify-content:flex-start;
+}
+.private-message-bubble{
+  max-width:min(78%,560px);
+  padding:10px 12px 7px;
+  border-radius:17px;
+  overflow-wrap:anywhere;
+  white-space:pre-wrap;
+  line-height:1.35;
+}
+.private-message-row.mine .private-message-bubble{
+  background:#2563eb;
+  color:white;
+  border-bottom-right-radius:5px;
+}
+.private-message-row.theirs .private-message-bubble{
+  background:rgba(255,255,255,.09);
+  color:white;
+  border-bottom-left-radius:5px;
+}
+.private-message-meta{
+  margin-top:4px;
+  font-size:10px;
+  opacity:.68;
+  text-align:right;
+}
+.private-chat-compose{
+  display:flex;
+  align-items:flex-end;
+  gap:8px;
+  padding-top:10px;
+  border-top:1px solid rgba(255,255,255,.1);
+}
+.private-chat-compose textarea{
+  flex:1;
+  min-height:44px;
+  max-height:130px;
+  resize:none;
+  border-radius:18px;
+  padding:11px 13px;
+}
+.private-chat-send{
+  width:46px;
+  height:46px;
+  min-width:46px;
+  border-radius:50%!important;
+  display:grid;
+  place-items:center;
+  padding:0!important;
+}
+.message-list-item[data-conversation-id]{
+  cursor:pointer;
+}
+.message-list-item[data-conversation-id]:active{
+  transform:scale(.995);
+}
+.message-start-overlay{
+  position:fixed;
+  inset:0;
+  z-index:100000;
+  background:rgba(0,0,0,.72);
+  display:flex;
+  align-items:flex-end;
+  justify-content:center;
+  padding:12px;
+}
+.message-start-sheet{
+  width:min(620px,100%);
+  background:#101827;
+  border:1px solid rgba(255,255,255,.12);
+  border-radius:20px 20px 12px 12px;
+  padding:16px;
+  box-shadow:0 -14px 50px rgba(0,0,0,.35);
+}
+.message-start-sheet textarea{
+  width:100%;
+  min-height:110px;
+  resize:none;
+  margin:10px 0;
+}
+.message-start-actions{
+  display:flex;
+  gap:8px;
+}
+.message-start-actions button{
+  flex:1;
+}
+
 </style>
 
 <link
@@ -4993,10 +5255,103 @@ onclick="retourPage()">
 
 <h2 data-i18n="notifications">🔔 Notifications</h2>
 
-<div id="notificationsList"></div>
+<div class="messages-main-tabs">
+  <button
+    id="btnCentreNotifications"
+    class="messages-tab active"
+    onclick="afficherOngletCentreNotifications('notifications')">
+    <i class="fa-solid fa-bell"></i>
+    Notifications
+  </button>
+
+  <button
+    id="btnCentreMessages"
+    class="messages-tab"
+    onclick="afficherOngletCentreNotifications('messages')">
+    <i class="fa-solid fa-message"></i>
+    Messages
+    <span id="badgeMessagesCentre" class="messages-tab-badge hidden">0</span>
+  </button>
+</div>
+
+<div id="centreNotificationsNormal">
+  <div id="notificationsList"></div>
+</div>
+
+<div id="centreMessages" class="hidden">
+
+  <div class="messages-sub-tabs">
+    <button
+      id="btnOngletConversations"
+      class="messages-sub-tab active"
+      onclick="afficherOngletMessagerie('conversations')">
+      Conversations
+    </button>
+
+    <button
+      id="btnOngletDemandes"
+      class="messages-sub-tab"
+      onclick="afficherOngletMessagerie('demandes')">
+      Demandes
+      <span id="badgeDemandesMessages" class="messages-tab-badge hidden">0</span>
+    </button>
+  </div>
+
+  <div id="messagesConversationsList"></div>
+  <div id="messagesDemandesList" class="hidden"></div>
 
 </div>
 
+</div>
+
+</section>
+
+
+
+<section id="pageConversationPrivee" class="hidden">
+  <div class="card private-chat-card">
+
+    <div class="private-chat-header">
+      <button
+        class="back-btn"
+        onclick="retourDepuisConversationPrivee()">
+        ‹
+      </button>
+
+      <img
+        id="privateChatAvatar"
+        class="private-chat-avatar"
+        src="/logo.png">
+
+      <div class="private-chat-user">
+        <div id="privateChatName" class="private-chat-name">Conversation</div>
+        <div id="privateChatUsername" class="private-chat-username"></div>
+      </div>
+    </div>
+
+    <div
+      id="privateChatMessages"
+      class="private-chat-messages">
+    </div>
+
+    <div class="private-chat-compose">
+      <textarea
+        id="privateChatInput"
+        maxlength="1000"
+        rows="1"
+        placeholder="Écrire un message..."
+        onkeydown="gererToucheEnvoiMessage(event)"></textarea>
+
+      <button
+        id="privateChatSendBtn"
+        class="private-chat-send"
+        onclick="envoyerMessageConversationPrivee()"
+        aria-label="Envoyer">
+        <i class="fa-solid fa-paper-plane"></i>
+      </button>
+    </div>
+
+  </div>
 </section>
 
 <section
@@ -9187,6 +9542,21 @@ color:white!important;
   }
 </button>
 
+    <button
+      type="button"
+      data-public-message-user-id="${userId}"
+      onclick="ouvrirMessageDepuisProfilPublic(${userId}, event)"
+      disabled
+      aria-label="Message"
+      title="Vérification de la messagerie..."
+      style="
+        opacity:.55;
+        cursor:not-allowed;
+      "
+    >
+      <i class="fa-solid fa-comment"></i>
+    </button>
+
     <button onclick="ouvrirCarteJoueurPublic(${userId})">
       <i class="fa-solid fa-id-card"></i>
     </button>
@@ -9248,6 +9618,10 @@ color:white!important;
   </div>
 
 `;
+
+  await actualiserBoutonMessageProfilPublic(
+    userId
+  );
 }
 
 async function retourDepuisVideoPublique(){
@@ -12134,21 +12508,49 @@ await chargerGroupesTournoisProfil();
 }
 
 
+let totalMessagesNonLusGlobal = 0;
+let totalDemandesMessagesGlobal = 0;
+let intervalActualisationMessagerie = null;
+
+function actualiserBadgePrincipalNotifications(
+  notificationsNonLues = 0
+){
+
+  const total =
+    Math.max(0, Number(notificationsNonLues) || 0) +
+    Math.max(0, Number(totalMessagesNonLusGlobal) || 0) +
+    Math.max(0, Number(totalDemandesMessagesGlobal) || 0);
+
+  if(total > 0){
+    notifBadge.textContent = String(total);
+    notifBadge.classList.remove("hidden");
+  }else{
+    notifBadge.textContent = "0";
+    notifBadge.classList.add("hidden");
+  }
+
+}
+
 async function chargerBadgeNotifications(){
 
-  const data =
-    await get("/notifications-unread-count");
+  let notificationsNonLues = 0;
 
-  if(data.count > 0){
+  try{
+    const data =
+      await get("/notifications-unread-count");
 
-    notifBadge.textContent = data.count;
-    notifBadge.classList.remove("hidden");
-
-  }else{
-
-    notifBadge.classList.add("hidden");
-
+    notificationsNonLues =
+      Math.max(0, Number(data?.count) || 0);
+  }catch(error){
+    console.error(
+      "Erreur badge notifications :",
+      error
+    );
   }
+
+  actualiserBadgePrincipalNotifications(
+    notificationsNonLues
+  );
 
 }
 
@@ -16200,6 +16602,1143 @@ async function ouvrirProfilJoueur(userId){
 
 }
 
+function afficherOngletCentreNotifications(type){
+
+  const afficherMessages =
+    type === "messages";
+
+  document
+    .getElementById("centreNotificationsNormal")
+    ?.classList.toggle(
+      "hidden",
+      afficherMessages
+    );
+
+  document
+    .getElementById("centreMessages")
+    ?.classList.toggle(
+      "hidden",
+      !afficherMessages
+    );
+
+  document
+    .getElementById("btnCentreNotifications")
+    ?.classList.toggle(
+      "active",
+      !afficherMessages
+    );
+
+  document
+    .getElementById("btnCentreMessages")
+    ?.classList.toggle(
+      "active",
+      afficherMessages
+    );
+
+  if(afficherMessages){
+    chargerCentreMessages();
+  }
+
+}
+
+function afficherOngletMessagerie(type){
+
+  const afficherDemandes =
+    type === "demandes";
+
+  document
+    .getElementById("messagesConversationsList")
+    ?.classList.toggle(
+      "hidden",
+      afficherDemandes
+    );
+
+  document
+    .getElementById("messagesDemandesList")
+    ?.classList.toggle(
+      "hidden",
+      !afficherDemandes
+    );
+
+  document
+    .getElementById("btnOngletConversations")
+    ?.classList.toggle(
+      "active",
+      !afficherDemandes
+    );
+
+  document
+    .getElementById("btnOngletDemandes")
+    ?.classList.toggle(
+      "active",
+      afficherDemandes
+    );
+
+}
+
+function rafraichirBadgesCentreMessages(){
+
+  const badgeCentre =
+    document.getElementById(
+      "badgeMessagesCentre"
+    );
+
+  const badgeDemandes =
+    document.getElementById(
+      "badgeDemandesMessages"
+    );
+
+  const totalCentre =
+    Math.max(0, Number(totalMessagesNonLusGlobal) || 0) +
+    Math.max(0, Number(totalDemandesMessagesGlobal) || 0);
+
+  if(badgeCentre){
+    badgeCentre.textContent = String(totalCentre);
+    badgeCentre.classList.toggle(
+      "hidden",
+      totalCentre <= 0
+    );
+  }
+
+  if(badgeDemandes){
+    const demandes =
+      Math.max(0, Number(totalDemandesMessagesGlobal) || 0);
+
+    badgeDemandes.textContent = String(demandes);
+    badgeDemandes.classList.toggle(
+      "hidden",
+      demandes <= 0
+    );
+  }
+
+}
+
+function mettreAJourBadgeMessagesCentre(total){
+  totalMessagesNonLusGlobal =
+    Math.max(0, Number(total) || 0);
+  rafraichirBadgesCentreMessages();
+}
+
+function mettreAJourBadgeDemandesMessages(total){
+  totalDemandesMessagesGlobal =
+    Math.max(0, Number(total) || 0);
+  rafraichirBadgesCentreMessages();
+}
+
+function texteDateMessage(dateValue){
+
+  if(!dateValue) return "";
+
+  const date = new Date(
+    String(dateValue).replace(" ", "T") +
+    (String(dateValue).includes("Z") ? "" : "Z")
+  );
+
+  if(Number.isNaN(date.getTime())){
+    return "";
+  }
+
+  return date.toLocaleString(
+    langueApp === "en" ? "en-GB" : "fr-FR",
+    {
+      day:"2-digit",
+      month:"2-digit",
+      hour:"2-digit",
+      minute:"2-digit"
+    }
+  );
+
+}
+
+async function chargerConversationsMessages(){
+
+  const box =
+    document.getElementById(
+      "messagesConversationsList"
+    );
+
+  if(!box) return;
+
+  box.innerHTML =
+    '<p class="small">Chargement des conversations...</p>';
+
+  try{
+
+    const data =
+      await get("/message-conversations");
+
+    if(!data || data.ok !== true){
+      box.innerHTML =
+        '<p class="small">Impossible de charger les conversations.</p>';
+      mettreAJourBadgeMessagesCentre(0);
+      return;
+    }
+
+    const conversations =
+      Array.isArray(data.conversations)
+        ? data.conversations
+        : [];
+
+    mettreAJourBadgeMessagesCentre(
+      data.unread_count || 0
+    );
+
+    if(conversations.length === 0){
+      box.innerHTML =
+        '<p class="small">Aucune conversation pour le moment.</p>';
+      return;
+    }
+
+    box.innerHTML =
+      conversations.map(c=>{
+
+        const user =
+          c.other_user || {};
+
+        const nonLus =
+          Math.max(
+            0,
+            Number(c.unread_count) || 0
+          );
+
+        const prefixe =
+          c.last_message_is_mine
+            ? "Vous : "
+            : "";
+
+        return `
+          <div
+            class="message-list-item"
+            data-conversation-id="${Number(c.id) || 0}"
+            onclick="ouvrirConversationPrivee(${Number(c.id) || 0})"
+          >
+            <img
+              class="message-list-avatar"
+              src="${escapeHtml(user.profile_photo || "/logo.png")}">
+
+            <div class="message-list-body">
+              <div class="message-list-name">
+                ${escapeHtml(user.name || "Joueur")}
+              </div>
+
+              <div class="message-list-username">
+                @${escapeHtml(user.username || "")}
+              </div>
+
+              <div class="message-list-preview">
+                ${escapeHtml(prefixe + (c.last_message || "Aucun message"))}
+              </div>
+
+              <div class="message-list-username">
+                ${escapeHtml(texteDateMessage(c.last_message_at || c.updated_at))}
+              </div>
+            </div>
+
+            ${
+              nonLus > 0
+                ? `<span class="message-unread-badge">${nonLus}</span>`
+                : ""
+            }
+          </div>
+        `;
+
+      }).join("");
+
+  }catch(error){
+
+    console.error(
+      "Erreur conversations messages :",
+      error
+    );
+
+    box.innerHTML =
+      '<p class="small">Impossible de charger les conversations.</p>';
+
+  }
+
+}
+
+async function chargerDemandesMessages(){
+
+  const box =
+    document.getElementById(
+      "messagesDemandesList"
+    );
+
+  if(!box) return;
+
+  box.innerHTML =
+    '<p class="small">Chargement des demandes...</p>';
+
+  try{
+
+    const data =
+      await get("/message-requests");
+
+    if(!data || data.ok !== true){
+      box.innerHTML =
+        '<p class="small">Impossible de charger les demandes.</p>';
+      mettreAJourBadgeDemandesMessages(0);
+      return;
+    }
+
+    const demandes =
+      Array.isArray(data.requests)
+        ? data.requests
+        : [];
+
+    mettreAJourBadgeDemandesMessages(
+      demandes.length
+    );
+
+    if(demandes.length === 0){
+      box.innerHTML =
+        '<p class="small">Aucune demande de message.</p>';
+      return;
+    }
+
+    box.innerHTML =
+      demandes.map(d=>{
+
+        const user = d.user || {};
+        const conversationId =
+          Number(d.conversation_id) || 0;
+
+        return `
+          <div class="message-list-item">
+            <img
+              class="message-list-avatar"
+              src="${escapeHtml(user.profile_photo || "/logo.png")}">
+
+            <div class="message-list-body">
+              <div class="message-list-name">
+                ${escapeHtml(user.name || "Joueur")}
+              </div>
+
+              <div class="message-list-username">
+                @${escapeHtml(user.username || "")}
+              </div>
+
+              <div class="message-list-preview">
+                ${escapeHtml(d.message || "")}
+              </div>
+
+              <div class="message-list-username">
+                ${escapeHtml(texteDateMessage(d.created_at))}
+              </div>
+
+              <div class="message-request-actions">
+                <button
+                  onclick="accepterDemandeMessage(${conversationId}, event)">
+                  Accepter
+                </button>
+
+                <button
+                  class="secondary"
+                  onclick="refuserDemandeMessage(${conversationId}, event)">
+                  Refuser
+                </button>
+              </div>
+            </div>
+          </div>
+        `;
+
+      }).join("");
+
+  }catch(error){
+
+    console.error(
+      "Erreur demandes messages :",
+      error
+    );
+
+    box.innerHTML =
+      '<p class="small">Impossible de charger les demandes.</p>';
+
+  }
+
+}
+
+async function chargerCentreMessages(){
+
+  await Promise.all([
+    chargerConversationsMessages(),
+    chargerDemandesMessages()
+  ]);
+
+}
+
+async function accepterDemandeMessage(
+  conversationId,
+  event
+){
+
+  event?.stopPropagation();
+
+  const id = Number(conversationId);
+
+  if(!Number.isInteger(id) || id <= 0){
+    return;
+  }
+
+  const btn = event?.currentTarget;
+
+  if(btn?.dataset.loading === "1"){
+    return;
+  }
+
+  if(btn){
+    btn.dataset.loading = "1";
+    btn.disabled = true;
+  }
+
+  try{
+
+    const result = await post(
+      `/message-request/${id}/accept`
+    );
+
+    if(!result || result.ok !== true){
+      showNotif(
+        result?.message ||
+        "Impossible d'accepter la demande."
+      );
+      return;
+    }
+
+    showNotif(
+      result.message ||
+      "Demande acceptée."
+    );
+
+    await chargerCentreMessages();
+    afficherOngletMessagerie("conversations");
+
+  }catch(error){
+
+    console.error(
+      "Erreur acceptation demande message :",
+      error
+    );
+
+    showNotif(
+      "Impossible d'accepter la demande."
+    );
+
+  }finally{
+
+    if(btn){
+      btn.dataset.loading = "0";
+      btn.disabled = false;
+    }
+
+  }
+
+}
+
+async function refuserDemandeMessage(
+  conversationId,
+  event
+){
+
+  event?.stopPropagation();
+
+  const id = Number(conversationId);
+
+  if(!Number.isInteger(id) || id <= 0){
+    return;
+  }
+
+  const btn = event?.currentTarget;
+
+  if(btn?.dataset.loading === "1"){
+    return;
+  }
+
+  if(btn){
+    btn.dataset.loading = "1";
+    btn.disabled = true;
+  }
+
+  try{
+
+    const result = await post(
+      `/message-request/${id}/reject`
+    );
+
+    if(!result || result.ok !== true){
+      showNotif(
+        result?.message ||
+        "Impossible de refuser la demande."
+      );
+      return;
+    }
+
+    showNotif(
+      result.message ||
+      "Demande refusée."
+    );
+
+    await chargerCentreMessages();
+    afficherOngletMessagerie("demandes");
+
+  }catch(error){
+
+    console.error(
+      "Erreur refus demande message :",
+      error
+    );
+
+    showNotif(
+      "Impossible de refuser la demande."
+    );
+
+  }finally{
+
+    if(btn){
+      btn.dataset.loading = "0";
+      btn.disabled = false;
+    }
+
+  }
+
+}
+
+
+
+/* =========================================================
+   MESSAGERIE PRIVÉE — BLOC 8
+   Conversation active + bulles + envoi + lecture.
+========================================================= */
+
+let conversationPriveeId = null;
+let conversationPriveeChargement = false;
+let conversationPriveeEnvoi = false;
+
+function afficherMessagesConversationPrivee(messages){
+
+  const box =
+    document.getElementById("privateChatMessages");
+
+  if(!box) return;
+
+  const liste =
+    Array.isArray(messages)
+      ? messages
+      : [];
+
+  if(liste.length === 0){
+    box.innerHTML =
+      '<p class="small" style="text-align:center;">Aucun message.</p>';
+    return;
+  }
+
+  box.innerHTML =
+    liste.map(m=>{
+
+      const mine =
+        m.is_mine === true;
+
+      const heure =
+        texteDateMessage(m.created_at);
+
+      return `
+        <div class="private-message-row ${mine ? "mine" : "theirs"}">
+          <div class="private-message-bubble">
+            <div>${escapeHtml(m.body || "")}</div>
+            <div class="private-message-meta">
+              ${escapeHtml(heure)}${mine && m.seen ? " · Lu" : ""}
+            </div>
+          </div>
+        </div>
+      `;
+
+    }).join("");
+
+  requestAnimationFrame(()=>{
+    box.scrollTop = box.scrollHeight;
+  });
+
+}
+
+async function marquerConversationPriveeLue(
+  conversationId
+){
+
+  const id = Number(conversationId);
+
+  if(!Number.isInteger(id) || id <= 0){
+    return;
+  }
+
+  try{
+
+    await post(
+      `/message-conversation/${id}/read`
+    );
+
+    await chargerBadgeMessagesCentreGlobal();
+
+  }catch(error){
+
+    console.error(
+      "Erreur marquage conversation lue :",
+      error
+    );
+
+  }
+
+}
+
+async function chargerConversationPrivee(
+  conversationId,
+  options = {}
+){
+
+  const id = Number(conversationId);
+
+  if(
+    !Number.isInteger(id) ||
+    id <= 0 ||
+    conversationPriveeChargement
+  ){
+    return false;
+  }
+
+  conversationPriveeChargement = true;
+
+  const box =
+    document.getElementById("privateChatMessages");
+
+  if(box && options.silent !== true){
+    box.innerHTML =
+      '<p class="small" style="text-align:center;">Chargement des messages...</p>';
+  }
+
+  try{
+
+    const data =
+      await get(
+        `/message-conversation/${id}/messages`
+      );
+
+    if(!data || data.ok !== true){
+
+      if(box){
+        box.innerHTML = `
+          <p class="small" style="text-align:center;">
+            ${escapeHtml(data?.message || "Impossible de charger la conversation.")}
+          </p>
+        `;
+      }
+
+      return false;
+    }
+
+    conversationPriveeId = id;
+
+    const user =
+      data.conversation?.other_user || {};
+
+    const avatar =
+      document.getElementById("privateChatAvatar");
+
+    const name =
+      document.getElementById("privateChatName");
+
+    const username =
+      document.getElementById("privateChatUsername");
+
+    if(avatar){
+      avatar.src =
+        user.profile_photo || "/logo.png";
+      avatar.onclick = ()=>{
+        if(Number(user.id) > 0){
+          ouvrirProfilPublic(Number(user.id));
+        }
+      };
+      avatar.style.cursor =
+        Number(user.id) > 0
+          ? "pointer"
+          : "default";
+    }
+
+    if(name){
+      name.textContent =
+        user.name || "Joueur";
+    }
+
+    if(username){
+      username.textContent =
+        user.username
+          ? `@${user.username}`
+          : "";
+    }
+
+    afficherMessagesConversationPrivee(
+      data.messages
+    );
+
+    await marquerConversationPriveeLue(id);
+
+    return true;
+
+  }catch(error){
+
+    console.error(
+      "Erreur chargement conversation privée :",
+      error
+    );
+
+    if(box){
+      box.innerHTML =
+        '<p class="small" style="text-align:center;">Impossible de charger la conversation.</p>';
+    }
+
+    return false;
+
+  }finally{
+
+    conversationPriveeChargement = false;
+
+  }
+
+}
+
+async function ouvrirConversationPrivee(
+  conversationId,
+  options = {}
+){
+
+  const id = Number(conversationId);
+
+  if(!Number.isInteger(id) || id <= 0){
+    showNotif("Conversation invalide.");
+    return;
+  }
+
+  if(options.skipHistory === true){
+    setPage("pageConversationPrivee", false);
+  }else{
+    setPage("pageConversationPrivee");
+  }
+
+  document.body.classList.remove("video-mode");
+  document.querySelector("header")?.classList.add("hidden");
+  document.querySelector(".bottom-nav")?.classList.add("hidden");
+  document.getElementById("messageCard")?.classList.add("hidden");
+
+  const input =
+    document.getElementById("privateChatInput");
+
+  if(input){
+    input.value = "";
+  }
+
+  const ok =
+    await chargerConversationPrivee(id);
+
+  if(!ok){
+    return;
+  }
+
+  setTimeout(()=>{
+    document
+      .getElementById("privateChatInput")
+      ?.focus();
+  },100);
+
+}
+
+async function retourDepuisConversationPrivee(){
+
+  conversationPriveeId = null;
+
+  await retourPage();
+
+  if(currentPageName === "pageNotifications"){
+    afficherOngletCentreNotifications("messages");
+    afficherOngletMessagerie("conversations");
+    await chargerCentreMessages();
+  }
+
+}
+
+function gererToucheEnvoiMessage(event){
+
+  if(
+    event.key === "Enter" &&
+    !event.shiftKey
+  ){
+    event.preventDefault();
+    envoyerMessageConversationPrivee();
+  }
+
+}
+
+async function envoyerMessageConversationPrivee(){
+
+  const id =
+    Number(conversationPriveeId);
+
+  const input =
+    document.getElementById("privateChatInput");
+
+  const btn =
+    document.getElementById("privateChatSendBtn");
+
+  const texte =
+    String(input?.value || "").trim();
+
+  if(
+    !Number.isInteger(id) ||
+    id <= 0 ||
+    !texte ||
+    conversationPriveeEnvoi
+  ){
+    return;
+  }
+
+  conversationPriveeEnvoi = true;
+
+  if(btn){
+    btn.disabled = true;
+  }
+
+  if(input){
+    input.disabled = true;
+  }
+
+  try{
+
+    const result = await post(
+      `/message-conversation/${id}/send`,
+      {
+        message:texte
+      }
+    );
+
+    if(!result || result.ok !== true){
+      showNotif(
+        result?.message ||
+        "Impossible d'envoyer le message."
+      );
+      return;
+    }
+
+    if(input){
+      input.value = "";
+    }
+
+    await chargerConversationPrivee(
+      id,
+      {silent:true}
+    );
+
+  }catch(error){
+
+    console.error(
+      "Erreur envoi conversation privée :",
+      error
+    );
+
+    showNotif(
+      "Impossible d'envoyer le message."
+    );
+
+  }finally{
+
+    conversationPriveeEnvoi = false;
+
+    if(btn){
+      btn.disabled = false;
+    }
+
+    if(input){
+      input.disabled = false;
+      input.focus();
+    }
+
+  }
+
+}
+
+async function chargerBadgeMessagesCentreGlobal(){
+
+  try{
+
+    const [dataMessages, dataDemandes] =
+      await Promise.all([
+        get("/messages-unread-count"),
+        get("/message-requests")
+      ]);
+
+    if(dataMessages?.ok === true){
+      mettreAJourBadgeMessagesCentre(
+        dataMessages.count || 0
+      );
+    }
+
+    if(dataDemandes?.ok === true){
+      mettreAJourBadgeDemandesMessages(
+        Array.isArray(dataDemandes.requests)
+          ? dataDemandes.requests.length
+          : 0
+      );
+    }
+
+    await chargerBadgeNotifications();
+
+  }catch(error){
+    console.error(
+      "Erreur badge global messages :",
+      error
+    );
+  }
+
+}
+
+async function actualiserMessagerieAutomatiquement(){
+
+  if(document.hidden){
+    return;
+  }
+
+  await chargerBadgeMessagesCentreGlobal();
+
+  const pageNotifications =
+    document.getElementById("pageNotifications");
+
+  const pageConversation =
+    document.getElementById("pageConversationPrivee");
+
+  const notificationsOuvertes =
+    !!pageNotifications &&
+    !pageNotifications.classList.contains("hidden");
+
+  const conversationOuverte =
+    !!pageConversation &&
+    !pageConversation.classList.contains("hidden");
+
+  if(notificationsOuvertes){
+    await chargerCentreMessages();
+  }
+
+  if(
+    conversationOuverte &&
+    Number.isInteger(Number(conversationPriveeId)) &&
+    Number(conversationPriveeId) > 0
+  ){
+    await chargerConversationPrivee(
+      Number(conversationPriveeId),
+      {silent:true}
+    );
+  }
+
+}
+
+function demarrerActualisationMessagerie(){
+
+  if(intervalActualisationMessagerie){
+    return;
+  }
+
+  intervalActualisationMessagerie =
+    setInterval(
+      actualiserMessagerieAutomatiquement,
+      15000
+    );
+
+}
+
+document.addEventListener(
+  "visibilitychange",
+  ()=>{
+    if(!document.hidden){
+      actualiserMessagerieAutomatiquement();
+    }
+  }
+);
+
+window.addEventListener(
+  "focus",
+  actualiserMessagerieAutomatiquement
+);
+
+setTimeout(()=>{
+  chargerBadgeMessagesCentreGlobal();
+  demarrerActualisationMessagerie();
+}, 1500);
+
+function fermerPremierMessage(){
+
+  document
+    .getElementById("messageStartOverlay")
+    ?.remove();
+
+}
+
+function ouvrirEditeurPremierMessage(
+  userId,
+  mutualFollow = false
+){
+
+  const id = Number(userId);
+
+  if(!Number.isInteger(id) || id <= 0){
+    return;
+  }
+
+  fermerPremierMessage();
+
+  const overlay =
+    document.createElement("div");
+
+  overlay.id = "messageStartOverlay";
+  overlay.className = "message-start-overlay";
+
+  overlay.innerHTML = `
+    <div class="message-start-sheet">
+      <div style="font-weight:800;font-size:18px;">
+        ${mutualFollow ? "Nouveau message" : "Demande de message"}
+      </div>
+
+      <div class="small" style="margin-top:5px;opacity:.75;">
+        ${
+          mutualFollow
+            ? "Vous vous suivez mutuellement : le message sera envoyé directement."
+            : "Ce premier message sera envoyé comme demande. Tu ne pourras pas en envoyer un deuxième avant son acceptation."
+        }
+      </div>
+
+      <textarea
+        id="messageStartInput"
+        maxlength="1000"
+        placeholder="Écrire ton message..."></textarea>
+
+      <div class="message-start-actions">
+        <button
+          class="secondary"
+          onclick="fermerPremierMessage()">
+          Annuler
+        </button>
+
+        <button
+          id="messageStartSendBtn"
+          onclick="envoyerPremierMessage(${id})">
+          Envoyer
+        </button>
+      </div>
+    </div>
+  `;
+
+  overlay.addEventListener(
+    "click",
+    event=>{
+      if(event.target === overlay){
+        fermerPremierMessage();
+      }
+    }
+  );
+
+  document.body.appendChild(overlay);
+
+  setTimeout(()=>{
+    document
+      .getElementById("messageStartInput")
+      ?.focus();
+  },50);
+
+}
+
+async function envoyerPremierMessage(userId){
+
+  const id = Number(userId);
+
+  const input =
+    document.getElementById("messageStartInput");
+
+  const btn =
+    document.getElementById("messageStartSendBtn");
+
+  const texte =
+    String(input?.value || "").trim();
+
+  if(
+    !Number.isInteger(id) ||
+    id <= 0 ||
+    !texte ||
+    btn?.dataset.loading === "1"
+  ){
+    if(!texte){
+      showNotif("Écris d'abord un message.");
+    }
+    return;
+  }
+
+  if(btn){
+    btn.dataset.loading = "1";
+    btn.disabled = true;
+  }
+
+  try{
+
+    const result = await post(
+      "/message-conversation/start",
+      {
+        target_user_id:id,
+        message:texte
+      }
+    );
+
+    if(!result || result.ok !== true){
+      showNotif(
+        result?.message ||
+        "Impossible d'envoyer le message."
+      );
+      return;
+    }
+
+    fermerPremierMessage();
+
+    if(
+      String(result.status || "") === "active" &&
+      Number(result.conversation_id) > 0
+    ){
+      await ouvrirConversationPrivee(
+        Number(result.conversation_id)
+      );
+    }else{
+      showNotif(
+        result.message ||
+        "Demande de message envoyée."
+      );
+      await actualiserBoutonMessageProfilPublic(id);
+    }
+
+  }catch(error){
+
+    console.error(
+      "Erreur premier message :",
+      error
+    );
+
+    showNotif(
+      "Impossible d'envoyer le message."
+    );
+
+  }finally{
+
+    if(btn && document.body.contains(btn)){
+      btn.dataset.loading = "0";
+      btn.disabled = false;
+    }
+
+  }
+
+}
+
+
 async function chargerNotifications(){
 
   const data =
@@ -16327,11 +17866,17 @@ async function ouvrirNotifications(){
 
   ouvrirPage("pageNotifications");
 
-  await chargerNotifications();
+  afficherOngletCentreNotifications("notifications");
+  afficherOngletMessagerie("conversations");
+
+  await Promise.all([
+    chargerNotifications(),
+    chargerCentreMessages()
+  ]);
 
   await post("/notifications-read");
 
-  await chargerBadgeNotifications();
+  await chargerBadgeMessagesCentreGlobal();
 
 }
 
@@ -18355,6 +19900,26 @@ async function(data){
     const tournamentId =
       Number(data?.tournament_id);
 
+    const conversationId =
+      Number(data?.conversation_id);
+
+    if(
+      type === "message" ||
+      type === "messages"
+    ){
+
+      if(
+        Number.isInteger(conversationId) &&
+        conversationId > 0
+      ){
+        await ouvrirConversationPrivee(
+          conversationId
+        );
+      }
+
+      return;
+    }
+
     if(
       type === "follow" ||
       type === "abonnement" ||
@@ -19579,6 +21144,267 @@ async function suivreDepuisVideo(
 
 }
 
+async function actualiserBoutonMessageProfilPublic(userId){
+
+  const idJoueur =
+    Number(userId);
+
+  if(
+    !Number.isInteger(idJoueur) ||
+    idJoueur <= 0
+  ){
+    return;
+  }
+
+  const btn =
+    document.querySelector(
+      `[data-public-message-user-id="${idJoueur}"]`
+    );
+
+  if(!btn){
+    return;
+  }
+
+  btn.disabled = true;
+  btn.style.opacity = ".55";
+  btn.style.cursor = "not-allowed";
+  btn.title = "Vérification de la messagerie...";
+
+  try{
+
+    const access =
+      await get(
+        "/message-access/" + idJoueur
+      );
+
+    if(
+      !access ||
+      access.ok !== true
+    ){
+      btn.title =
+        access?.message ||
+        "Messagerie indisponible";
+      return;
+    }
+
+    const conversation =
+      access.conversation || null;
+
+    const status =
+      String(
+        conversation?.status || ""
+      ).toLowerCase();
+
+    btn.dataset.conversationId =
+      conversation?.id
+        ? String(conversation.id)
+        : "";
+
+    btn.dataset.conversationStatus =
+      status;
+
+    btn.dataset.messageMode =
+      String(access.mode || "none");
+
+    /*
+      Conversation déjà active :
+      le bouton Message reste disponible,
+      même si les abonnements changent ensuite.
+    */
+    if(status === "active"){
+      btn.disabled = false;
+      btn.style.opacity = "1";
+      btn.style.cursor = "pointer";
+      btn.title = "Ouvrir la conversation";
+      return;
+    }
+
+    /*
+      Une demande refusée reste bloquée tant
+      que les deux comptes ne deviennent pas
+      abonnés mutuellement.
+    */
+    if(
+      status === "rejected" &&
+      access.mutual_follow !== true
+    ){
+      btn.disabled = true;
+      btn.style.opacity = ".55";
+      btn.style.cursor = "not-allowed";
+      btn.title = "Demande de message refusée";
+      return;
+    }
+
+    /*
+      Aucune relation d'abonnement :
+      le bouton reste visible mais désactivé.
+    */
+    if(
+      access.can_message !== true &&
+      access.mutual_follow !== true
+    ){
+      btn.disabled = true;
+      btn.style.opacity = ".55";
+      btn.style.cursor = "not-allowed";
+      btn.title =
+        "Un abonnement est nécessaire pour envoyer un message";
+      return;
+    }
+
+    btn.disabled = false;
+    btn.style.opacity = "1";
+    btn.style.cursor = "pointer";
+
+    if(status === "pending"){
+
+      btn.title =
+        conversation?.is_my_request
+          ? "Demande de message déjà envoyée"
+          : "Demande de message reçue";
+
+    }else if(access.mutual_follow === true){
+
+      btn.title =
+        "Envoyer un message";
+
+    }else{
+
+      btn.title =
+        "Envoyer une demande de message";
+
+    }
+
+  }catch(error){
+
+    console.error(
+      "Erreur bouton Message profil public :",
+      error
+    );
+
+    btn.disabled = true;
+    btn.style.opacity = ".55";
+    btn.style.cursor = "not-allowed";
+    btn.title = "Messagerie indisponible";
+
+  }
+
+}
+
+async function ouvrirMessageDepuisProfilPublic(userId, event){
+
+  const idJoueur =
+    Number(userId);
+
+  const btn =
+    event?.currentTarget;
+
+  if(
+    !Number.isInteger(idJoueur) ||
+    idJoueur <= 0 ||
+    !btn ||
+    btn.dataset.loading === "1"
+  ){
+    return;
+  }
+
+  btn.dataset.loading = "1";
+
+  try{
+
+    const access =
+      await get(
+        "/message-access/" + idJoueur
+      );
+
+    if(
+      !access ||
+      access.ok !== true
+    ){
+      showNotif(
+        access?.message ||
+        "Messagerie indisponible"
+      );
+      return;
+    }
+
+    const conversation =
+      access.conversation || null;
+
+    const status =
+      String(
+        conversation?.status || ""
+      ).toLowerCase();
+
+    if(
+      status === "active" &&
+      Number(conversation?.id) > 0
+    ){
+      await ouvrirConversationPrivee(
+        Number(conversation.id)
+      );
+      return;
+    }
+
+    if(status === "pending"){
+
+      if(conversation?.is_my_request){
+        showNotif(
+          "Ta demande de message est déjà envoyée."
+        );
+      }else{
+        showNotif(
+          "Tu as reçu une demande de message de ce joueur. Ouvre Messages > Demandes pour répondre."
+        );
+      }
+
+      return;
+    }
+
+    if(
+      status === "rejected" &&
+      access.mutual_follow !== true
+    ){
+      showNotif(
+        "Cette demande de message a été refusée."
+      );
+      return;
+    }
+
+    if(access.can_message !== true){
+      showNotif(
+        "Un abonnement est nécessaire avant d'envoyer un message."
+      );
+      return;
+    }
+
+    ouvrirEditeurPremierMessage(
+      idJoueur,
+      access.mutual_follow === true
+    );
+
+  }catch(error){
+
+    console.error(
+      "Erreur ouverture messagerie profil public :",
+      error
+    );
+
+    showNotif(
+      "Impossible d'ouvrir la messagerie."
+    );
+
+  }finally{
+
+    btn.dataset.loading = "0";
+
+    await actualiserBoutonMessageProfilPublic(
+      idJoueur
+    );
+
+  }
+
+}
+
 async function suivreDepuisProfilPublic(userId, event){
 
   const idJoueur =
@@ -19837,6 +21663,10 @@ async function suivreDepuisProfilPublic(userId, event){
   }finally{
 
     btn.dataset.loading = "0";
+
+    await actualiserBoutonMessageProfilPublic(
+      idJoueur
+    );
 
   }
 
