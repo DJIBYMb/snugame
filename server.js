@@ -759,12 +759,25 @@ async function envoyerPushMessageUtilisateur(
         .trim()
         .slice(0,180);
 
-    await envoyerNotificationPush(
-      tokenRow.token,
-      nom,
-      apercu || "Nouveau message",
-      `message:${conversationId}:${senderId}`
-    );
+    /*
+      Messages privés : push DATA-ONLY.
+      Android reçoit toujours conversation_id et construit
+      lui-même la notification, même en arrière-plan.
+    */
+    await getMessaging().send({
+      token:tokenRow.token,
+      data:{
+        title:nom,
+        body:apercu || "Nouveau message",
+        action:`message:${conversationId}:${senderId}`,
+        notification_type:"message",
+        conversation_id:String(conversationId),
+        sender_id:String(senderId)
+      },
+      android:{
+        priority:"high"
+      }
+    });
 
   }catch(error){
 
