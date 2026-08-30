@@ -4942,6 +4942,326 @@ body.navigation-restoring section{
   color:rgba(255,255,255,.68);
 }
 
+
+/* =========================================================
+   SUNUGAME LIVE — PAGE DE CONTRÔLE DU DIRECT (BLOC 18)
+========================================================= */
+
+.sunugame-live-room{
+  position:fixed;
+  inset:0;
+  z-index:12000;
+  background:#07090d;
+  color:#fff;
+  display:flex;
+  flex-direction:column;
+}
+
+.sunugame-live-room.hidden{
+  display:none !important;
+}
+
+.sunugame-live-room-header{
+  flex:0 0 auto;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  padding:
+    max(14px, env(safe-area-inset-top))
+    14px
+    12px;
+  background:
+    linear-gradient(
+      180deg,
+      rgba(0,0,0,.72),
+      rgba(0,0,0,.18)
+    );
+  border-bottom:
+    1px solid rgba(255,255,255,.08);
+}
+
+.sunugame-live-owner{
+  display:flex;
+  align-items:center;
+  min-width:0;
+  gap:9px;
+}
+
+.sunugame-live-owner-photo{
+  width:42px;
+  height:42px;
+  border-radius:50%;
+  object-fit:cover;
+  border:2px solid #ff3157;
+  background:#111;
+}
+
+.sunugame-live-owner-info{
+  min-width:0;
+}
+
+.sunugame-live-owner-top{
+  display:flex;
+  align-items:center;
+  gap:7px;
+}
+
+.sunugame-live-badge{
+  background:#ff244e;
+  color:#fff;
+  border-radius:6px;
+  padding:4px 7px;
+  font-size:10px;
+  line-height:1;
+  font-weight:900;
+  letter-spacing:.6px;
+}
+
+.sunugame-live-owner-name{
+  max-width:145px;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  font-weight:800;
+  font-size:14px;
+}
+
+.sunugame-live-owner-username{
+  margin-top:3px;
+  font-size:11px;
+  opacity:.62;
+}
+
+.sunugame-live-room-stats{
+  flex:0 0 auto;
+  display:flex;
+  align-items:center;
+  gap:7px;
+}
+
+.sunugame-live-stat{
+  min-width:55px;
+  padding:7px 9px;
+  text-align:center;
+  border-radius:11px;
+  background:rgba(255,255,255,.08);
+  border:1px solid rgba(255,255,255,.08);
+}
+
+.sunugame-live-stat strong{
+  display:block;
+  font-size:14px;
+  line-height:1.1;
+}
+
+.sunugame-live-stat span{
+  display:block;
+  margin-top:3px;
+  font-size:9px;
+  opacity:.65;
+}
+
+.sunugame-live-room-body{
+  position:relative;
+  flex:1 1 auto;
+  min-height:0;
+  overflow:hidden;
+  display:flex;
+  flex-direction:column;
+}
+
+.sunugame-live-room-stage{
+  position:absolute;
+  inset:0;
+  background:
+    radial-gradient(
+      circle at 50% 28%,
+      rgba(67,78,102,.2),
+      transparent 42%
+    ),
+    #07090d;
+  pointer-events:none;
+}
+
+.sunugame-live-room-center{
+  position:absolute;
+  left:16px;
+  right:16px;
+  top:20px;
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  pointer-events:none;
+}
+
+.sunugame-live-room-status{
+  max-width:75%;
+  padding:8px 10px;
+  border-radius:10px;
+  background:rgba(0,0,0,.4);
+  backdrop-filter:blur(8px);
+  font-size:11px;
+  color:rgba(255,255,255,.8);
+}
+
+.sunugame-live-comments-area{
+  position:absolute;
+  left:0;
+  right:0;
+  bottom:0;
+  max-height:48%;
+  overflow-y:auto;
+  padding:20px 13px 12px;
+  background:
+    linear-gradient(
+      180deg,
+      transparent,
+      rgba(0,0,0,.42) 18%,
+      rgba(0,0,0,.72)
+    );
+  scrollbar-width:none;
+}
+
+.sunugame-live-comments-area::-webkit-scrollbar{
+  display:none;
+}
+
+.sunugame-live-comment{
+  display:flex;
+  align-items:flex-start;
+  gap:7px;
+  margin-top:9px;
+}
+
+.sunugame-live-comment-photo{
+  width:30px;
+  height:30px;
+  flex:0 0 30px;
+  border-radius:50%;
+  object-fit:cover;
+  background:#151820;
+}
+
+.sunugame-live-comment-content{
+  min-width:0;
+  max-width:86%;
+  padding:7px 9px;
+  border-radius:12px;
+  background:rgba(20,23,30,.72);
+  backdrop-filter:blur(8px);
+}
+
+.sunugame-live-comment-name{
+  font-size:11px;
+  font-weight:900;
+}
+
+.sunugame-live-comment-text{
+  margin-top:2px;
+  font-size:13px;
+  line-height:1.25;
+  overflow-wrap:anywhere;
+}
+
+.sunugame-live-comment-reply{
+  margin-bottom:3px;
+  font-size:10px;
+  opacity:.65;
+}
+
+.sunugame-live-comment-pinned{
+  border:
+    1px solid rgba(255,195,64,.48);
+}
+
+.sunugame-live-comment-pin{
+  margin-right:4px;
+}
+
+.sunugame-live-empty-comments{
+  padding:18px 8px 4px;
+  text-align:left;
+  font-size:12px;
+  opacity:.55;
+}
+
+.sunugame-live-composer{
+  flex:0 0 auto;
+  display:flex;
+  align-items:center;
+  gap:8px;
+  padding:
+    10px
+    12px
+    max(12px, env(safe-area-inset-bottom));
+  background:#080a0e;
+  border-top:
+    1px solid rgba(255,255,255,.08);
+}
+
+.sunugame-live-comment-input{
+  min-width:0;
+  flex:1;
+  height:42px;
+  border:1px solid rgba(255,255,255,.1);
+  outline:none;
+  border-radius:22px;
+  padding:0 15px;
+  background:rgba(255,255,255,.08);
+  color:#fff;
+  font-size:13px;
+}
+
+.sunugame-live-comment-input::placeholder{
+  color:rgba(255,255,255,.48);
+}
+
+.sunugame-live-send{
+  width:42px;
+  height:42px;
+  flex:0 0 42px;
+  border:0;
+  border-radius:50%;
+  background:#fff;
+  color:#090b0f;
+  font-weight:900;
+  font-size:17px;
+}
+
+.sunugame-live-stop-app{
+  flex:0 0 auto;
+  border:0;
+  border-radius:9px;
+  padding:8px 10px;
+  background:#e62c4a;
+  color:#fff;
+  font-size:10px;
+  font-weight:900;
+  pointer-events:auto;
+}
+
+.sunugame-live-room-back{
+  width:34px;
+  height:34px;
+  flex:0 0 34px;
+  border:0;
+  border-radius:50%;
+  background:rgba(255,255,255,.09);
+  color:#fff;
+  font-size:20px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+
+.sunugame-live-owner-wrap{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  min-width:0;
+}
+
 </style>
 
 <link
@@ -6263,13 +6583,13 @@ class="hidden creation-media-page">
             class="glass-btn creation-media-main-btn"
             type="button"
             onclick="preparerLiveSunugame()">
-            Continuer
+            Live
           </button>
 
           <p
             id="livePreparationMessage"
             class="live-preparation-note">
-            Choisis la source puis appuie sur Continuer.
+            Choisis la source puis appuie sur Live.
           </p>
 
           <p
@@ -6286,6 +6606,131 @@ class="hidden creation-media-page">
   </div>
 
 </section>
+
+
+<section
+id="pageLiveEnCours"
+class="hidden sunugame-live-room">
+
+  <div class="sunugame-live-room-header">
+
+    <div class="sunugame-live-owner-wrap">
+
+      <button
+        type="button"
+        class="sunugame-live-room-back"
+        onclick="retourDepuisPageLiveEnCours()"
+        aria-label="Retour">
+        ‹
+      </button>
+
+      <div class="sunugame-live-owner">
+
+        <img
+          id="liveRoomProfilePhoto"
+          class="sunugame-live-owner-photo"
+          src="/default-avatar.png"
+          alt="Photo de profil">
+
+        <div class="sunugame-live-owner-info">
+
+          <div class="sunugame-live-owner-top">
+
+            <span class="sunugame-live-badge">
+              LIVE
+            </span>
+
+            <span
+              id="liveRoomProfileName"
+              class="sunugame-live-owner-name">
+              SunuGame
+            </span>
+
+          </div>
+
+          <div
+            id="liveRoomUsername"
+            class="sunugame-live-owner-username">
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+    <div class="sunugame-live-room-stats">
+
+      <div class="sunugame-live-stat">
+        <strong id="liveRoomViewers">0</strong>
+        <span>spectateurs</span>
+      </div>
+
+      <div class="sunugame-live-stat">
+        <strong id="liveRoomLikes">0</strong>
+        <span>tapotages</span>
+      </div>
+
+    </div>
+
+  </div>
+
+  <div class="sunugame-live-room-body">
+
+    <div class="sunugame-live-room-stage"></div>
+
+    <div class="sunugame-live-room-center">
+
+      <div
+        id="liveRoomStatus"
+        class="sunugame-live-room-status">
+        Préparation du LIVE…
+      </div>
+
+      <button
+        type="button"
+        class="sunugame-live-stop-app"
+        onclick="arreterLiveDepuisApplication()">
+        Arrêter LIVE
+      </button>
+
+    </div>
+
+    <div
+      id="liveRoomComments"
+      class="sunugame-live-comments-area">
+
+      <div class="sunugame-live-empty-comments">
+        Les commentaires du LIVE apparaîtront ici.
+      </div>
+
+    </div>
+
+  </div>
+
+  <div class="sunugame-live-composer">
+
+    <input
+      id="liveRoomCommentInput"
+      class="sunugame-live-comment-input"
+      type="text"
+      maxlength="280"
+      autocomplete="off"
+      placeholder="Écrire un commentaire…"
+      onkeydown="if(event.key==='Enter'){envoyerCommentairePageLive()}">
+
+    <button
+      type="button"
+      class="sunugame-live-send"
+      onclick="envoyerCommentairePageLive()"
+      aria-label="Envoyer">
+      ➤
+    </button>
+
+  </div>
+
+</section>
+
 
 <section
 id="pagePublierVideo"
@@ -20240,7 +20685,17 @@ function(){
 
   if(message){
     message.textContent =
-      "L'écran est capturé. La diffusion réseau sera branchée au prochain bloc.";
+      "L'écran est capturé. Tu peux ouvrir eFootball.";
+  }
+
+  const liveRoomStatus =
+    document.getElementById(
+      "liveRoomStatus"
+    );
+
+  if(liveRoomStatus){
+    liveRoomStatus.textContent =
+      "✅ LIVE écran actif. Tu peux ouvrir eFootball.";
   }
 };
 
@@ -20307,7 +20762,7 @@ async function preparerLiveSunugame(){
 
   if(bouton){
     bouton.disabled = true;
-    bouton.textContent = "Préparation...";
+    bouton.textContent = "Démarrage...";
   }
 
   if(message){
@@ -20393,6 +20848,8 @@ async function preparerLiveSunugame(){
 
       await demarrerCameraLiveSunugame();
 
+      await ouvrirPageLiveEnCours();
+
     }else{
 
       if(message){
@@ -20400,7 +20857,12 @@ async function preparerLiveSunugame(){
           "Autorise le partage de ton écran dans Android.";
       }
 
-      demanderPartageEcranAndroid();
+      const demandeEcran =
+        demanderPartageEcranAndroid();
+
+      if(demandeEcran !== false){
+        await ouvrirPageLiveEnCours();
+      }
     }
 
     /*
@@ -20428,12 +20890,574 @@ async function preparerLiveSunugame(){
 
     if(bouton){
       bouton.disabled = false;
-      bouton.textContent = "Continuer";
+      bouton.textContent = "Live";
     }
 
   }
 
 }
+
+
+let timerStatsPageLiveSunugame = null;
+let timerCommentairesPageLiveSunugame = null;
+let dernierRenduCommentairesLive = "";
+
+function echapperLiveSunugame(value){
+
+  return String(value ?? "")
+    .replaceAll("&","&amp;")
+    .replaceAll("<","&lt;")
+    .replaceAll(">","&gt;")
+    .replaceAll('"',"&quot;")
+    .replaceAll("'","&#039;");
+}
+
+async function ouvrirPageLiveEnCours(){
+
+  const live =
+    window.liveSunugameEnPreparation;
+
+  if(!live?.id){
+    return;
+  }
+
+  /*
+  On charge le compte connecté afin d'afficher
+  exactement sa photo et son nom en haut à gauche.
+  */
+  let compte = null;
+
+  try{
+    compte =
+      await synchroniserCompteConnecte();
+  }catch(error){
+    console.warn(
+      "Profil LIVE non chargé :",
+      error
+    );
+  }
+
+  const photo =
+    document.getElementById(
+      "liveRoomProfilePhoto"
+    );
+
+  const name =
+    document.getElementById(
+      "liveRoomProfileName"
+    );
+
+  const username =
+    document.getElementById(
+      "liveRoomUsername"
+    );
+
+  if(photo){
+    photo.src =
+      compte?.profile_photo ||
+      "/default-avatar.png";
+
+    photo.onerror = function(){
+      this.onerror = null;
+      this.src =
+        "/default-avatar.png";
+    };
+  }
+
+  if(name){
+    name.textContent =
+      compte?.name ||
+      compte?.username ||
+      "SunuGame";
+  }
+
+  if(username){
+    username.textContent =
+      compte?.username
+        ? "@" + compte.username
+        : "";
+  }
+
+  setPage(
+    "pageLiveEnCours"
+  );
+
+  const status =
+    document.getElementById(
+      "liveRoomStatus"
+    );
+
+  if(status){
+
+    status.textContent =
+      sourceLiveSunugame === "screen"
+        ? "Partage de l'écran en cours. Tu peux ouvrir eFootball."
+        : "Caméra du LIVE active.";
+  }
+
+  demarrerActualisationPageLive();
+}
+
+function demarrerActualisationPageLive(){
+
+  arreterActualisationPageLive();
+
+  actualiserStatsPageLive();
+  actualiserCommentairesPageLive();
+
+  timerStatsPageLiveSunugame =
+    setInterval(
+      actualiserStatsPageLive,
+      2000
+    );
+
+  timerCommentairesPageLiveSunugame =
+    setInterval(
+      actualiserCommentairesPageLive,
+      1500
+    );
+}
+
+function arreterActualisationPageLive(){
+
+  if(timerStatsPageLiveSunugame){
+
+    clearInterval(
+      timerStatsPageLiveSunugame
+    );
+
+    timerStatsPageLiveSunugame =
+      null;
+  }
+
+  if(timerCommentairesPageLiveSunugame){
+
+    clearInterval(
+      timerCommentairesPageLiveSunugame
+    );
+
+    timerCommentairesPageLiveSunugame =
+      null;
+  }
+}
+
+async function actualiserStatsPageLive(){
+
+  const liveId =
+    Number(
+      window
+        .liveSunugameEnPreparation
+        ?.id || 0
+    );
+
+  if(!liveId){
+    return;
+  }
+
+  try{
+
+    const response =
+      await fetch(
+        `/live/${liveId}/stats`,
+        {
+          credentials:"include",
+          cache:"no-store"
+        }
+      );
+
+    const data =
+      await response.json();
+
+    if(
+      !response.ok ||
+      !data?.ok
+    ){
+      return;
+    }
+
+    const viewers =
+      document.getElementById(
+        "liveRoomViewers"
+      );
+
+    const likes =
+      document.getElementById(
+        "liveRoomLikes"
+      );
+
+    if(viewers){
+      viewers.textContent =
+        Number(
+          data.stats?.viewers || 0
+        ).toLocaleString("fr-FR");
+    }
+
+    if(likes){
+      likes.textContent =
+        Number(
+          data.stats?.likes || 0
+        ).toLocaleString("fr-FR");
+    }
+
+  }catch(error){
+
+    console.warn(
+      "Stats page LIVE :",
+      error
+    );
+  }
+}
+
+async function actualiserCommentairesPageLive(){
+
+  const liveId =
+    Number(
+      window
+        .liveSunugameEnPreparation
+        ?.id || 0
+    );
+
+  const zone =
+    document.getElementById(
+      "liveRoomComments"
+    );
+
+  if(
+    !liveId ||
+    !zone
+  ){
+    return;
+  }
+
+  try{
+
+    const response =
+      await fetch(
+        `/live/${liveId}/comments`,
+        {
+          credentials:"include",
+          cache:"no-store"
+        }
+      );
+
+    const data =
+      await response.json();
+
+    if(
+      !response.ok ||
+      !data?.ok
+    ){
+      return;
+    }
+
+    const comments =
+      Array.isArray(data.comments)
+        ? data.comments
+        : [];
+
+    const signature =
+      comments
+        .map(comment=>
+          [
+            comment.id,
+            comment.content,
+            comment.is_pinned
+              ? 1
+              : 0
+          ].join(":")
+        )
+        .join("|");
+
+    if(
+      signature ===
+      dernierRenduCommentairesLive
+    ){
+      return;
+    }
+
+    dernierRenduCommentairesLive =
+      signature;
+
+    if(!comments.length){
+
+      zone.innerHTML = `
+        <div class="sunugame-live-empty-comments">
+          Les commentaires du LIVE apparaîtront ici.
+        </div>
+      `;
+
+      return;
+    }
+
+    zone.innerHTML =
+      comments
+        .map(comment=>{
+
+          const user =
+            comment.user || {};
+
+          const username =
+            user.username ||
+            user.name ||
+            "joueur";
+
+          const photo =
+            user.profile_photo ||
+            "/default-avatar.png";
+
+          const reponse =
+            comment.reply_to
+              ? `
+                <div class="sunugame-live-comment-reply">
+                  ↳ @${echapperLiveSunugame(
+                    comment.reply_to.username ||
+                    ""
+                  )}
+                </div>
+              `
+              : "";
+
+          return `
+            <div
+              class="sunugame-live-comment ${
+                comment.is_pinned
+                  ? "sunugame-live-comment-pinned"
+                  : ""
+              }">
+
+              <img
+                class="sunugame-live-comment-photo"
+                src="${echapperLiveSunugame(photo)}"
+                onerror="this.src='/default-avatar.png'">
+
+              <div class="sunugame-live-comment-content">
+
+                ${reponse}
+
+                <div class="sunugame-live-comment-name">
+                  ${
+                    comment.is_pinned
+                      ? '<span class="sunugame-live-comment-pin">📌</span>'
+                      : ""
+                  }
+                  @${echapperLiveSunugame(username)}
+                </div>
+
+                <div class="sunugame-live-comment-text">
+                  ${echapperLiveSunugame(
+                    comment.content || ""
+                  )}
+                </div>
+
+              </div>
+
+            </div>
+          `;
+        })
+        .join("");
+
+    zone.scrollTop =
+      zone.scrollHeight;
+
+  }catch(error){
+
+    console.warn(
+      "Commentaires page LIVE :",
+      error
+    );
+  }
+}
+
+async function envoyerCommentairePageLive(){
+
+  const liveId =
+    Number(
+      window
+        .liveSunugameEnPreparation
+        ?.id || 0
+    );
+
+  const input =
+    document.getElementById(
+      "liveRoomCommentInput"
+    );
+
+  const content =
+    String(input?.value || "")
+      .trim();
+
+  if(
+    !liveId ||
+    !content
+  ){
+    return;
+  }
+
+  if(input){
+    input.disabled = true;
+  }
+
+  try{
+
+    const response =
+      await fetch(
+        `/live/${liveId}/comments`,
+        {
+          method:"POST",
+          credentials:"include",
+          headers:{
+            "Content-Type":"application/json"
+          },
+          body:JSON.stringify({
+            content
+          })
+        }
+      );
+
+    let data = null;
+
+    try{
+      data =
+        await response.json();
+    }catch(error){
+      data = null;
+    }
+
+    if(
+      !response.ok ||
+      !data?.ok
+    ){
+
+      throw new Error(
+        data?.message ||
+        "Impossible d'envoyer le commentaire."
+      );
+    }
+
+    if(input){
+      input.value = "";
+    }
+
+    dernierRenduCommentairesLive = "";
+
+    await actualiserCommentairesPageLive();
+
+  }catch(error){
+
+    alert(
+      error.message ||
+      "Impossible d'envoyer le commentaire."
+    );
+
+  }finally{
+
+    if(input){
+
+      input.disabled = false;
+      input.focus();
+    }
+  }
+}
+
+async function arreterLiveDepuisApplication(){
+
+  const liveId =
+    Number(
+      window
+        .liveSunugameEnPreparation
+        ?.id || 0
+    );
+
+  if(!liveId){
+    return;
+  }
+
+  if(
+    !confirm(
+      "Arrêter le LIVE ?"
+    )
+  ){
+    return;
+  }
+
+  try{
+
+    await fetch(
+      `/live/${liveId}/end`,
+      {
+        method:"POST",
+        credentials:"include",
+        headers:{
+          "Content-Type":"application/json"
+        },
+        body:"{}"
+      }
+    );
+
+  }catch(error){
+
+    console.warn(
+      "Arrêt serveur LIVE :",
+      error
+    );
+  }
+
+  try{
+
+    if(
+      window.AndroidLive &&
+      typeof window.AndroidLive
+        .stopScreenShare ===
+        "function"
+    ){
+
+      window.AndroidLive
+        .stopScreenShare();
+    }
+
+  }catch(error){
+
+    console.warn(
+      "Arrêt capture Android :",
+      error
+    );
+  }
+
+  arreterCameraLiveSunugame();
+  arreterActualisationPageLive();
+
+  window.liveSunugameEnPreparation =
+    null;
+
+  setPage(
+    "pageDashboard"
+  );
+
+  try{
+    ouvrirPanel(
+      "panelHighlights"
+    );
+  }catch(error){
+  }
+}
+
+function retourDepuisPageLiveEnCours(){
+
+  /*
+  Retour visuel seulement :
+  le LIVE/capture continue.
+  */
+  arreterActualisationPageLive();
+
+  setPage(
+    "pageCreationVideo"
+  );
+
+  afficherOngletCreationMedia(
+    "live"
+  );
+}
+
 
 async function updateName(){
 
