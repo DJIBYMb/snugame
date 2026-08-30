@@ -1702,6 +1702,122 @@ WHERE status IN ('starting','live');
   }
 });
 
+
+/* =========================================================
+   LIVE SUNUGAME — BLOC 17
+   Commentaires, modération, tapotages, vues, partages,
+   signalements et modérateurs.
+========================================================= */
+
+db.exec(`
+CREATE TABLE IF NOT EXISTS live_comments(
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  live_id INTEGER NOT NULL,
+  user_id INTEGER NOT NULL,
+  parent_id INTEGER,
+  content TEXT NOT NULL,
+  is_pinned INTEGER NOT NULL DEFAULT 0,
+  deleted_at TEXT,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY(live_id) REFERENCES live_streams(id),
+  FOREIGN KEY(user_id) REFERENCES users(id),
+  FOREIGN KEY(parent_id) REFERENCES live_comments(id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_live_comments_live
+ON live_comments(live_id,id DESC);
+
+CREATE TABLE IF NOT EXISTS live_moderators(
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  live_id INTEGER NOT NULL,
+  user_id INTEGER NOT NULL,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(live_id,user_id),
+  FOREIGN KEY(live_id) REFERENCES live_streams(id),
+  FOREIGN KEY(user_id) REFERENCES users(id)
+);
+
+CREATE TABLE IF NOT EXISTS live_mutes(
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  live_id INTEGER NOT NULL,
+  user_id INTEGER NOT NULL,
+  muted_by INTEGER NOT NULL,
+  muted_until TEXT NOT NULL,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(live_id,user_id),
+  FOREIGN KEY(live_id) REFERENCES live_streams(id),
+  FOREIGN KEY(user_id) REFERENCES users(id),
+  FOREIGN KEY(muted_by) REFERENCES users(id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_live_mutes_live
+ON live_mutes(live_id,muted_until);
+
+CREATE TABLE IF NOT EXISTS live_like_taps(
+  live_id INTEGER NOT NULL,
+  user_id INTEGER NOT NULL,
+  taps INTEGER NOT NULL DEFAULT 0,
+  updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY(live_id,user_id),
+  FOREIGN KEY(live_id) REFERENCES live_streams(id),
+  FOREIGN KEY(user_id) REFERENCES users(id)
+);
+
+CREATE TABLE IF NOT EXISTS live_viewers(
+  live_id INTEGER NOT NULL,
+  user_id INTEGER NOT NULL,
+  joined_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  last_seen TEXT DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY(live_id,user_id),
+  FOREIGN KEY(live_id) REFERENCES live_streams(id),
+  FOREIGN KEY(user_id) REFERENCES users(id)
+);
+
+CREATE TABLE IF NOT EXISTS live_views(
+  live_id INTEGER NOT NULL,
+  user_id INTEGER NOT NULL,
+  first_viewed_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY(live_id,user_id),
+  FOREIGN KEY(live_id) REFERENCES live_streams(id),
+  FOREIGN KEY(user_id) REFERENCES users(id)
+);
+
+CREATE TABLE IF NOT EXISTS live_share_events(
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  live_id INTEGER NOT NULL,
+  user_id INTEGER NOT NULL,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY(live_id) REFERENCES live_streams(id),
+  FOREIGN KEY(user_id) REFERENCES users(id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_live_share_events_live
+ON live_share_events(live_id,id DESC);
+
+CREATE TABLE IF NOT EXISTS live_reports(
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  live_id INTEGER NOT NULL,
+  reporter_id INTEGER NOT NULL,
+  reason TEXT NOT NULL DEFAULT '',
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(live_id,reporter_id),
+  FOREIGN KEY(live_id) REFERENCES live_streams(id),
+  FOREIGN KEY(reporter_id) REFERENCES users(id)
+);
+`, err=>{
+  if(err){
+    console.error(
+      "Erreur initialisation LIVE Bloc 17 SQLite :",
+      err
+    );
+  }else{
+    console.log(
+      "Tables LIVE Bloc 17 prêtes"
+    );
+  }
+});
+
 db.run(`
 CREATE TABLE IF NOT EXISTS rewards(
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -18519,6 +18635,1663 @@ app.get("/live/:id", async (req,res)=>{
 
   }
 });
+
+
+/* =========================================================
+   LIVE SUNUGAME — BLOC 17
+   API commentaires / modération / statistiques.
+========================================================= */
+
+async function liveContexteModeration(
+  liveId,
+  userId
+){
+
+  const live = await get(
+    `
+    SELECT *
+    FROM live_streams
+    WHERE id=?
+    LIMIT 1
+    `,
+    [liveId]
+  );
+
+  if(!live){
+    return null;
+  }
+
+  const isOwner =
+    Number(live.user_id) ===
+    Number(userId);
+
+  let isModerator = false;
+
+  if(
+    !isOwner &&
+    Number(userId) > 0
+  ){
+
+    const row = await get(
+      `
+      SELECT id
+      FROM live_moderators
+      WHERE live_id=?
+        AND user_id=?
+      LIMIT 1
+      `,
+      [liveId,userId]
+    );
+
+    isModerator = !!row;
+  }
+
+  return {
+    live,
+    isOwner,
+    isModerator,
+    canModerate:
+      isOwner ||
+      isModerator
+  };
+}
+
+async function liveStats(
+  liveId
+){
+
+  const viewers = await get(
+    `
+    SELECT COUNT(*) AS total
+    FROM live_viewers
+    WHERE live_id=?
+      AND last_seen >= datetime('now','-35 seconds')
+    `,
+    [liveId]
+  );
+
+  const views = await get(
+    `
+    SELECT COUNT(*) AS total
+    FROM live_views
+    WHERE live_id=?
+    `,
+    [liveId]
+  );
+
+  const likes = await get(
+    `
+    SELECT COALESCE(SUM(taps),0) AS total
+    FROM live_like_taps
+    WHERE live_id=?
+    `,
+    [liveId]
+  );
+
+  const shares = await get(
+    `
+    SELECT COUNT(*) AS total
+    FROM live_share_events
+    WHERE live_id=?
+    `,
+    [liveId]
+  );
+
+  const comments = await get(
+    `
+    SELECT COUNT(*) AS total
+    FROM live_comments
+    WHERE live_id=?
+      AND deleted_at IS NULL
+    `,
+    [liveId]
+  );
+
+  return {
+    viewers:Number(viewers?.total || 0),
+    views:Number(views?.total || 0),
+    likes:Number(likes?.total || 0),
+    shares:Number(shares?.total || 0),
+    comments:Number(comments?.total || 0)
+  };
+}
+
+app.get(
+  "/live/:id/stats",
+  async (req,res)=>{
+
+    try{
+
+      const liveId =
+        Number(req.params.id);
+
+      if(
+        !Number.isInteger(liveId) ||
+        liveId <= 0
+      ){
+        return res.status(400).json({
+          ok:false,
+          message:"Live invalide"
+        });
+      }
+
+      const live = await get(
+        `
+        SELECT id,status
+        FROM live_streams
+        WHERE id=?
+        LIMIT 1
+        `,
+        [liveId]
+      );
+
+      if(!live){
+        return res.status(404).json({
+          ok:false,
+          message:"Live introuvable"
+        });
+      }
+
+      return res.json({
+        ok:true,
+        status:live.status,
+        stats:
+          await liveStats(liveId)
+      });
+
+    }catch(error){
+
+      console.error(
+        "Erreur stats LIVE :",
+        error
+      );
+
+      return res.status(500).json({
+        ok:false,
+        message:"Impossible de charger les statistiques"
+      });
+    }
+  }
+);
+
+app.post(
+  "/live/:id/viewer/heartbeat",
+  async (req,res)=>{
+
+    try{
+
+      if(!connected(req)){
+        return res.status(401).json({
+          ok:false,
+          message:tr(req,"Connecte-toi","Please log in")
+        });
+      }
+
+      const me =
+        Number(req.session.userId);
+
+      const liveId =
+        Number(req.params.id);
+
+      const live = await get(
+        `
+        SELECT id,status,user_id
+        FROM live_streams
+        WHERE id=?
+        LIMIT 1
+        `,
+        [liveId]
+      );
+
+      if(
+        !live ||
+        live.status === "ended"
+      ){
+        return res.status(404).json({
+          ok:false,
+          message:"Live indisponible"
+        });
+      }
+
+      /*
+      Le streamer n'est pas compté comme son propre spectateur.
+      */
+      if(
+        Number(live.user_id) !== me
+      ){
+
+        await run(
+          `
+          INSERT INTO live_viewers(
+            live_id,
+            user_id,
+            joined_at,
+            last_seen
+          )
+          VALUES(
+            ?,
+            ?,
+            datetime('now'),
+            datetime('now')
+          )
+          ON CONFLICT(live_id,user_id)
+          DO UPDATE SET
+            last_seen=datetime('now')
+          `,
+          [liveId,me]
+        );
+
+        await run(
+          `
+          INSERT OR IGNORE INTO live_views(
+            live_id,
+            user_id,
+            first_viewed_at
+          )
+          VALUES(
+            ?,
+            ?,
+            datetime('now')
+          )
+          `,
+          [liveId,me]
+        );
+      }
+
+      const stats =
+        await liveStats(liveId);
+
+      await run(
+        `
+        UPDATE live_streams
+        SET viewers_count=?,
+            updated_at=datetime('now')
+        WHERE id=?
+        `,
+        [stats.viewers,liveId]
+      );
+
+      return res.json({
+        ok:true,
+        stats
+      });
+
+    }catch(error){
+
+      console.error(
+        "Erreur heartbeat LIVE :",
+        error
+      );
+
+      return res.status(500).json({
+        ok:false
+      });
+    }
+  }
+);
+
+app.post(
+  "/live/:id/like",
+  async (req,res)=>{
+
+    try{
+
+      if(!connected(req)){
+        return res.status(401).json({
+          ok:false,
+          message:"Connecte-toi"
+        });
+      }
+
+      const me =
+        Number(req.session.userId);
+
+      const liveId =
+        Number(req.params.id);
+
+      let taps =
+        Number(req.body?.taps || 1);
+
+      if(
+        !Number.isFinite(taps)
+      ){
+        taps = 1;
+      }
+
+      taps =
+        Math.max(
+          1,
+          Math.min(
+            20,
+            Math.floor(taps)
+          )
+        );
+
+      const live = await get(
+        `
+        SELECT id,status
+        FROM live_streams
+        WHERE id=?
+        LIMIT 1
+        `,
+        [liveId]
+      );
+
+      if(
+        !live ||
+        live.status === "ended"
+      ){
+        return res.status(404).json({
+          ok:false,
+          message:"Live indisponible"
+        });
+      }
+
+      await run(
+        `
+        INSERT INTO live_like_taps(
+          live_id,
+          user_id,
+          taps,
+          updated_at
+        )
+        VALUES(
+          ?,
+          ?,
+          ?,
+          datetime('now')
+        )
+        ON CONFLICT(live_id,user_id)
+        DO UPDATE SET
+          taps=live_like_taps.taps + excluded.taps,
+          updated_at=datetime('now')
+        `,
+        [liveId,me,taps]
+      );
+
+      const stats =
+        await liveStats(liveId);
+
+      return res.json({
+        ok:true,
+        likes:stats.likes
+      });
+
+    }catch(error){
+
+      console.error(
+        "Erreur like LIVE :",
+        error
+      );
+
+      return res.status(500).json({
+        ok:false
+      });
+    }
+  }
+);
+
+app.post(
+  "/live/:id/share",
+  async (req,res)=>{
+
+    try{
+
+      if(!connected(req)){
+        return res.status(401).json({
+          ok:false,
+          message:"Connecte-toi"
+        });
+      }
+
+      const me =
+        Number(req.session.userId);
+
+      const liveId =
+        Number(req.params.id);
+
+      await run(
+        `
+        INSERT INTO live_share_events(
+          live_id,
+          user_id,
+          created_at
+        )
+        SELECT
+          id,
+          ?,
+          datetime('now')
+        FROM live_streams
+        WHERE id=?
+          AND status!='ended'
+        `,
+        [me,liveId]
+      );
+
+      const stats =
+        await liveStats(liveId);
+
+      return res.json({
+        ok:true,
+        shares:stats.shares
+      });
+
+    }catch(error){
+
+      console.error(
+        "Erreur partage LIVE :",
+        error
+      );
+
+      return res.status(500).json({
+        ok:false
+      });
+    }
+  }
+);
+
+app.post(
+  "/live/:id/report",
+  async (req,res)=>{
+
+    try{
+
+      if(!connected(req)){
+        return res.status(401).json({
+          ok:false,
+          message:"Connecte-toi"
+        });
+      }
+
+      const me =
+        Number(req.session.userId);
+
+      const liveId =
+        Number(req.params.id);
+
+      let reason =
+        String(req.body?.reason || "")
+          .trim()
+          .replace(/\s+/g," ");
+
+      if(reason.length > 500){
+        reason =
+          reason.slice(0,500);
+      }
+
+      if(!reason){
+        reason =
+          "Signalement utilisateur";
+      }
+
+      const live = await get(
+        `
+        SELECT user_id
+        FROM live_streams
+        WHERE id=?
+        LIMIT 1
+        `,
+        [liveId]
+      );
+
+      if(!live){
+        return res.status(404).json({
+          ok:false,
+          message:"Live introuvable"
+        });
+      }
+
+      if(
+        Number(live.user_id) === me
+      ){
+        return res.status(400).json({
+          ok:false,
+          message:"Tu ne peux pas signaler ton propre live"
+        });
+      }
+
+      await run(
+        `
+        INSERT INTO live_reports(
+          live_id,
+          reporter_id,
+          reason,
+          created_at
+        )
+        VALUES(
+          ?,
+          ?,
+          ?,
+          datetime('now')
+        )
+        ON CONFLICT(live_id,reporter_id)
+        DO UPDATE SET
+          reason=excluded.reason,
+          created_at=datetime('now')
+        `,
+        [liveId,me,reason]
+      );
+
+      return res.json({
+        ok:true
+      });
+
+    }catch(error){
+
+      console.error(
+        "Erreur signalement LIVE :",
+        error
+      );
+
+      return res.status(500).json({
+        ok:false
+      });
+    }
+  }
+);
+
+app.get(
+  "/live/:id/comments",
+  async (req,res)=>{
+
+    try{
+
+      const liveId =
+        Number(req.params.id);
+
+      if(
+        !Number.isInteger(liveId) ||
+        liveId <= 0
+      ){
+        return res.status(400).json({
+          ok:false,
+          comments:[]
+        });
+      }
+
+      const me =
+        connected(req)
+          ? Number(req.session.userId)
+          : 0;
+
+      const context =
+        await liveContexteModeration(
+          liveId,
+          me
+        );
+
+      if(!context){
+        return res.status(404).json({
+          ok:false,
+          comments:[]
+        });
+      }
+
+      const rows = await all(
+        `
+        SELECT
+          c.id,
+          c.live_id,
+          c.user_id,
+          c.parent_id,
+          c.content,
+          c.is_pinned,
+          c.created_at,
+          u.name,
+          u.username,
+          u.profile_photo,
+          pc.content AS parent_content,
+          pu.username AS parent_username
+        FROM live_comments c
+        JOIN users u
+          ON u.id=c.user_id
+        LEFT JOIN live_comments pc
+          ON pc.id=c.parent_id
+        LEFT JOIN users pu
+          ON pu.id=pc.user_id
+        WHERE c.live_id=?
+          AND c.deleted_at IS NULL
+        ORDER BY
+          c.is_pinned DESC,
+          c.id DESC
+        LIMIT 100
+        `,
+        [liveId]
+      );
+
+      let mutedUntil = null;
+
+      if(me > 0){
+
+        const mute = await get(
+          `
+          SELECT muted_until
+          FROM live_mutes
+          WHERE live_id=?
+            AND user_id=?
+            AND muted_until > datetime('now')
+          LIMIT 1
+          `,
+          [liveId,me]
+        );
+
+        mutedUntil =
+          mute?.muted_until ||
+          null;
+      }
+
+      return res.json({
+        ok:true,
+        can_moderate:
+          context.canModerate,
+        is_owner:
+          context.isOwner,
+        muted_until:
+          mutedUntil,
+        comments:
+          rows
+            .reverse()
+            .map(row=>({
+              id:Number(row.id),
+              user_id:Number(row.user_id),
+              parent_id:
+                row.parent_id
+                  ? Number(row.parent_id)
+                  : null,
+              content:row.content || "",
+              is_pinned:
+                Number(row.is_pinned) === 1,
+              created_at:
+                row.created_at || null,
+              user:{
+                name:row.name || "",
+                username:row.username || "",
+                profile_photo:
+                  row.profile_photo || null
+              },
+              reply_to:
+                row.parent_id
+                  ? {
+                      username:
+                        row.parent_username || "",
+                      content:
+                        row.parent_content || ""
+                    }
+                  : null
+            }))
+      });
+
+    }catch(error){
+
+      console.error(
+        "Erreur commentaires LIVE :",
+        error
+      );
+
+      return res.status(500).json({
+        ok:false,
+        comments:[]
+      });
+    }
+  }
+);
+
+app.post(
+  "/live/:id/comments",
+  async (req,res)=>{
+
+    try{
+
+      if(!connected(req)){
+        return res.status(401).json({
+          ok:false,
+          message:"Connecte-toi"
+        });
+      }
+
+      const me =
+        Number(req.session.userId);
+
+      const liveId =
+        Number(req.params.id);
+
+      let content =
+        String(req.body?.content || "")
+          .trim()
+          .replace(/\s+/g," ");
+
+      if(content.length > 280){
+        content =
+          content.slice(0,280);
+      }
+
+      if(!content){
+        return res.status(400).json({
+          ok:false,
+          message:"Commentaire vide"
+        });
+      }
+
+      const live = await get(
+        `
+        SELECT id,status
+        FROM live_streams
+        WHERE id=?
+        LIMIT 1
+        `,
+        [liveId]
+      );
+
+      if(
+        !live ||
+        live.status === "ended"
+      ){
+        return res.status(404).json({
+          ok:false,
+          message:"Live indisponible"
+        });
+      }
+
+      const mute = await get(
+        `
+        SELECT muted_until
+        FROM live_mutes
+        WHERE live_id=?
+          AND user_id=?
+          AND muted_until > datetime('now')
+        LIMIT 1
+        `,
+        [liveId,me]
+      );
+
+      if(mute){
+        return res.status(403).json({
+          ok:false,
+          code:"LIVE_MUTED",
+          muted_until:
+            mute.muted_until,
+          message:
+            "Tu ne peux pas commenter jusqu'à " +
+            mute.muted_until
+        });
+      }
+
+      let parentId =
+        Number(req.body?.parent_id || 0);
+
+      if(
+        !Number.isInteger(parentId) ||
+        parentId <= 0
+      ){
+        parentId = null;
+      }
+
+      if(parentId){
+
+        const parent = await get(
+          `
+          SELECT id
+          FROM live_comments
+          WHERE id=?
+            AND live_id=?
+            AND deleted_at IS NULL
+          LIMIT 1
+          `,
+          [parentId,liveId]
+        );
+
+        if(!parent){
+          parentId = null;
+        }
+      }
+
+      const result = await run(
+        `
+        INSERT INTO live_comments(
+          live_id,
+          user_id,
+          parent_id,
+          content,
+          created_at
+        )
+        VALUES(
+          ?,
+          ?,
+          ?,
+          ?,
+          datetime('now')
+        )
+        `,
+        [
+          liveId,
+          me,
+          parentId,
+          content
+        ]
+      );
+
+      return res.status(201).json({
+        ok:true,
+        comment_id:
+          Number(result.lastID)
+      });
+
+    }catch(error){
+
+      console.error(
+        "Erreur ajout commentaire LIVE :",
+        error
+      );
+
+      return res.status(500).json({
+        ok:false,
+        message:"Impossible d'envoyer le commentaire"
+      });
+    }
+  }
+);
+
+app.post(
+  "/live/:id/comments/:commentId/pin",
+  async (req,res)=>{
+
+    try{
+
+      if(!connected(req)){
+        return res.status(401).json({
+          ok:false
+        });
+      }
+
+      const me =
+        Number(req.session.userId);
+
+      const liveId =
+        Number(req.params.id);
+
+      const commentId =
+        Number(req.params.commentId);
+
+      const context =
+        await liveContexteModeration(
+          liveId,
+          me
+        );
+
+      if(
+        !context ||
+        !context.canModerate
+      ){
+        return res.status(403).json({
+          ok:false,
+          message:"Action réservée au modérateur"
+        });
+      }
+
+      const pinned =
+        req.body?.pinned === false
+          ? 0
+          : 1;
+
+      if(pinned){
+
+        await run(
+          `
+          UPDATE live_comments
+          SET is_pinned=0
+          WHERE live_id=?
+          `,
+          [liveId]
+        );
+      }
+
+      await run(
+        `
+        UPDATE live_comments
+        SET is_pinned=?
+        WHERE id=?
+          AND live_id=?
+          AND deleted_at IS NULL
+        `,
+        [
+          pinned,
+          commentId,
+          liveId
+        ]
+      );
+
+      return res.json({
+        ok:true,
+        pinned:!!pinned
+      });
+
+    }catch(error){
+
+      console.error(
+        "Erreur épinglage commentaire LIVE :",
+        error
+      );
+
+      return res.status(500).json({
+        ok:false
+      });
+    }
+  }
+);
+
+app.delete(
+  "/live/:id/comments/:commentId",
+  async (req,res)=>{
+
+    try{
+
+      if(!connected(req)){
+        return res.status(401).json({
+          ok:false
+        });
+      }
+
+      const me =
+        Number(req.session.userId);
+
+      const liveId =
+        Number(req.params.id);
+
+      const commentId =
+        Number(req.params.commentId);
+
+      const context =
+        await liveContexteModeration(
+          liveId,
+          me
+        );
+
+      if(
+        !context ||
+        !context.canModerate
+      ){
+        return res.status(403).json({
+          ok:false,
+          message:"Action réservée au modérateur"
+        });
+      }
+
+      await run(
+        `
+        UPDATE live_comments
+        SET deleted_at=datetime('now'),
+            is_pinned=0
+        WHERE id=?
+          AND live_id=?
+        `,
+        [commentId,liveId]
+      );
+
+      return res.json({
+        ok:true
+      });
+
+    }catch(error){
+
+      console.error(
+        "Erreur suppression commentaire LIVE :",
+        error
+      );
+
+      return res.status(500).json({
+        ok:false
+      });
+    }
+  }
+);
+
+app.post(
+  "/live/:id/mute",
+  async (req,res)=>{
+
+    try{
+
+      if(!connected(req)){
+        return res.status(401).json({
+          ok:false
+        });
+      }
+
+      const me =
+        Number(req.session.userId);
+
+      const liveId =
+        Number(req.params.id);
+
+      const targetUserId =
+        Number(req.body?.user_id);
+
+      const duration =
+        Number(req.body?.duration_seconds);
+
+      const allowed =
+        new Set([
+          30,
+          180,
+          300,
+          600,
+          900
+        ]);
+
+      if(
+        !Number.isInteger(targetUserId) ||
+        targetUserId <= 0 ||
+        !allowed.has(duration)
+      ){
+        return res.status(400).json({
+          ok:false,
+          message:"Mute invalide"
+        });
+      }
+
+      const context =
+        await liveContexteModeration(
+          liveId,
+          me
+        );
+
+      if(
+        !context ||
+        !context.canModerate
+      ){
+        return res.status(403).json({
+          ok:false,
+          message:"Action réservée au modérateur"
+        });
+      }
+
+      if(
+        Number(context.live.user_id) ===
+        targetUserId
+      ){
+        return res.status(400).json({
+          ok:false,
+          message:"Impossible de mute le propriétaire du live"
+        });
+      }
+
+      const modifier =
+        `+${duration} seconds`;
+
+      await run(
+        `
+        INSERT INTO live_mutes(
+          live_id,
+          user_id,
+          muted_by,
+          muted_until,
+          created_at,
+          updated_at
+        )
+        VALUES(
+          ?,
+          ?,
+          ?,
+          datetime('now',?),
+          datetime('now'),
+          datetime('now')
+        )
+        ON CONFLICT(live_id,user_id)
+        DO UPDATE SET
+          muted_by=excluded.muted_by,
+          muted_until=excluded.muted_until,
+          updated_at=datetime('now')
+        `,
+        [
+          liveId,
+          targetUserId,
+          me,
+          modifier
+        ]
+      );
+
+      return res.json({
+        ok:true,
+        duration_seconds:
+          duration
+      });
+
+    }catch(error){
+
+      console.error(
+        "Erreur mute LIVE :",
+        error
+      );
+
+      return res.status(500).json({
+        ok:false
+      });
+    }
+  }
+);
+
+app.post(
+  "/live/:id/moderators",
+  async (req,res)=>{
+
+    try{
+
+      if(!connected(req)){
+        return res.status(401).json({
+          ok:false
+        });
+      }
+
+      const me =
+        Number(req.session.userId);
+
+      const liveId =
+        Number(req.params.id);
+
+      const userId =
+        Number(req.body?.user_id);
+
+      const context =
+        await liveContexteModeration(
+          liveId,
+          me
+        );
+
+      if(
+        !context ||
+        !context.isOwner
+      ){
+        return res.status(403).json({
+          ok:false,
+          message:"Seul le propriétaire du live peut ajouter un modérateur"
+        });
+      }
+
+      if(
+        !Number.isInteger(userId) ||
+        userId <= 0 ||
+        userId === me
+      ){
+        return res.status(400).json({
+          ok:false,
+          message:"Modérateur invalide"
+        });
+      }
+
+      const user = await get(
+        `
+        SELECT id
+        FROM users
+        WHERE id=?
+        LIMIT 1
+        `,
+        [userId]
+      );
+
+      if(!user){
+        return res.status(404).json({
+          ok:false,
+          message:"Utilisateur introuvable"
+        });
+      }
+
+      await run(
+        `
+        INSERT OR IGNORE INTO live_moderators(
+          live_id,
+          user_id,
+          created_at
+        )
+        VALUES(
+          ?,
+          ?,
+          datetime('now')
+        )
+        `,
+        [liveId,userId]
+      );
+
+      return res.json({
+        ok:true
+      });
+
+    }catch(error){
+
+      console.error(
+        "Erreur ajout modérateur LIVE :",
+        error
+      );
+
+      return res.status(500).json({
+        ok:false
+      });
+    }
+  }
+);
+
+app.delete(
+  "/live/:id/moderators/:userId",
+  async (req,res)=>{
+
+    try{
+
+      if(!connected(req)){
+        return res.status(401).json({
+          ok:false
+        });
+      }
+
+      const me =
+        Number(req.session.userId);
+
+      const liveId =
+        Number(req.params.id);
+
+      const userId =
+        Number(req.params.userId);
+
+      const context =
+        await liveContexteModeration(
+          liveId,
+          me
+        );
+
+      if(
+        !context ||
+        !context.isOwner
+      ){
+        return res.status(403).json({
+          ok:false
+        });
+      }
+
+      await run(
+        `
+        DELETE FROM live_moderators
+        WHERE live_id=?
+          AND user_id=?
+        `,
+        [liveId,userId]
+      );
+
+      return res.json({
+        ok:true
+      });
+
+    }catch(error){
+
+      console.error(
+        "Erreur suppression modérateur LIVE :",
+        error
+      );
+
+      return res.status(500).json({
+        ok:false
+      });
+    }
+  }
+);
+
+/* =========================================================
+   FENÊTRE FLOTTANTE DU STREAMER
+   Chargée dans une WebView Android au-dessus d'eFootball.
+========================================================= */
+
+app.get(
+  "/live-overlay/:id",
+  async (req,res)=>{
+
+    const liveId =
+      Number(req.params.id);
+
+    if(
+      !Number.isInteger(liveId) ||
+      liveId <= 0
+    ){
+      return res
+        .status(400)
+        .send("Live invalide");
+    }
+
+    const live = await get(
+      `
+      SELECT
+        l.id,
+        l.title,
+        l.status,
+        l.user_id,
+        u.username
+      FROM live_streams l
+      JOIN users u
+        ON u.id=l.user_id
+      WHERE l.id=?
+      LIMIT 1
+      `,
+      [liveId]
+    );
+
+    if(!live){
+      return res
+        .status(404)
+        .send("Live introuvable");
+    }
+
+    /*
+    La page elle-même ne reçoit aucun pouvoir de modération
+    depuis l'URL. Chaque action sensible est revérifiée côté API.
+    */
+    res.setHeader(
+      "Content-Type",
+      "text/html; charset=utf-8"
+    );
+
+    return res.send(`<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>SunuGame LIVE</title>
+<style>
+*{box-sizing:border-box}
+html,body{margin:0;width:100%;height:100%;font-family:Arial,sans-serif;background:transparent;color:#fff;overflow:hidden}
+body{background:rgba(7,9,14,.93);border:1px solid rgba(255,255,255,.14);border-radius:18px}
+button,input,select{font:inherit}
+#panel{height:100%;display:flex;flex-direction:column}
+#collapsed{display:none;width:100%;height:100%;align-items:center;justify-content:center}
+#collapsed button{width:100%;height:100%;border:0;border-radius:18px;background:rgba(10,12,18,.92);color:#fff;font-size:29px;font-weight:900}
+.header{display:flex;align-items:center;gap:7px;padding:8px 9px;border-bottom:1px solid rgba(255,255,255,.09)}
+.badge{background:#ff264d;border-radius:7px;padding:4px 7px;font-size:11px;font-weight:900}
+.stats{display:flex;gap:8px;font-size:11px;opacity:.82;flex:1}
+.icon-btn{border:0;background:rgba(255,255,255,.08);color:#fff;border-radius:9px;width:32px;height:32px;font-weight:900}
+#pinned{display:none;margin:6px 7px 0;padding:7px;border-radius:9px;background:rgba(255,194,61,.13);font-size:11px;border:1px solid rgba(255,194,61,.22)}
+#comments{flex:1;overflow-y:auto;padding:6px 7px;scrollbar-width:none}
+.comment{padding:6px 5px;border-bottom:1px solid rgba(255,255,255,.06);font-size:12px}
+.comment .name{font-weight:800;margin-right:5px}
+.comment .reply{opacity:.62;font-size:10px;margin:2px 0}
+.actions{display:flex;gap:5px;margin-top:4px;flex-wrap:wrap}
+.actions button{border:0;border-radius:6px;background:rgba(255,255,255,.08);color:#fff;padding:3px 6px;font-size:10px}
+.actions .danger{background:rgba(255,50,70,.17)}
+#replyBar{display:none;padding:5px 8px;background:rgba(255,255,255,.06);font-size:10px}
+.composer{display:flex;gap:5px;padding:7px;border-top:1px solid rgba(255,255,255,.09)}
+.composer input{min-width:0;flex:1;border:0;outline:0;border-radius:9px;background:rgba(255,255,255,.09);color:#fff;padding:8px;font-size:12px}
+.composer button{border:0;border-radius:9px;padding:0 10px;background:#fff;color:#080a0e;font-weight:900}
+.footer{display:grid;grid-template-columns:1fr 1fr 1.15fr;gap:5px;padding:0 7px 7px}
+.footer button{border:0;border-radius:9px;padding:7px 4px;background:rgba(255,255,255,.08);color:#fff;font-size:10px;font-weight:800}
+.footer .stop{background:#e72d4b}
+.empty{padding:12px;text-align:center;opacity:.6;font-size:11px}
+</style>
+</head>
+<body>
+
+<div id="panel">
+  <div class="header">
+    <span class="badge">LIVE</span>
+    <div class="stats">
+      <span>👁 <b id="views">0</b></span>
+      <span>● <b id="viewers">0</b></span>
+      <span>❤️ <b id="likes">0</b></span>
+    </div>
+    <button class="icon-btn" onclick="collapseOverlay()">‹</button>
+  </div>
+
+  <div id="pinned"></div>
+  <div id="comments"><div class="empty">Aucun commentaire</div></div>
+  <div id="replyBar"></div>
+
+  <div class="composer">
+    <input id="input" maxlength="280" placeholder="Répondre..." onfocus="enableInput()">
+    <button onclick="sendComment()">➤</button>
+  </div>
+
+  <div class="footer">
+    <button onclick="shareLive()">Partager</button>
+    <button onclick="refreshAll()">Actualiser</button>
+    <button class="stop" onclick="stopLive()">Arrêter LIVE</button>
+  </div>
+</div>
+
+<div id="collapsed">
+  <button onclick="expandOverlay()">&gt;</button>
+</div>
+
+<script>
+const LIVE_ID=${liveId};
+let canModerate=false;
+let replyTo=null;
+
+function esc(v){
+  return String(v??"")
+    .replaceAll("&","&amp;")
+    .replaceAll("<","&lt;")
+    .replaceAll(">","&gt;")
+    .replaceAll('"',"&quot;")
+    .replaceAll("'","&#039;");
+}
+
+async function api(url,opt={}){
+  const r=await fetch(url,{
+    credentials:"include",
+    headers:{
+      "Content-Type":"application/json",
+      ...(opt.headers||{})
+    },
+    ...opt
+  });
+  let data={};
+  try{data=await r.json()}catch(_){}
+  if(!r.ok){
+    throw new Error(data.message||"Erreur");
+  }
+  return data;
+}
+
+async function refreshStats(){
+  try{
+    const d=await api("/live/"+LIVE_ID+"/stats");
+    viewers.textContent=d.stats?.viewers??0;
+    views.textContent=d.stats?.views??0;
+    likes.textContent=d.stats?.likes??0;
+  }catch(_){}
+}
+
+async function refreshComments(){
+  try{
+    const d=await api("/live/"+LIVE_ID+"/comments");
+    canModerate=!!d.can_moderate;
+
+    const list=d.comments||[];
+    const pin=list.find(c=>c.is_pinned);
+
+    if(pin){
+      pinned.style.display="block";
+      pinned.innerHTML="📌 <b>@"+esc(pin.user?.username)+"</b> "+esc(pin.content);
+    }else{
+      pinned.style.display="none";
+      pinned.innerHTML="";
+    }
+
+    if(!list.length){
+      comments.innerHTML='<div class="empty">Aucun commentaire</div>';
+      return;
+    }
+
+    comments.innerHTML=list.map(c=>{
+      const reply=c.reply_to
+        ? '<div class="reply">↳ @'+esc(c.reply_to.username)+' '+esc(c.reply_to.content).slice(0,55)+'</div>'
+        : '';
+
+      const moderator=canModerate
+        ? '<div class="actions">'+
+            '<button onclick="pinComment('+c.id+','+(!c.is_pinned)+')">'+(c.is_pinned?'Désépingler':'Épingler')+'</button>'+
+            '<button class="danger" onclick="deleteComment('+c.id+')">Supprimer</button>'+
+            '<select onchange="muteUser('+c.user_id+',this.value);this.value=\\'\\'">'+
+              '<option value="">Mute…</option>'+
+              '<option value="30">30 sec</option>'+
+              '<option value="180">3 min</option>'+
+              '<option value="300">5 min</option>'+
+              '<option value="600">10 min</option>'+
+              '<option value="900">15 min</option>'+
+            '</select>'+
+          '</div>'
+        : '';
+
+      return '<div class="comment">'+
+        '<div><span class="name">@'+esc(c.user?.username)+'</span>'+esc(c.content)+'</div>'+
+        reply+
+        '<div class="actions"><button onclick="replyComment('+c.id+',\\'@'+esc(c.user?.username)+'\\')">Répondre</button></div>'+
+        moderator+
+      '</div>';
+    }).join("");
+
+    comments.scrollTop=comments.scrollHeight;
+
+  }catch(e){
+    comments.innerHTML='<div class="empty">'+esc(e.message)+'</div>';
+  }
+}
+
+function replyComment(id,name){
+  replyTo=id;
+  replyBar.style.display="block";
+  replyBar.innerHTML='Réponse à '+esc(name)+' <button onclick="cancelReply()">×</button>';
+  enableInput();
+  input.focus();
+}
+
+function cancelReply(){
+  replyTo=null;
+  replyBar.style.display="none";
+  disableInput();
+}
+
+async function sendComment(){
+  const content=input.value.trim();
+  if(!content)return;
+
+  try{
+    await api("/live/"+LIVE_ID+"/comments",{
+      method:"POST",
+      body:JSON.stringify({
+        content,
+        parent_id:replyTo
+      })
+    });
+    input.value="";
+    cancelReply();
+    await refreshComments();
+  }catch(e){
+    alert(e.message);
+  }
+}
+
+async function pinComment(id,pinnedValue){
+  try{
+    await api("/live/"+LIVE_ID+"/comments/"+id+"/pin",{
+      method:"POST",
+      body:JSON.stringify({pinned:pinnedValue})
+    });
+    await refreshComments();
+  }catch(e){alert(e.message)}
+}
+
+async function deleteComment(id){
+  try{
+    await api("/live/"+LIVE_ID+"/comments/"+id,{
+      method:"DELETE"
+    });
+    await refreshComments();
+  }catch(e){alert(e.message)}
+}
+
+async function muteUser(userId,duration){
+  if(!duration)return;
+  try{
+    await api("/live/"+LIVE_ID+"/mute",{
+      method:"POST",
+      body:JSON.stringify({
+        user_id:userId,
+        duration_seconds:Number(duration)
+      })
+    });
+  }catch(e){alert(e.message)}
+}
+
+async function shareLive(){
+  try{
+    await api("/live/"+LIVE_ID+"/share",{
+      method:"POST",
+      body:"{}"
+    });
+  }catch(_){}
+
+  const url=
+    "https://snugame-1.onrender.com/app?live="+LIVE_ID;
+
+  if(window.AndroidOverlay?.shareLive){
+    AndroidOverlay.shareLive(url);
+  }
+}
+
+async function stopLive(){
+  if(!confirm("Arrêter le LIVE ?"))return;
+
+  try{
+    await api("/live/"+LIVE_ID+"/end",{
+      method:"POST",
+      body:"{}"
+    });
+  }catch(_){}
+
+  if(window.AndroidOverlay?.stopCapture){
+    AndroidOverlay.stopCapture();
+  }
+}
+
+function collapseOverlay(){
+  if(window.AndroidOverlay?.collapse){
+    AndroidOverlay.collapse();
+  }
+}
+
+function expandOverlay(){
+  if(window.AndroidOverlay?.expand){
+    AndroidOverlay.expand();
+  }
+}
+
+function enableInput(){
+  if(window.AndroidOverlay?.enableInput){
+    AndroidOverlay.enableInput();
+  }
+}
+
+function disableInput(){
+  if(window.AndroidOverlay?.disableInput){
+    AndroidOverlay.disableInput();
+  }
+}
+
+window.setOverlayCollapsed=function(v){
+  panel.style.display=v?"none":"flex";
+  collapsed.style.display=v?"flex":"none";
+};
+
+async function refreshAll(){
+  await Promise.all([
+    refreshStats(),
+    refreshComments()
+  ]);
+}
+
+refreshAll();
+setInterval(refreshStats,2000);
+setInterval(refreshComments,1500);
+</script>
+</body>
+</html>`);
+  }
+);
+
 
 app.listen(PORT, () => {
 
