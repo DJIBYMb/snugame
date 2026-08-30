@@ -4651,6 +4651,297 @@ body.navigation-restoring section{
   flex:1;
 }
 
+
+/* ==========================================
+   CRÉATION VIDÉO / LIVE — BLOC 15
+========================================== */
+.creation-media-page{
+  min-height:100dvh;
+  background:#05070d;
+  color:#fff;
+}
+
+.creation-media-card{
+  width:min(100%,620px);
+  margin:0 auto;
+  min-height:100dvh;
+  padding:18px 16px 110px;
+  background:
+    radial-gradient(circle at 50% 0%,rgba(30,64,175,.22),transparent 36%),
+    #05070d;
+}
+
+.creation-media-header{
+  display:grid;
+  grid-template-columns:48px 1fr 48px;
+  align-items:center;
+  min-height:54px;
+  margin-bottom:12px;
+}
+
+.creation-media-header h2{
+  margin:0;
+  text-align:center;
+  font-size:20px;
+  font-weight:900;
+  letter-spacing:.2px;
+}
+
+.creation-media-back{
+  width:44px!important;
+  height:44px!important;
+  min-width:44px!important;
+  padding:0!important;
+  margin:0!important;
+  border-radius:50%!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  font-size:30px!important;
+  line-height:1!important;
+  background:rgba(255,255,255,.08)!important;
+  border:1px solid rgba(255,255,255,.12)!important;
+  color:#fff!important;
+}
+
+.creation-media-tabs{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:8px;
+  padding:5px;
+  margin:10px 0 24px;
+  border-radius:18px;
+  background:rgba(255,255,255,.06);
+  border:1px solid rgba(255,255,255,.08);
+}
+
+.creation-media-tab{
+  min-height:48px!important;
+  margin:0!important;
+  border-radius:14px!important;
+  background:transparent!important;
+  color:rgba(255,255,255,.62)!important;
+  border:none!important;
+  box-shadow:none!important;
+  font-weight:900!important;
+  font-size:16px!important;
+}
+
+.creation-media-tab.active{
+  background:#fff!important;
+  color:#05070d!important;
+}
+
+.creation-media-content{
+  animation:sunuMediaAppear .18s ease;
+}
+
+@keyframes sunuMediaAppear{
+  from{
+    opacity:0;
+    transform:translateY(6px);
+  }
+  to{
+    opacity:1;
+    transform:translateY(0);
+  }
+}
+
+.creation-media-choice{
+  min-height:360px;
+  border-radius:26px;
+  border:1px solid rgba(255,255,255,.10);
+  background:rgba(255,255,255,.035);
+  padding:28px 20px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  text-align:center;
+}
+
+.creation-media-icon{
+  width:82px;
+  height:82px;
+  border-radius:24px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  margin-bottom:18px;
+  background:rgba(37,99,235,.16);
+  border:1px solid rgba(96,165,250,.24);
+  font-size:34px;
+}
+
+.creation-media-choice h3{
+  margin:0 0 8px;
+  font-size:23px;
+}
+
+.creation-media-choice p{
+  max-width:390px;
+  margin:0 0 22px;
+  color:rgba(255,255,255,.65);
+  line-height:1.45;
+}
+
+.creation-media-main-btn{
+  width:100%!important;
+  max-width:390px!important;
+  min-height:52px!important;
+  margin:0!important;
+  border-radius:16px!important;
+  font-size:16px!important;
+  font-weight:900!important;
+}
+
+.live-preparation{
+  min-height:360px;
+  border-radius:26px;
+  overflow:hidden;
+  position:relative;
+  background:
+    radial-gradient(circle at 50% 20%,rgba(37,99,235,.25),transparent 38%),
+    #0a0d14;
+  border:1px solid rgba(255,255,255,.10);
+}
+
+.live-camera-placeholder{
+  height:260px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  text-align:center;
+  padding:20px;
+  color:rgba(255,255,255,.78);
+}
+
+.live-camera-placeholder i{
+  font-size:42px;
+  margin-bottom:14px;
+}
+
+.live-badge-preview{
+  position:absolute;
+  top:16px;
+  left:16px;
+  padding:7px 10px;
+  border-radius:9px;
+  font-size:12px;
+  font-weight:1000;
+  letter-spacing:.5px;
+  background:#ef4444;
+  color:white;
+}
+
+.live-preparation-form{
+  padding:16px;
+  background:rgba(0,0,0,.30);
+  border-top:1px solid rgba(255,255,255,.08);
+}
+
+.live-preparation-form input{
+  width:100%;
+  box-sizing:border-box;
+  margin:0 0 12px;
+}
+
+.live-preparation-note{
+  min-height:22px;
+  margin:12px 0 0;
+  text-align:center;
+  color:rgba(255,255,255,.62);
+  font-size:13px;
+  line-height:1.4;
+}
+
+@media(max-width:420px){
+  .creation-media-card{
+    padding-left:12px;
+    padding-right:12px;
+  }
+
+  .creation-media-choice,
+  .live-preparation{
+    border-radius:22px;
+  }
+}
+
+
+/* ==========================================
+   LIVE CAMÉRA / ÉCRAN DU JEU — BLOC 16
+========================================== */
+.live-source-selector{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:8px;
+  margin-bottom:12px;
+}
+
+.live-source-btn{
+  min-height:45px!important;
+  margin:0!important;
+  border-radius:13px!important;
+  background:rgba(255,255,255,.06)!important;
+  color:rgba(255,255,255,.70)!important;
+  border:1px solid rgba(255,255,255,.09)!important;
+  box-shadow:none!important;
+  font-weight:900!important;
+}
+
+.live-source-btn.active{
+  background:#fff!important;
+  color:#05070d!important;
+}
+
+#liveCameraPreview{
+  width:100%;
+  height:260px;
+  object-fit:cover;
+  background:#070a10;
+  display:block;
+}
+
+.live-camera-zone{
+  position:relative;
+  height:260px;
+  overflow:hidden;
+  background:#070a10;
+}
+
+.live-camera-zone .live-camera-placeholder{
+  position:absolute;
+  inset:0;
+  height:auto;
+}
+
+.live-camera-zone.camera-active .live-camera-placeholder{
+  display:none;
+}
+
+.live-controls-row{
+  display:flex;
+  gap:8px;
+  margin-top:10px;
+}
+
+.live-controls-row button{
+  flex:1;
+  min-height:42px!important;
+  margin:0!important;
+  border-radius:12px!important;
+  font-size:13px!important;
+}
+
+.live-status-line{
+  margin:10px 0 0;
+  text-align:center;
+  font-size:13px;
+  line-height:1.4;
+  color:rgba(255,255,255,.68);
+}
+
 </style>
 
 <link
@@ -5801,6 +6092,201 @@ Le nom d'utilisateur doit être unique et peut être modifié une fois tous les 
 
 </section>
 
+
+<section
+id="pageCreationVideo"
+class="hidden creation-media-page">
+
+  <div class="creation-media-card">
+
+    <div class="creation-media-header">
+
+      <button
+        class="creation-media-back"
+        onclick="retourPage()"
+        aria-label="Retour">
+        ‹
+      </button>
+
+      <h2>Créer</h2>
+
+      <div></div>
+
+    </div>
+
+    <div
+      class="creation-media-tabs"
+      role="tablist"
+      aria-label="Type de création">
+
+      <button
+        id="tabCreationGalerie"
+        class="creation-media-tab active"
+        type="button"
+        onclick="afficherOngletCreationMedia('galerie')">
+        Galerie
+      </button>
+
+      <button
+        id="tabCreationLive"
+        class="creation-media-tab"
+        type="button"
+        onclick="afficherOngletCreationMedia('live')">
+        Live
+      </button>
+
+    </div>
+
+    <div
+      id="creationGalerieContent"
+      class="creation-media-content">
+
+      <div class="creation-media-choice">
+
+        <div class="creation-media-icon">
+          <i class="fa-regular fa-images"></i>
+        </div>
+
+        <h3>Galerie</h3>
+
+        <p>
+          Choisis une vidéo de ton téléphone,
+          puis ajoute son titre avant de la publier.
+        </p>
+
+        <button
+          class="glass-btn creation-media-main-btn"
+          type="button"
+          onclick="ouvrirChoixVideo()">
+          Choisir une vidéo
+        </button>
+
+      </div>
+
+    </div>
+
+    <div
+      id="creationLiveContent"
+      class="creation-media-content hidden">
+
+      <div class="live-preparation">
+
+        <div class="live-badge-preview">
+          LIVE
+        </div>
+
+        <div
+          id="liveCameraZone"
+          class="live-camera-zone">
+
+          <video
+            id="liveCameraPreview"
+            autoplay
+            muted
+            playsinline>
+          </video>
+
+          <div class="live-camera-placeholder">
+
+            <i
+              id="liveSourcePlaceholderIcon"
+              class="fa-solid fa-video">
+            </i>
+
+            <strong
+              id="liveSourcePlaceholderTitle">
+              Préparation du direct
+            </strong>
+
+            <span
+              id="liveSourcePlaceholderText">
+              Choisis Caméra ou Écran du jeu.
+            </span>
+
+          </div>
+
+        </div>
+
+        <div class="live-preparation-form">
+
+          <div class="live-source-selector">
+
+            <button
+              id="btnLiveSourceCamera"
+              class="live-source-btn active"
+              type="button"
+              onclick="selectionnerSourceLive('camera')">
+              <i class="fa-solid fa-camera"></i>
+              Caméra
+            </button>
+
+            <button
+              id="btnLiveSourceScreen"
+              class="live-source-btn"
+              type="button"
+              onclick="selectionnerSourceLive('screen')">
+              <i class="fa-solid fa-gamepad"></i>
+              Écran du jeu
+            </button>
+
+          </div>
+
+          <input
+            id="liveTitleInput"
+            type="text"
+            maxlength="120"
+            autocomplete="off"
+            placeholder="Ajoute un titre à ton live">
+
+          <div class="live-controls-row">
+
+            <button
+              id="btnLiveMicro"
+              class="secondary"
+              type="button"
+              onclick="basculerMicroLive()">
+              🎙 Micro ON
+            </button>
+
+            <button
+              id="btnLiveFlipCamera"
+              class="secondary"
+              type="button"
+              onclick="changerCameraLive()">
+              🔄 Caméra
+            </button>
+
+          </div>
+
+          <button
+            id="btnPreparerLive"
+            class="glass-btn creation-media-main-btn"
+            type="button"
+            onclick="preparerLiveSunugame()">
+            Continuer
+          </button>
+
+          <p
+            id="livePreparationMessage"
+            class="live-preparation-note">
+            Choisis la source puis appuie sur Continuer.
+          </p>
+
+          <p
+            id="liveAndroidStatus"
+            class="live-status-line">
+          </p>
+
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
+
+</section>
+
 <section
 id="pagePublierVideo"
 class="hidden">
@@ -5873,7 +6359,7 @@ Classements
   <div class="tiktok-feed" id="highlightsList"></div>
 
   <div class="video-tabs">
-    <button id="btnAddVideo" onclick="ouvrirChoixVideo()">
+    <button id="btnAddVideo" onclick="ouvrirCreationVideo()">
       <i class="fa-solid fa-plus"></i>
     </button>
   </div>
@@ -19335,6 +19821,65 @@ function ouvrirParametresProfil(){
 
 let selectedHighlightFile = null;
 
+function ouvrirCreationVideo(){
+
+  stopAllVideos();
+
+  arreterCameraLiveSunugame();
+
+  setPage("pageCreationVideo");
+
+  afficherOngletCreationMedia("galerie");
+
+}
+
+function afficherOngletCreationMedia(onglet){
+
+  const galerie =
+    document.getElementById(
+      "creationGalerieContent"
+    );
+
+  const live =
+    document.getElementById(
+      "creationLiveContent"
+    );
+
+  const tabGalerie =
+    document.getElementById(
+      "tabCreationGalerie"
+    );
+
+  const tabLive =
+    document.getElementById(
+      "tabCreationLive"
+    );
+
+  const afficherLive =
+    onglet === "live";
+
+  galerie?.classList.toggle(
+    "hidden",
+    afficherLive
+  );
+
+  live?.classList.toggle(
+    "hidden",
+    !afficherLive
+  );
+
+  tabGalerie?.classList.toggle(
+    "active",
+    !afficherLive
+  );
+
+  tabLive?.classList.toggle(
+    "active",
+    afficherLive
+  );
+
+}
+
 function ouvrirChoixVideo(){
 
   const input =
@@ -19357,6 +19902,10 @@ function ouvrirChoixVideo(){
     const preview =
       document.getElementById("videoPreview");
 
+    if(!preview){
+      return;
+    }
+
     preview.src =
       URL.createObjectURL(selectedHighlightFile);
 
@@ -19365,6 +19914,494 @@ function ouvrirChoixVideo(){
   };
 
   input.click();
+
+}
+
+
+let sourceLiveSunugame = "camera";
+
+let fluxCameraLiveSunugame = null;
+
+let cameraLiveFacingMode = "user";
+
+let microLiveActif = true;
+
+function selectionnerSourceLive(source){
+
+  sourceLiveSunugame =
+    source === "screen"
+      ? "screen"
+      : "camera";
+
+  const cameraBtn =
+    document.getElementById(
+      "btnLiveSourceCamera"
+    );
+
+  const screenBtn =
+    document.getElementById(
+      "btnLiveSourceScreen"
+    );
+
+  cameraBtn?.classList.toggle(
+    "active",
+    sourceLiveSunugame === "camera"
+  );
+
+  screenBtn?.classList.toggle(
+    "active",
+    sourceLiveSunugame === "screen"
+  );
+
+  const flip =
+    document.getElementById(
+      "btnLiveFlipCamera"
+    );
+
+  if(flip){
+    flip.style.display =
+      sourceLiveSunugame === "camera"
+        ? ""
+        : "none";
+  }
+
+  const title =
+    document.getElementById(
+      "liveSourcePlaceholderTitle"
+    );
+
+  const text =
+    document.getElementById(
+      "liveSourcePlaceholderText"
+    );
+
+  const icon =
+    document.getElementById(
+      "liveSourcePlaceholderIcon"
+    );
+
+  if(sourceLiveSunugame === "screen"){
+
+    arreterCameraLiveSunugame();
+
+    if(title){
+      title.textContent =
+        "Écran du jeu";
+    }
+
+    if(text){
+      text.textContent =
+        "Android demandera l'autorisation de partager ton écran.";
+    }
+
+    if(icon){
+      icon.className =
+        "fa-solid fa-gamepad";
+    }
+
+  }else{
+
+    if(title){
+      title.textContent =
+        "Caméra";
+    }
+
+    if(text){
+      text.textContent =
+        "La prévisualisation apparaîtra ici.";
+    }
+
+    if(icon){
+      icon.className =
+        "fa-solid fa-video";
+    }
+  }
+}
+
+async function demarrerCameraLiveSunugame(){
+
+  const message =
+    document.getElementById(
+      "livePreparationMessage"
+    );
+
+  if(
+    !navigator.mediaDevices ||
+    !navigator.mediaDevices.getUserMedia
+  ){
+
+    throw new Error(
+      "La caméra n'est pas disponible sur cet appareil."
+    );
+  }
+
+  arreterCameraLiveSunugame();
+
+  const stream =
+    await navigator.mediaDevices
+      .getUserMedia({
+        video:{
+          facingMode:
+            cameraLiveFacingMode
+        },
+        audio:
+          microLiveActif
+      });
+
+  fluxCameraLiveSunugame =
+    stream;
+
+  const preview =
+    document.getElementById(
+      "liveCameraPreview"
+    );
+
+  if(preview){
+
+    preview.srcObject =
+      stream;
+
+    await preview.play()
+      .catch(()=>{});
+  }
+
+  document
+    .getElementById(
+      "liveCameraZone"
+    )
+    ?.classList.add(
+      "camera-active"
+    );
+
+  if(message){
+    message.textContent =
+      "Caméra prête. Le direct n'est pas encore envoyé aux spectateurs.";
+  }
+}
+
+function arreterCameraLiveSunugame(){
+
+  if(fluxCameraLiveSunugame){
+
+    fluxCameraLiveSunugame
+      .getTracks()
+      .forEach(track=>{
+        track.stop();
+      });
+  }
+
+  fluxCameraLiveSunugame =
+    null;
+
+  const preview =
+    document.getElementById(
+      "liveCameraPreview"
+    );
+
+  if(preview){
+    preview.srcObject = null;
+  }
+
+  document
+    .getElementById(
+      "liveCameraZone"
+    )
+    ?.classList.remove(
+      "camera-active"
+    );
+}
+
+async function changerCameraLive(){
+
+  if(sourceLiveSunugame !== "camera"){
+    return;
+  }
+
+  cameraLiveFacingMode =
+    cameraLiveFacingMode === "user"
+      ? "environment"
+      : "user";
+
+  try{
+
+    await demarrerCameraLiveSunugame();
+
+  }catch(error){
+
+    console.error(
+      "Changement caméra :",
+      error
+    );
+  }
+}
+
+function basculerMicroLive(){
+
+  microLiveActif =
+    !microLiveActif;
+
+  const bouton =
+    document.getElementById(
+      "btnLiveMicro"
+    );
+
+  if(bouton){
+
+    bouton.textContent =
+      microLiveActif
+        ? "🎙 Micro ON"
+        : "🔇 Micro OFF";
+  }
+
+  if(fluxCameraLiveSunugame){
+
+    fluxCameraLiveSunugame
+      .getAudioTracks()
+      .forEach(track=>{
+
+        track.enabled =
+          microLiveActif;
+      });
+  }
+}
+
+function demanderPartageEcranAndroid(){
+
+  const status =
+    document.getElementById(
+      "liveAndroidStatus"
+    );
+
+  if(
+    !window.AndroidLive ||
+    typeof window.AndroidLive
+      .startScreenShare !== "function"
+  ){
+
+    if(status){
+      status.textContent =
+        "Le partage d'écran nécessite l'application Android SunuGame.";
+    }
+
+    return false;
+  }
+
+  if(status){
+    status.textContent =
+      "Autorise maintenant le partage d'écran dans Android.";
+  }
+
+  window.AndroidLive
+    .startScreenShare();
+
+  return true;
+}
+
+window.onAndroidScreenShareStarted =
+function(){
+
+  const status =
+    document.getElementById(
+      "liveAndroidStatus"
+    );
+
+  if(status){
+    status.textContent =
+      "✅ Capture de l'écran active. Tu peux ouvrir eFootball.";
+  }
+
+  const message =
+    document.getElementById(
+      "livePreparationMessage"
+    );
+
+  if(message){
+    message.textContent =
+      "L'écran est capturé. La diffusion réseau sera branchée au prochain bloc.";
+  }
+};
+
+window.onAndroidScreenShareDenied =
+function(){
+
+  const status =
+    document.getElementById(
+      "liveAndroidStatus"
+    );
+
+  if(status){
+    status.textContent =
+      "Partage d'écran annulé.";
+  }
+};
+
+window.onAndroidScreenShareStopped =
+function(){
+
+  const status =
+    document.getElementById(
+      "liveAndroidStatus"
+    );
+
+  if(status){
+    status.textContent =
+      "Partage d'écran arrêté.";
+  }
+};
+
+
+async function preparerLiveSunugame(){
+
+  const input =
+    document.getElementById(
+      "liveTitleInput"
+    );
+
+  const bouton =
+    document.getElementById(
+      "btnPreparerLive"
+    );
+
+  const message =
+    document.getElementById(
+      "livePreparationMessage"
+    );
+
+  const title =
+    String(input?.value || "")
+      .trim()
+      .replace(/\s+/g," ");
+
+  if(title.length > 120){
+
+    if(message){
+      message.textContent =
+        "Le titre ne doit pas dépasser 120 caractères.";
+    }
+
+    return;
+  }
+
+  if(bouton){
+    bouton.disabled = true;
+    bouton.textContent = "Préparation...";
+  }
+
+  if(message){
+    message.textContent =
+      "Préparation du live...";
+  }
+
+  try{
+
+    const response =
+      await fetch(
+        "/live/start",
+        {
+          method:"POST",
+          headers:{
+            "Content-Type":"application/json",
+            "x-language":
+              localStorage.getItem("lang") ||
+              "fr"
+          },
+          credentials:"include",
+          body:JSON.stringify({
+            title
+          })
+        }
+      );
+
+    let data = null;
+
+    try{
+      data = await response.json();
+    }catch(error){
+      data = null;
+    }
+
+    if(
+      !response.ok ||
+      !data ||
+      data.ok !== true
+    ){
+
+      if(
+        data?.code === "LIVE_ALREADY_OPEN" &&
+        data?.live?.id
+      ){
+
+        window.liveSunugameEnPreparation =
+          data.live;
+
+        if(message){
+          message.textContent =
+            "Tu as déjà un live en préparation.";
+        }
+
+        return;
+      }
+
+      throw new Error(
+        data?.message ||
+        "Impossible de préparer le live"
+      );
+    }
+
+    window.liveSunugameEnPreparation =
+      data.live;
+
+    if(
+      sourceLiveSunugame ===
+      "camera"
+    ){
+
+      if(message){
+        message.textContent =
+          "Autorise la caméra et le micro.";
+      }
+
+      await demarrerCameraLiveSunugame();
+
+    }else{
+
+      if(message){
+        message.textContent =
+          "Autorise le partage de ton écran dans Android.";
+      }
+
+      demanderPartageEcranAndroid();
+    }
+
+    /*
+      IMPORTANT :
+      /live/start crée seulement la session côté serveur.
+      On ne passe PAS encore le statut à "live".
+      Il manque volontairement l'encodeur + transport
+      vers les spectateurs.
+    */
+
+  }catch(error){
+
+    console.error(
+      "Erreur préparation LIVE :",
+      error
+    );
+
+    if(message){
+      message.textContent =
+        error.message ||
+        "Impossible de préparer le live.";
+    }
+
+  }finally{
+
+    if(bouton){
+      bouton.disabled = false;
+      bouton.textContent = "Continuer";
+    }
+
+  }
 
 }
 

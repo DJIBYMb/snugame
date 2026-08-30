@@ -1652,6 +1652,56 @@ ON direct_messages(receiver_id,seen);
   }
 });
 
+
+/* =========================================================
+   LIVE SUNUGAME — BLOC 14
+   Base SQLite du système LIVE.
+
+   Ce bloc ne diffuse pas encore la caméra.
+   Il prépare les lives, leur propriétaire, leur statut
+   et les compteurs.
+========================================================= */
+
+db.exec(`
+CREATE TABLE IF NOT EXISTS live_streams(
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL,
+  title TEXT NOT NULL DEFAULT '',
+  status TEXT NOT NULL DEFAULT 'starting'
+    CHECK(status IN ('starting','live','ended')),
+  provider TEXT,
+  provider_stream_id TEXT,
+  playback_url TEXT,
+  viewers_count INTEGER NOT NULL DEFAULT 0,
+  started_at TEXT,
+  ended_at TEXT,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY(user_id) REFERENCES users(id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_live_streams_status
+ON live_streams(status,created_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_live_streams_user_id
+ON live_streams(user_id,id DESC);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_live_streams_one_open_per_user
+ON live_streams(user_id)
+WHERE status IN ('starting','live');
+`, err=>{
+  if(err){
+    console.error(
+      "Erreur initialisation LIVE SQLite :",
+      err
+    );
+  }else{
+    console.log(
+      "Table et index LIVE SQLite prêts"
+    );
+  }
+});
+
 db.run(`
 CREATE TABLE IF NOT EXISTS rewards(
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -17917,6 +17967,557 @@ app.get("/messages-unread-count", async (req,res)=>{
 
   }
 
+});
+
+
+/* =========================================================
+   LIVE SUNUGAME — BLOC 14
+   API de base.
+
+   IMPORTANT :
+   - le backend prend toujours user_id depuis la session ;
+   - un utilisateur ne peut avoir qu'un live ouvert ;
+   - pour l'instant aucun secret de diffusion n'est envoyé
+     au frontend : on branchera le fournisseur vidéo ensuite.
+========================================================= */
+
+const liveStartLimiter = rateLimit({
+  windowMs:60 * 1000,
+  max:10,
+  standardHeaders:true,
+  legacyHeaders:false,
+  message:{
+    ok:false,
+    message:"Trop de tentatives de création de live. Réessaie dans une minute."
+  }
+});
+
+app.post(
+  "/live/start",
+  liveStartLimiter,
+  async (req,res)=>{
+
+    try{
+
+      if(!connected(req)){
+        return res.status(401).json({
+          ok:false,
+          message:tr(req,"Connecte-toi","Please log in")
+        });
+      }
+
+      const me = Number(req.session.userId);
+
+      let title =
+        String(req.body.title || "")
+          .trim()
+          .replace(/\s+/g," ");
+
+      if(title.length > 120){
+        title = title.slice(0,120).trim();
+      }
+
+      if(!title){
+        title =
+          tr(
+            req,
+            "Live SUNUGAME",
+            "SUNUGAME Live"
+          );
+      }
+
+      const user = await get(
+        `
+        SELECT
+          id,
+          name,
+          username,
+          profile_photo
+        FROM users
+        WHERE id=?
+        LIMIT 1
+        `,
+        [me]
+      );
+
+      if(!user){
+        return res.status(404).json({
+          ok:false,
+          message:tr(
+            req,
+            "Utilisateur introuvable",
+            "User not found"
+          )
+        });
+      }
+
+      const existing = await get(
+        `
+        SELECT *
+        FROM live_streams
+        WHERE user_id=?
+          AND status IN ('starting','live')
+        ORDER BY id DESC
+        LIMIT 1
+        `,
+        [me]
+      );
+
+      if(existing){
+        return res.status(409).json({
+          ok:false,
+          code:"LIVE_ALREADY_OPEN",
+          message:tr(
+            req,
+            "Tu as déjà un live en cours",
+            "You already have an active live"
+          ),
+          live:{
+            id:Number(existing.id),
+            title:existing.title || "",
+            status:existing.status,
+            playback_url:existing.playback_url || null,
+            viewers_count:Number(existing.viewers_count || 0),
+            started_at:existing.started_at || null
+          }
+        });
+      }
+
+      const result = await run(
+        `
+        INSERT INTO live_streams(
+          user_id,
+          title,
+          status,
+          viewers_count,
+          created_at,
+          updated_at
+        )
+        VALUES(
+          ?,
+          ?,
+          'starting',
+          0,
+          datetime('now'),
+          datetime('now')
+        )
+        `,
+        [me,title]
+      );
+
+      const liveId = Number(result.lastID);
+
+      const live = await get(
+        `
+        SELECT *
+        FROM live_streams
+        WHERE id=?
+          AND user_id=?
+        LIMIT 1
+        `,
+        [liveId,me]
+      );
+
+      return res.status(201).json({
+        ok:true,
+        live:{
+          id:Number(live.id),
+          title:live.title || "",
+          status:live.status,
+          provider:live.provider || null,
+          playback_url:live.playback_url || null,
+          viewers_count:Number(live.viewers_count || 0),
+          started_at:live.started_at || null,
+          created_at:live.created_at || null,
+          owner:{
+            id:Number(user.id),
+            name:user.name || "",
+            username:user.username || "",
+            profile_photo:user.profile_photo || null
+          }
+        }
+      });
+
+    }catch(error){
+
+      if(
+        String(error?.message || "")
+          .includes("idx_live_streams_one_open_per_user")
+      ){
+        return res.status(409).json({
+          ok:false,
+          code:"LIVE_ALREADY_OPEN",
+          message:tr(
+            req,
+            "Tu as déjà un live en cours",
+            "You already have an active live"
+          )
+        });
+      }
+
+      console.error(
+        "Erreur création LIVE :",
+        error
+      );
+
+      return res.status(500).json({
+        ok:false,
+        message:tr(
+          req,
+          "Impossible de préparer le live",
+          "Unable to prepare the live"
+        )
+      });
+
+    }
+  }
+);
+
+app.post("/live/:id/go-live", async (req,res)=>{
+
+  try{
+
+    if(!connected(req)){
+      return res.status(401).json({
+        ok:false,
+        message:tr(req,"Connecte-toi","Please log in")
+      });
+    }
+
+    const me = Number(req.session.userId);
+    const liveId = Number(req.params.id);
+
+    if(
+      !Number.isInteger(liveId) ||
+      liveId <= 0
+    ){
+      return res.status(400).json({
+        ok:false,
+        message:tr(req,"Live invalide","Invalid live")
+      });
+    }
+
+    const live = await get(
+      `
+      SELECT *
+      FROM live_streams
+      WHERE id=?
+      LIMIT 1
+      `,
+      [liveId]
+    );
+
+    if(!live){
+      return res.status(404).json({
+        ok:false,
+        message:tr(req,"Live introuvable","Live not found")
+      });
+    }
+
+    if(Number(live.user_id) !== me){
+      return res.status(403).json({
+        ok:false,
+        message:tr(
+          req,
+          "Tu ne peux pas démarrer le live d'un autre utilisateur",
+          "You cannot start another user's live"
+        )
+      });
+    }
+
+    if(live.status === "ended"){
+      return res.status(409).json({
+        ok:false,
+        message:tr(
+          req,
+          "Ce live est déjà terminé",
+          "This live has already ended"
+        )
+      });
+    }
+
+    await run(
+      `
+      UPDATE live_streams
+      SET status='live',
+          started_at=COALESCE(started_at,datetime('now')),
+          updated_at=datetime('now')
+      WHERE id=?
+        AND user_id=?
+      `,
+      [liveId,me]
+    );
+
+    return res.json({
+      ok:true,
+      live_id:liveId,
+      status:"live"
+    });
+
+  }catch(error){
+
+    console.error(
+      "Erreur démarrage LIVE :",
+      error
+    );
+
+    return res.status(500).json({
+      ok:false,
+      message:tr(
+        req,
+        "Impossible de démarrer le live",
+        "Unable to start the live"
+      )
+    });
+
+  }
+});
+
+app.post("/live/:id/end", async (req,res)=>{
+
+  try{
+
+    if(!connected(req)){
+      return res.status(401).json({
+        ok:false,
+        message:tr(req,"Connecte-toi","Please log in")
+      });
+    }
+
+    const me = Number(req.session.userId);
+    const liveId = Number(req.params.id);
+
+    if(
+      !Number.isInteger(liveId) ||
+      liveId <= 0
+    ){
+      return res.status(400).json({
+        ok:false,
+        message:tr(req,"Live invalide","Invalid live")
+      });
+    }
+
+    const live = await get(
+      `
+      SELECT *
+      FROM live_streams
+      WHERE id=?
+      LIMIT 1
+      `,
+      [liveId]
+    );
+
+    if(!live){
+      return res.status(404).json({
+        ok:false,
+        message:tr(req,"Live introuvable","Live not found")
+      });
+    }
+
+    if(Number(live.user_id) !== me){
+      return res.status(403).json({
+        ok:false,
+        message:tr(
+          req,
+          "Tu ne peux pas terminer le live d'un autre utilisateur",
+          "You cannot end another user's live"
+        )
+      });
+    }
+
+    if(live.status === "ended"){
+      return res.json({
+        ok:true,
+        live_id:liveId,
+        status:"ended"
+      });
+    }
+
+    await run(
+      `
+      UPDATE live_streams
+      SET status='ended',
+          viewers_count=0,
+          ended_at=datetime('now'),
+          updated_at=datetime('now')
+      WHERE id=?
+        AND user_id=?
+      `,
+      [liveId,me]
+    );
+
+    return res.json({
+      ok:true,
+      live_id:liveId,
+      status:"ended"
+    });
+
+  }catch(error){
+
+    console.error(
+      "Erreur arrêt LIVE :",
+      error
+    );
+
+    return res.status(500).json({
+      ok:false,
+      message:tr(
+        req,
+        "Impossible de terminer le live",
+        "Unable to end the live"
+      )
+    });
+
+  }
+});
+
+app.get("/lives", async (req,res)=>{
+
+  try{
+
+    const lives = await all(
+      `
+      SELECT
+        l.id,
+        l.user_id,
+        l.title,
+        l.status,
+        l.provider,
+        l.playback_url,
+        l.viewers_count,
+        l.started_at,
+        l.created_at,
+        u.name,
+        u.username,
+        u.profile_photo
+      FROM live_streams l
+      JOIN users u
+        ON u.id=l.user_id
+      WHERE l.status='live'
+      ORDER BY
+        l.viewers_count DESC,
+        COALESCE(l.started_at,l.created_at) DESC,
+        l.id DESC
+      LIMIT 100
+      `
+    );
+
+    return res.json({
+      ok:true,
+      lives:lives.map(live=>({
+        id:Number(live.id),
+        title:live.title || "",
+        status:"live",
+        provider:live.provider || null,
+        playback_url:live.playback_url || null,
+        viewers_count:Number(live.viewers_count || 0),
+        started_at:live.started_at || null,
+        owner:{
+          id:Number(live.user_id),
+          name:live.name || "",
+          username:live.username || "",
+          profile_photo:live.profile_photo || null
+        }
+      }))
+    });
+
+  }catch(error){
+
+    console.error(
+      "Erreur liste LIVE :",
+      error
+    );
+
+    return res.status(500).json({
+      ok:false,
+      lives:[],
+      message:tr(
+        req,
+        "Impossible de charger les lives",
+        "Unable to load live streams"
+      )
+    });
+
+  }
+});
+
+app.get("/live/:id", async (req,res)=>{
+
+  try{
+
+    const liveId = Number(req.params.id);
+
+    if(
+      !Number.isInteger(liveId) ||
+      liveId <= 0
+    ){
+      return res.status(400).json({
+        ok:false,
+        message:tr(req,"Live invalide","Invalid live")
+      });
+    }
+
+    const live = await get(
+      `
+      SELECT
+        l.*,
+        u.name,
+        u.username,
+        u.profile_photo
+      FROM live_streams l
+      JOIN users u
+        ON u.id=l.user_id
+      WHERE l.id=?
+      LIMIT 1
+      `,
+      [liveId]
+    );
+
+    if(!live){
+      return res.status(404).json({
+        ok:false,
+        message:tr(req,"Live introuvable","Live not found")
+      });
+    }
+
+    return res.json({
+      ok:true,
+      live:{
+        id:Number(live.id),
+        title:live.title || "",
+        status:live.status,
+        provider:live.provider || null,
+        playback_url:live.playback_url || null,
+        viewers_count:Number(live.viewers_count || 0),
+        started_at:live.started_at || null,
+        ended_at:live.ended_at || null,
+        created_at:live.created_at || null,
+        owner:{
+          id:Number(live.user_id),
+          name:live.name || "",
+          username:live.username || "",
+          profile_photo:live.profile_photo || null
+        }
+      }
+    });
+
+  }catch(error){
+
+    console.error(
+      "Erreur lecture LIVE :",
+      error
+    );
+
+    return res.status(500).json({
+      ok:false,
+      message:tr(
+        req,
+        "Impossible de charger le live",
+        "Unable to load the live"
+      )
+    });
+
+  }
 });
 
 app.listen(PORT, () => {
