@@ -20180,8 +20180,12 @@ function demanderPartageEcranAndroid(){
 
     if(status){
       status.textContent =
-        "Le partage d'écran nécessite l'application Android SunuGame.";
+        "Pont Android LIVE non chargé. Ferme SunuGame puis ouvre la version Android recompilée.";
     }
+
+    console.error(
+      "AndroidLive indisponible : l'APK installé ne contient pas encore le nouveau MainActivity, ou la page est ouverte dans un navigateur."
+    );
 
     return false;
   }
@@ -20331,25 +20335,32 @@ async function preparerLiveSunugame(){
         data?.live?.id
       ){
 
+        /*
+          On réutilise le live déjà créé.
+          IMPORTANT : on ne s'arrête plus ici.
+          On continue vers Caméra ou Écran du jeu.
+        */
         window.liveSunugameEnPreparation =
           data.live;
 
         if(message){
           message.textContent =
-            "Tu as déjà un live en préparation.";
+            "Live déjà préparé. Ouverture de la source...";
         }
 
-        return;
+      }else{
+
+        throw new Error(
+          data?.message ||
+          "Impossible de préparer le live"
+        );
       }
 
-      throw new Error(
-        data?.message ||
-        "Impossible de préparer le live"
-      );
-    }
+    }else{
 
-    window.liveSunugameEnPreparation =
-      data.live;
+      window.liveSunugameEnPreparation =
+        data.live;
+    }
 
     if(
       sourceLiveSunugame ===
