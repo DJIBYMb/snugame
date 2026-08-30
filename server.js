@@ -690,28 +690,71 @@ async function envoyerNotificationPush(
 
     }
 
-    await getMessaging().send({
+    const estMessagePrive =
+      action.startsWith("message:");
 
-      token,
+    if(estMessagePrive){
 
-      notification:{
-        title:String(titre || ""),
-        body:String(message || "")
-      },
+      /*
+        MESSAGE PRIVÉ = DATA-ONLY.
 
-      data,
+        Important :
+        Android reçoit toujours le message dans
+        MyFirebaseMessagingService, même quand
+        l'application est en arrière-plan.
 
-      android:{
+        Le service Android construit ensuite lui-même
+        la notification avec conversation_id afin que
+        le clic ouvre directement la bonne conversation.
+      */
+      data.title =
+        String(titre || "SUNUGAME");
 
-        priority:"high",
+      data.body =
+        String(message || "Nouveau message");
 
-        notification:{
-          sound:"default"
+      await getMessaging().send({
+
+        token,
+
+        data,
+
+        android:{
+          priority:"high"
         }
 
-      }
+      });
 
-    });
+    }else{
+
+      /*
+        Les autres notifications SUNUGAME
+        restent exactement comme avant.
+      */
+      await getMessaging().send({
+
+        token,
+
+        notification:{
+          title:String(titre || ""),
+          body:String(message || "")
+        },
+
+        data,
+
+        android:{
+
+          priority:"high",
+
+          notification:{
+            sound:"default"
+          }
+
+        }
+
+      });
+
+    }
 
   }catch(e){
 
