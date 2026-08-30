@@ -20195,8 +20195,27 @@ function demanderPartageEcranAndroid(){
       "Autorise maintenant le partage d'écran dans Android.";
   }
 
+  const liveId =
+    Number(
+      window
+        .liveSunugameEnPreparation
+        ?.id || 0
+    );
+
+  if(!liveId){
+
+    if(status){
+      status.textContent =
+        "Live introuvable. Recommence la préparation.";
+    }
+
+    return false;
+  }
+
   window.AndroidLive
-    .startScreenShare();
+    .startScreenShare(
+      String(liveId)
+    );
 
   return true;
 }
