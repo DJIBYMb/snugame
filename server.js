@@ -317,7 +317,7 @@ const upload = multer({
   storage,
 
   limits:{
-    fileSize:50 * 1024 * 1024
+    fileSize:100 * 1024 * 1024
 
   },
 
@@ -2141,6 +2141,35 @@ function containsBadWords(text=""){
 
 }
 
+
+/* =========================================================
+   SUNUGAME — BLOC 19
+   Réponses d'authentification jamais mises en cache.
+========================================================= */
+
+app.use(
+  [
+    "/login",
+    "/logout",
+    "/register",
+    "/me",
+    "/reset-password"
+  ],
+  (req,res,next)=>{
+
+    res.set({
+      "Cache-Control":
+        "no-store, no-cache, must-revalidate, private",
+      "Pragma":
+        "no-cache",
+      "Expires":
+        "0"
+    });
+
+    next();
+  }
+);
+
 app.post("/register", async (req,res)=>{
 
   try{
@@ -2264,36 +2293,62 @@ app.post("/register", async (req,res)=>{
           [cleanEmail]
         );
 
-        req.session.userId = userId;
+        /*
+        Nouvelle session après inscription :
+        évite de réutiliser un ancien identifiant de session.
+        */
+        req.session.regenerate(
+          regenerateError=>{
 
-req.session.save(saveError=>{
+            if(regenerateError){
 
-  if(saveError){
+              console.error(
+                "Erreur régénération session inscription :",
+                regenerateError
+              );
 
-    console.error(
-      "Erreur sauvegarde session inscription :",
-      saveError
-    );
+              return res.status(500).send(
+                tr(
+                  req,
+                  "Compte créé, mais la connexion a échoué",
+                  "Account created, but login failed"
+                )
+              );
+            }
 
-    return res.status(500).send(
-      tr(
-        req,
-        "Compte créé, mais la connexion a échoué",
-        "Account created, but login failed"
-      )
-    );
+            req.session.userId =
+              userId;
 
-  }
+            req.session.save(
+              saveError=>{
 
-  return res.send(
-    tr(
-      req,
-      "Compte créé",
-      "Account created"
-    )
-  );
+                if(saveError){
 
-});
+                  console.error(
+                    "Erreur sauvegarde session inscription :",
+                    saveError
+                  );
+
+                  return res.status(500).send(
+                    tr(
+                      req,
+                      "Compte créé, mais la connexion a échoué",
+                      "Account created, but login failed"
+                    )
+                  );
+                }
+
+                return res.send(
+                  tr(
+                    req,
+                    "Compte créé",
+                    "Account created"
+                  )
+                );
+              }
+            );
+          }
+        );
 
       }
     );
@@ -2441,6 +2496,10 @@ const uploadLimiter = rateLimit({
 
 app.post("/logout",(req,res)=>{
 
+  /*
+  Le cookie est invalidé dans la réponse et la session
+  est supprimée du store SQLite.
+  */
   req.session.destroy(error=>{
 
     if(error){
@@ -2457,7 +2516,6 @@ app.post("/logout",(req,res)=>{
           "Unable to log out"
         )
       );
-
     }
 
     res.clearCookie(
@@ -2472,6 +2530,13 @@ app.post("/logout",(req,res)=>{
       }
     );
 
+    res.set({
+      "Cache-Control":
+        "no-store, no-cache, must-revalidate, private",
+      "Pragma":"no-cache",
+      "Expires":"0"
+    });
+
     return res.send(
       tr(
         req,
@@ -2479,9 +2544,7 @@ app.post("/logout",(req,res)=>{
         "Logged out"
       )
     );
-
   });
-
 });
 
 app.get("/me", async (req,res)=>{

@@ -5262,6 +5262,231 @@ body.navigation-restoring section{
   min-width:0;
 }
 
+
+/* =========================================================
+   SUNUGAME — BLOC 19
+   AUTHENTIFICATION ISOLÉE ET STABLE
+========================================================= */
+
+body.auth-mode{
+  overflow:hidden !important;
+  background:#07111f !important;
+}
+
+body.auth-mode header,
+body.auth-mode .bottom-nav{
+  display:none !important;
+}
+
+body.auth-mode #pageAuth{
+  position:fixed !important;
+  inset:0 !important;
+  z-index:1000000 !important;
+  width:100vw !important;
+  height:100dvh !important;
+  min-height:100dvh !important;
+  margin:0 !important;
+  padding:
+    max(24px, env(safe-area-inset-top))
+    18px
+    max(24px, env(safe-area-inset-bottom)) !important;
+  overflow-y:auto !important;
+  -webkit-overflow-scrolling:touch;
+  background:
+    radial-gradient(
+      circle at 50% 0%,
+      rgba(24,82,145,.28),
+      transparent 36%
+    ),
+    #07111f !important;
+}
+
+body.auth-mode #pageAuth > .card,
+body.auth-mode #pageAuth > #registerBox,
+body.auth-mode #pageAuth > #forgotBox{
+  position:relative !important;
+  inset:auto !important;
+  z-index:auto !important;
+  width:min(100%, 430px) !important;
+  height:auto !important;
+  min-height:0 !important;
+  max-height:none !important;
+  margin:72px auto 24px !important;
+  padding:22px !important;
+  overflow:visible !important;
+  transform:none !important;
+  border-radius:18px !important;
+  background:rgba(10,23,40,.96) !important;
+  box-shadow:
+    0 18px 60px rgba(0,0,0,.28) !important;
+}
+
+body.auth-mode #pageAuth > #registerBox.fullscreen-register,
+body.auth-mode #pageAuth > #forgotBox.fullscreen-forgot{
+  position:relative !important;
+  inset:auto !important;
+  width:min(100%, 430px) !important;
+  height:auto !important;
+  min-height:0 !important;
+  margin:72px auto 24px !important;
+  padding:22px !important;
+  overflow:visible !important;
+}
+
+body.auth-mode #pageAuth input{
+  width:100% !important;
+  max-width:100% !important;
+  box-sizing:border-box !important;
+}
+
+body.auth-mode #pageAuth button{
+  max-width:100%;
+}
+
+body.auth-mode #btnLangueAuth{
+  position:fixed !important;
+  top:max(14px, env(safe-area-inset-top)) !important;
+  right:16px !important;
+  z-index:1000002 !important;
+}
+
+body.auth-mode.register-mode #pageAuth,
+body.auth-mode.forgot-mode #pageAuth{
+  overflow-y:auto !important;
+}
+
+body.auth-mode.register-mode #registerBox,
+body.auth-mode.forgot-mode #forgotBox{
+  display:block;
+}
+
+body.auth-mode .fullscreen-register,
+body.auth-mode .fullscreen-forgot{
+  padding-top:22px !important;
+  padding-left:22px !important;
+  padding-right:22px !important;
+  padding-bottom:22px !important;
+}
+
+
+
+/* =========================================================
+   SUNUGAME — BLOC 19.1
+   Mot de passe oublié : stable avec clavier Android
+========================================================= */
+
+body.auth-mode.forgot-mode{
+  overflow:hidden !important;
+}
+
+body.auth-mode.forgot-mode #pageAuth{
+  position:fixed !important;
+  inset:0 !important;
+  width:100% !important;
+  height:100% !important;
+  min-height:100% !important;
+  padding:
+    18px
+    18px
+    22px !important;
+  overflow-y:auto !important;
+  overscroll-behavior:none;
+}
+
+body.auth-mode.forgot-mode #forgotBox,
+body.auth-mode.forgot-mode #forgotBox.fullscreen-forgot{
+  position:relative !important;
+  inset:auto !important;
+  display:block !important;
+  width:min(100%, 430px) !important;
+  height:auto !important;
+  min-height:auto !important;
+  max-height:none !important;
+  margin:58px auto 28px !important;
+  padding:22px !important;
+  overflow:visible !important;
+  transform:none !important;
+}
+
+body.auth-mode.forgot-mode #forgotBox input{
+  position:relative !important;
+  z-index:1 !important;
+}
+
+/*
+Le bouton langue reste proche du formulaire et ne colle
+plus au bord extrême de l'écran.
+*/
+body.auth-mode #btnLangueAuth{
+  top:max(20px, env(safe-area-inset-top)) !important;
+  right:22px !important;
+}
+
+@media (max-height:600px){
+  body.auth-mode.forgot-mode #forgotBox,
+  body.auth-mode.forgot-mode #forgotBox.fullscreen-forgot{
+    margin-top:46px !important;
+    margin-bottom:20px !important;
+  }
+
+  body.auth-mode #btnLangueAuth{
+    top:12px !important;
+    right:18px !important;
+  }
+}
+
+
+/* =========================================================
+   SUNUGAME — BLOC 19.2
+   Création de compte stable avec clavier Android
+========================================================= */
+
+body.auth-mode.register-mode{
+  overflow:hidden !important;
+}
+
+body.auth-mode.register-mode #pageAuth{
+  position:fixed !important;
+  inset:0 !important;
+  width:100% !important;
+  height:100% !important;
+  min-height:100% !important;
+  padding:
+    18px
+    18px
+    22px !important;
+  overflow-y:auto !important;
+  overscroll-behavior:none;
+}
+
+body.auth-mode.register-mode #registerBox,
+body.auth-mode.register-mode #registerBox.fullscreen-register{
+  position:relative !important;
+  inset:auto !important;
+  display:block !important;
+  width:min(100%, 430px) !important;
+  height:auto !important;
+  min-height:auto !important;
+  max-height:none !important;
+  margin:58px auto 28px !important;
+  padding:22px !important;
+  overflow:visible !important;
+  transform:none !important;
+}
+
+body.auth-mode.register-mode #registerBox input{
+  position:relative !important;
+  z-index:1 !important;
+}
+
+@media (max-height:600px){
+  body.auth-mode.register-mode #registerBox,
+  body.auth-mode.register-mode #registerBox.fullscreen-register{
+    margin-top:46px !important;
+    margin-bottom:20px !important;
+  }
+}
+
 </style>
 
 <link
@@ -8979,6 +9204,203 @@ function showNotif(text){
 
 }
 
+
+/* =========================================================
+   BLOC 19 — GARDE DE SESSION FRONTEND
+   Toute requête liée à l'ancien compte est annulée dès
+   qu'une connexion/déconnexion change de session.
+========================================================= */
+
+let generationSessionFrontend = 1;
+
+let controleurRequetesCompte =
+  new AbortController();
+
+function nouvelleGenerationSessionFrontend(){
+
+  generationSessionFrontend += 1;
+
+  try{
+    controleurRequetesCompte.abort();
+  }catch(error){
+  }
+
+  controleurRequetesCompte =
+    new AbortController();
+
+  return generationSessionFrontend;
+}
+
+function estRouteAuthentificationPublique(url=""){
+
+  return [
+    "/login",
+    "/logout",
+    "/register",
+    "/send-code",
+    "/send-reset-code",
+    "/reset-password",
+    "/me"
+  ].some(route=>
+    String(url).startsWith(route)
+  );
+}
+
+function signalRequeteCompte(url=""){
+
+  if(
+    estRouteAuthentificationPublique(url)
+  ){
+    return undefined;
+  }
+
+  return controleurRequetesCompte.signal;
+}
+
+function nettoyerFormulairesAuthentification(){
+
+  [
+    "loginPassword",
+    "registerPassword",
+    "registerCode",
+    "forgotCode",
+    "newPassword"
+  ].forEach(id=>{
+
+    const el =
+      document.getElementById(id);
+
+    if(el){
+      el.value = "";
+    }
+  });
+
+  [
+    "msgLoginEmail",
+    "msgLoginPassword",
+    "msgLoginGeneral",
+    "messageCodeEmail",
+    "forgotPasswordMessage"
+  ].forEach(id=>{
+
+    const el =
+      document.getElementById(id);
+
+    if(el){
+      el.textContent = "";
+      el.classList?.remove(
+        "success",
+        "error"
+      );
+    }
+  });
+}
+
+function nettoyerDonneesComptePersistantes(){
+
+  /*
+    On garde volontairement :
+    - langueApp / lang
+    - fcmToken
+    - compteurs de publicité
+    car ils appartiennent à l'appareil, pas au compte.
+  */
+
+  [
+    "lastPage",
+    "lastPanel"
+  ].forEach(key=>
+    localStorage.removeItem(key)
+  );
+
+  [
+    "appDejaOuverte",
+    "hideBottomNavOrg",
+    "modeOrganisateurTemp",
+    "tournoiExterne",
+    "tournoiOrganisateurId"
+  ].forEach(key=>
+    sessionStorage.removeItem(key)
+  );
+}
+
+function arreterFonctionsCompteActif(){
+
+  stopAllVideosSecurise();
+
+  if(tiktokObserver){
+    tiktokObserver.disconnect();
+    tiktokObserver = null;
+  }
+
+  try{
+    arreterActualisationPageLive();
+  }catch(error){
+  }
+
+  try{
+    arreterCameraLiveSunugame();
+  }catch(error){
+  }
+
+  try{
+
+    if(
+      window.AndroidLive &&
+      typeof window.AndroidLive
+        .stopScreenShare ===
+        "function"
+    ){
+      window.AndroidLive
+        .stopScreenShare();
+    }
+
+  }catch(error){
+  }
+
+  window.liveSunugameEnPreparation =
+    null;
+
+  derniereVideoComptee = null;
+}
+
+function basculerImmediatementVersConnexion(){
+
+  nouvelleGenerationSessionFrontend();
+
+  arreterFonctionsCompteActif();
+
+  reinitialiserDonneesCompteFrontend();
+
+  nettoyerDonneesComptePersistantes();
+
+  currentUserId = null;
+  currentPublicUserId = null;
+  currentCommentVideoId = null;
+  commentaireParentId = null;
+  utilisateurAbonne = false;
+
+  cacheTirage = null;
+  cacheTournoiId = null;
+  estProprietaire = false;
+  currentPanelName = null;
+  tournoisDejaCharges = false;
+
+  window.videoSoundEnabled = false;
+  window.favorisChanged = false;
+
+  history.replaceState(
+    {},
+    "",
+    "/app"
+  );
+
+  nettoyerFormulairesAuthentification();
+
+  afficherConnexionPropre();
+}
+
+
 let redirectionConnexionEnCours = false;
 
 async function gererSessionExpiree(){
@@ -8989,32 +9411,7 @@ async function gererSessionExpiree(){
 
   redirectionConnexionEnCours = true;
 
-  stopAllVideosSecurise();
-
-  if(tiktokObserver){
-    tiktokObserver.disconnect();
-    tiktokObserver = null;
-  }
-
-  derniereVideoComptee = null;
-  currentUserId = null;
-  currentCommentVideoId = null;
-  utilisateurAbonne = false;
-
-  document.body.classList.remove(
-    "video-mode",
-    "video-profil-mode",
-    "register-mode",
-    "forgot-mode"
-  );
-
-  document
-    .getElementById("commentsSheet")
-    ?.classList.add("hidden");
-
-  sessionStorage.clear();
-
-  afficherConnexionPropre();
+  basculerImmediatementVersConnexion();
 
   const msg =
     document.getElementById(
@@ -9034,7 +9431,6 @@ async function gererSessionExpiree(){
     showNotif(
       "Ta session a expiré. Connecte-toi à nouveau."
     );
-
   }
 
   setTimeout(()=>{
@@ -9042,12 +9438,14 @@ async function gererSessionExpiree(){
     redirectionConnexionEnCours = false;
 
   },1000);
-
 }
 
 async function post(url, data = {}){
 
   try{
+
+    const generationAuDepart =
+      generationSessionFrontend;
 
     const res = await fetch(url,{
       method:"POST",
@@ -9059,8 +9457,30 @@ async function post(url, data = {}){
 
       credentials:"same-origin",
 
+      signal:
+        signalRequeteCompte(url),
+
+      cache:"no-store",
+
       body:JSON.stringify(data)
     });
+
+    if(
+      !estRouteAuthentificationPublique(url) &&
+      generationAuDepart !==
+        generationSessionFrontend
+    ){
+
+      const staleError =
+        new Error(
+          "Ancienne session ignorée"
+        );
+
+      staleError.code =
+        "SESSION_FRONTEND_CHANGE";
+
+      throw staleError;
+    }
 
     /*
       On récupère d'abord la réponse en texte.
@@ -9178,6 +9598,14 @@ async function post(url, data = {}){
 
   }catch(error){
 
+    if(
+      error?.name === "AbortError" ||
+      error?.code ===
+        "SESSION_FRONTEND_CHANGE"
+    ){
+      throw error;
+    }
+
     /*
       Si l'erreur possède déjà un statut HTTP,
       cela veut dire que le serveur a répondu.
@@ -9222,13 +9650,27 @@ async function get(url){
 
   try{
 
+    const generationAuDepart =
+      generationSessionFrontend;
+
     const res = await fetch(url,{
       method:"GET",
       headers:{
         "x-language":langueApp
       },
-      credentials:"same-origin"
+      credentials:"same-origin",
+      signal:
+        signalRequeteCompte(url),
+      cache:"no-store"
     });
+
+    if(
+      !estRouteAuthentificationPublique(url) &&
+      generationAuDepart !==
+        generationSessionFrontend
+    ){
+      return null;
+    }
 
     const text = await res.text();
 
@@ -9278,6 +9720,14 @@ async function get(url){
     }
 
   }catch(error){
+
+    if(
+      error?.name === "AbortError" ||
+      error?.code ===
+        "SESSION_FRONTEND_CHANGE"
+    ){
+      return null;
+    }
 
     console.error(
       "Erreur réseau GET :",
@@ -9405,7 +9855,13 @@ function afficherConnexionPropre(){
     "video-mode",
     "video-profil-mode",
     "register-mode",
-    "forgot-mode"
+    "forgot-mode",
+    "profile-mode",
+    "competition-mode"
+  );
+
+  document.body.classList.add(
+    "auth-mode"
   );
 
   window.openingProfileVideo = false;
@@ -9453,6 +9909,10 @@ function afficherConnexionPropre(){
 }
 
 function showRegister(){
+
+  document.body.classList.add(
+    "auth-mode"
+  );
 
   document.body.classList.remove(
     "forgot-mode"
@@ -12656,6 +13116,78 @@ function demarrerCompteurCodeEmail(secondes = 60){
 
 }
 
+
+function maintenirPageCreationCompte(){
+
+  if(
+    !document.body.classList.contains(
+      "register-mode"
+    )
+  ){
+    return;
+  }
+
+  document.body.classList.add(
+    "auth-mode",
+    "register-mode"
+  );
+
+  registerBox.classList.remove(
+    "hidden"
+  );
+
+  registerBox.classList.add(
+    "fullscreen-register"
+  );
+
+  document
+    .querySelector("#pageAuth > .card")
+    ?.classList.add("hidden");
+
+  forgotBox.classList.add(
+    "hidden"
+  );
+}
+
+/*
+Le clavier Android peut redimensionner la WebView.
+On garde le formulaire Créer un compte ouvert sans
+réinitialiser les champs déjà saisis.
+*/
+[
+  registerName,
+  registerEmail,
+  registerPassword,
+  registerCode
+].forEach(input=>{
+
+  input?.addEventListener(
+    "focus",
+    maintenirPageCreationCompte
+  );
+
+  input?.addEventListener(
+    "input",
+    maintenirPageCreationCompte
+  );
+});
+
+window.visualViewport
+  ?.addEventListener(
+    "resize",
+    ()=>{
+
+      if(
+        document.body.classList.contains(
+          "register-mode"
+        )
+      ){
+        maintenirPageCreationCompte();
+      }
+    }
+  );
+
+
 async function envoyerCode(){
 
   const messageCode =
@@ -12746,19 +13278,21 @@ async function register(){
     code:registerCode.value
   });
 
-  if(result.includes("Compte créé")){
+  if(
+    typeof result === "string" &&
+    result.includes("Compte créé")
+  ){
+
+    nouvelleGenerationSessionFrontend();
 
     document.body.classList.remove(
+      "auth-mode",
       "register-mode",
       "forgot-mode"
     );
 
-    afficherBottomNav();
-
-    sessionStorage.clear();
-
-    localStorage.setItem("lastPanel", "panelProprietaire");
-    localStorage.setItem("lastPage", "pageDashboard");
+    reinitialiserDonneesCompteFrontend();
+    nettoyerDonneesComptePersistantes();
 
     modeOrganisateurDepuisProfil = false;
     tournoiOrganisateurId = null;
@@ -12767,11 +13301,44 @@ async function register(){
 
     registerBox.classList.add("hidden");
     registerBox.classList.remove("fullscreen-register");
-    document.body.classList.remove("register-mode");
+
+    const compteActuel =
+      await synchroniserCompteConnecte();
+
+    if(!compteActuel){
+
+      afficherConnexionPropre();
+
+      message.textContent =
+        "Compte créé, mais la session n'a pas pu être chargée.";
+
+      return;
+    }
+
+    localStorage.setItem(
+      "lastPanel",
+      "panelProprietaire"
+    );
+
+    localStorage.setItem(
+      "lastPage",
+      "pageDashboard"
+    );
+
+    afficherBottomNav();
 
     await ouvrirTableauProprietaire();
 
     showNotif("Compte créé et connecté");
+
+    prechargerDonneesUtilisateur();
+
+    const token =
+      localStorage.getItem("fcmToken");
+
+    if(token){
+      await saveFcmToken(token);
+    }
 
     return;
   }
@@ -12912,26 +13479,31 @@ async function login(){
     email:loginEmail.value,
     password:loginPassword.value
   });
-if(result.includes("Connexion")){
+if(
+  typeof result === "string" &&
+  result.includes("Connexion")
+){
+
+  nouvelleGenerationSessionFrontend();
 
   document.body.classList.remove(
+    "auth-mode",
     "register-mode",
     "forgot-mode"
   );
 
-  afficherBottomNav();
-
   reinitialiserDonneesCompteFrontend();
-  sessionStorage.clear();
-
-  localStorage.setItem("lastPanel", "panelProprietaire");
-  localStorage.setItem("lastPage", "pageDashboard");
+  nettoyerDonneesComptePersistantes();
 
   modeOrganisateurDepuisProfil = false;
   tournoiOrganisateurId = null;
 
   history.replaceState({}, "", "/app");
 
+  /*
+    Vérification immédiate du compte réellement associé
+    au nouveau cookie de session.
+  */
   const compteActuel =
     await synchroniserCompteConnecte();
 
@@ -12942,6 +13514,18 @@ if(result.includes("Connexion")){
       "form-message error";
     return;
   }
+
+  localStorage.setItem(
+    "lastPanel",
+    "panelProprietaire"
+  );
+
+  localStorage.setItem(
+    "lastPage",
+    "pageDashboard"
+  );
+
+  afficherBottomNav();
 
   await ouvrirTableauProprietaire();
 
@@ -13006,121 +13590,96 @@ async function logout(){
 
   deconnexionEnCours = true;
 
+  /*
+    PRIORITÉ UX/SÉCURITÉ :
+    l'ancien compte disparaît immédiatement de l'écran,
+    avant même d'attendre la réponse réseau.
+  */
+  basculerImmediatementVersConnexion();
+
+  const msg =
+    document.getElementById(
+      "msgLoginGeneral"
+    );
+
   try{
 
-    /*
-      Arrêter toutes les vidéos avant
-      de supprimer la session.
-    */
-    stopAllVideosSecurise();
-
-    /*
-      Arrêter l'observer TikTok.
-    */
-    if(tiktokObserver){
-      tiktokObserver.disconnect();
-      tiktokObserver = null;
-    }
-
-    derniereVideoComptee = null;
-
-    /*
-      Fermer les commentaires.
-    */
-    const sheet =
-      document.getElementById("commentsSheet");
-
-    if(sheet){
-      sheet.classList.add("hidden");
-    }
-
-    const input =
-      document.getElementById("commentInput");
-
-    if(input){
-      input.value = "";
-      input.blur();
-    }
-
-    /*
-      Informer le serveur.
-    */
-    try{
-
-      await fetch("/logout",{
-        method:"POST",
-        headers:{
-          "Content-Type":"application/json",
-          "x-language":langueApp
-        },
-        credentials:"same-origin",
-        body:JSON.stringify({})
-      });
-
-    }catch(error){
-
-      console.error(
-        "Erreur pendant la déconnexion serveur :",
-        error
+    const response =
+      await fetch(
+        "/logout",
+        {
+          method:"POST",
+          headers:{
+            "Content-Type":
+              "application/json",
+            "x-language":
+              langueApp
+          },
+          credentials:"same-origin",
+          cache:"no-store",
+          body:"{}"
+        }
       );
 
+    if(!response.ok){
+
+      throw new Error(
+        "La session serveur n'a pas pu être fermée."
+      );
+    }
+
+    /*
+      Double vérification :
+      /me doit confirmer qu'aucun compte n'est encore attaché
+      au cookie WebView.
+    */
+    const verification =
+      await fetch(
+        "/me?v=" + Date.now(),
+        {
+          method:"GET",
+          credentials:"same-origin",
+          cache:"no-store",
+          headers:{
+            "x-language":
+              langueApp
+          }
+        }
+      );
+
+    const compte =
+      await verification.json();
+
+    if(
+      compte &&
+      compte.connected !== false
+    ){
+
+      throw new Error(
+        "La session serveur semble encore active."
+      );
+    }
+
+  }catch(error){
+
+    console.error(
+      "Déconnexion serveur :",
+      error
+    );
+
+    if(msg){
+
+      msg.textContent =
+        "Les données de l'application ont été déconnectées. Vérifie ta connexion internet avant de te reconnecter.";
+
+      msg.className =
+        "form-message error";
     }
 
   }finally{
 
-    reinitialiserDonneesCompteFrontend();
-    sessionStorage.clear();
-
-    currentUserId = null;
-    currentCommentVideoId = null;
-    utilisateurAbonne = false;
-
-    cacheTirage = null;
-    cacheTournoiId = null;
-
-    estProprietaire = false;
-    currentPanelName = null;
-    tournoisDejaCharges = false;
-
-    window.videoSoundEnabled = false;
-    window.favorisChanged = false;
-
-    document.body.classList.remove(
-      "video-mode",
-      "video-profil-mode"
-    );
-
-    const highlightsList =
-      document.getElementById("highlightsList");
-
-    if(highlightsList){
-      highlightsList.innerHTML = "";
-    }
-
-    const profileVideoContainer =
-      document.getElementById(
-        "profileVideoContainer"
-      );
-
-    if(profileVideoContainer){
-      profileVideoContainer.innerHTML = "";
-    }
-
-    if(
-      typeof tournoiSelect !== "undefined" &&
-      tournoiSelect
-    ){
-      tournoiSelect.innerHTML = "";
-    }
-
-    localStorage.removeItem("lastPanel");
-
-    setPage("pageAuth");
-
     deconnexionEnCours = false;
-
   }
-
 }
 
 async function abonnement(){
@@ -15478,9 +16037,9 @@ async function publierHighlight(){
       return;
     }
 
-    if(file.size > 50 * 1024 * 1024){
+    if(file.size > 100 * 1024 * 1024){
       message.textContent =
-        "Vidéo maximum 50 MB";
+        "Vidéo maximum 100 MB";
       return;
     }
 
@@ -15497,7 +16056,7 @@ async function publierHighlight(){
 
     if(!ok){
       message.textContent =
-        "Vidéo maximum 1 minute";
+        "Vidéo maximum 2 minutes";
 
       if(btn){
         btn.disabled = false;
@@ -16680,6 +17239,11 @@ document
 
 function ouvrirMotDePasseOublie(){
 
+  document.body.classList.add(
+    "auth-mode"
+  );
+
+
   document.body.classList.remove(
     "register-mode"
   );
@@ -16744,6 +17308,77 @@ function closeForgotPassword(){
   afficherConnexionPropre();
 
 }
+
+
+function maintenirPageMotDePasseOublie(){
+
+  if(
+    !document.body.classList.contains(
+      "forgot-mode"
+    )
+  ){
+    return;
+  }
+
+  document.body.classList.add(
+    "auth-mode",
+    "forgot-mode"
+  );
+
+  forgotBox.classList.remove(
+    "hidden"
+  );
+
+  forgotBox.classList.add(
+    "fullscreen-forgot"
+  );
+
+  document
+    .querySelector("#pageAuth > .card")
+    ?.classList.add("hidden");
+
+  registerBox.classList.add(
+    "hidden"
+  );
+}
+
+/*
+Le clavier Android peut déclencher resize/visualViewport.
+On garde simplement le formulaire ouvert, sans reconstruire
+la page et sans effacer ce que l'utilisateur tape.
+*/
+[
+  forgotEmail,
+  forgotCode,
+  newPassword
+].forEach(input=>{
+
+  input?.addEventListener(
+    "focus",
+    maintenirPageMotDePasseOublie
+  );
+
+  input?.addEventListener(
+    "input",
+    maintenirPageMotDePasseOublie
+  );
+});
+
+window.visualViewport
+  ?.addEventListener(
+    "resize",
+    ()=>{
+
+      if(
+        document.body.classList.contains(
+          "forgot-mode"
+        )
+      ){
+        maintenirPageMotDePasseOublie();
+      }
+    }
+  );
+
 
 async function envoyerCodeReset(){
 
@@ -16908,6 +17543,11 @@ async function resetPassword(){
       "success"
     );
 
+    /*
+      Le formulaire ne se ferme QUE maintenant :
+      tous les champs sont valides et le serveur vient de
+      confirmer que le mot de passe a réellement été changé.
+    */
     forgotEmail.value = "";
     forgotCode.value = "";
     newPassword.value = "";
@@ -16920,18 +17560,15 @@ async function resetPassword(){
       "lastPage"
     );
 
-    setTimeout(()=>{
+    afficherConnexionPropre();
 
-      afficherMessage("");
+    loginEmail.value =
+      email;
 
-      closeForgotPassword();
+    loginPassword.value =
+      "";
 
-      setPage(
-        "pageAuth",
-        false
-      );
-
-    },1000);
+    loginPassword.focus();
 
   }catch(error){
 
@@ -18850,7 +19487,7 @@ async function verifierVideoDuration(file){
 
       URL.revokeObjectURL(video.src);
 
-      resolve(video.duration <= 60);
+      resolve(video.duration <= 120);
 
     };
 
@@ -21645,10 +22282,20 @@ async function demarrerApplication(){
       "app-loading"
     );
 
-    afficherConnexionPropre();
+    basculerImmediatementVersConnexion();
 
     return;
   }
+
+  nouvelleGenerationSessionFrontend();
+
+  document.body.classList.remove(
+    "auth-mode",
+    "register-mode",
+    "forgot-mode"
+  );
+
+  reinitialiserDonneesCompteFrontend();
 
   currentUserId = Number(data.id);
 
