@@ -5487,6 +5487,71 @@ body.auth-mode.register-mode #registerBox input{
   }
 }
 
+
+/* =========================================================
+   SUNUGAME — BLOC 21
+   Publication vidéo 5 sec → 2 min + progression réelle
+========================================================= */
+
+.video-publish-preview-wrap{
+  position:relative;
+  width:100%;
+}
+
+.video-upload-progress{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  width:100%;
+  margin:12px 0 4px;
+}
+
+.video-upload-progress.hidden{
+  display:none !important;
+}
+
+.video-upload-track{
+  position:relative;
+  flex:1;
+  height:5px;
+  border-radius:999px;
+  background:rgba(255,255,255,.20);
+  overflow:visible;
+}
+
+.video-upload-fill{
+  position:absolute;
+  left:0;
+  top:0;
+  width:0%;
+  height:100%;
+  border-radius:999px;
+  background:#fff;
+  transition:width .12s linear;
+}
+
+.video-upload-knob{
+  position:absolute;
+  top:50%;
+  left:0%;
+  width:13px;
+  height:13px;
+  border-radius:50%;
+  background:#fff;
+  transform:translate(-50%,-50%);
+  box-shadow:0 0 8px rgba(255,255,255,.65);
+  transition:left .12s linear;
+}
+
+.video-upload-percent{
+  flex:0 0 46px;
+  text-align:right;
+  color:#fff;
+  font-size:13px;
+  font-weight:900;
+  font-variant-numeric:tabular-nums;
+}
+
 </style>
 
 <link
@@ -6972,17 +7037,48 @@ onclick="retourPage()">
 <h2> Publier une vidéo</h2>
 
 
-<video
-id="videoPreview"
-controls
-playsinline
-style="
-width:100%;
-max-height:420px;
-border-radius:18px;
-object-fit:cover;
-">
-</video>
+<div class="video-publish-preview-wrap">
+
+  <video
+  id="videoPreview"
+  controls
+  playsinline
+  style="
+  width:100%;
+  max-height:420px;
+  border-radius:18px;
+  object-fit:cover;
+  ">
+  </video>
+
+  <div
+    id="videoUploadProgress"
+    class="video-upload-progress hidden"
+    aria-live="polite">
+
+    <div class="video-upload-track">
+
+      <div
+        id="videoUploadFill"
+        class="video-upload-fill">
+      </div>
+
+      <div
+        id="videoUploadKnob"
+        class="video-upload-knob">
+      </div>
+
+    </div>
+
+    <div
+      id="videoUploadPercent"
+      class="video-upload-percent">
+      0%
+    </div>
+
+  </div>
+
+</div>
 
 <input
 id="highlightTitre"
@@ -16013,6 +16109,214 @@ async function envoyerPreuvePaiement(){
 
 }
 
+
+function mettreProgressionUploadVideo(
+  pourcentage,
+  visible = true
+){
+
+  const zone =
+    document.getElementById(
+      "videoUploadProgress"
+    );
+
+  const fill =
+    document.getElementById(
+      "videoUploadFill"
+    );
+
+  const knob =
+    document.getElementById(
+      "videoUploadKnob"
+    );
+
+  const compteur =
+    document.getElementById(
+      "videoUploadPercent"
+    );
+
+  const valeur =
+    Math.max(
+      0,
+      Math.min(
+        100,
+        Math.round(
+          Number(pourcentage) || 0
+        )
+      )
+    );
+
+  if(zone){
+
+    zone.classList.toggle(
+      "hidden",
+      !visible
+    );
+  }
+
+  if(fill){
+    fill.style.width =
+      valeur + "%";
+  }
+
+  if(knob){
+    knob.style.left =
+      valeur + "%";
+  }
+
+  if(compteur){
+    compteur.textContent =
+      valeur + "%";
+  }
+}
+
+function envoyerVideoAvecProgression(file){
+
+  return new Promise(
+    (resolve,reject)=>{
+
+      const xhr =
+        new XMLHttpRequest();
+
+      const formData =
+        new FormData();
+
+      formData.append(
+        "image",
+        file
+      );
+
+      mettreProgressionUploadVideo(
+        0,
+        true
+      );
+
+      xhr.open(
+        "POST",
+        "/upload-image",
+        true
+      );
+
+      xhr.withCredentials = true;
+
+      xhr.setRequestHeader(
+        "x-language",
+        langueApp
+      );
+
+      xhr.upload.onprogress =
+        function(event){
+
+          if(
+            !event.lengthComputable
+          ){
+            return;
+          }
+
+          const percent =
+            (
+              event.loaded /
+              event.total
+            ) * 100;
+
+          mettreProgressionUploadVideo(
+            percent,
+            true
+          );
+
+          message.textContent =
+            "Envoi de la vidéo : " +
+            Math.round(percent) +
+            "%";
+        };
+
+      xhr.onerror =
+        function(){
+
+          reject(
+            new Error(
+              "Erreur réseau pendant l'envoi de la vidéo."
+            )
+          );
+        };
+
+      xhr.onabort =
+        function(){
+
+          reject(
+            new Error(
+              "Envoi de la vidéo annulé."
+            )
+          );
+        };
+
+      xhr.onload =
+        function(){
+
+          let data = null;
+
+          try{
+
+            data =
+              JSON.parse(
+                xhr.responseText ||
+                "{}"
+              );
+
+          }catch(error){
+
+            reject(
+              new Error(
+                "Réponse serveur invalide pendant l'envoi."
+              )
+            );
+
+            return;
+          }
+
+          if(
+            xhr.status < 200 ||
+            xhr.status >= 300
+          ){
+
+            reject(
+              new Error(
+                data?.message ||
+                "Le serveur a refusé la vidéo."
+              )
+            );
+
+            return;
+          }
+
+          if(
+            !data?.ok ||
+            !data?.url
+          ){
+
+            reject(
+              new Error(
+                data?.message ||
+                "La vidéo n'a pas été enregistrée."
+              )
+            );
+
+            return;
+          }
+
+          mettreProgressionUploadVideo(
+            100,
+            true
+          );
+
+          resolve(data);
+        };
+
+      xhr.send(formData);
+    }
+  );
+}
+
 async function publierHighlight(){
 
   const btn =
@@ -16025,113 +16329,182 @@ async function publierHighlight(){
     const file =
       selectedHighlightFile;
 
-    if(!highlightTitre.value){
+    if(!highlightTitre.value.trim()){
+
       message.textContent =
         "Titre obligatoire";
+
       return;
     }
 
     if(!file){
+
       message.textContent =
         "Choisis une vidéo";
+
       return;
     }
 
-    if(file.size > 100 * 1024 * 1024){
+    if(
+      !String(file.type || "")
+        .startsWith("video/")
+    ){
+
+      message.textContent =
+        "Le fichier doit être une vidéo.";
+
+      return;
+    }
+
+    if(
+      file.size >
+      100 * 1024 * 1024
+    ){
+
       message.textContent =
         "Vidéo maximum 100 MB";
+
       return;
     }
 
     if(btn){
+
       btn.disabled = true;
-      btn.textContent = "Publication...";
+      btn.textContent =
+        "Publication...";
     }
+
+    mettreProgressionUploadVideo(
+      0,
+      false
+    );
 
     message.textContent =
       "Vérification de la vidéo...";
 
-    const ok =
-      await verifierVideoDuration(file);
+    const verification =
+      await verifierVideoDuration(
+        file
+      );
 
-    if(!ok){
+    if(
+      verification.duration < 5
+    ){
+
       message.textContent =
-        "Vidéo maximum 2 minutes";
-
-      if(btn){
-        btn.disabled = false;
-        btn.textContent = "Publier";
-      }
+        "La vidéo doit durer au minimum 5 secondes.";
 
       return;
     }
 
-    const formData =
-      new FormData();
+    if(
+      verification.duration > 120
+    ){
 
-    formData.append("image", file);
+      message.textContent =
+        "La vidéo doit durer au maximum 2 minutes.";
+
+      return;
+    }
 
     message.textContent =
-      "Upload vidéo en cours... Ne ferme pas la page.";
-
-    const uploadRes =
-      await fetch("/upload-image",{
-        method:"POST",
-        body:formData
-      });
+      "Envoi de la vidéo : 0%";
 
     const uploadData =
-      await uploadRes.json();
-
-    if(!uploadData.ok){
-      message.textContent =
-        uploadData.message ||
-        "Erreur upload vidéo";
-
-      if(btn){
-        btn.disabled = false;
-        btn.textContent = "Publier";
-      }
-
-      return;
-    }
+      await envoyerVideoAvecProgression(
+        file
+      );
 
     message.textContent =
-      "Vidéo uploadée. Publication...";
+      "Vidéo envoyée à 100 %. Publication...";
 
     const result =
-  await post("/highlight",{
-    titre:highlightTitre.value,
-    description:"",
-    media_url:uploadData.url,
-    thumbnail_url:uploadData.thumbnail_url || ""
-  });
+      await post(
+        "/highlight",
+        {
+          titre:
+            highlightTitre
+              .value
+              .trim(),
+          description:"",
+          media_url:
+            uploadData.url,
+          thumbnail_url:
+            uploadData.thumbnail_url ||
+            ""
+        }
+      );
 
-    message.textContent = result;
+    message.textContent =
+      result ||
+      "Vidéo publiée";
 
     highlightTitre.value = "";
     selectedHighlightFile = null;
-    videoPreview.src = "";
+
+    try{
+
+      videoPreview.pause();
+
+      if(
+        videoPreview.src &&
+        videoPreview.src.startsWith(
+          "blob:"
+        )
+      ){
+        URL.revokeObjectURL(
+          videoPreview.src
+        );
+      }
+
+      videoPreview.removeAttribute(
+        "src"
+      );
+
+      videoPreview.load();
+
+    }catch(error){
+    }
+
+    mettreProgressionUploadVideo(
+      100,
+      true
+    );
+
+    highlightsList.innerHTML = "";
 
     await chargerHighlights();
 
-    setPage("pageDashboard");
+    setPage(
+      "pageDashboard"
+    );
+
     ouvrirModeVideos();
 
-  }catch(e){
+  }catch(error){
+
+    console.error(
+      "Publication vidéo :",
+      error
+    );
 
     message.textContent =
-      "Erreur publication : " + e.message;
+      "Erreur publication : " +
+      (
+        error?.message ||
+        "Impossible de publier la vidéo"
+      );
 
   }finally{
 
     if(btn){
+
       btn.disabled = false;
-      btn.textContent = "Publier";
+
+      btn.textContent =
+        "Publier";
     }
-
   }
-
 }
 
 async function chargerHighlights(){
@@ -19476,26 +19849,62 @@ function fermerProfilJoueur(){
 
 async function verifierVideoDuration(file){
 
-  return new Promise((resolve)=>{
+  return new Promise((resolve,reject)=>{
 
     const video =
       document.createElement("video");
+
+    const objectUrl =
+      URL.createObjectURL(file);
 
     video.preload = "metadata";
 
     video.onloadedmetadata = function(){
 
-      URL.revokeObjectURL(video.src);
+      const duration =
+        Number(video.duration);
 
-      resolve(video.duration <= 120);
+      URL.revokeObjectURL(
+        objectUrl
+      );
 
+      if(
+        !Number.isFinite(duration) ||
+        duration <= 0
+      ){
+
+        reject(
+          new Error(
+            "Impossible de lire la durée de cette vidéo."
+          )
+        );
+
+        return;
+      }
+
+      resolve({
+        duration,
+        valide:
+          duration >= 5 &&
+          duration <= 120
+      });
     };
 
-    video.src =
-      URL.createObjectURL(file);
+    video.onerror = function(){
 
+      URL.revokeObjectURL(
+        objectUrl
+      );
+
+      reject(
+        new Error(
+          "Cette vidéo ne peut pas être lue."
+        )
+      );
+    };
+
+    video.src = objectUrl;
   });
-
 }
 
 function openVideoUpload(){
@@ -19511,6 +19920,11 @@ function closeVideoUpload(){
 
 
 function prepareVideoUpload(){
+
+  mettreProgressionUploadVideo(
+    0,
+    false
+  );
 
   const input =
     document.getElementById("highlightVideoFile");
