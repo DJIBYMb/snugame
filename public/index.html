@@ -960,6 +960,195 @@ button:disabled{
   pointer-events:auto;
 }
 
+
+/* =========================================================
+   DÉCOUVERTE DE CONTACTS SUR PROFIL — BLOC 24
+========================================================= */
+.profile-discover-box{
+  margin-top:18px;
+  padding-top:14px;
+  border-top:1px solid rgba(255,255,255,.10);
+}
+.profile-discover-header{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  margin-bottom:12px;
+}
+.profile-discover-title{
+  margin:0;
+  font-size:17px;
+  font-weight:800;
+}
+.profile-discover-see-all{
+  width:auto!important;
+  min-width:auto!important;
+  margin:0!important;
+  padding:7px 10px!important;
+  border:0!important;
+  background:transparent!important;
+  color:#7fb0ff!important;
+  font-size:13px;
+  font-weight:700;
+}
+.profile-discover-list{
+  display:flex;
+  gap:11px;
+  overflow-x:auto;
+  padding:2px 2px 8px;
+  scroll-snap-type:x proximity;
+  scrollbar-width:none;
+}
+.profile-discover-list::-webkit-scrollbar{
+  display:none;
+}
+.profile-discover-list.vertical{
+  flex-direction:column;
+  overflow-x:visible;
+  padding-bottom:2px;
+}
+.profile-discover-card{
+  position:relative;
+  flex:0 0 132px;
+  min-width:132px;
+  padding:13px 9px 10px;
+  border-radius:15px;
+  background:rgba(255,255,255,.055);
+  border:1px solid rgba(255,255,255,.08);
+  text-align:center;
+  scroll-snap-align:start;
+}
+.profile-discover-list.vertical .profile-discover-card{
+  flex:none;
+  width:100%;
+  min-width:0;
+  display:grid;
+  grid-template-columns:54px minmax(0,1fr) auto;
+  grid-template-areas:
+    "avatar identity close"
+    "avatar action action";
+  align-items:center;
+  column-gap:11px;
+  row-gap:7px;
+  padding:10px 11px;
+  text-align:left;
+}
+.profile-discover-close{
+  position:absolute!important;
+  top:5px;
+  right:5px;
+  width:27px!important;
+  min-width:27px!important;
+  height:27px!important;
+  padding:0!important;
+  margin:0!important;
+  border:0!important;
+  border-radius:50%!important;
+  background:transparent!important;
+  color:rgba(255,255,255,.72)!important;
+  font-size:18px;
+  line-height:27px;
+}
+.profile-discover-list.vertical .profile-discover-close{
+  position:static!important;
+  grid-area:close;
+  justify-self:end;
+}
+.profile-discover-avatar-wrap{
+  display:flex;
+  justify-content:center;
+  margin:1px auto 8px;
+}
+.profile-discover-list.vertical .profile-discover-avatar-wrap{
+  grid-area:avatar;
+  margin:0;
+}
+.profile-discover-avatar,
+.profile-initial-avatar{
+  width:58px;
+  height:58px;
+  border-radius:50%;
+  object-fit:cover;
+  display:grid;
+  place-items:center;
+  background:#1d4ed8;
+  color:white;
+  font-weight:900;
+  font-size:24px;
+  text-transform:uppercase;
+  user-select:none;
+}
+.profile-discover-list.vertical .profile-discover-avatar,
+.profile-discover-list.vertical .profile-initial-avatar{
+  width:52px;
+  height:52px;
+  font-size:21px;
+}
+.profile-discover-identity{
+  min-width:0;
+}
+.profile-discover-list.vertical .profile-discover-identity{
+  grid-area:identity;
+}
+.profile-discover-name{
+  display:block;
+  font-size:13px;
+  font-weight:800;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.profile-discover-username{
+  display:block;
+  margin-top:2px;
+  font-size:11px;
+  opacity:.65;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.profile-discover-follow{
+  width:100%!important;
+  min-width:0!important;
+  margin:9px 0 0!important;
+  padding:8px 8px!important;
+  border:2px solid #22c55e!important;
+  border-radius:10px!important;
+  background:transparent!important;
+  color:#22c55e!important;
+  font-size:12px!important;
+  font-weight:800!important;
+  box-shadow:none!important;
+}
+.profile-discover-follow:active{
+  transform:scale(.98);
+}
+.profile-discover-follow:disabled{
+  opacity:.6;
+}
+.profile-discover-list.vertical .profile-discover-follow{
+  grid-area:action;
+  width:auto!important;
+  justify-self:start;
+  margin:0!important;
+  padding:7px 13px!important;
+}
+.profile-own-avatar-initial{
+  width:120px;
+  height:120px;
+  border-radius:50%;
+  border:4px solid #1455ff;
+  display:grid;
+  place-items:center;
+  background:#1d4ed8;
+  color:white;
+  font-size:46px;
+  font-weight:900;
+  text-transform:uppercase;
+  cursor:pointer;
+}
+
 .profile-video-grid{
   display:grid;
   grid-template-columns:repeat(3,1fr);
@@ -1921,144 +2110,6 @@ body.forgot-mode .fullscreen-forgot{
   z-index:5;
 }
 
-
-/* =========================================================
-   PROFIL — CONTACTS À DÉCOUVRIR — BLOC 24
-========================================================= */
-.profile-discover-box{
-  margin-top:16px;
-  padding-top:14px;
-  border-top:1px solid rgba(255,255,255,.10);
-}
-.profile-discover-header{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:12px;
-  margin-bottom:12px;
-}
-.profile-discover-title{
-  margin:0;
-  font-size:17px;
-  font-weight:800;
-}
-.profile-discover-see-all{
-  width:auto!important;
-  min-width:auto!important;
-  padding:7px 10px!important;
-  border-radius:10px!important;
-  font-size:12px!important;
-}
-.profile-discover-list{
-  display:grid;
-  grid-auto-flow:column;
-  grid-auto-columns:128px;
-  gap:10px;
-  overflow-x:auto;
-  overflow-y:hidden;
-  padding:2px 2px 8px;
-  scroll-snap-type:x proximity;
-  scrollbar-width:none;
-}
-.profile-discover-list::-webkit-scrollbar{
-  display:none;
-}
-.profile-discover-list.expanded{
-  grid-auto-flow:row;
-  grid-auto-columns:auto;
-  grid-template-columns:1fr;
-  overflow:visible;
-  padding-bottom:2px;
-}
-.profile-discover-card{
-  position:relative;
-  min-width:0;
-  border:1px solid rgba(255,255,255,.10);
-  background:rgba(255,255,255,.045);
-  border-radius:16px;
-  padding:13px 9px 10px;
-  text-align:center;
-  scroll-snap-align:start;
-}
-.profile-discover-list.expanded .profile-discover-card{
-  display:grid;
-  grid-template-columns:52px minmax(0,1fr) auto;
-  align-items:center;
-  gap:10px;
-  padding:10px 12px;
-  text-align:left;
-}
-.profile-discover-close{
-  position:absolute;
-  top:6px;
-  right:6px;
-  width:24px!important;
-  height:24px!important;
-  min-width:24px!important;
-  padding:0!important;
-  border-radius:50%!important;
-  display:grid!important;
-  place-items:center;
-  background:rgba(0,0,0,.28)!important;
-  border:1px solid rgba(255,255,255,.12)!important;
-  color:#fff!important;
-  font-size:12px!important;
-  z-index:2;
-}
-.profile-discover-avatar{
-  width:58px;
-  height:58px;
-  border-radius:50%;
-  object-fit:cover;
-  display:block;
-  margin:4px auto 8px;
-  background:rgba(255,255,255,.08);
-  cursor:pointer;
-}
-.profile-discover-list.expanded .profile-discover-avatar{
-  width:52px;
-  height:52px;
-  margin:0;
-}
-.profile-discover-info{
-  min-width:0;
-}
-.profile-discover-name{
-  font-size:13px;
-  font-weight:800;
-  white-space:nowrap;
-  overflow:hidden;
-  text-overflow:ellipsis;
-  cursor:pointer;
-}
-.profile-discover-username{
-  margin-top:2px;
-  font-size:11px;
-  opacity:.66;
-  white-space:nowrap;
-  overflow:hidden;
-  text-overflow:ellipsis;
-}
-.profile-discover-follow{
-  width:100%!important;
-  min-width:0!important;
-  margin-top:9px!important;
-  padding:7px 7px!important;
-  border-radius:10px!important;
-  font-size:11px!important;
-  line-height:1.15!important;
-}
-.profile-discover-list.expanded .profile-discover-follow{
-  width:auto!important;
-  margin:0 28px 0 0!important;
-  padding:8px 10px!important;
-  white-space:nowrap;
-}
-.profile-discover-empty{
-  margin:5px 0;
-  font-size:12px;
-  opacity:.65;
-}
 .video-profile-menu{
   position:fixed;
   left:50%;
@@ -6218,13 +6269,14 @@ class="card hidden">
 
 <div id="profileVideosGrid" class="profile-video-grid"></div>
 
+
 <div id="profileDiscoverBox" class="profile-discover-box hidden">
   <div class="profile-discover-header">
     <h3 class="profile-discover-title">Contacts à découvrir</h3>
     <button
       id="profileDiscoverSeeAll"
-      class="secondary profile-discover-see-all"
-      onclick="toggleContactsDecouvrir()">
+      class="profile-discover-see-all"
+      onclick="basculerTousContactsProfil()">
       Tout voir
     </button>
   </div>
@@ -14061,6 +14113,257 @@ async function chargerDashboardTournoiProfil(){
 
 }
 
+
+function premiereLettreProfil(name, username){
+  const source = String(name || username || "?").trim();
+  return (source.charAt(0) || "?").toUpperCase();
+}
+
+function echapperHtmlProfil(valeur){
+  return String(valeur ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+function avatarContactProfilHTML(user, classe="profile-discover-avatar"){
+  if(user?.profile_photo){
+    return `
+      <img
+        class="${classe}"
+        src="${echapperHtmlProfil(user.profile_photo)}"
+        alt="Profil"
+      >
+    `;
+  }
+
+  return `
+    <div class="profile-initial-avatar ${classe}">
+      ${echapperHtmlProfil(premiereLettreProfil(user?.name, user?.username))}
+    </div>
+  `;
+}
+
+function avatarProfilPrincipalHTML(user, editable=true){
+  const clic = editable ? 'onclick="photoProfilClick()"' : '';
+
+  if(user?.profile_photo){
+    return `
+      <img
+        id="profilPhotoImg"
+        src="${echapperHtmlProfil(user.profile_photo)}"
+        ${clic}
+        style="
+          width:120px;
+          height:120px;
+          border-radius:50%;
+          object-fit:cover;
+          border:4px solid #1455ff;
+          cursor:pointer;
+        ">
+    `;
+  }
+
+  return `
+    <div
+      id="profilPhotoImg"
+      class="profile-own-avatar-initial"
+      ${clic}>
+      ${echapperHtmlProfil(premiereLettreProfil(user?.name, user?.username))}
+    </div>
+  `;
+}
+
+let contactsProfilToutVoir = false;
+const contactsProfilMasques = new Set();
+let profilCompteSansVideoPubliee = false;
+
+function masquerContactProfil(userId){
+  contactsProfilMasques.add(Number(userId));
+  document
+    .querySelector(`[data-profile-discover-user="${Number(userId)}"]`)
+    ?.remove();
+
+  const liste = document.getElementById("profileDiscoverList");
+  const box = document.getElementById("profileDiscoverBox");
+
+  if(liste && !liste.querySelector(".profile-discover-card")){
+    box?.classList.add("hidden");
+  }
+}
+
+function basculerTousContactsProfil(){
+  contactsProfilToutVoir = !contactsProfilToutVoir;
+
+  const liste = document.getElementById("profileDiscoverList");
+  const bouton = document.getElementById("profileDiscoverSeeAll");
+
+  liste?.classList.toggle("vertical", contactsProfilToutVoir);
+
+  if(bouton){
+    bouton.textContent = contactsProfilToutVoir ? "Réduire" : "Tout voir";
+  }
+}
+
+async function suivreContactDecouverte(userId, event){
+  const bouton = event?.currentTarget;
+  const id = Number(userId);
+
+  if(
+    !bouton ||
+    bouton.dataset.loading === "1" ||
+    !Number.isInteger(id) ||
+    id <= 0
+  ){
+    return;
+  }
+
+  const ancienTexte = bouton.textContent.trim();
+  bouton.dataset.loading = "1";
+  bouton.disabled = true;
+  bouton.textContent = "...";
+
+  try{
+    const resultat = await post("/follow-player",{
+      player_user_id:id
+    });
+
+    const texte = String(resultat || "");
+    const suiviReussi =
+      /Abonnement réussi|Follow successful/i.test(texte) &&
+      !/Unfollow|désabonn/i.test(texte);
+
+    if(!suiviReussi){
+      bouton.textContent = ancienTexte;
+      bouton.disabled = false;
+      showNotif(texte || "Impossible de suivre ce compte");
+      return;
+    }
+
+    synchroniserPetitsBoutonsSuivi(id, true);
+    masquerContactProfil(id);
+
+    const stats = await get("/my-social-stats");
+    if(stats){
+      if(typeof profilFollowers !== "undefined" && profilFollowers){
+        profilFollowers.textContent = stats.followers || 0;
+      }
+      if(typeof profilFollowing !== "undefined" && profilFollowing){
+        profilFollowing.textContent = stats.following || 0;
+      }
+    }
+
+    showNotif(
+      ancienTexte === "Suivre en retour"
+        ? "Abonnement en retour réussi ✅"
+        : "Abonnement réussi ✅"
+    );
+
+  }catch(error){
+    console.error("Erreur suivi contact à découvrir :", error);
+    bouton.textContent = ancienTexte;
+    bouton.disabled = false;
+    showNotif("Impossible de suivre ce compte");
+  }finally{
+    bouton.dataset.loading = "0";
+  }
+}
+
+async function chargerContactsADecouvrirProfil(){
+  const box = document.getElementById("profileDiscoverBox");
+  const liste = document.getElementById("profileDiscoverList");
+  const boutonToutVoir = document.getElementById("profileDiscoverSeeAll");
+
+  if(!box || !liste){
+    return;
+  }
+
+  // Le bloc doit rester visible tant que le compte n'a publié aucune vidéo.
+  box.classList.remove("hidden");
+  liste.innerHTML = `<p class="small" style="margin:4px 2px 8px;">Recherche de contacts…</p>`;
+
+  try{
+    const users = await get("/profile-discover-users");
+
+    const visibles = Array.isArray(users)
+      ? users.filter(u => !contactsProfilMasques.has(Number(u.id)))
+      : [];
+
+    contactsProfilToutVoir = false;
+    liste.classList.remove("vertical");
+
+    if(boutonToutVoir){
+      boutonToutVoir.textContent = "Tout voir";
+      boutonToutVoir.classList.toggle("hidden", visibles.length <= 1);
+    }
+
+    if(visibles.length === 0){
+      liste.innerHTML = `<p class="small" style="margin:4px 2px 8px;">Aucun contact à découvrir pour le moment.</p>`;
+      return;
+    }
+
+    liste.innerHTML = visibles.map(u=>{
+      const nom = echapperHtmlProfil(u.name || u.username || "Utilisateur");
+      const username = echapperHtmlProfil(u.username || "");
+      const boutonTexte = Number(u.follows_me) === 1
+        ? "Suivre en retour"
+        : "Suivre";
+
+      return `
+        <div
+          class="profile-discover-card"
+          data-profile-discover-user="${Number(u.id)}">
+
+          <button
+            class="profile-discover-close"
+            aria-label="Masquer"
+            onclick="event.stopPropagation(); masquerContactProfil(${Number(u.id)})">
+            ×
+          </button>
+
+          <div
+            class="profile-discover-avatar-wrap"
+            onclick="ouvrirProfilPublic(${Number(u.id)})"
+            style="cursor:pointer;">
+            ${avatarContactProfilHTML(u)}
+          </div>
+
+          <div
+            class="profile-discover-identity"
+            onclick="ouvrirProfilPublic(${Number(u.id)})"
+            style="cursor:pointer;">
+            <span class="profile-discover-name">${nom}</span>
+            ${username ? `<span class="profile-discover-username">@${username}</span>` : ""}
+          </div>
+
+          <button
+            class="secondary profile-discover-follow"
+            onclick="event.stopPropagation(); suivreContactDecouverte(${Number(u.id)}, event)">
+            ${boutonTexte}
+          </button>
+        </div>
+      `;
+    }).join("");
+
+  }catch(error){
+    console.error("Erreur contacts à découvrir :", error);
+    liste.innerHTML = `<p class="small" style="margin:4px 2px 8px;">Impossible de charger les contacts pour le moment.</p>`;
+    box.classList.remove("hidden");
+  }
+}
+
+function cacherContactsADecouvrirProfil(){
+  document.getElementById("profileDiscoverBox")?.classList.add("hidden");
+  const liste = document.getElementById("profileDiscoverList");
+  if(liste){
+    liste.innerHTML = "";
+    liste.classList.remove("vertical");
+  }
+  contactsProfilToutVoir = false;
+}
+
 async function ouvrirProfilCompte(){
 
 
@@ -14154,18 +14457,7 @@ if(token){
     "/default-avatar.png";
 
   profilPhoto.innerHTML = `
-  <img
-  id="profilPhotoImg"
-  src="${data.profile_photo || "/default-avatar.png"}"
-  onclick="photoProfilClick()"
-  style="
-    width:120px;
-    height:120px;
-    border-radius:50%;
-    object-fit:cover;
-    border:4px solid #1455ff;
-    cursor:pointer;
-  ">
+  ${avatarProfilPrincipalHTML(data, true)}
 
   <i
 id="btnEditProfil"
@@ -14174,17 +14466,23 @@ onclick="event.stopPropagation(); toggleEditProfil()">
 </i>
 `;
 
-modifierProfilPhoto.innerHTML = `
-  <img
-  src="${data.profile_photo || "/default-avatar.png"}"
-  style="
-    width:120px;
-    height:120px;
-    border-radius:50%;
-    object-fit:cover;
-    border:4px solid #1455ff;
-  ">
-`;
+modifierProfilPhoto.innerHTML = data.profile_photo
+  ? `
+    <img
+      src="${echapperHtmlProfil(data.profile_photo)}"
+      style="
+        width:120px;
+        height:120px;
+        border-radius:50%;
+        object-fit:cover;
+        border:4px solid #1455ff;
+      ">
+    `
+  : `
+    <div class="profile-own-avatar-initial" style="cursor:default;">
+      ${echapperHtmlProfil(premiereLettreProfil(data.name, data.username))}
+    </div>
+    `;
  profilNom.textContent =
     data.name || "";
 
@@ -14267,13 +14565,16 @@ profileVideosGrid.innerHTML =
 
       </div>
     `).join("")
-  : "";
+  : "<p class='small'>Aucune vidéo publiée.</p>";
 
-  if(Array.isArray(profileVideos) && profileVideos.length === 0){
-    await chargerContactsDecouvrir();
-  }else{
-    masquerContactsDecouvrir();
-  }
+profilCompteSansVideoPubliee = !(profileVideos && profileVideos.length);
+
+if(profilCompteSansVideoPubliee){
+  await chargerContactsADecouvrirProfil();
+}else{
+  cacherContactsADecouvrirProfil();
+}
+
   profilEmail.textContent = "";
 
    document
@@ -14405,197 +14706,6 @@ async function chargerMesRecompenses(){
 
 }
 
-
-let contactsDecouvrirEtendus = false;
-
-function echapperHtmlContact(value){
-  return String(value ?? "")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
-}
-
-function masquerContactsDecouvrir(){
-  const box = document.getElementById("profileDiscoverBox");
-  const list = document.getElementById("profileDiscoverList");
-  const btn = document.getElementById("profileDiscoverSeeAll");
-
-  box?.classList.add("hidden");
-  list?.classList.remove("expanded");
-  if(list) list.innerHTML = "";
-  if(btn) btn.textContent = "Tout voir";
-  contactsDecouvrirEtendus = false;
-}
-
-function afficherContactsDecouvrir(users){
-  const box = document.getElementById("profileDiscoverBox");
-  const list = document.getElementById("profileDiscoverList");
-  const btn = document.getElementById("profileDiscoverSeeAll");
-
-  if(!box || !list || !btn){
-    return;
-  }
-
-  if(!Array.isArray(users) || users.length === 0){
-    masquerContactsDecouvrir();
-    return;
-  }
-
-  list.innerHTML = users.map(u=>{
-    const id = Number(u.id);
-    const nom = echapperHtmlContact(u.name || u.username || "Utilisateur");
-    const username = echapperHtmlContact(u.username || "");
-    const photo = echapperHtmlContact(u.profile_photo || "/default-avatar.png");
-    const retour = Number(u.follows_me) === 1;
-
-    return `
-      <div class="profile-discover-card" data-discover-user-id="${id}">
-        <button
-          class="profile-discover-close"
-          aria-label="Masquer cette suggestion"
-          onclick="event.stopPropagation(); masquerSuggestionContact(${id}, this)">
-          <i class="fa-solid fa-xmark"></i>
-        </button>
-
-        <img
-          src="${photo}"
-          class="profile-discover-avatar"
-          alt="Photo de profil"
-          onclick="ouvrirProfilPublic(${id})">
-
-        <div class="profile-discover-info">
-          <div
-            class="profile-discover-name"
-            onclick="ouvrirProfilPublic(${id})">${nom}</div>
-          <div class="profile-discover-username">@${username}</div>
-        </div>
-
-        <button
-          class="profile-discover-follow"
-          data-return-follow="${retour ? "1" : "0"}"
-          onclick="event.stopPropagation(); suivreContactDecouvrir(${id}, this)">
-          ${retour ? "Suivre en retour" : "Suivre"}
-        </button>
-      </div>
-    `;
-  }).join("");
-
-  box.classList.remove("hidden");
-  list.classList.toggle("expanded", contactsDecouvrirEtendus);
-  btn.textContent = contactsDecouvrirEtendus ? "Réduire" : "Tout voir";
-}
-
-async function chargerContactsDecouvrir(){
-  try{
-    const users = await get("/profile-discover");
-    afficherContactsDecouvrir(users);
-  }catch(error){
-    console.error("Erreur contacts à découvrir :", error);
-    masquerContactsDecouvrir();
-  }
-}
-
-function toggleContactsDecouvrir(){
-  const list = document.getElementById("profileDiscoverList");
-  const btn = document.getElementById("profileDiscoverSeeAll");
-
-  if(!list || !btn){
-    return;
-  }
-
-  contactsDecouvrirEtendus = !contactsDecouvrirEtendus;
-  list.classList.toggle("expanded", contactsDecouvrirEtendus);
-  btn.textContent = contactsDecouvrirEtendus ? "Réduire" : "Tout voir";
-}
-
-async function masquerSuggestionContact(userId, btn){
-  const id = Number(userId);
-  const card = btn?.closest(".profile-discover-card");
-
-  if(!Number.isInteger(id) || id <= 0){
-    return;
-  }
-
-  card?.remove();
-
-  const list = document.getElementById("profileDiscoverList");
-  if(list && !list.querySelector(".profile-discover-card")){
-    masquerContactsDecouvrir();
-  }
-
-  try{
-    await post("/profile-discover/dismiss", {
-      user_id:id
-    });
-  }catch(error){
-    console.error("Erreur masquage suggestion :", error);
-  }
-}
-
-async function suivreContactDecouvrir(userId, btn){
-  const id = Number(userId);
-
-  if(
-    !btn ||
-    btn.dataset.loading === "1" ||
-    !Number.isInteger(id) ||
-    id <= 0
-  ){
-    return;
-  }
-
-  btn.dataset.loading = "1";
-  const ancienTexte = btn.textContent;
-  btn.textContent = "...";
-
-  try{
-    const result = await post("/follow-player", {
-      player_user_id:id
-    });
-
-    const texte = String(result || "");
-    const suivi =
-      /Abonnement réussi|Follow successful/i.test(texte) &&
-      !/Unfollow|désabonn/i.test(texte);
-
-    if(!suivi){
-      btn.textContent = ancienTexte;
-      showNotif(texte || "Impossible de suivre ce compte");
-      return;
-    }
-
-    const compteur = document.getElementById("profilFollowing");
-    if(compteur){
-      compteur.textContent = String((Number(compteur.textContent) || 0) + 1);
-    }
-
-    synchroniserPetitsBoutonsSuivi(id, true);
-
-    const card = btn.closest(".profile-discover-card");
-    card?.remove();
-
-    const list = document.getElementById("profileDiscoverList");
-    if(list && !list.querySelector(".profile-discover-card")){
-      masquerContactsDecouvrir();
-    }
-
-    showNotif(
-      btn.dataset.returnFollow === "1"
-        ? "Abonnement en retour réussi ✅"
-        : "Abonnement réussi ✅"
-    );
-
-  }catch(error){
-    console.error("Erreur suivi contact à découvrir :", error);
-    btn.textContent = ancienTexte;
-    showNotif(error?.message || "Impossible de suivre ce compte");
-  }finally{
-    btn.dataset.loading = "0";
-  }
-}
-
 async function chargerMesFavoris(){
 
   document.getElementById("profileVideoTabs").innerHTML = `
@@ -14640,6 +14750,13 @@ async function chargerMesFavoris(){
 
     `).join("")
     : "<p class='small'>Aucune vidéo en favori.</p>";
+
+  // Les favoris ne doivent pas faire disparaître les contacts à découvrir.
+  if(profilCompteSansVideoPubliee){
+    await chargerContactsADecouvrirProfil();
+  }else{
+    cacherContactsADecouvrirProfil();
+  }
 
 }
 
@@ -16897,6 +17014,36 @@ async function publierHighlight(){
   }
 }
 
+function estSuiviDansFluxVideo(h){
+
+  const id = Number(h?.user_id);
+
+  if(
+    Number.isInteger(id) &&
+    window.etatSuiviVideo instanceof Map &&
+    window.etatSuiviVideo.has(id)
+  ){
+    return window.etatSuiviVideo.get(id) === true;
+  }
+
+  const suivi =
+    h?.isFollowing === true ||
+    Number(h?.isFollowing) === 1 ||
+    h?.following === true ||
+    Number(h?.following) === 1 ||
+    h?.followed === true ||
+    Number(h?.followed) === 1;
+
+  if(
+    Number.isInteger(id) &&
+    id > 0
+  ){
+    window.etatSuiviVideo.set(id, suivi);
+  }
+
+  return suivi;
+}
+
 async function chargerHighlights(){
 
     if(
@@ -16908,7 +17055,13 @@ async function chargerHighlights(){
 
 
   const data =
-    await fetch("/highlights")
+    await fetch(
+      "/highlights",
+      {
+        credentials:"same-origin",
+        cache:"no-store"
+      }
+    )
     .then(r=>r.json());
 
   highlightsList.innerHTML =
@@ -17034,27 +17187,13 @@ async function chargerHighlights(){
                   <button
                     type="button"
                     class="video-mini-follow-btn ${
-                      (
-                        h.isFollowing === true ||
-                        Number(h.isFollowing) === 1 ||
-                        h.following === true ||
-                        Number(h.following) === 1 ||
-                        h.followed === true ||
-                        Number(h.followed) === 1
-                      )
+                      estSuiviDansFluxVideo(h)
                         ? "following"
                         : ""
                     }"
                     data-user-id="${h.user_id}"
                     data-following="${
-                      (
-                        h.isFollowing === true ||
-                        Number(h.isFollowing) === 1 ||
-                        h.following === true ||
-                        Number(h.following) === 1 ||
-                        h.followed === true ||
-                        Number(h.followed) === 1
-                      )
+                      estSuiviDansFluxVideo(h)
                         ? "1"
                         : "0"
                     }"
@@ -17063,26 +17202,12 @@ async function chargerHighlights(){
                       suivreDepuisVideo(${h.user_id}, this);
                     "
                     aria-label="${
-                      (
-                        h.isFollowing === true ||
-                        Number(h.isFollowing) === 1 ||
-                        h.following === true ||
-                        Number(h.following) === 1 ||
-                        h.followed === true ||
-                        Number(h.followed) === 1
-                      )
+                      estSuiviDansFluxVideo(h)
                         ? "Ne plus suivre"
                         : "Suivre"
                     }"
                   >${
-                    (
-                      h.isFollowing === true ||
-                      Number(h.isFollowing) === 1 ||
-                      h.following === true ||
-                      Number(h.following) === 1 ||
-                      h.followed === true ||
-                      Number(h.followed) === 1
-                    )
+                    estSuiviDansFluxVideo(h)
                       ? "✓"
                       : "+"
                   }</button>
@@ -24747,6 +24872,9 @@ function chargerPolitiqueConfidentialite(){
 
 
 
+window.etatSuiviVideo =
+  window.etatSuiviVideo || new Map();
+
 function synchroniserPetitsBoutonsSuivi(
   userId,
   suivi
@@ -24754,6 +24882,16 @@ function synchroniserPetitsBoutonsSuivi(
 
   const id =
     Number(userId);
+
+  if(
+    Number.isInteger(id) &&
+    id > 0
+  ){
+    window.etatSuiviVideo.set(
+      id,
+      !!suivi
+    );
+  }
 
   document
     .querySelectorAll(
