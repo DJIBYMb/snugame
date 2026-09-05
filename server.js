@@ -1281,6 +1281,16 @@ db.run(`
   `);
 
   db.run(`
+    CREATE TABLE IF NOT EXISTS profile_discovery_dismissals(
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL,
+      dismissed_user_id INTEGER NOT NULL,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      UNIQUE(user_id,dismissed_user_id)
+    )
+  `);
+
+  db.run(`
     ALTER TABLE users
     ADD COLUMN abonnement_expire_at TEXT
   `,()=>{});
@@ -9619,6 +9629,118 @@ app.get("/user-following/:id", async (req,res)=>{
     );
 
     res.json([]);
+
+  }
+
+});
+
+app.get("/profile-discover", async (req,res)=>{
+
+  try{
+
+    if(!connected(req)){
+      return res.status(401).json([]);
+    }
+
+    const me = Number(req.session.userId);
+
+    const users = await all(
+      `
+      SELECT
+        u.id,
+        u.name,
+        u.username,
+        u.profile_photo,
+        CASE
+          WHEN incoming.id IS NOT NULL THEN 1
+          ELSE 0
+        END AS follows_me
+      FROM users u
+      LEFT JOIN follows outgoing
+        ON outgoing.follower_id=?
+       AND outgoing.following_participant_id=u.id
+      LEFT JOIN follows incoming
+        ON incoming.follower_id=u.id
+       AND incoming.following_participant_id=?
+      LEFT JOIN profile_discovery_dismissals d
+        ON d.user_id=?
+       AND d.dismissed_user_id=u.id
+      WHERE u.id<>?
+        AND outgoing.id IS NULL
+        AND d.id IS NULL
+        AND COALESCE(u.banned,0)=0
+      ORDER BY
+        CASE WHEN incoming.id IS NOT NULL THEN 0 ELSE 1 END ASC,
+        RANDOM()
+      LIMIT 20
+      `,
+      [me,me,me,me]
+    );
+
+    return res.json(users || []);
+
+  }catch(error){
+
+    console.error(
+      "Erreur contacts à découvrir :",
+      error
+    );
+
+    return res.status(500).json([]);
+
+  }
+
+});
+
+app.post("/profile-discover/dismiss", async (req,res)=>{
+
+  try{
+
+    if(!connected(req)){
+      return res.status(401).json({
+        ok:false,
+        message:tr(req,"Connecte-toi","Please log in")
+      });
+    }
+
+    const me = Number(req.session.userId);
+    const dismissedUserId = Number(req.body.user_id);
+
+    if(
+      !Number.isInteger(dismissedUserId) ||
+      dismissedUserId <= 0 ||
+      dismissedUserId === me
+    ){
+      return res.status(400).json({
+        ok:false,
+        message:tr(req,"Utilisateur invalide","Invalid user")
+      });
+    }
+
+    await run(
+      `
+      INSERT OR IGNORE INTO profile_discovery_dismissals(
+        user_id,
+        dismissed_user_id
+      )
+      VALUES(?,?)
+      `,
+      [me,dismissedUserId]
+    );
+
+    return res.json({ok:true});
+
+  }catch(error){
+
+    console.error(
+      "Erreur masquage contact à découvrir :",
+      error
+    );
+
+    return res.status(500).json({
+      ok:false,
+      message:tr(req,"Erreur serveur","Server error")
+    });
 
   }
 

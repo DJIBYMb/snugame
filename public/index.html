@@ -1921,6 +1921,144 @@ body.forgot-mode .fullscreen-forgot{
   z-index:5;
 }
 
+
+/* =========================================================
+   PROFIL — CONTACTS À DÉCOUVRIR — BLOC 24
+========================================================= */
+.profile-discover-box{
+  margin-top:16px;
+  padding-top:14px;
+  border-top:1px solid rgba(255,255,255,.10);
+}
+.profile-discover-header{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  margin-bottom:12px;
+}
+.profile-discover-title{
+  margin:0;
+  font-size:17px;
+  font-weight:800;
+}
+.profile-discover-see-all{
+  width:auto!important;
+  min-width:auto!important;
+  padding:7px 10px!important;
+  border-radius:10px!important;
+  font-size:12px!important;
+}
+.profile-discover-list{
+  display:grid;
+  grid-auto-flow:column;
+  grid-auto-columns:128px;
+  gap:10px;
+  overflow-x:auto;
+  overflow-y:hidden;
+  padding:2px 2px 8px;
+  scroll-snap-type:x proximity;
+  scrollbar-width:none;
+}
+.profile-discover-list::-webkit-scrollbar{
+  display:none;
+}
+.profile-discover-list.expanded{
+  grid-auto-flow:row;
+  grid-auto-columns:auto;
+  grid-template-columns:1fr;
+  overflow:visible;
+  padding-bottom:2px;
+}
+.profile-discover-card{
+  position:relative;
+  min-width:0;
+  border:1px solid rgba(255,255,255,.10);
+  background:rgba(255,255,255,.045);
+  border-radius:16px;
+  padding:13px 9px 10px;
+  text-align:center;
+  scroll-snap-align:start;
+}
+.profile-discover-list.expanded .profile-discover-card{
+  display:grid;
+  grid-template-columns:52px minmax(0,1fr) auto;
+  align-items:center;
+  gap:10px;
+  padding:10px 12px;
+  text-align:left;
+}
+.profile-discover-close{
+  position:absolute;
+  top:6px;
+  right:6px;
+  width:24px!important;
+  height:24px!important;
+  min-width:24px!important;
+  padding:0!important;
+  border-radius:50%!important;
+  display:grid!important;
+  place-items:center;
+  background:rgba(0,0,0,.28)!important;
+  border:1px solid rgba(255,255,255,.12)!important;
+  color:#fff!important;
+  font-size:12px!important;
+  z-index:2;
+}
+.profile-discover-avatar{
+  width:58px;
+  height:58px;
+  border-radius:50%;
+  object-fit:cover;
+  display:block;
+  margin:4px auto 8px;
+  background:rgba(255,255,255,.08);
+  cursor:pointer;
+}
+.profile-discover-list.expanded .profile-discover-avatar{
+  width:52px;
+  height:52px;
+  margin:0;
+}
+.profile-discover-info{
+  min-width:0;
+}
+.profile-discover-name{
+  font-size:13px;
+  font-weight:800;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  cursor:pointer;
+}
+.profile-discover-username{
+  margin-top:2px;
+  font-size:11px;
+  opacity:.66;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.profile-discover-follow{
+  width:100%!important;
+  min-width:0!important;
+  margin-top:9px!important;
+  padding:7px 7px!important;
+  border-radius:10px!important;
+  font-size:11px!important;
+  line-height:1.15!important;
+}
+.profile-discover-list.expanded .profile-discover-follow{
+  width:auto!important;
+  margin:0 28px 0 0!important;
+  padding:8px 10px!important;
+  white-space:nowrap;
+}
+.profile-discover-empty{
+  margin:5px 0;
+  font-size:12px;
+  opacity:.65;
+}
 .video-profile-menu{
   position:fixed;
   left:50%;
@@ -4566,12 +4704,16 @@ body.navigation-restoring section{
   justify-content:flex-start;
 }
 .private-message-bubble{
+  display:inline-flex;
+  flex-direction:column;
+  align-items:flex-start;
+  width:fit-content;
   max-width:min(78%,560px);
-  padding:10px 12px 7px;
+  padding:7px 10px 5px;
   border-radius:17px;
   overflow-wrap:anywhere;
   white-space:pre-wrap;
-  line-height:1.35;
+  line-height:1.28;
 }
 .private-message-row.mine .private-message-bubble{
   background:#2563eb;
@@ -4584,10 +4726,13 @@ body.navigation-restoring section{
   border-bottom-left-radius:5px;
 }
 .private-message-meta{
-  margin-top:4px;
+  align-self:flex-end;
+  margin-top:1px;
+  line-height:1;
   font-size:10px;
   opacity:.68;
   text-align:right;
+  white-space:nowrap;
 }
 .private-chat-compose{
   display:flex;
@@ -5552,6 +5697,41 @@ body.auth-mode.register-mode #registerBox input{
   font-variant-numeric:tabular-nums;
 }
 
+
+/* =========================================================
+   SUNUGAME — BLOC 22
+   Séparateurs de date dans la messagerie privée
+========================================================= */
+
+.private-message-date-separator{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  width:100%;
+  margin:10px 0 6px;
+  user-select:none;
+}
+
+.private-message-date-separator span{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  min-height:28px;
+  padding:5px 12px;
+  border-radius:999px;
+  background:rgba(255,255,255,.07);
+  border:1px solid rgba(255,255,255,.08);
+  color:rgba(255,255,255,.78);
+  font-size:11px;
+  font-weight:800;
+  letter-spacing:.1px;
+  text-align:center;
+}
+
+.private-message-meta{
+  white-space:nowrap;
+}
+
 </style>
 
 <link
@@ -6037,6 +6217,19 @@ class="card hidden">
 <div id="profileVideoTabs"></div>
 
 <div id="profileVideosGrid" class="profile-video-grid"></div>
+
+<div id="profileDiscoverBox" class="profile-discover-box hidden">
+  <div class="profile-discover-header">
+    <h3 class="profile-discover-title">Contacts à découvrir</h3>
+    <button
+      id="profileDiscoverSeeAll"
+      class="secondary profile-discover-see-all"
+      onclick="toggleContactsDecouvrir()">
+      Tout voir
+    </button>
+  </div>
+  <div id="profileDiscoverList" class="profile-discover-list"></div>
+</div>
 
 <div
 id="usernameEditBox"
@@ -14074,7 +14267,13 @@ profileVideosGrid.innerHTML =
 
       </div>
     `).join("")
-  : "<p class='small'>Aucune vidéo publiée.</p>";
+  : "";
+
+  if(Array.isArray(profileVideos) && profileVideos.length === 0){
+    await chargerContactsDecouvrir();
+  }else{
+    masquerContactsDecouvrir();
+  }
   profilEmail.textContent = "";
 
    document
@@ -14204,6 +14403,197 @@ async function chargerMesRecompenses(){
     `).join("")
     : "<p class='small'>Aucune récompense pour le moment.</p>";
 
+}
+
+
+let contactsDecouvrirEtendus = false;
+
+function echapperHtmlContact(value){
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+function masquerContactsDecouvrir(){
+  const box = document.getElementById("profileDiscoverBox");
+  const list = document.getElementById("profileDiscoverList");
+  const btn = document.getElementById("profileDiscoverSeeAll");
+
+  box?.classList.add("hidden");
+  list?.classList.remove("expanded");
+  if(list) list.innerHTML = "";
+  if(btn) btn.textContent = "Tout voir";
+  contactsDecouvrirEtendus = false;
+}
+
+function afficherContactsDecouvrir(users){
+  const box = document.getElementById("profileDiscoverBox");
+  const list = document.getElementById("profileDiscoverList");
+  const btn = document.getElementById("profileDiscoverSeeAll");
+
+  if(!box || !list || !btn){
+    return;
+  }
+
+  if(!Array.isArray(users) || users.length === 0){
+    masquerContactsDecouvrir();
+    return;
+  }
+
+  list.innerHTML = users.map(u=>{
+    const id = Number(u.id);
+    const nom = echapperHtmlContact(u.name || u.username || "Utilisateur");
+    const username = echapperHtmlContact(u.username || "");
+    const photo = echapperHtmlContact(u.profile_photo || "/default-avatar.png");
+    const retour = Number(u.follows_me) === 1;
+
+    return `
+      <div class="profile-discover-card" data-discover-user-id="${id}">
+        <button
+          class="profile-discover-close"
+          aria-label="Masquer cette suggestion"
+          onclick="event.stopPropagation(); masquerSuggestionContact(${id}, this)">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+
+        <img
+          src="${photo}"
+          class="profile-discover-avatar"
+          alt="Photo de profil"
+          onclick="ouvrirProfilPublic(${id})">
+
+        <div class="profile-discover-info">
+          <div
+            class="profile-discover-name"
+            onclick="ouvrirProfilPublic(${id})">${nom}</div>
+          <div class="profile-discover-username">@${username}</div>
+        </div>
+
+        <button
+          class="profile-discover-follow"
+          data-return-follow="${retour ? "1" : "0"}"
+          onclick="event.stopPropagation(); suivreContactDecouvrir(${id}, this)">
+          ${retour ? "Suivre en retour" : "Suivre"}
+        </button>
+      </div>
+    `;
+  }).join("");
+
+  box.classList.remove("hidden");
+  list.classList.toggle("expanded", contactsDecouvrirEtendus);
+  btn.textContent = contactsDecouvrirEtendus ? "Réduire" : "Tout voir";
+}
+
+async function chargerContactsDecouvrir(){
+  try{
+    const users = await get("/profile-discover");
+    afficherContactsDecouvrir(users);
+  }catch(error){
+    console.error("Erreur contacts à découvrir :", error);
+    masquerContactsDecouvrir();
+  }
+}
+
+function toggleContactsDecouvrir(){
+  const list = document.getElementById("profileDiscoverList");
+  const btn = document.getElementById("profileDiscoverSeeAll");
+
+  if(!list || !btn){
+    return;
+  }
+
+  contactsDecouvrirEtendus = !contactsDecouvrirEtendus;
+  list.classList.toggle("expanded", contactsDecouvrirEtendus);
+  btn.textContent = contactsDecouvrirEtendus ? "Réduire" : "Tout voir";
+}
+
+async function masquerSuggestionContact(userId, btn){
+  const id = Number(userId);
+  const card = btn?.closest(".profile-discover-card");
+
+  if(!Number.isInteger(id) || id <= 0){
+    return;
+  }
+
+  card?.remove();
+
+  const list = document.getElementById("profileDiscoverList");
+  if(list && !list.querySelector(".profile-discover-card")){
+    masquerContactsDecouvrir();
+  }
+
+  try{
+    await post("/profile-discover/dismiss", {
+      user_id:id
+    });
+  }catch(error){
+    console.error("Erreur masquage suggestion :", error);
+  }
+}
+
+async function suivreContactDecouvrir(userId, btn){
+  const id = Number(userId);
+
+  if(
+    !btn ||
+    btn.dataset.loading === "1" ||
+    !Number.isInteger(id) ||
+    id <= 0
+  ){
+    return;
+  }
+
+  btn.dataset.loading = "1";
+  const ancienTexte = btn.textContent;
+  btn.textContent = "...";
+
+  try{
+    const result = await post("/follow-player", {
+      player_user_id:id
+    });
+
+    const texte = String(result || "");
+    const suivi =
+      /Abonnement réussi|Follow successful/i.test(texte) &&
+      !/Unfollow|désabonn/i.test(texte);
+
+    if(!suivi){
+      btn.textContent = ancienTexte;
+      showNotif(texte || "Impossible de suivre ce compte");
+      return;
+    }
+
+    const compteur = document.getElementById("profilFollowing");
+    if(compteur){
+      compteur.textContent = String((Number(compteur.textContent) || 0) + 1);
+    }
+
+    synchroniserPetitsBoutonsSuivi(id, true);
+
+    const card = btn.closest(".profile-discover-card");
+    card?.remove();
+
+    const list = document.getElementById("profileDiscoverList");
+    if(list && !list.querySelector(".profile-discover-card")){
+      masquerContactsDecouvrir();
+    }
+
+    showNotif(
+      btn.dataset.returnFollow === "1"
+        ? "Abonnement en retour réussi ✅"
+        : "Abonnement réussi ✅"
+    );
+
+  }catch(error){
+    console.error("Erreur suivi contact à découvrir :", error);
+    btn.textContent = ancienTexte;
+    showNotif(error?.message || "Impossible de suivre ce compte");
+  }finally{
+    btn.dataset.loading = "0";
+  }
 }
 
 async function chargerMesFavoris(){
@@ -18666,29 +19056,228 @@ function mettreAJourBadgeDemandesMessages(total){
   rafraichirBadgesCentreMessages();
 }
 
-function texteDateMessage(dateValue){
+function convertirDateMessage(dateValue){
 
-  if(!dateValue) return "";
+  if(!dateValue){
+    return null;
+  }
 
-  const date = new Date(
-    String(dateValue).replace(" ", "T") +
-    (String(dateValue).includes("Z") ? "" : "Z")
-  );
+  let valeur =
+    String(dateValue).trim();
 
-  if(Number.isNaN(date.getTime())){
+  /*
+    Les dates SQLite du backend sont généralement en UTC
+    sous la forme YYYY-MM-DD HH:mm:ss.
+  */
+  if(
+    /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/
+      .test(valeur)
+  ){
+    valeur =
+      valeur.replace(" ", "T") +
+      "Z";
+  }
+  else if(
+    /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/
+      .test(valeur)
+  ){
+    valeur += "Z";
+  }
+
+  const date =
+    new Date(valeur);
+
+  if(
+    Number.isNaN(
+      date.getTime()
+    )
+  ){
+    return null;
+  }
+
+  return date;
+}
+
+function cleJourMessage(dateValue){
+
+  const date =
+    convertirDateMessage(
+      dateValue
+    );
+
+  if(!date){
     return "";
   }
 
-  return date.toLocaleString(
-    langueApp === "en" ? "en-GB" : "fr-FR",
+  return [
+    date.getFullYear(),
+    String(
+      date.getMonth() + 1
+    ).padStart(2,"0"),
+    String(
+      date.getDate()
+    ).padStart(2,"0")
+  ].join("-");
+}
+
+function debutJourLocal(date){
+
+  return new Date(
+    date.getFullYear(),
+    date.getMonth(),
+    date.getDate()
+  );
+}
+
+function texteSeparateurDateMessage(
+  dateValue
+){
+
+  const date =
+    convertirDateMessage(
+      dateValue
+    );
+
+  if(!date){
+    return "";
+  }
+
+  const maintenant =
+    new Date();
+
+  const aujourdHui =
+    debutJourLocal(
+      maintenant
+    );
+
+  const jourMessage =
+    debutJourLocal(
+      date
+    );
+
+  const differenceJours =
+    Math.round(
+      (
+        aujourdHui.getTime() -
+        jourMessage.getTime()
+      ) /
+      86400000
+    );
+
+  if(differenceJours === 0){
+
+    return langueApp === "en"
+      ? "Today"
+      : "Aujourd’hui";
+  }
+
+  if(differenceJours === 1){
+
+    return langueApp === "en"
+      ? "Yesterday"
+      : "Hier";
+  }
+
+  /*
+    Pour les six jours précédents :
+    lundi, mardi, mercredi...
+  */
+  if(
+    differenceJours >= 2 &&
+    differenceJours <= 6
+  ){
+
+    const jour =
+      date.toLocaleDateString(
+        langueApp === "en"
+          ? "en-GB"
+          : "fr-FR",
+        {
+          weekday:"long"
+        }
+      );
+
+    if(langueApp === "en"){
+      return jour;
+    }
+
+    /*
+      Les noms des jours sont affichés en minuscule,
+      comme dans une conversation mobile classique.
+    */
+    return jour.toLowerCase();
+  }
+
+  /*
+    Plus ancien :
+    4 septembre 2026
+  */
+  return date.toLocaleDateString(
+    langueApp === "en"
+      ? "en-GB"
+      : "fr-FR",
     {
-      day:"2-digit",
-      month:"2-digit",
+      day:"numeric",
+      month:"long",
+      year:"numeric"
+    }
+  );
+}
+
+function texteHeureMessage(dateValue){
+
+  const date =
+    convertirDateMessage(
+      dateValue
+    );
+
+  if(!date){
+    return "";
+  }
+
+  return date.toLocaleTimeString(
+    langueApp === "en"
+      ? "en-GB"
+      : "fr-FR",
+    {
       hour:"2-digit",
       minute:"2-digit"
     }
   );
+}
 
+function texteDateMessage(dateValue){
+
+  /*
+    Conservé pour les listes de conversations :
+    Aujourd’hui 10:42 / Hier 21:10 / mercredi 18:03 /
+    4 septembre 2026 17:55.
+  */
+  const date =
+    convertirDateMessage(
+      dateValue
+    );
+
+  if(!date){
+    return "";
+  }
+
+  const jour =
+    texteSeparateurDateMessage(
+      dateValue
+    );
+
+  const heure =
+    texteHeureMessage(
+      dateValue
+    );
+
+  return [
+    jour,
+    heure
+  ]
+    .filter(Boolean)
+    .join(" ");
 }
 
 async function chargerConversationsMessages(){
@@ -19059,9 +19648,13 @@ let conversationPriveeEnvoi = false;
 function afficherMessagesConversationPrivee(messages){
 
   const box =
-    document.getElementById("privateChatMessages");
+    document.getElementById(
+      "privateChatMessages"
+    );
 
-  if(!box) return;
+  if(!box){
+    return;
+  }
 
   const liste =
     Array.isArray(messages)
@@ -19069,37 +19662,84 @@ function afficherMessagesConversationPrivee(messages){
       : [];
 
   if(liste.length === 0){
+
     box.innerHTML =
       '<p class="small" style="text-align:center;">Aucun message.</p>';
+
     return;
   }
 
-  box.innerHTML =
-    liste.map(m=>{
+  let derniereCleJour = "";
 
-      const mine =
-        m.is_mine === true;
+  const morceaux = [];
 
-      const heure =
-        texteDateMessage(m.created_at);
+  liste.forEach(m=>{
 
-      return `
-        <div class="private-message-row ${mine ? "mine" : "theirs"}">
-          <div class="private-message-bubble">
-            <div>${escapeHtml(m.body || "")}</div>
-            <div class="private-message-meta">
-              ${escapeHtml(heure)}${mine && m.seen ? " · Lu" : ""}
-            </div>
-          </div>
+    const cleJour =
+      cleJourMessage(
+        m.created_at
+      );
+
+    /*
+      Nouveau séparateur seulement lorsque le jour change.
+    */
+    if(
+      cleJour &&
+      cleJour !== derniereCleJour
+    ){
+
+      morceaux.push(`
+        <div class="private-message-date-separator">
+          <span>
+            ${escapeHtml(
+              texteSeparateurDateMessage(
+                m.created_at
+              )
+            )}
+          </span>
         </div>
-      `;
+      `);
 
-    }).join("");
+      derniereCleJour =
+        cleJour;
+    }
 
-  requestAnimationFrame(()=>{
-    box.scrollTop = box.scrollHeight;
+    const mine =
+      m.is_mine === true;
+
+    const heure =
+      texteHeureMessage(
+        m.created_at
+      );
+
+    morceaux.push(`
+      <div class="private-message-row ${mine ? "mine" : "theirs"}">
+
+        <div class="private-message-bubble">
+
+          <div>
+            ${escapeHtml(m.body || "")}
+          </div>
+
+          <div class="private-message-meta">
+            ${escapeHtml(heure)}
+            ${mine && m.seen ? " · Lu" : ""}
+          </div>
+
+        </div>
+
+      </div>
+    `);
   });
 
+  box.innerHTML =
+    morceaux.join("");
+
+  requestAnimationFrame(()=>{
+
+    box.scrollTop =
+      box.scrollHeight;
+  });
 }
 
 async function marquerConversationPriveeLue(
