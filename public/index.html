@@ -961,8 +961,9 @@ button:disabled{
 }
 
 
+
 /* =========================================================
-   DÉCOUVERTE DE CONTACTS SUR PROFIL — BLOC 24
+   CONTACTS À DÉCOUVRIR — PROFIL (BLOC 28)
 ========================================================= */
 .profile-discover-box{
   margin-top:18px;
@@ -1000,9 +1001,7 @@ button:disabled{
   scroll-snap-type:x proximity;
   scrollbar-width:none;
 }
-.profile-discover-list::-webkit-scrollbar{
-  display:none;
-}
+.profile-discover-list::-webkit-scrollbar{display:none;}
 .profile-discover-list.vertical{
   flex-direction:column;
   overflow-x:visible;
@@ -1025,9 +1024,7 @@ button:disabled{
   min-width:0;
   display:grid;
   grid-template-columns:54px minmax(0,1fr) auto;
-  grid-template-areas:
-    "avatar identity close"
-    "avatar action action";
+  grid-template-areas:"avatar identity close" "avatar action action";
   align-items:center;
   column-gap:11px;
   row-gap:7px;
@@ -1064,8 +1061,7 @@ button:disabled{
   grid-area:avatar;
   margin:0;
 }
-.profile-discover-avatar,
-.profile-initial-avatar{
+.profile-discover-avatar,.profile-initial-avatar{
   width:58px;
   height:58px;
   border-radius:50%;
@@ -1085,12 +1081,8 @@ button:disabled{
   height:52px;
   font-size:21px;
 }
-.profile-discover-identity{
-  min-width:0;
-}
-.profile-discover-list.vertical .profile-discover-identity{
-  grid-area:identity;
-}
+.profile-discover-identity{min-width:0;}
+.profile-discover-list.vertical .profile-discover-identity{grid-area:identity;}
 .profile-discover-name{
   display:block;
   font-size:13px;
@@ -1121,32 +1113,14 @@ button:disabled{
   font-weight:800!important;
   box-shadow:none!important;
 }
-.profile-discover-follow:active{
-  transform:scale(.98);
-}
-.profile-discover-follow:disabled{
-  opacity:.6;
-}
+.profile-discover-follow:active{transform:scale(.98);}
+.profile-discover-follow:disabled{opacity:.6;}
 .profile-discover-list.vertical .profile-discover-follow{
   grid-area:action;
   width:auto!important;
   justify-self:start;
   margin:0!important;
   padding:7px 13px!important;
-}
-.profile-own-avatar-initial{
-  width:120px;
-  height:120px;
-  border-radius:50%;
-  border:4px solid #1455ff;
-  display:grid;
-  place-items:center;
-  background:#1d4ed8;
-  color:white;
-  font-size:46px;
-  font-weight:900;
-  text-transform:uppercase;
-  cursor:pointer;
 }
 
 .profile-video-grid{
@@ -4550,8 +4524,9 @@ section.page-show{
   transform:translateY(0);
 }
 
-/* Barre de progression vidéo : discrète, tactile et utilisable
-   dans le flux Vidéos et dans une vidéo de profil public. */
+/* Barre de progression vidéo — cachée par défaut.
+   Elle apparaît seulement quand le doigt/la souris arrive
+   dans sa zone en bas de la vidéo. */
 .video-progress{
   position:absolute !important;
   left:18px !important;
@@ -4566,10 +4541,23 @@ section.page-show{
   border:none !important;
   box-shadow:none !important;
   cursor:pointer !important;
-  pointer-events:auto !important;
   touch-action:pan-x !important;
   accent-color:#ffffff;
-  opacity:.82;
+
+  opacity:0 !important;
+  visibility:hidden !important;
+  pointer-events:none !important;
+  transform:translateY(3px);
+  transition:opacity .16s ease, transform .16s ease, visibility .16s ease;
+}
+
+.video-progress.video-progress-visible,
+.video-progress:focus,
+.video-progress:active{
+  opacity:.88 !important;
+  visibility:visible !important;
+  pointer-events:auto !important;
+  transform:translateY(0);
 }
 
 /* Pendant une restauration d'historique, on réaffiche directement
@@ -6269,7 +6257,6 @@ class="card hidden">
 
 <div id="profileVideosGrid" class="profile-video-grid"></div>
 
-
 <div id="profileDiscoverBox" class="profile-discover-box hidden">
   <div class="profile-discover-header">
     <h3 class="profile-discover-title">Contacts à découvrir</h3>
@@ -6282,6 +6269,7 @@ class="card hidden">
   </div>
   <div id="profileDiscoverList" class="profile-discover-list"></div>
 </div>
+
 
 <div
 id="usernameEditBox"
@@ -14114,12 +14102,16 @@ async function chargerDashboardTournoiProfil(){
 }
 
 
+
+/* =========================================================
+   CONTACTS À DÉCOUVRIR — PROFIL (BLOC 28)
+========================================================= */
 function premiereLettreProfil(name, username){
   const source = String(name || username || "?").trim();
   return (source.charAt(0) || "?").toUpperCase();
 }
 
-function echapperHtmlProfil(valeur){
+function echapperHtmlContactProfil(valeur){
   return String(valeur ?? "")
     .replaceAll("&", "&amp;")
     .replaceAll("<", "&lt;")
@@ -14128,80 +14120,45 @@ function echapperHtmlProfil(valeur){
     .replaceAll("'", "&#039;");
 }
 
-function avatarContactProfilHTML(user, classe="profile-discover-avatar"){
+function avatarContactProfilHTML(user){
   if(user?.profile_photo){
-    return `
-      <img
-        class="${classe}"
-        src="${echapperHtmlProfil(user.profile_photo)}"
-        alt="Profil"
-      >
-    `;
+    return `<img class="profile-discover-avatar" src="${echapperHtmlContactProfil(user.profile_photo)}" alt="Profil">`;
   }
-
-  return `
-    <div class="profile-initial-avatar ${classe}">
-      ${echapperHtmlProfil(premiereLettreProfil(user?.name, user?.username))}
-    </div>
-  `;
-}
-
-function avatarProfilPrincipalHTML(user, editable=true){
-  const clic = editable ? 'onclick="photoProfilClick()"' : '';
-
-  if(user?.profile_photo){
-    return `
-      <img
-        id="profilPhotoImg"
-        src="${echapperHtmlProfil(user.profile_photo)}"
-        ${clic}
-        style="
-          width:120px;
-          height:120px;
-          border-radius:50%;
-          object-fit:cover;
-          border:4px solid #1455ff;
-          cursor:pointer;
-        ">
-    `;
-  }
-
-  return `
-    <div
-      id="profilPhotoImg"
-      class="profile-own-avatar-initial"
-      ${clic}>
-      ${echapperHtmlProfil(premiereLettreProfil(user?.name, user?.username))}
-    </div>
-  `;
+  return `<div class="profile-initial-avatar">${echapperHtmlContactProfil(premiereLettreProfil(user?.name,user?.username))}</div>`;
 }
 
 let contactsProfilToutVoir = false;
 const contactsProfilMasques = new Set();
 let profilCompteSansVideoPubliee = false;
 
+function afficherEtatVideContactsProfil(){
+  const box = document.getElementById("profileDiscoverBox");
+  const liste = document.getElementById("profileDiscoverList");
+  const btn = document.getElementById("profileDiscoverSeeAll");
+  if(!box || !liste) return;
+  box.classList.remove("hidden");
+  liste.classList.remove("vertical");
+  liste.innerHTML = `<p class="small" style="margin:4px 2px 8px;">Aucun contact à découvrir pour le moment.</p>`;
+  if(btn) btn.classList.add("hidden");
+}
+
 function masquerContactProfil(userId){
-  contactsProfilMasques.add(Number(userId));
-  document
-    .querySelector(`[data-profile-discover-user="${Number(userId)}"]`)
-    ?.remove();
+  const id = Number(userId);
+  contactsProfilMasques.add(id);
+  document.querySelector(`[data-profile-discover-user="${id}"]`)?.remove();
 
   const liste = document.getElementById("profileDiscoverList");
-  const box = document.getElementById("profileDiscoverBox");
-
   if(liste && !liste.querySelector(".profile-discover-card")){
-    box?.classList.add("hidden");
+    // Important : le bloc ne disparaît plus. Seule la fiche supprimée disparaît.
+    afficherEtatVideContactsProfil();
   }
 }
 
 function basculerTousContactsProfil(){
   contactsProfilToutVoir = !contactsProfilToutVoir;
-
   const liste = document.getElementById("profileDiscoverList");
   const bouton = document.getElementById("profileDiscoverSeeAll");
-
   liste?.classList.toggle("vertical", contactsProfilToutVoir);
-
   if(bouton){
     bouton.textContent = contactsProfilToutVoir ? "Réduire" : "Tout voir";
   }
@@ -14210,15 +14167,7 @@ function basculerTousContactsProfil(){
 async function suivreContactDecouverte(userId, event){
   const bouton = event?.currentTarget;
   const id = Number(userId);
-
-  if(
-    !bouton ||
-    bouton.dataset.loading === "1" ||
-    !Number.isInteger(id) ||
-    id <= 0
-  ){
-    return;
-  }
+  if(!bouton || bouton.dataset.loading === "1" || !Number.isInteger(id) || id <= 0) return;
 
   const ancienTexte = bouton.textContent.trim();
   bouton.dataset.loading = "1";
@@ -14226,14 +14175,9 @@ async function suivreContactDecouverte(userId, event){
   bouton.textContent = "...";
 
   try{
-    const resultat = await post("/follow-player",{
-      player_user_id:id
-    });
-
+    const resultat = await post("/follow-player",{player_user_id:id});
     const texte = String(resultat || "");
-    const suiviReussi =
-      /Abonnement réussi|Follow successful/i.test(texte) &&
-      !/Unfollow|désabonn/i.test(texte);
+    const suiviReussi = /Abonnement réussi|Follow successful/i.test(texte) && !/Unfollow|désabonn/i.test(texte);
 
     if(!suiviReussi){
       bouton.textContent = ancienTexte;
@@ -14242,27 +14186,18 @@ async function suivreContactDecouverte(userId, event){
       return;
     }
 
-    synchroniserPetitsBoutonsSuivi(id, true);
+    synchroniserPetitsBoutonsSuivi(id,true);
     masquerContactProfil(id);
 
     const stats = await get("/my-social-stats");
     if(stats){
-      if(typeof profilFollowers !== "undefined" && profilFollowers){
-        profilFollowers.textContent = stats.followers || 0;
-      }
-      if(typeof profilFollowing !== "undefined" && profilFollowing){
-        profilFollowing.textContent = stats.following || 0;
-      }
+      if(typeof profilFollowers !== "undefined" && profilFollowers) profilFollowers.textContent = stats.followers || 0;
+      if(typeof profilFollowing !== "undefined" && profilFollowing) profilFollowing.textContent = stats.following || 0;
     }
 
-    showNotif(
-      ancienTexte === "Suivre en retour"
-        ? "Abonnement en retour réussi ✅"
-        : "Abonnement réussi ✅"
-    );
-
+    showNotif(ancienTexte === "Suivre en retour" ? "Abonnement en retour réussi ✅" : "Abonnement réussi ✅");
   }catch(error){
-    console.error("Erreur suivi contact à découvrir :", error);
+    console.error("Erreur suivi contact à découvrir :",error);
     bouton.textContent = ancienTexte;
     bouton.disabled = false;
     showNotif("Impossible de suivre ce compte");
@@ -14275,82 +14210,51 @@ async function chargerContactsADecouvrirProfil(){
   const box = document.getElementById("profileDiscoverBox");
   const liste = document.getElementById("profileDiscoverList");
   const boutonToutVoir = document.getElementById("profileDiscoverSeeAll");
+  if(!box || !liste) return;
 
-  if(!box || !liste){
-    return;
-  }
-
-  // Le bloc doit rester visible tant que le compte n'a publié aucune vidéo.
+  // Toujours visible quand le compte n'a aucune vidéo publiée.
   box.classList.remove("hidden");
   liste.innerHTML = `<p class="small" style="margin:4px 2px 8px;">Recherche de contacts…</p>`;
 
   try{
     const users = await get("/profile-discover-users");
-
-    const visibles = Array.isArray(users)
-      ? users.filter(u => !contactsProfilMasques.has(Number(u.id)))
-      : [];
+    const visibles = Array.isArray(users) ? users.filter(u=>!contactsProfilMasques.has(Number(u.id))) : [];
 
     contactsProfilToutVoir = false;
     liste.classList.remove("vertical");
 
-    if(boutonToutVoir){
-      boutonToutVoir.textContent = "Tout voir";
-      boutonToutVoir.classList.toggle("hidden", visibles.length <= 1);
-    }
-
     if(visibles.length === 0){
-      liste.innerHTML = `<p class="small" style="margin:4px 2px 8px;">Aucun contact à découvrir pour le moment.</p>`;
+      afficherEtatVideContactsProfil();
       return;
     }
 
+    if(boutonToutVoir){
+      boutonToutVoir.textContent = "Tout voir";
+      boutonToutVoir.classList.toggle("hidden",visibles.length <= 1);
+    }
+
     liste.innerHTML = visibles.map(u=>{
-      const nom = echapperHtmlProfil(u.name || u.username || "Utilisateur");
-      const username = echapperHtmlProfil(u.username || "");
-      const boutonTexte = Number(u.follows_me) === 1
-        ? "Suivre en retour"
-        : "Suivre";
-
+      const nom = echapperHtmlContactProfil(u.name || u.username || "Utilisateur");
+      const username = echapperHtmlContactProfil(u.username || "");
+      const boutonTexte = Number(u.follows_me) === 1 ? "Suivre en retour" : "Suivre";
       return `
-        <div
-          class="profile-discover-card"
-          data-profile-discover-user="${Number(u.id)}">
-
-          <button
-            class="profile-discover-close"
-            aria-label="Masquer"
-            onclick="event.stopPropagation(); masquerContactProfil(${Number(u.id)})">
-            ×
-          </button>
-
-          <div
-            class="profile-discover-avatar-wrap"
-            onclick="ouvrirProfilPublic(${Number(u.id)})"
-            style="cursor:pointer;">
+        <div class="profile-discover-card" data-profile-discover-user="${Number(u.id)}">
+          <button class="profile-discover-close" aria-label="Masquer" onclick="event.stopPropagation(); masquerContactProfil(${Number(u.id)})">×</button>
+          <div class="profile-discover-avatar-wrap" onclick="ouvrirProfilPublic(${Number(u.id)})" style="cursor:pointer;">
             ${avatarContactProfilHTML(u)}
           </div>
-
-          <div
-            class="profile-discover-identity"
-            onclick="ouvrirProfilPublic(${Number(u.id)})"
-            style="cursor:pointer;">
+          <div class="profile-discover-identity" onclick="ouvrirProfilPublic(${Number(u.id)})" style="cursor:pointer;">
             <span class="profile-discover-name">${nom}</span>
             ${username ? `<span class="profile-discover-username">@${username}</span>` : ""}
           </div>
-
-          <button
-            class="secondary profile-discover-follow"
-            onclick="event.stopPropagation(); suivreContactDecouverte(${Number(u.id)}, event)">
-            ${boutonTexte}
-          </button>
-        </div>
-      `;
+          <button class="secondary profile-discover-follow" onclick="event.stopPropagation(); suivreContactDecouverte(${Number(u.id)},event)">${boutonTexte}</button>
+        </div>`;
     }).join("");
-
   }catch(error){
-    console.error("Erreur contacts à découvrir :", error);
-    liste.innerHTML = `<p class="small" style="margin:4px 2px 8px;">Impossible de charger les contacts pour le moment.</p>`;
+    console.error("Erreur contacts à découvrir :",error);
     box.classList.remove("hidden");
+    liste.innerHTML = `<p class="small" style="margin:4px 2px 8px;">Impossible de charger les contacts pour le moment.</p>`;
+    if(boutonToutVoir) boutonToutVoir.classList.add("hidden");
   }
 }
 
@@ -14457,7 +14361,18 @@ if(token){
     "/default-avatar.png";
 
   profilPhoto.innerHTML = `
-  ${avatarProfilPrincipalHTML(data, true)}
+  <img
+  id="profilPhotoImg"
+  src="${data.profile_photo || "/default-avatar.png"}"
+  onclick="photoProfilClick()"
+  style="
+    width:120px;
+    height:120px;
+    border-radius:50%;
+    object-fit:cover;
+    border:4px solid #1455ff;
+    cursor:pointer;
+  ">
 
   <i
 id="btnEditProfil"
@@ -14466,23 +14381,17 @@ onclick="event.stopPropagation(); toggleEditProfil()">
 </i>
 `;
 
-modifierProfilPhoto.innerHTML = data.profile_photo
-  ? `
-    <img
-      src="${echapperHtmlProfil(data.profile_photo)}"
-      style="
-        width:120px;
-        height:120px;
-        border-radius:50%;
-        object-fit:cover;
-        border:4px solid #1455ff;
-      ">
-    `
-  : `
-    <div class="profile-own-avatar-initial" style="cursor:default;">
-      ${echapperHtmlProfil(premiereLettreProfil(data.name, data.username))}
-    </div>
-    `;
+modifierProfilPhoto.innerHTML = `
+  <img
+  src="${data.profile_photo || "/default-avatar.png"}"
+  style="
+    width:120px;
+    height:120px;
+    border-radius:50%;
+    object-fit:cover;
+    border:4px solid #1455ff;
+  ">
+`;
  profilNom.textContent =
     data.name || "";
 
@@ -14751,7 +14660,6 @@ async function chargerMesFavoris(){
     `).join("")
     : "<p class='small'>Aucune vidéo en favori.</p>";
 
-  // Les favoris ne doivent pas faire disparaître les contacts à découvrir.
   if(profilCompteSansVideoPubliee){
     await chargerContactsADecouvrirProfil();
   }else{
@@ -17014,36 +16922,6 @@ async function publierHighlight(){
   }
 }
 
-function estSuiviDansFluxVideo(h){
-
-  const id = Number(h?.user_id);
-
-  if(
-    Number.isInteger(id) &&
-    window.etatSuiviVideo instanceof Map &&
-    window.etatSuiviVideo.has(id)
-  ){
-    return window.etatSuiviVideo.get(id) === true;
-  }
-
-  const suivi =
-    h?.isFollowing === true ||
-    Number(h?.isFollowing) === 1 ||
-    h?.following === true ||
-    Number(h?.following) === 1 ||
-    h?.followed === true ||
-    Number(h?.followed) === 1;
-
-  if(
-    Number.isInteger(id) &&
-    id > 0
-  ){
-    window.etatSuiviVideo.set(id, suivi);
-  }
-
-  return suivi;
-}
-
 async function chargerHighlights(){
 
     if(
@@ -17055,13 +16933,7 @@ async function chargerHighlights(){
 
 
   const data =
-    await fetch(
-      "/highlights",
-      {
-        credentials:"same-origin",
-        cache:"no-store"
-      }
-    )
+    await fetch("/highlights")
     .then(r=>r.json());
 
   highlightsList.innerHTML =
@@ -17187,13 +17059,27 @@ async function chargerHighlights(){
                   <button
                     type="button"
                     class="video-mini-follow-btn ${
-                      estSuiviDansFluxVideo(h)
+                      (
+                        h.isFollowing === true ||
+                        Number(h.isFollowing) === 1 ||
+                        h.following === true ||
+                        Number(h.following) === 1 ||
+                        h.followed === true ||
+                        Number(h.followed) === 1
+                      )
                         ? "following"
                         : ""
                     }"
                     data-user-id="${h.user_id}"
                     data-following="${
-                      estSuiviDansFluxVideo(h)
+                      (
+                        h.isFollowing === true ||
+                        Number(h.isFollowing) === 1 ||
+                        h.following === true ||
+                        Number(h.following) === 1 ||
+                        h.followed === true ||
+                        Number(h.followed) === 1
+                      )
                         ? "1"
                         : "0"
                     }"
@@ -17202,12 +17088,26 @@ async function chargerHighlights(){
                       suivreDepuisVideo(${h.user_id}, this);
                     "
                     aria-label="${
-                      estSuiviDansFluxVideo(h)
+                      (
+                        h.isFollowing === true ||
+                        Number(h.isFollowing) === 1 ||
+                        h.following === true ||
+                        Number(h.following) === 1 ||
+                        h.followed === true ||
+                        Number(h.followed) === 1
+                      )
                         ? "Ne plus suivre"
                         : "Suivre"
                     }"
                   >${
-                    estSuiviDansFluxVideo(h)
+                    (
+                      h.isFollowing === true ||
+                      Number(h.isFollowing) === 1 ||
+                      h.following === true ||
+                      Number(h.following) === 1 ||
+                      h.followed === true ||
+                      Number(h.followed) === 1
+                    )
                       ? "✓"
                       : "+"
                   }</button>
@@ -24872,9 +24772,6 @@ function chargerPolitiqueConfidentialite(){
 
 
 
-window.etatSuiviVideo =
-  window.etatSuiviVideo || new Map();
-
 function synchroniserPetitsBoutonsSuivi(
   userId,
   suivi
@@ -24882,16 +24779,6 @@ function synchroniserPetitsBoutonsSuivi(
 
   const id =
     Number(userId);
-
-  if(
-    Number.isInteger(id) &&
-    id > 0
-  ){
-    window.etatSuiviVideo.set(
-      id,
-      !!suivi
-    );
-  }
 
   document
     .querySelectorAll(
@@ -26170,6 +26057,62 @@ function initialiserProgressionVideo(video){
     carte.appendChild(
       barre
     );
+
+    /*
+      La barre reste totalement cachée tant que le doigt/la souris
+      n'entre pas dans sa zone. Elle se recache automatiquement.
+    */
+    let timerMasquageProgression = null;
+    let progressionEnCours = false;
+
+    const montrerProgressionVideo = ()=>{
+      clearTimeout(timerMasquageProgression);
+      barre.classList.add("video-progress-visible");
+
+      if(!progressionEnCours){
+        timerMasquageProgression = setTimeout(()=>{
+          barre.classList.remove("video-progress-visible");
+        },1800);
+      }
+    };
+
+    const verifierZoneProgression = event=>{
+      const rect = carte.getBoundingClientRect();
+      const point = event.touches?.[0] || event.changedTouches?.[0] || event;
+      const y = Number(point.clientY);
+
+      if(!Number.isFinite(y)){
+        return;
+      }
+
+      /* Zone tactile autour de la position réelle de la barre. */
+      const distanceDuBas = rect.bottom - y;
+
+      if(distanceDuBas >= 54 && distanceDuBas <= 112){
+        montrerProgressionVideo();
+      }
+    };
+
+    carte.addEventListener("pointermove", verifierZoneProgression, {passive:true});
+    carte.addEventListener("touchstart", verifierZoneProgression, {passive:true});
+    carte.addEventListener("touchmove", verifierZoneProgression, {passive:true});
+
+    barre.addEventListener("pointerdown", ()=>{
+      progressionEnCours = true;
+      montrerProgressionVideo();
+    });
+
+    const terminerProgression = ()=>{
+      progressionEnCours = false;
+      clearTimeout(timerMasquageProgression);
+      timerMasquageProgression = setTimeout(()=>{
+        barre.classList.remove("video-progress-visible");
+      },900);
+    };
+
+    barre.addEventListener("pointerup", terminerProgression);
+    barre.addEventListener("pointercancel", terminerProgression);
+    barre.addEventListener("change", terminerProgression);
 
     /*
       Empêche le clic sur la barre de mettre
