@@ -5951,6 +5951,7 @@ data-i18n-placeholder="email"
 placeholder="Ton email">
 
 <button
+type="button"
 id="btnEnvoyerCodeReset"
 class="secondary"
 data-i18n="sendCode"
@@ -5970,6 +5971,7 @@ data-i18n-placeholder="newPassword"
 placeholder="Nouveau mot de passe">
 
 <button
+type="button"
 id="btnChangerMotDePasse"
 data-i18n="changePassword"
 onclick="resetPassword()">
@@ -6016,6 +6018,7 @@ data-i18n-placeholder="password"
 placeholder="Mot de passe">
 
 <button
+type="button"
 id="btnEnvoyerCodeEmail"
 class="secondary texte-rouge"
 data-i18n="sendEmailCode"
@@ -6035,10 +6038,17 @@ data-i18n-placeholder="receivedCode"
 placeholder="Code reçu par email">
 
 <button
+type="button"
+id="btnValiderCreationCompte"
 data-i18n="createAccount"
 onclick="register()">
 Créer compte
 </button>
+
+<div
+id="registerFormMessage"
+class="form-message">
+</div>
 
 </div>
 
@@ -9732,7 +9742,40 @@ function basculerImmediatementVersConnexion(){
 
 let redirectionConnexionEnCours = false;
 
-async function gererSessionExpiree(){
+/*
+  BLOC 30 — VERROU DES FORMULAIRES D’AUTHENTIFICATION
+  Pendant Mot de passe oublié ou Créer un compte, une ancienne
+  requête protégée peut recevoir 401. Elle ne doit JAMAIS fermer
+  le formulaire que l’utilisateur est en train de remplir.
+*/
+function formulaireAuthSecondaireOuvert(){
+
+  return (
+    document.body.dataset.authFormLock === "forgot" ||
+    document.body.dataset.authFormLock === "register" ||
+    document.body.classList.contains("forgot-mode") ||
+    document.body.classList.contains("register-mode") ||
+    !forgotBox?.classList.contains("hidden") ||
+    !registerBox?.classList.contains("hidden")
+  );
+}
+
+async function gererSessionExpiree(options = {}){
+
+  const forcerConnexion =
+    options?.forcerConnexion === true;
+
+  /*
+    Une requête de l’ancien écran peut finir après l’ouverture
+    d’un formulaire public. On ignore sa redirection visuelle.
+    Le 401 reste retourné au code appelant, mais la page reste ouverte.
+  */
+  if(
+    !forcerConnexion &&
+    formulaireAuthSecondaireOuvert()
+  ){
+    return;
+  }
 
   if(redirectionConnexionEnCours){
     return;
@@ -10239,6 +10282,8 @@ function afficherConnexionPropre(){
 
 function showRegister(){
 
+  document.body.dataset.authFormLock = "register";
+
   document.body.classList.add(
     "auth-mode"
   );
@@ -10275,6 +10320,8 @@ function showRegister(){
 }
 
 function closeRegister(){
+
+  delete document.body.dataset.authFormLock;
 
   registerBox.classList.add("hidden");
 
@@ -13600,18 +13647,154 @@ premierCodeEnvoye = true;
 
 async function register(){
 
-  const result = await post("/register",{
-    name:registerName.value,
-    email:registerEmail.value,
-    password:registerPassword.value,
-    code:registerCode.value
-  });
+  /*
+    BLOC 29 — CRÉATION DE COMPTE STABLE
+    Le formulaire reste affiché tant que le serveur n'a pas
+    confirmé exactement que le compte a été créé.
+  */
 
-  if(
-    typeof result === "string" &&
-    result.includes("Compte créé")
-  ){
+  maintenirPageCreationCompte();
 
+  const nom =
+    registerName.value.trim();
+
+  const email =
+    registerEmail.value.trim().toLowerCase();
+
+  const password =
+    registerPassword.value;
+
+  const code =
+    registerCode.value.trim();
+
+  const messageBox =
+    document.getElementById(
+      "registerFormMessage"
+    ) ||
+    document.getElementById(
+      "messageCodeEmail"
+    );
+
+  const bouton =
+    document.getElementById(
+      "btnValiderCreationCompte"
+    );
+
+  function afficherErreurCreation(texte){
+
+    maintenirPageCreationCompte();
+
+    if(messageBox){
+      messageBox.style.display = "block";
+      messageBox.style.color = "#ef4444";
+      messageBox.textContent = texte;
+      messageBox.classList?.remove("success");
+      messageBox.classList?.add("error");
+    }
+
+  }
+
+  function effacerMessageCreation(){
+
+    if(messageBox){
+      messageBox.textContent = "";
+      messageBox.classList?.remove(
+        "success",
+        "error"
+      );
+    }
+
+  }
+
+  effacerMessageCreation();
+
+  if(!nom){
+    afficherErreurCreation(
+      "Entre ton nom"
+    );
+    registerName.focus();
+    return;
+  }
+
+  if(nom.length < 2){
+    afficherErreurCreation(
+      "Le nom est trop court"
+    );
+    registerName.focus();
+    return;
+  }
+
+  const emailValide =
+    /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+  if(!email || !emailValide.test(email)){
+    afficherErreurCreation(
+      "Entre une adresse e-mail valide"
+    );
+    registerEmail.focus();
+    return;
+  }
+
+  if(!password || password.length < 8){
+    afficherErreurCreation(
+      "Le mot de passe doit contenir au moins 8 caractères"
+    );
+    registerPassword.focus();
+    return;
+  }
+
+  if(!code || code.length < 4){
+    afficherErreurCreation(
+      "Entre le code reçu par e-mail"
+    );
+    registerCode.focus();
+    return;
+  }
+
+  if(bouton){
+    bouton.disabled = true;
+  }
+
+  try{
+
+    const result = await post(
+      "/register",
+      {
+        name:nom,
+        email,
+        password,
+        code
+      }
+    );
+
+    const texteResultat =
+      typeof result === "object"
+        ? String(
+            result?.message ||
+            result?.success ||
+            result?.error ||
+            ""
+          )
+        : String(result || "");
+
+    const creationConfirmee =
+      texteResultat.trim() === "Compte créé" ||
+      texteResultat.trim() === "Account created";
+
+    if(!creationConfirmee){
+
+      afficherErreurCreation(
+        texteResultat ||
+        "Impossible de créer le compte"
+      );
+
+      return;
+    }
+
+    /*
+      À partir d'ici SEULEMENT : le backend a confirmé
+      que le compte vient réellement d'être créé.
+    */
     nouvelleGenerationSessionFrontend();
 
     document.body.classList.remove(
@@ -13629,7 +13812,11 @@ async function register(){
     history.replaceState({}, "", "/app");
 
     registerBox.classList.add("hidden");
-    registerBox.classList.remove("fullscreen-register");
+    registerBox.classList.remove(
+      "fullscreen-register"
+    );
+
+    delete document.body.dataset.authFormLock;
 
     const compteActuel =
       await synchroniserCompteConnecte();
@@ -13643,6 +13830,11 @@ async function register(){
 
       return;
     }
+
+    registerName.value = "";
+    registerEmail.value = "";
+    registerPassword.value = "";
+    registerCode.value = "";
 
     localStorage.setItem(
       "lastPanel",
@@ -13669,10 +13861,25 @@ async function register(){
       await saveFcmToken(token);
     }
 
-    return;
-  }
+  }catch(error){
 
-  message.textContent = result;
+    console.error(
+      "Erreur création compte :",
+      error
+    );
+
+    afficherErreurCreation(
+      error?.message ||
+      "Impossible de créer le compte"
+    );
+
+  }finally{
+
+    if(bouton){
+      bouton.disabled = false;
+    }
+
+  }
 }
 
 function reinitialiserDonneesCompteFrontend(){
@@ -18027,6 +18234,8 @@ document
 
 function ouvrirMotDePasseOublie(){
 
+  document.body.dataset.authFormLock = "forgot";
+
   document.body.classList.add(
     "auth-mode"
   );
@@ -18082,6 +18291,8 @@ function ouvrirMotDePasseOublie(){
 }
 
 function closeForgotPassword(){
+
+  delete document.body.dataset.authFormLock;
 
   forgotBox.classList.add("hidden");
 
@@ -18248,13 +18459,27 @@ async function envoyerCodeReset(){
 
 async function resetPassword(){
 
+  /*
+    BLOC 29 — MOT DE PASSE OUBLIÉ STABLE
+    La page ne se ferme jamais pendant la saisie, ni après
+    une erreur de code. Elle se ferme seulement si le backend
+    répond exactement que le mot de passe a été changé.
+  */
+
+  maintenirPageMotDePasseOublie();
+
   const messageBox =
     document.getElementById(
       "forgotPasswordMessage"
     );
 
+  const bouton =
+    document.getElementById(
+      "btnChangerMotDePasse"
+    );
+
   const email =
-    forgotEmail.value.trim();
+    forgotEmail.value.trim().toLowerCase();
 
   const code =
     forgotCode.value.trim();
@@ -18266,6 +18491,11 @@ async function resetPassword(){
     texte,
     type = "error"
   ){
+
+    /* Toute erreur garde obligatoirement la page ouverte. */
+    if(type !== "success"){
+      maintenirPageMotDePasseOublie();
+    }
 
     if(!messageBox){
       return;
@@ -18286,31 +18516,41 @@ async function resetPassword(){
 
   afficherMessage("");
 
-  if(!email || !code || !password){
+  const emailValide =
+    /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+  if(!email || !emailValide.test(email)){
 
     afficherMessage(
-      "Tous les champs sont obligatoires"
+      "Entre une adresse e-mail valide"
     );
 
+    forgotEmail.focus();
     return;
   }
 
-  if(code.length < 4){
+  if(!code || code.length < 4){
 
     afficherMessage(
-      "Le code saisi est incorrect"
+      "Entre le code reçu par e-mail"
     );
 
+    forgotCode.focus();
     return;
   }
 
-  if(password.length < 8){
+  if(!password || password.length < 8){
 
     afficherMessage(
       "Le mot de passe doit contenir au moins 8 caractères"
     );
 
+    newPassword.focus();
     return;
+  }
+
+  if(bouton){
+    bouton.disabled = true;
   }
 
   try{
@@ -18324,17 +18564,45 @@ async function resetPassword(){
       }
     );
 
+    const texteResultat =
+      typeof result === "object"
+        ? String(
+            result?.message ||
+            result?.success ||
+            result?.error ||
+            ""
+          )
+        : String(result || "");
+
+    const changementConfirme =
+      texteResultat.trim() ===
+        "Mot de passe changé" ||
+      texteResultat.trim() ===
+        "Password changed";
+
+    /*
+      IMPORTANT : certaines erreurs du backend peuvent être
+      renvoyées avec HTTP 200. On ne ferme donc PAS la page
+      simplement parce que la requête a répondu.
+    */
+    if(!changementConfirme){
+
+      afficherMessage(
+        texteResultat ||
+        "Le code ou les informations sont incorrects"
+      );
+
+      return;
+    }
+
     afficherMessage(
-      result?.message ||
-      result ||
       "Mot de passe changé avec succès",
       "success"
     );
 
     /*
-      Le formulaire ne se ferme QUE maintenant :
-      tous les champs sont valides et le serveur vient de
-      confirmer que le mot de passe a réellement été changé.
+      C'est le SEUL endroit où la page Mot de passe oublié
+      se ferme automatiquement : validation complète réussie.
     */
     forgotEmail.value = "";
     forgotCode.value = "";
@@ -18348,14 +18616,11 @@ async function resetPassword(){
       "lastPage"
     );
 
+    delete document.body.dataset.authFormLock;
     afficherConnexionPropre();
 
-    loginEmail.value =
-      email;
-
-    loginPassword.value =
-      "";
-
+    loginEmail.value = email;
+    loginPassword.value = "";
     loginPassword.focus();
 
   }catch(error){
@@ -18366,12 +18631,17 @@ async function resetPassword(){
     );
 
     afficherMessage(
-      error.message ||
+      error?.message ||
       "Impossible de changer le mot de passe"
     );
 
-  }
+  }finally{
 
+    if(bouton){
+      bouton.disabled = false;
+    }
+
+  }
 }
 
 async function banUser(userId){
@@ -23360,6 +23630,15 @@ async function demarrerApplication(){
     document.body.classList.remove(
       "app-loading"
     );
+
+    /*
+      Si l’utilisateur a déjà ouvert Mot de passe oublié ou
+      Créer un compte pendant le démarrage, ne jamais écraser
+      ce formulaire quand /me termine sa réponse.
+    */
+    if(formulaireAuthSecondaireOuvert()){
+      return;
+    }
 
     basculerImmediatementVersConnexion();
 
