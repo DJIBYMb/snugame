@@ -1147,6 +1147,14 @@ button:disabled{
   display:block;
 }
 
+
+/* =========================================================
+   LIVE — masquer la navigation principale pendant le LIVE
+========================================================= */
+body.live-room-mode .bottom-nav{
+  display:none!important;
+}
+
 .bottom-nav{
   position:fixed;
   bottom:0;
@@ -22964,6 +22972,14 @@ async function ouvrirPageLiveEnCours(){
         : "";
   }
 
+  document.body.classList.add(
+    "live-room-mode"
+  );
+
+  document
+    .querySelector(".bottom-nav")
+    ?.classList.add("hidden");
+
   setPage(
     "pageLiveEnCours"
   );
@@ -23415,6 +23431,14 @@ async function arreterLiveDepuisApplication(){
   window.liveSunugameEnPreparation =
     null;
 
+  document.body.classList.remove(
+    "live-room-mode"
+  );
+
+  document
+    .querySelector(".bottom-nav")
+    ?.classList.remove("hidden");
+
   setPage(
     "pageDashboard"
   );
@@ -23434,6 +23458,14 @@ function retourDepuisPageLiveEnCours(){
   le LIVE/capture continue.
   */
   arreterActualisationPageLive();
+
+  document.body.classList.remove(
+    "live-room-mode"
+  );
+
+  document
+    .querySelector(".bottom-nav")
+    ?.classList.remove("hidden");
 
   setPage(
     "pageCreationVideo"
