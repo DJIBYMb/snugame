@@ -24062,15 +24062,33 @@ async function ouvrirLiveSpectateur(
       .querySelector(".bottom-nav")
       ?.classList.remove("hidden");
 
+    /*
+      Si la connexion LiveKit échoue après l'ouverture
+      de pageLiveSpectateur, on revient immédiatement
+      vers le fil Vidéos pour éviter une page vide/noire.
+    */
+    setPage(
+      "pageDashboard",
+      false
+    );
+
+    try{
+      await ouvrirPanel(
+        "panelHighlights"
+      );
+
+      highlightsList.innerHTML = "";
+      await chargerHighlights();
+    }catch(_){
+    }
+
+    retourLiveSpectateurEtat =
+      null;
+
     alert(
       error.message ||
       "Impossible de rejoindre ce LIVE."
     );
-
-    try{
-      await chargerHighlights();
-    }catch(_){
-    }
   }
 }
 
@@ -28047,6 +28065,21 @@ async function retourGeneral(){
   retourGeneralEnCours = true;
 
   try{
+
+    /*
+      LIVE spectateur :
+      le bouton Retour Android doit fermer proprement
+      la room LiveKit et revenir au fil Vidéos.
+    */
+    if(
+      currentPageName === "pageLiveSpectateur" ||
+      !document
+        .getElementById("pageLiveSpectateur")
+        ?.classList.contains("hidden")
+    ){
+      await quitterLiveSpectateur();
+      return;
+    }
 
     if(!pageVideoProfil.classList.contains("hidden")){
       await retourProfilDepuisVideo();
