@@ -90,15 +90,25 @@ async function creerTokenLiveKit({
   ttl
 }){
 
-  const token = new AccessToken(
-    process.env.LIVEKIT_API_KEY,
-    process.env.LIVEKIT_API_SECRET,
-    {
-      identity:String(identity),
-      name:String(name || identity),
-      ttl:ttl || "2h"
-    }
-  );
+const liveKitApiKey =
+  String(
+    process.env.LIVEKIT_API_KEY || ""
+  ).trim();
+
+const liveKitApiSecret =
+  String(
+    process.env.LIVEKIT_API_SECRET || ""
+  ).trim();
+
+const token = new AccessToken(
+  liveKitApiKey,
+  liveKitApiSecret,
+  {
+    identity:String(identity),
+    name:String(name || identity),
+    ttl:ttl || "2h"
+  }
+);
 
   token.addGrant({
     roomJoin:true,
