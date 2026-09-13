@@ -6124,6 +6124,48 @@ href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
   src="https://cdn.jsdelivr.net/npm/livekit-client@2.22.3/dist/livekit-client.umd.min.js">
 </script>
 
+
+<style id="sunugame-public-live-profile-style">
+  .sunugame-public-live-avatar{
+    border:3px solid #ff2020 !important;
+    box-shadow:
+      0 0 0 3px rgba(255,32,32,.22),
+      0 0 18px rgba(255,32,32,.85) !important;
+    animation:sunugamePublicLivePulse 1.35s ease-in-out infinite;
+  }
+
+  .sunugame-public-live-badge{
+    position:absolute;
+    left:50%;
+    transform:translateX(-50%);
+    top:132px;
+    z-index:6;
+    border:1px solid rgba(255,255,255,.32);
+    background:#e50914;
+    color:white;
+    font-weight:900;
+    font-size:12px;
+    letter-spacing:.6px;
+    padding:5px 11px;
+    border-radius:999px;
+    box-shadow:0 5px 18px rgba(229,9,20,.42);
+    cursor:pointer;
+    user-select:none;
+  }
+
+  @keyframes sunugamePublicLivePulse{
+    0%,100%{
+      box-shadow:
+        0 0 0 3px rgba(255,32,32,.20),
+        0 0 13px rgba(255,32,32,.65);
+    }
+    50%{
+      box-shadow:
+        0 0 0 6px rgba(255,32,32,.10),
+        0 0 26px rgba(255,32,32,1);
+    }
+  }
+</style>
 </head>
 
 <body class="app-loading">
@@ -11650,6 +11692,126 @@ let etatAvantVideoProfil = null;
 let etatAvantVideoPublique = null;
 let scrollAvantVideoPublique = 0;
 
+async function actualiserEtatLiveProfilPublic(
+  userId
+){
+
+  const avatar =
+    document.querySelector(
+      `[data-public-live-avatar="${Number(userId)}"]`
+    );
+
+  const badge =
+    document.querySelector(
+      `[data-public-live-badge="${Number(userId)}"]`
+    );
+
+  if(!avatar){
+    return;
+  }
+
+  let liveActif = null;
+
+  try{
+
+    const response =
+      await fetch(
+        "/lives",
+        {
+          credentials:"include",
+          cache:"no-store"
+        }
+      );
+
+    const data =
+      await response.json();
+
+    if(
+      response.ok &&
+      data?.ok &&
+      Array.isArray(data.lives)
+    ){
+      liveActif =
+        data.lives.find(
+          live=>
+            Number(live?.owner?.id) ===
+            Number(userId)
+        ) || null;
+    }
+
+  }catch(error){
+    console.warn(
+      "État LIVE profil public :",
+      error
+    );
+  }
+
+  if(liveActif){
+
+    const liveId =
+      Number(liveActif.id);
+
+    avatar.classList.add(
+      "sunugame-public-live-avatar"
+    );
+
+    avatar.style.cursor =
+      "pointer";
+
+    avatar.onclick =
+      event=>{
+        event?.stopPropagation?.();
+        ouvrirLiveSpectateur(
+          liveId
+        );
+      };
+
+    if(badge){
+      badge.classList.remove(
+        "hidden"
+      );
+      badge.onclick =
+        event=>{
+          event?.stopPropagation?.();
+          ouvrirLiveSpectateur(
+            liveId
+          );
+        };
+      badge.onkeydown =
+        event=>{
+          if(
+            event.key === "Enter" ||
+            event.key === " "
+          ){
+            event.preventDefault();
+            ouvrirLiveSpectateur(
+              liveId
+            );
+          }
+        };
+    }
+
+  }else{
+
+    avatar.classList.remove(
+      "sunugame-public-live-avatar"
+    );
+
+    avatar.style.cursor =
+      "";
+
+    avatar.onclick = null;
+
+    if(badge){
+      badge.classList.add(
+        "hidden"
+      );
+      badge.onclick = null;
+      badge.onkeydown = null;
+    }
+  }
+}
+
 async function ouvrirProfilPublic(
   userId,
   options = {}
@@ -11721,7 +11883,16 @@ publicProfilContent.innerHTML = `
 
     <img
     class="player-profile-avatar"
+    data-public-live-avatar="${userId}"
     src="${data.profile_photo || "/logo.png"}">
+
+    <div
+      class="sunugame-public-live-badge hidden"
+      data-public-live-badge="${userId}"
+      role="button"
+      tabindex="0">
+      🔴 LIVE
+    </div>
 
     <div class="player-profile-name">
       ${data.name || "Joueur"}
@@ -11861,6 +12032,38 @@ color:white!important;
   </div>
 
 `;
+
+  await actualiserEtatLiveProfilPublic(
+    userId
+  );
+
+  if(
+    window.timerEtatLiveProfilPublic
+  ){
+    clearInterval(
+      window.timerEtatLiveProfilPublic
+    );
+  }
+
+  window.timerEtatLiveProfilPublic =
+    setInterval(
+      ()=>{
+
+        if(
+          currentPageName !==
+            "pagePublicProfil" ||
+          Number(currentPublicUserId) !==
+            Number(userId)
+        ){
+          return;
+        }
+
+        actualiserEtatLiveProfilPublic(
+          userId
+        );
+      },
+      4000
+    );
 
   await actualiserBoutonMessageProfilPublic(
     userId
@@ -23306,11 +23509,21 @@ async function demanderPartageEcranAndroid(){
       data = null;
     }
 
+    const liveKitUrl =
+      data?.url ||
+      data?.server_url ||
+      "";
+
+    const liveKitToken =
+      data?.token ||
+      data?.participant_token ||
+      "";
+
     if(
       !response.ok ||
       !data?.ok ||
-      !data?.url ||
-      !data?.token ||
+      !liveKitUrl ||
+      !liveKitToken ||
       !data?.room
     ){
 
@@ -23330,8 +23543,8 @@ async function demanderPartageEcranAndroid(){
 
     window.AndroidLive.startScreenShare(
       String(liveId),
-      String(data.url),
-      String(data.token),
+      String(liveKitUrl),
+      String(liveKitToken),
       String(data.room)
     );
 
@@ -23868,11 +24081,21 @@ async function ouvrirLiveSpectateur(
       );
     }
 
+    const liveKitViewerUrl =
+      tokenData?.url ||
+      tokenData?.server_url ||
+      "";
+
+    const liveKitViewerToken =
+      tokenData?.token ||
+      tokenData?.participant_token ||
+      "";
+
     if(
       !tokenResponse.ok ||
       !tokenData?.ok ||
-      !tokenData?.url ||
-      !tokenData?.token
+      !liveKitViewerUrl ||
+      !liveKitViewerToken
     ){
 
       throw new Error(
@@ -24005,8 +24228,8 @@ async function ouvrirLiveSpectateur(
     );
 
     await room.connect(
-      String(tokenData.url),
-      String(tokenData.token)
+      String(liveKitViewerUrl),
+      String(liveKitViewerToken)
     );
 
     attacherPistesDejaDisponibles(
