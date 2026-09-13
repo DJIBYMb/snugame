@@ -5779,11 +5779,350 @@ body.auth-mode.register-mode #registerBox input{
   white-space:nowrap;
 }
 
+
+/* =========================================================
+   SUNUGAME LIVE — CARTE FEED + PAGE SPECTATEUR
+========================================================= */
+
+.sunugame-live-feed-card{
+  position:relative;
+  min-height:100%;
+  overflow:hidden;
+  background:
+    radial-gradient(circle at 25% 20%, rgba(239,68,68,.28), transparent 35%),
+    radial-gradient(circle at 80% 70%, rgba(59,130,246,.22), transparent 36%),
+    linear-gradient(160deg,#09090b,#111827 62%,#020617);
+}
+
+.sunugame-live-feed-preview{
+  position:absolute;
+  inset:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+
+.sunugame-live-feed-preview::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  background:
+    linear-gradient(to top,rgba(0,0,0,.82),transparent 58%),
+    linear-gradient(to bottom,rgba(0,0,0,.36),transparent 32%);
+  pointer-events:none;
+}
+
+.sunugame-live-feed-avatar{
+  width:118px;
+  height:118px;
+  border-radius:50%;
+  object-fit:cover;
+  border:4px solid rgba(255,255,255,.92);
+  box-shadow:
+    0 0 0 7px rgba(239,68,68,.22),
+    0 18px 55px rgba(0,0,0,.55);
+}
+
+.sunugame-live-feed-top{
+  position:absolute;
+  top:78px;
+  left:16px;
+  right:16px;
+  z-index:3;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+}
+
+.sunugame-live-feed-badge{
+  display:inline-flex;
+  align-items:center;
+  gap:7px;
+  padding:7px 11px;
+  border-radius:999px;
+  background:#ef4444;
+  color:white;
+  font-weight:900;
+  font-size:12px;
+  letter-spacing:.4px;
+  box-shadow:0 8px 25px rgba(239,68,68,.35);
+}
+
+.sunugame-live-feed-viewers{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  padding:7px 11px;
+  border-radius:999px;
+  background:rgba(0,0,0,.52);
+  border:1px solid rgba(255,255,255,.12);
+  color:white;
+  font-size:12px;
+  font-weight:800;
+  backdrop-filter:blur(12px);
+}
+
+.sunugame-live-feed-bottom{
+  position:absolute;
+  left:16px;
+  right:16px;
+  bottom:88px;
+  z-index:4;
+}
+
+.sunugame-live-feed-user{
+  margin-bottom:7px;
+  color:#fff;
+  font-size:15px;
+  font-weight:900;
+}
+
+.sunugame-live-feed-title{
+  max-width:78%;
+  color:#fff;
+  font-size:14px;
+  line-height:1.35;
+  font-weight:700;
+  text-shadow:0 2px 8px rgba(0,0,0,.7);
+}
+
+.sunugame-live-enter-btn{
+  margin-top:16px;
+  min-height:46px;
+  padding:0 18px;
+  border:0;
+  border-radius:14px;
+  background:#fff;
+  color:#09090b;
+  font-size:13px;
+  font-weight:950;
+  letter-spacing:.2px;
+  box-shadow:0 12px 30px rgba(0,0,0,.35);
+}
+
+.sunugame-live-spectator-page{
+  position:fixed;
+  inset:0;
+  z-index:999990;
+  background:#000;
+  color:#fff;
+  overflow:hidden;
+}
+
+.sunugame-live-spectator-stage{
+  position:absolute;
+  inset:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:#000;
+}
+
+#liveSpectatorMedia{
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+
+#liveSpectatorMedia video{
+  width:100%;
+  height:100%;
+  object-fit:contain;
+  background:#000;
+}
+
+#liveSpectatorMedia audio{
+  display:none;
+}
+
+.sunugame-live-spectator-gradient{
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  background:
+    linear-gradient(to bottom,rgba(0,0,0,.62),transparent 27%),
+    linear-gradient(to top,rgba(0,0,0,.82),transparent 43%);
+}
+
+.sunugame-live-spectator-header{
+  position:absolute;
+  top:max(14px,env(safe-area-inset-top));
+  left:12px;
+  right:12px;
+  z-index:6;
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+
+.sunugame-live-spectator-back{
+  width:40px;
+  height:40px;
+  border:0;
+  border-radius:50%;
+  background:rgba(0,0,0,.52);
+  color:#fff;
+  font-size:25px;
+  font-weight:800;
+}
+
+.sunugame-live-spectator-avatar{
+  width:39px;
+  height:39px;
+  border-radius:50%;
+  object-fit:cover;
+  border:2px solid #fff;
+}
+
+.sunugame-live-spectator-owner{
+  min-width:0;
+  flex:1;
+}
+
+.sunugame-live-spectator-name{
+  font-size:13px;
+  font-weight:900;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+.sunugame-live-spectator-meta{
+  display:flex;
+  align-items:center;
+  gap:7px;
+  margin-top:2px;
+  font-size:11px;
+  color:rgba(255,255,255,.84);
+}
+
+.sunugame-live-spectator-livebadge{
+  padding:3px 7px;
+  border-radius:999px;
+  background:#ef4444;
+  color:#fff;
+  font-weight:900;
+}
+
+.sunugame-live-spectator-actions{
+  position:absolute;
+  right:12px;
+  bottom:112px;
+  z-index:7;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:13px;
+}
+
+.sunugame-live-spectator-action{
+  width:47px;
+  height:47px;
+  border:1px solid rgba(255,255,255,.15);
+  border-radius:50%;
+  background:rgba(0,0,0,.48);
+  color:#fff;
+  font-size:18px;
+  backdrop-filter:blur(12px);
+}
+
+.sunugame-live-spectator-action-count{
+  margin-top:-9px;
+  font-size:11px;
+  font-weight:800;
+}
+
+.sunugame-live-spectator-lower{
+  position:absolute;
+  left:12px;
+  right:70px;
+  bottom:14px;
+  z-index:7;
+}
+
+.sunugame-live-spectator-title{
+  margin-bottom:8px;
+  font-size:13px;
+  font-weight:800;
+  line-height:1.35;
+}
+
+.sunugame-live-spectator-status{
+  margin-bottom:7px;
+  color:rgba(255,255,255,.76);
+  font-size:11px;
+}
+
+.sunugame-live-spectator-comments{
+  max-height:160px;
+  overflow-y:auto;
+  margin-bottom:8px;
+  padding-right:4px;
+}
+
+.sunugame-live-spectator-comment{
+  display:flex;
+  gap:7px;
+  margin:6px 0;
+  font-size:12px;
+  line-height:1.35;
+}
+
+.sunugame-live-spectator-comment b{
+  color:#fff;
+}
+
+.sunugame-live-spectator-comment span{
+  color:rgba(255,255,255,.88);
+}
+
+.sunugame-live-spectator-inputrow{
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+
+.sunugame-live-spectator-input{
+  min-width:0;
+  flex:1;
+  min-height:42px;
+  padding:0 14px;
+  border:1px solid rgba(255,255,255,.14);
+  border-radius:999px;
+  background:rgba(0,0,0,.55);
+  color:#fff;
+  outline:none;
+}
+
+.sunugame-live-spectator-send{
+  width:42px;
+  height:42px;
+  border:0;
+  border-radius:50%;
+  background:#fff;
+  color:#111827;
+  font-weight:900;
+}
+
+body.live-spectator-mode .bottom-nav{
+  display:none!important;
+}
+
 </style>
 
 <link
 rel="stylesheet"
 href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+
+
+<script
+  src="https://cdn.jsdelivr.net/npm/livekit-client@2.22.3/dist/livekit-client.umd.min.js">
+</script>
 
 </head>
 
@@ -7139,6 +7478,135 @@ class="hidden creation-media-page">
           </p>
 
         </div>
+
+      </div>
+
+    </div>
+
+  </div>
+
+</section>
+
+
+
+<section
+  id="pageLiveSpectateur"
+  class="hidden sunugame-live-spectator-page">
+
+  <div class="sunugame-live-spectator-stage">
+
+    <div id="liveSpectatorMedia"></div>
+
+    <div class="sunugame-live-spectator-gradient"></div>
+
+    <div class="sunugame-live-spectator-header">
+
+      <button
+        type="button"
+        class="sunugame-live-spectator-back"
+        onclick="quitterLiveSpectateur()"
+        aria-label="Retour">
+        ‹
+      </button>
+
+      <img
+        id="liveSpectatorAvatar"
+        class="sunugame-live-spectator-avatar"
+        src="/default-avatar.png"
+        alt="Profil">
+
+      <div class="sunugame-live-spectator-owner">
+
+        <div
+          id="liveSpectatorName"
+          class="sunugame-live-spectator-name">
+          SunuGame
+        </div>
+
+        <div class="sunugame-live-spectator-meta">
+          <span class="sunugame-live-spectator-livebadge">
+            LIVE
+          </span>
+          <span>
+            👁 <span id="liveSpectatorViewers">0</span>
+          </span>
+        </div>
+
+      </div>
+
+    </div>
+
+    <div class="sunugame-live-spectator-actions">
+
+      <button
+        type="button"
+        class="sunugame-live-spectator-action"
+        onclick="likerLiveSpectateur()"
+        aria-label="J'aime">
+        ♥
+      </button>
+      <div
+        id="liveSpectatorLikes"
+        class="sunugame-live-spectator-action-count">
+        0
+      </div>
+
+      <button
+        type="button"
+        class="sunugame-live-spectator-action"
+        onclick="partagerLiveSpectateur()"
+        aria-label="Partager">
+        ↗
+      </button>
+
+      <button
+        type="button"
+        class="sunugame-live-spectator-action"
+        onclick="signalerLiveSpectateur()"
+        aria-label="Signaler">
+        !
+      </button>
+
+    </div>
+
+    <div class="sunugame-live-spectator-lower">
+
+      <div
+        id="liveSpectatorTitle"
+        class="sunugame-live-spectator-title">
+      </div>
+
+      <div
+        id="liveSpectatorStatus"
+        class="sunugame-live-spectator-status">
+        Connexion au LIVE...
+      </div>
+
+      <div
+        id="liveSpectatorComments"
+        class="sunugame-live-spectator-comments">
+      </div>
+
+      <div class="sunugame-live-spectator-inputrow">
+
+        <input
+          id="liveSpectatorCommentInput"
+          class="sunugame-live-spectator-input"
+          type="text"
+          maxlength="280"
+          placeholder="Ajouter un commentaire..."
+          onkeydown="
+            if(event.key === 'Enter'){
+              envoyerCommentaireLiveSpectateur();
+            }
+          ">
+
+        <button
+          type="button"
+          class="sunugame-live-spectator-send"
+          onclick="envoyerCommentaireLiveSpectateur()">
+          ➤
+        </button>
 
       </div>
 
@@ -17139,50 +17607,108 @@ async function publierHighlight(){
 
 async function chargerHighlights(){
 
-    if(
-    highlightsList.innerHTML.trim() !== ""
-  ){
-    initTikTokAutoplay();
-    return;
+  /*
+    Le fil Vidéos mélange maintenant :
+    - les LIVE réellement actifs venant de /lives ;
+    - les highlights normaux venant de /highlights.
+
+    Aucune connexion LiveKit n'est ouverte pendant le scroll.
+    Le spectateur entre dans la room uniquement après avoir
+    appuyé sur "ENTRER DANS LE LIVE".
+  */
+
+  let highlights = [];
+  let lives = [];
+
+  try{
+
+    const [
+      highlightsResponse,
+      livesResponse
+    ] =
+      await Promise.all([
+        fetch(
+          "/highlights",
+          {
+            credentials:"include",
+            cache:"no-store"
+          }
+        ),
+        fetch(
+          "/lives",
+          {
+            credentials:"include",
+            cache:"no-store"
+          }
+        )
+      ]);
+
+    const highlightsData =
+      await highlightsResponse.json();
+
+    const livesData =
+      await livesResponse.json();
+
+    highlights =
+      Array.isArray(highlightsData)
+        ? highlightsData
+        : [];
+
+    lives =
+      (
+        livesResponse.ok &&
+        livesData?.ok &&
+        Array.isArray(livesData.lives)
+      )
+        ? livesData.lives
+        : [];
+
+  }catch(error){
+
+    console.error(
+      "Chargement fil Vidéos/LIVE :",
+      error
+    );
+
+    try{
+      highlights =
+        await fetch("/highlights")
+          .then(r=>r.json());
+    }catch(_){
+      highlights = [];
+    }
   }
 
+  const renduHighlight =
+    h=>`
 
-  const data =
-    await fetch("/highlights")
-    .then(r=>r.json());
+      <div
+        class="tiktok-video"
+        data-id="${h.id}"
+        data-highlight-id="${h.id}"
+      >
 
-  highlightsList.innerHTML =
-    data.map(h=>`
+        <img
+          src="${h.thumbnail_url || '/default-video-cover.png'}"
+          class="video-panel-cover">
 
-    <div
-  class="tiktok-video"
-  data-id="${h.id}"
-  data-highlight-id="${h.id}"
->
-
-    <img
-  src="${h.thumbnail_url || '/default-video-cover.png'}"
-  class="video-panel-cover">
-
-<video
-  src="${h.media_url}"
-  class="highlight-video"
-  loop
-  playsinline
-  preload="auto"
-  onplaying="hideVideoCover(this)"
-  onclick="toggleVideoPause(this)">
-</video>
+        <video
+          src="${h.media_url}"
+          class="highlight-video"
+          loop
+          playsinline
+          preload="auto"
+          onplaying="hideVideoCover(this)"
+          onclick="toggleVideoPause(this)">
+        </video>
 
         <div class="tiktok-left">
 
           <div
-          class="tiktok-user"
-          style="cursor:pointer;"
-          onclick="ouvrirProfilPublic(${h.user_id}); event.stopPropagation();">
-
+            class="tiktok-user"
+            style="cursor:pointer;"
+            onclick="ouvrirProfilPublic(${h.user_id}); event.stopPropagation();">
             @${h.username}
-
           </div>
 
           <div class="tiktok-title collapsed">
@@ -17198,8 +17724,7 @@ async function chargerHighlights(){
                   onclick="
                     event.stopPropagation();
                     toggleDescriptionVideo(this);
-                  "
-                >
+                  ">
                   Voir plus
                 </button>
               `
@@ -17211,52 +17736,51 @@ async function chargerHighlights(){
         <div class="tiktok-actions">
 
           <button
-          class="tiktok-action-btn"
-          onclick="likeHighlight(${h.id}, this)">
-
-          <i class="${
-          h.liked
-          ? 'fa-solid fa-heart'
-          : 'fa-regular fa-heart'
-          }"></i>
-
+            class="tiktok-action-btn"
+            onclick="likeHighlight(${h.id}, this)">
+            <i class="${
+              h.liked
+                ? 'fa-solid fa-heart'
+                : 'fa-regular fa-heart'
+            }"></i>
           </button>
 
           <div class="like-count">
-         ${h.likes || 0}
-         </div>
-
-          <button
-          class="tiktok-action-btn"
-           onclick="ouvrirCommentaires(${h.id})">
-           <i class="fa-regular fa-comment"></i>
-          </button>
-
-         <div class="comment-count">
-          ${h.comments || 0}
+            ${h.likes || 0}
           </div>
 
           <button
-          class="tiktok-action-btn"
-          onclick="toggleFavoriVideo(${h.id}, this)">
-           <i class="${
-           h.favorited
-           ? 'fa-solid fa-bookmark'
-           : 'fa-regular fa-bookmark'
-           }"></i>
+            class="tiktok-action-btn"
+            onclick="ouvrirCommentaires(${h.id})">
+            <i class="fa-regular fa-comment"></i>
+          </button>
+
+          <div class="comment-count">
+            ${h.comments || 0}
+          </div>
+
+          <button
+            class="tiktok-action-btn"
+            onclick="toggleFavoriVideo(${h.id}, this)">
+            <i class="${
+              h.favorited
+                ? 'fa-solid fa-bookmark'
+                : 'fa-regular fa-bookmark'
+            }"></i>
           </button>
 
           <div class="favorite-count">
-           ${h.favorites || 0}
+            ${h.favorites || 0}
           </div>
 
           ${
-            Number(h.user_id) !== Number(currentUserId)
+            Number(h.user_id) !==
+            Number(currentUserId)
               ? `
                 <div
                   class="video-mini-profile"
-                  data-video-mini-user="${h.user_id}"
-                >
+                  data-video-mini-user="${h.user_id}">
+
                   <img
                     class="video-mini-profile-photo"
                     src="${h.profile_photo || '/default-avatar.png'}"
@@ -17268,8 +17792,7 @@ async function chargerHighlights(){
                     onerror="
                       this.onerror=null;
                       this.src='/default-avatar.png';
-                    "
-                  >
+                    ">
 
                   <button
                     type="button"
@@ -17301,8 +17824,8 @@ async function chargerHighlights(){
                     onclick="
                       event.stopPropagation();
                       suivreDepuisVideo(${h.user_id}, this);
-                    "
-                    aria-label="${
+                    ">
+                    ${
                       (
                         h.isFollowing === true ||
                         Number(h.isFollowing) === 1 ||
@@ -17311,21 +17834,11 @@ async function chargerHighlights(){
                         h.followed === true ||
                         Number(h.followed) === 1
                       )
-                        ? "Ne plus suivre"
-                        : "Suivre"
-                    }"
-                  >${
-                    (
-                      h.isFollowing === true ||
-                      Number(h.isFollowing) === 1 ||
-                      h.following === true ||
-                      Number(h.following) === 1 ||
-                      h.followed === true ||
-                      Number(h.followed) === 1
-                    )
-                      ? "✓"
-                      : "+"
-                  }</button>
+                        ? "✓"
+                        : "+"
+                    }
+                  </button>
+
                 </div>
               `
               : ""
@@ -17333,57 +17846,173 @@ async function chargerHighlights(){
 
         </div>
 
-    </div>
+      </div>
+    `;
 
-   `).join("");
+  const renduLive =
+    live=>{
 
-   initialiserBarresProgressionVideos();
+      const owner =
+        live.owner || {};
 
-   prepareFirstPanelVideo();
+      const username =
+        owner.username ||
+        owner.name ||
+        "joueur";
 
-   document
-  .querySelectorAll(
-    "#panelHighlights .highlight-video"
-  )
-  .forEach(video=>{
+      const title =
+        live.title ||
+        "LIVE eFootball";
 
-    video.muted = false;
-    video.volume = 1;
+      const avatar =
+        owner.profile_photo ||
+        "/default-avatar.png";
 
-  });
+      return `
+        <div
+          class="tiktok-video sunugame-live-feed-card"
+          data-live-feed-id="${Number(live.id)}">
 
-   const firstVideo =
-  document.querySelector(
-    "#panelHighlights .tiktok-video video"
-  );
+          <div class="sunugame-live-feed-preview">
+
+            <img
+              class="sunugame-live-feed-avatar"
+              src="${echapperLiveSunugame(avatar)}"
+              alt="LIVE @${echapperLiveSunugame(username)}"
+              onerror="
+                this.onerror=null;
+                this.src='/default-avatar.png';
+              ">
+
+          </div>
+
+          <div class="sunugame-live-feed-top">
+
+            <span class="sunugame-live-feed-badge">
+              🔴 LIVE
+            </span>
+
+            <span class="sunugame-live-feed-viewers">
+              👁
+              <span data-live-card-viewers="${Number(live.id)}">
+                ${Number(live.viewers_count || 0)}
+              </span>
+            </span>
+
+          </div>
+
+          <div class="sunugame-live-feed-bottom">
+
+            <div class="sunugame-live-feed-user">
+              @${echapperLiveSunugame(username)}
+            </div>
+
+            <div class="sunugame-live-feed-title">
+              ${echapperLiveSunugame(title)}
+            </div>
+
+            <button
+              type="button"
+              class="sunugame-live-enter-btn"
+              onclick="
+                event.stopPropagation();
+                ouvrirLiveSpectateur(${Number(live.id)});
+              ">
+              ENTRER DANS LE LIVE
+            </button>
+
+          </div>
+
+        </div>
+      `;
+    };
+
+  /*
+    Mélange simple et stable :
+    un LIVE est placé régulièrement entre les vidéos
+    sans dupliquer les éléments.
+  */
+  const feed = [];
+
+  let hi = 0;
+  let li = 0;
+
+  while(
+    hi < highlights.length ||
+    li < lives.length
+  ){
+
+    if(
+      hi < highlights.length
+    ){
+      feed.push(
+        renduHighlight(
+          highlights[hi++]
+        )
+      );
+    }
+
+    if(
+      hi < highlights.length
+    ){
+      feed.push(
+        renduHighlight(
+          highlights[hi++]
+        )
+      );
+    }
+
+    if(
+      li < lives.length
+    ){
+      feed.push(
+        renduLive(
+          lives[li++]
+        )
+      );
+    }
+  }
+
+  highlightsList.innerHTML =
+    feed.join("");
+
+  initialiserBarresProgressionVideos();
+
+  prepareFirstPanelVideo();
+
+  document
+    .querySelectorAll(
+      "#panelHighlights .highlight-video"
+    )
+    .forEach(video=>{
+
+      video.muted = false;
+      video.volume = 1;
+    });
 
   const videos =
-  document.querySelectorAll(
-    "#panelHighlights .tiktok-video video"
-  );
+    document.querySelectorAll(
+      "#panelHighlights .tiktok-video video"
+    );
 
-if(videos[1]){
+  if(videos[0]){
+    videos[0].preload = "auto";
+    videos[0].load();
+  }
 
-  videos[1].preload = "auto";
-
-  videos[1].load();
-
-}
-
-if(firstVideo){
-
-  firstVideo.preload = "auto";
-
-  firstVideo.load();
-
-}
+  if(videos[1]){
+    videos[1].preload = "auto";
+    videos[1].load();
+  }
 
   if(!window.openingProfileVideo){
-  setTimeout(()=>{
-    initTikTokAutoplay();
-  },800);
- }
+
+    setTimeout(()=>{
+      initTikTokAutoplay();
+    },800);
+  }
 }
+
 
 function mettreAJourCompteursVue(
   videoId,
@@ -22604,7 +23233,7 @@ function basculerMicroLive(){
   }
 }
 
-function demanderPartageEcranAndroid(){
+async function demanderPartageEcranAndroid(){
 
   const status =
     document.getElementById(
@@ -22623,15 +23252,10 @@ function demanderPartageEcranAndroid(){
     }
 
     console.error(
-      "AndroidLive indisponible : l'APK installé ne contient pas encore le nouveau MainActivity, ou la page est ouverte dans un navigateur."
+      "AndroidLive indisponible : la version Android installée ne contient pas le pont LIVE attendu."
     );
 
     return false;
-  }
-
-  if(status){
-    status.textContent =
-      "Autorise maintenant le partage d'écran dans Android.";
   }
 
   const liveId =
@@ -22651,13 +23275,85 @@ function demanderPartageEcranAndroid(){
     return false;
   }
 
-  window.AndroidLive
-    .startScreenShare(
-      String(liveId)
+  if(status){
+    status.textContent =
+      "Préparation sécurisée de la diffusion...";
+  }
+
+  try{
+
+    const response =
+      await fetch(
+        `/live/${liveId}/publisher-token`,
+        {
+          method:"POST",
+          credentials:"include",
+          headers:{
+            "Content-Type":"application/json",
+            "x-language":
+              localStorage.getItem("lang") ||
+              "fr"
+          },
+          body:"{}"
+        }
+      );
+
+    let data = null;
+
+    try{
+      data = await response.json();
+    }catch(error){
+      data = null;
+    }
+
+    if(
+      !response.ok ||
+      !data?.ok ||
+      !data?.url ||
+      !data?.token ||
+      !data?.room
+    ){
+
+      throw new Error(
+        data?.message ||
+        "Impossible de préparer la connexion LiveKit"
+      );
+    }
+
+    if(status){
+      status.textContent =
+        "Autorise maintenant le partage d'écran dans Android.";
+    }
+
+    window.liveSunugamePublicationEnCours =
+      false;
+
+    window.AndroidLive.startScreenShare(
+      String(liveId),
+      String(data.url),
+      String(data.token),
+      String(data.room)
     );
 
-  return true;
+    return true;
+
+  }catch(error){
+
+    console.error(
+      "Préparation Android LiveKit :",
+      error
+    );
+
+    if(status){
+      status.textContent =
+        error.message ||
+        "Impossible de préparer la diffusion.";
+    }
+
+    return false;
+  }
 }
+
 
 window.onAndroidScreenShareStarted =
 function(){
@@ -22669,7 +23365,7 @@ function(){
 
   if(status){
     status.textContent =
-      "✅ Capture de l'écran active. Tu peux ouvrir eFootball.";
+      "Capture Android lancée. Connexion au direct en cours...";
   }
 
   const message =
@@ -22679,7 +23375,7 @@ function(){
 
   if(message){
     message.textContent =
-      "L'écran est capturé. Tu peux ouvrir eFootball.";
+      "Connexion de ton écran au LIVE...";
   }
 
   const liveRoomStatus =
@@ -22689,9 +23385,235 @@ function(){
 
   if(liveRoomStatus){
     liveRoomStatus.textContent =
-      "✅ LIVE écran actif. Tu peux ouvrir eFootball.";
+      "Connexion LIVE en cours...";
   }
 };
+
+
+window.onAndroidLivePublished =
+async function(){
+
+  const live =
+    window.liveSunugameEnPreparation;
+
+  const liveId =
+    Number(
+      live?.id || 0
+    );
+
+  if(!liveId){
+    return;
+  }
+
+  if(
+    window.liveSunugamePublicationEnCours
+  ){
+    return;
+  }
+
+  window.liveSunugamePublicationEnCours =
+    true;
+
+  const status =
+    document.getElementById(
+      "liveAndroidStatus"
+    );
+
+  const message =
+    document.getElementById(
+      "livePreparationMessage"
+    );
+
+  const liveRoomStatus =
+    document.getElementById(
+      "liveRoomStatus"
+    );
+
+  try{
+
+    if(status){
+      status.textContent =
+        "Écran connecté. Activation du LIVE...";
+    }
+
+    const response =
+      await fetch(
+        `/live/${liveId}/go-live`,
+        {
+          method:"POST",
+          credentials:"include",
+          headers:{
+            "Content-Type":"application/json",
+            "x-language":
+              localStorage.getItem("lang") ||
+              "fr"
+          },
+          body:"{}"
+        }
+      );
+
+    let data = null;
+
+    try{
+      data = await response.json();
+    }catch(error){
+      data = null;
+    }
+
+    if(
+      !response.ok ||
+      !data?.ok
+    ){
+
+      throw new Error(
+        data?.message ||
+        "Impossible d'activer le LIVE"
+      );
+    }
+
+    if(
+      window.liveSunugameEnPreparation
+    ){
+      window.liveSunugameEnPreparation.status =
+        "live";
+    }
+
+    if(status){
+      status.textContent =
+        "🔴 LIVE actif — ton écran est diffusé.";
+    }
+
+    if(message){
+      message.textContent =
+        "🔴 Tu es en LIVE. Tu peux ouvrir eFootball.";
+    }
+
+    if(liveRoomStatus){
+      liveRoomStatus.textContent =
+        "🔴 LIVE — diffusion écran active.";
+    }
+
+    try{
+      await ouvrirPageLiveEnCours();
+    }catch(error){
+      console.warn(
+        "Ouverture page LIVE :",
+        error
+      );
+    }
+
+    /*
+      Recharge le fil Vidéos si sa fonction existe.
+      Le backend /lives ne renvoie que status='live'.
+    */
+    try{
+
+      if(
+        typeof chargerHighlights ===
+        "function"
+      ){
+        chargerHighlights();
+      }
+
+    }catch(error){
+    }
+
+  }catch(error){
+
+    console.error(
+      "Activation LIVE après publication :",
+      error
+    );
+
+    if(status){
+      status.textContent =
+        error.message ||
+        "Le LIVE n'a pas pu être activé.";
+    }
+
+    if(message){
+      message.textContent =
+        error.message ||
+        "Le LIVE n'a pas pu être activé.";
+    }
+
+    if(liveRoomStatus){
+      liveRoomStatus.textContent =
+        "Erreur pendant l'activation du LIVE.";
+    }
+
+    /*
+      Sécurité :
+      si LiveKit diffuse mais que le backend refuse
+      le passage en status='live', on coupe la diffusion
+      afin de ne jamais laisser un direct invisible.
+    */
+    try{
+
+      if(
+        window.AndroidLive &&
+        typeof window.AndroidLive
+          .stopScreenShare ===
+          "function"
+      ){
+        window.AndroidLive
+          .stopScreenShare();
+      }
+
+    }catch(stopError){
+    }
+
+  }finally{
+
+    window.liveSunugamePublicationEnCours =
+      false;
+  }
+};
+
+
+window.onAndroidLiveError =
+function(messageErreur){
+
+  const message =
+    String(
+      messageErreur ||
+      "Impossible de démarrer la diffusion LIVE."
+    );
+
+  const status =
+    document.getElementById(
+      "liveAndroidStatus"
+    );
+
+  if(status){
+    status.textContent =
+      "Erreur LIVE : " + message;
+  }
+
+  const preparation =
+    document.getElementById(
+      "livePreparationMessage"
+    );
+
+  if(preparation){
+    preparation.textContent =
+      "Erreur LIVE : " + message;
+  }
+
+  const liveRoomStatus =
+    document.getElementById(
+      "liveRoomStatus"
+    );
+
+  if(liveRoomStatus){
+    liveRoomStatus.textContent =
+      "Erreur LIVE : " + message;
+  }
+
+  window.liveSunugamePublicationEnCours =
+    false;
+};
+
 
 window.onAndroidScreenShareDenied =
 function(){
@@ -22705,7 +23627,11 @@ function(){
     status.textContent =
       "Partage d'écran annulé.";
   }
+
+  window.liveSunugamePublicationEnCours =
+    false;
 };
+
 
 window.onAndroidScreenShareStopped =
 function(){
@@ -22719,7 +23645,1022 @@ function(){
     status.textContent =
       "Partage d'écran arrêté.";
   }
+
+  window.liveSunugamePublicationEnCours =
+    false;
 };
+
+
+/* =========================================================
+   SUNUGAME LIVE — SPECTATEUR LIVEKIT
+========================================================= */
+
+window.liveSpectateurActuel = null;
+window.liveKitSpectateurRoom = null;
+
+let timerHeartbeatLiveSpectateur = null;
+let timerStatsLiveSpectateur = null;
+let timerCommentairesLiveSpectateur = null;
+let signatureCommentairesLiveSpectateur = "";
+let retourLiveSpectateurEtat = null;
+
+
+function detacherMediasLiveSpectateur(){
+
+  const zone =
+    document.getElementById(
+      "liveSpectatorMedia"
+    );
+
+  if(zone){
+    zone.innerHTML = "";
+  }
+}
+
+
+async function deconnecterLiveKitSpectateur(){
+
+  const room =
+    window.liveKitSpectateurRoom;
+
+  window.liveKitSpectateurRoom =
+    null;
+
+  if(room){
+
+    try{
+      await room.disconnect();
+    }catch(error){
+      console.warn(
+        "Déconnexion LiveKit spectateur :",
+        error
+      );
+    }
+  }
+
+  detacherMediasLiveSpectateur();
+}
+
+
+function attacherPisteLiveSpectateur(
+  track
+){
+
+  const zone =
+    document.getElementById(
+      "liveSpectatorMedia"
+    );
+
+  if(
+    !zone ||
+    !track
+  ){
+    return;
+  }
+
+  const element =
+    track.attach();
+
+  if(
+    element instanceof HTMLVideoElement
+  ){
+
+    element.autoplay = true;
+    element.playsInline = true;
+    element.controls = false;
+    element.muted = false;
+
+    zone
+      .querySelectorAll("video")
+      .forEach(old=>{
+        if(old !== element){
+          old.remove();
+        }
+      });
+
+  }else if(
+    element instanceof HTMLAudioElement
+  ){
+
+    element.autoplay = true;
+  }
+
+  zone.appendChild(
+    element
+  );
+
+  element
+    .play?.()
+    .catch(()=>{});
+}
+
+
+function attacherPistesDejaDisponibles(
+  room
+){
+
+  room.remoteParticipants
+    .forEach(participant=>{
+
+      participant.trackPublications
+        .forEach(publication=>{
+
+          if(
+            publication.track
+          ){
+            attacherPisteLiveSpectateur(
+              publication.track
+            );
+          }
+        });
+    });
+}
+
+
+async function ouvrirLiveSpectateur(
+  liveIdValue
+){
+
+  const liveId =
+    Number(liveIdValue);
+
+  if(
+    !Number.isInteger(liveId) ||
+    liveId <= 0
+  ){
+    return;
+  }
+
+  if(
+    typeof LivekitClient ===
+    "undefined"
+  ){
+
+    alert(
+      "Le lecteur LIVE n'est pas encore chargé. Vérifie ta connexion Internet puis réessaie."
+    );
+
+    return;
+  }
+
+  const status =
+    document.getElementById(
+      "liveSpectatorStatus"
+    );
+
+  try{
+
+    retourLiveSpectateurEtat =
+      typeof capturerEtatNavigation ===
+      "function"
+        ? capturerEtatNavigation()
+        : null;
+
+    if(status){
+      status.textContent =
+        "Connexion sécurisée au LIVE...";
+    }
+
+    const [
+      liveResponse,
+      tokenResponse
+    ] =
+      await Promise.all([
+        fetch(
+          `/live/${liveId}`,
+          {
+            credentials:"include",
+            cache:"no-store"
+          }
+        ),
+        fetch(
+          `/live/${liveId}/viewer-token`,
+          {
+            method:"POST",
+            credentials:"include",
+            headers:{
+              "Content-Type":"application/json",
+              "x-language":
+                localStorage.getItem("lang") ||
+                "fr"
+            },
+            body:"{}"
+          }
+        )
+      ]);
+
+    const liveData =
+      await liveResponse.json();
+
+    const tokenData =
+      await tokenResponse.json();
+
+    if(
+      !liveResponse.ok ||
+      !liveData?.ok ||
+      liveData?.live?.status !==
+        "live"
+    ){
+
+      throw new Error(
+        liveData?.message ||
+        "Ce LIVE est terminé."
+      );
+    }
+
+    if(
+      !tokenResponse.ok ||
+      !tokenData?.ok ||
+      !tokenData?.url ||
+      !tokenData?.token
+    ){
+
+      throw new Error(
+        tokenData?.message ||
+        "Impossible de rejoindre ce LIVE."
+      );
+    }
+
+    const live =
+      liveData.live;
+
+    window.liveSpectateurActuel =
+      live;
+
+    const avatar =
+      document.getElementById(
+        "liveSpectatorAvatar"
+      );
+
+    const name =
+      document.getElementById(
+        "liveSpectatorName"
+      );
+
+    const title =
+      document.getElementById(
+        "liveSpectatorTitle"
+      );
+
+    if(avatar){
+
+      avatar.src =
+        live.owner?.profile_photo ||
+        "/default-avatar.png";
+
+      avatar.onerror =
+        function(){
+          this.onerror = null;
+          this.src =
+            "/default-avatar.png";
+        };
+    }
+
+    if(name){
+
+      name.textContent =
+        live.owner?.username
+          ? "@" + live.owner.username
+          : (
+              live.owner?.name ||
+              "SunuGame"
+            );
+    }
+
+    if(title){
+      title.textContent =
+        live.title ||
+        "LIVE eFootball";
+    }
+
+    document.body.classList.add(
+      "live-spectator-mode"
+    );
+
+    document
+      .querySelector(".bottom-nav")
+      ?.classList.add("hidden");
+
+    setPage(
+      "pageLiveSpectateur",
+      false
+    );
+
+    await deconnecterLiveKitSpectateur();
+
+    const room =
+      new LivekitClient.Room({
+        adaptiveStream:true
+      });
+
+    window.liveKitSpectateurRoom =
+      room;
+
+    room.on(
+      LivekitClient.RoomEvent
+        .TrackSubscribed,
+      (
+        track,
+        publication,
+        participant
+      )=>{
+
+        attacherPisteLiveSpectateur(
+          track
+        );
+      }
+    );
+
+    room.on(
+      LivekitClient.RoomEvent
+        .TrackUnsubscribed,
+      track=>{
+
+        try{
+          track.detach()
+            .forEach(element=>
+              element.remove()
+            );
+        }catch(error){
+        }
+      }
+    );
+
+    room.on(
+      LivekitClient.RoomEvent
+        .Disconnected,
+      ()=>{
+
+        const current =
+          window.liveSpectateurActuel;
+
+        if(
+          current?.id === liveId &&
+          status
+        ){
+          status.textContent =
+            "Connexion au LIVE interrompue.";
+        }
+      }
+    );
+
+    await room.connect(
+      String(tokenData.url),
+      String(tokenData.token)
+    );
+
+    attacherPistesDejaDisponibles(
+      room
+    );
+
+    if(status){
+      status.textContent =
+        "🔴 LIVE en direct";
+    }
+
+    await heartbeatLiveSpectateur();
+    await actualiserStatsLiveSpectateur();
+    await actualiserCommentairesLiveSpectateur();
+
+    arreterTimersLiveSpectateur();
+
+    timerHeartbeatLiveSpectateur =
+      setInterval(
+        heartbeatLiveSpectateur,
+        15000
+      );
+
+    timerStatsLiveSpectateur =
+      setInterval(
+        actualiserStatsLiveSpectateur,
+        3000
+      );
+
+    timerCommentairesLiveSpectateur =
+      setInterval(
+        actualiserCommentairesLiveSpectateur,
+        1800
+      );
+
+  }catch(error){
+
+    console.error(
+      "Ouverture LIVE spectateur :",
+      error
+    );
+
+    await deconnecterLiveKitSpectateur();
+
+    window.liveSpectateurActuel =
+      null;
+
+    document.body.classList.remove(
+      "live-spectator-mode"
+    );
+
+    document
+      .querySelector(".bottom-nav")
+      ?.classList.remove("hidden");
+
+    alert(
+      error.message ||
+      "Impossible de rejoindre ce LIVE."
+    );
+
+    try{
+      await chargerHighlights();
+    }catch(_){
+    }
+  }
+}
+
+
+function arreterTimersLiveSpectateur(){
+
+  if(timerHeartbeatLiveSpectateur){
+    clearInterval(
+      timerHeartbeatLiveSpectateur
+    );
+    timerHeartbeatLiveSpectateur = null;
+  }
+
+  if(timerStatsLiveSpectateur){
+    clearInterval(
+      timerStatsLiveSpectateur
+    );
+    timerStatsLiveSpectateur = null;
+  }
+
+  if(timerCommentairesLiveSpectateur){
+    clearInterval(
+      timerCommentairesLiveSpectateur
+    );
+    timerCommentairesLiveSpectateur = null;
+  }
+}
+
+
+async function heartbeatLiveSpectateur(){
+
+  const liveId =
+    Number(
+      window.liveSpectateurActuel
+        ?.id || 0
+    );
+
+  if(!liveId){
+    return;
+  }
+
+  try{
+
+    const response =
+      await fetch(
+        `/live/${liveId}/viewer/heartbeat`,
+        {
+          method:"POST",
+          credentials:"include",
+          headers:{
+            "Content-Type":"application/json"
+          },
+          body:"{}"
+        }
+      );
+
+    if(!response.ok){
+      return;
+    }
+
+    const data =
+      await response.json();
+
+    if(data?.ok){
+      appliquerStatsLiveSpectateur(
+        data.stats
+      );
+    }
+
+  }catch(error){
+  }
+}
+
+
+function appliquerStatsLiveSpectateur(
+  stats
+){
+
+  const viewers =
+    document.getElementById(
+      "liveSpectatorViewers"
+    );
+
+  const likes =
+    document.getElementById(
+      "liveSpectatorLikes"
+    );
+
+  if(viewers){
+    viewers.textContent =
+      Number(
+        stats?.viewers || 0
+      ).toLocaleString("fr-FR");
+  }
+
+  if(likes){
+    likes.textContent =
+      Number(
+        stats?.likes || 0
+      ).toLocaleString("fr-FR");
+  }
+}
+
+
+async function actualiserStatsLiveSpectateur(){
+
+  const liveId =
+    Number(
+      window.liveSpectateurActuel
+        ?.id || 0
+    );
+
+  if(!liveId){
+    return;
+  }
+
+  try{
+
+    const response =
+      await fetch(
+        `/live/${liveId}/stats`,
+        {
+          credentials:"include",
+          cache:"no-store"
+        }
+      );
+
+    const data =
+      await response.json();
+
+    if(
+      !response.ok ||
+      !data?.ok
+    ){
+      return;
+    }
+
+    appliquerStatsLiveSpectateur(
+      data.stats
+    );
+
+    if(
+      data.status !== "live"
+    ){
+
+      const status =
+        document.getElementById(
+          "liveSpectatorStatus"
+        );
+
+      if(status){
+        status.textContent =
+          "Ce LIVE est terminé.";
+      }
+
+      setTimeout(
+        ()=>{
+          quitterLiveSpectateur(
+            true
+          );
+        },
+        700
+      );
+    }
+
+  }catch(error){
+  }
+}
+
+
+async function actualiserCommentairesLiveSpectateur(){
+
+  const liveId =
+    Number(
+      window.liveSpectateurActuel
+        ?.id || 0
+    );
+
+  const zone =
+    document.getElementById(
+      "liveSpectatorComments"
+    );
+
+  if(
+    !liveId ||
+    !zone
+  ){
+    return;
+  }
+
+  try{
+
+    const response =
+      await fetch(
+        `/live/${liveId}/comments`,
+        {
+          credentials:"include",
+          cache:"no-store"
+        }
+      );
+
+    const data =
+      await response.json();
+
+    if(
+      !response.ok ||
+      !data?.ok
+    ){
+      return;
+    }
+
+    const comments =
+      Array.isArray(data.comments)
+        ? data.comments
+        : [];
+
+    const signature =
+      comments
+        .map(c=>
+          `${c.id}:${c.content}:${c.is_pinned ? 1 : 0}`
+        )
+        .join("|");
+
+    if(
+      signature ===
+      signatureCommentairesLiveSpectateur
+    ){
+      return;
+    }
+
+    signatureCommentairesLiveSpectateur =
+      signature;
+
+    zone.innerHTML =
+      comments
+        .slice(-30)
+        .map(comment=>{
+
+          const user =
+            comment.user || {};
+
+          const username =
+            user.username ||
+            user.name ||
+            "joueur";
+
+          return `
+            <div class="sunugame-live-spectator-comment">
+              <b>
+                ${
+                  comment.is_pinned
+                    ? "📌 "
+                    : ""
+                }@${echapperLiveSunugame(username)}
+              </b>
+              <span>
+                ${echapperLiveSunugame(comment.content || "")}
+              </span>
+            </div>
+          `;
+        })
+        .join("");
+
+    zone.scrollTop =
+      zone.scrollHeight;
+
+  }catch(error){
+  }
+}
+
+
+async function envoyerCommentaireLiveSpectateur(){
+
+  const liveId =
+    Number(
+      window.liveSpectateurActuel
+        ?.id || 0
+    );
+
+  const input =
+    document.getElementById(
+      "liveSpectatorCommentInput"
+    );
+
+  const content =
+    String(
+      input?.value || ""
+    ).trim();
+
+  if(
+    !liveId ||
+    !content
+  ){
+    return;
+  }
+
+  if(input){
+    input.disabled = true;
+  }
+
+  try{
+
+    const response =
+      await fetch(
+        `/live/${liveId}/comments`,
+        {
+          method:"POST",
+          credentials:"include",
+          headers:{
+            "Content-Type":"application/json"
+          },
+          body:JSON.stringify({
+            content
+          })
+        }
+      );
+
+    const data =
+      await response.json();
+
+    if(
+      !response.ok ||
+      !data?.ok
+    ){
+
+      throw new Error(
+        data?.message ||
+        "Impossible d'envoyer le commentaire."
+      );
+    }
+
+    if(input){
+      input.value = "";
+    }
+
+    signatureCommentairesLiveSpectateur =
+      "";
+
+    await actualiserCommentairesLiveSpectateur();
+
+  }catch(error){
+
+    alert(
+      error.message ||
+      "Impossible d'envoyer le commentaire."
+    );
+
+  }finally{
+
+    if(input){
+      input.disabled = false;
+    }
+  }
+}
+
+
+async function likerLiveSpectateur(){
+
+  const liveId =
+    Number(
+      window.liveSpectateurActuel
+        ?.id || 0
+    );
+
+  if(!liveId){
+    return;
+  }
+
+  try{
+
+    const response =
+      await fetch(
+        `/live/${liveId}/like`,
+        {
+          method:"POST",
+          credentials:"include",
+          headers:{
+            "Content-Type":"application/json"
+          },
+          body:JSON.stringify({
+            taps:1
+          })
+        }
+      );
+
+    const data =
+      await response.json();
+
+    if(
+      response.ok &&
+      data?.ok
+    ){
+
+      const likes =
+        document.getElementById(
+          "liveSpectatorLikes"
+        );
+
+      if(likes){
+        likes.textContent =
+          Number(
+            data.likes || 0
+          ).toLocaleString("fr-FR");
+      }
+    }
+
+  }catch(error){
+  }
+}
+
+
+async function partagerLiveSpectateur(){
+
+  const liveId =
+    Number(
+      window.liveSpectateurActuel
+        ?.id || 0
+    );
+
+  if(!liveId){
+    return;
+  }
+
+  try{
+
+    await fetch(
+      `/live/${liveId}/share`,
+      {
+        method:"POST",
+        credentials:"include",
+        headers:{
+          "Content-Type":"application/json"
+        },
+        body:"{}"
+      }
+    );
+
+  }catch(error){
+  }
+
+  const shareUrl =
+    `${location.origin}/app?live=${liveId}`;
+
+  try{
+
+    if(navigator.share){
+
+      await navigator.share({
+        title:
+          window.liveSpectateurActuel
+            ?.title ||
+          "LIVE SunuGame",
+        url:shareUrl
+      });
+
+    }else if(
+      navigator.clipboard
+        ?.writeText
+    ){
+
+      await navigator.clipboard
+        .writeText(
+          shareUrl
+        );
+
+      alert(
+        "Lien du LIVE copié."
+      );
+    }
+
+  }catch(error){
+  }
+}
+
+
+async function signalerLiveSpectateur(){
+
+  const liveId =
+    Number(
+      window.liveSpectateurActuel
+        ?.id || 0
+    );
+
+  if(!liveId){
+    return;
+  }
+
+  const reason =
+    prompt(
+      "Pourquoi veux-tu signaler ce LIVE ?"
+    );
+
+  if(reason === null){
+    return;
+  }
+
+  try{
+
+    const response =
+      await fetch(
+        `/live/${liveId}/report`,
+        {
+          method:"POST",
+          credentials:"include",
+          headers:{
+            "Content-Type":"application/json"
+          },
+          body:JSON.stringify({
+            reason:
+              String(reason).trim()
+          })
+        }
+      );
+
+    const data =
+      await response.json();
+
+    if(
+      !response.ok ||
+      !data?.ok
+    ){
+
+      throw new Error(
+        data?.message ||
+        "Impossible de signaler ce LIVE."
+      );
+    }
+
+    alert(
+      "Signalement envoyé."
+    );
+
+  }catch(error){
+
+    alert(
+      error.message ||
+      "Impossible de signaler ce LIVE."
+    );
+  }
+}
+
+
+async function quitterLiveSpectateur(
+  liveTermine = false
+){
+
+  arreterTimersLiveSpectateur();
+
+  signatureCommentairesLiveSpectateur =
+    "";
+
+  await deconnecterLiveKitSpectateur();
+
+  window.liveSpectateurActuel =
+    null;
+
+  document.body.classList.remove(
+    "live-spectator-mode"
+  );
+
+  document
+    .querySelector(".bottom-nav")
+    ?.classList.remove("hidden");
+
+  setPage(
+    "pageDashboard",
+    false
+  );
+
+  try{
+
+    await ouvrirPanel(
+      "panelHighlights"
+    );
+
+    /*
+      Recharge /lives :
+      si le créateur vient de terminer,
+      la carte disparaît automatiquement.
+    */
+    highlightsList.innerHTML = "";
+    await chargerHighlights();
+
+  }catch(error){
+  }
+
+  retourLiveSpectateurEtat =
+    null;
+}
+
 
 
 async function preparerLiveSunugame(){
@@ -22852,19 +24793,26 @@ async function preparerLiveSunugame(){
       }
 
       const demandeEcran =
-        demanderPartageEcranAndroid();
+        await demanderPartageEcranAndroid();
 
       if(demandeEcran !== false){
+
+        /*
+          La page LIVE peut s'ouvrir en état
+          "connexion en cours", mais le backend
+          ne passera à status='live' qu'après
+          onAndroidLivePublished().
+        */
         await ouvrirPageLiveEnCours();
       }
     }
 
     /*
       IMPORTANT :
-      /live/start crée seulement la session côté serveur.
-      On ne passe PAS encore le statut à "live".
-      Il manque volontairement l'encodeur + transport
-      vers les spectateurs.
+      /live/start crée la session en status='starting'.
+      Pour un partage d'écran Android, le passage à
+      status='live' est déclenché uniquement après
+      confirmation réelle de publication par LiveKit.
     */
 
   }catch(error){
@@ -22993,7 +24941,11 @@ async function ouvrirPageLiveEnCours(){
 
     status.textContent =
       sourceLiveSunugame === "screen"
-        ? "Partage de l'écran en cours. Tu peux ouvrir eFootball."
+        ? (
+            window.liveSunugameEnPreparation?.status === "live"
+              ? "🔴 LIVE — diffusion écran active."
+              : "Connexion de l'écran au LIVE en cours..."
+          )
         : "Caméra du LIVE active.";
   }
 
@@ -23430,6 +25382,9 @@ async function arreterLiveDepuisApplication(){
 
   window.liveSunugameEnPreparation =
     null;
+
+  window.liveSunugamePublicationEnCours =
+    false;
 
   document.body.classList.remove(
     "live-room-mode"

@@ -27,6 +27,9 @@ const nodemailer = require("nodemailer");
 const compression = require("compression");
 const helmet = require("helmet");
 
+const crypto = require("crypto");
+const { AccessToken } = require("livekit-server-sdk");
+
 if(process.env.FIREBASE_SERVICE_ACCOUNT){
 
   const serviceAccount =
@@ -56,6 +59,55 @@ for(const key of requiredR2){
     );
   }
 
+}
+
+const requiredLiveKit = [
+  "LIVEKIT_URL",
+  "LIVEKIT_API_KEY",
+  "LIVEKIT_API_SECRET"
+];
+
+for(const key of requiredLiveKit){
+
+  if(!process.env[key]){
+    throw new Error(
+      `Variable d'environnement LiveKit manquante : ${key}`
+    );
+  }
+
+}
+
+function liveKitRoomName(liveId){
+  return `sunugame-live-${Number(liveId)}`;
+}
+
+async function creerTokenLiveKit({
+  identity,
+  name,
+  roomName,
+  canPublish,
+  canSubscribe,
+  ttl
+}){
+
+  const token = new AccessToken(
+    process.env.LIVEKIT_API_KEY,
+    process.env.LIVEKIT_API_SECRET,
+    {
+      identity:String(identity),
+      name:String(name || identity),
+      ttl:ttl || "2h"
+    }
+  );
+
+  token.addGrant({
+    roomJoin:true,
+    room:roomName,
+    canPublish:Boolean(canPublish),
+    canSubscribe:Boolean(canSubscribe)
+  });
+
+  return token.toJwt();
 }
 
 
@@ -18432,15 +18484,305 @@ app.post(
   }
 );
 
+app.post(
+  "/live/:id/publisher-token",
+  async (req,res)=>{
+
+    try{
+
+      if(!connected(req)){
+
+        return res.status(401).json({
+          ok:false,
+          message:tr(
+            req,
+            "Connecte-toi",
+            "Please log in"
+          )
+        });
+
+      }
+
+      const me = Number(req.session.userId);
+      const liveId = Number(req.params.id);
+
+      if(
+        !Number.isInteger(liveId) ||
+        liveId <= 0
+      ){
+
+        return res.status(400).json({
+          ok:false,
+          message:tr(
+            req,
+            "Live invalide",
+            "Invalid live"
+          )
+        });
+
+      }
+
+      const live = await get(
+        `
+        SELECT
+          l.*,
+          u.name,
+          u.username
+        FROM live_streams l
+        JOIN users u
+          ON u.id = l.user_id
+        WHERE l.id = ?
+        LIMIT 1
+        `,
+        [liveId]
+      );
+
+      if(!live){
+
+        return res.status(404).json({
+          ok:false,
+          message:tr(
+            req,
+            "Live introuvable",
+            "Live not found"
+          )
+        });
+
+      }
+
+      if(Number(live.user_id) !== me){
+
+        return res.status(403).json({
+          ok:false,
+          message:tr(
+            req,
+            "Tu n'es pas propriétaire de ce live",
+            "You are not the owner of this live"
+          )
+        });
+
+      }
+
+      if(live.status === "ended"){
+
+        return res.status(409).json({
+          ok:false,
+          message:tr(
+            req,
+            "Ce live est déjà terminé",
+            "This live has already ended"
+          )
+        });
+
+      }
+
+      const roomName =
+        liveKitRoomName(liveId);
+
+      const identity =
+        `publisher-${me}-${liveId}`;
+
+      const token =
+        await creerTokenLiveKit({
+          identity,
+          name:
+            live.username ||
+            live.name ||
+            identity,
+          roomName,
+          canPublish:true,
+          canSubscribe:false,
+          ttl:"2h"
+        });
+
+      await run(
+        `
+        UPDATE live_streams
+        SET
+          provider='livekit',
+          provider_stream_id=?,
+          updated_at=datetime('now')
+        WHERE id=?
+        `,
+        [
+          roomName,
+          liveId
+        ]
+      );
+
+      return res.json({
+        ok:true,
+        live_id:liveId,
+        url:process.env.LIVEKIT_URL,
+        token,
+        room:roomName
+      });
+
+    }catch(error){
+
+      console.error(
+        "Erreur token publisher LiveKit :",
+        error
+      );
+
+      return res.status(500).json({
+        ok:false,
+        message:tr(
+          req,
+          "Impossible de préparer la diffusion du live",
+          "Unable to prepare live broadcast"
+        )
+      });
+
+    }
+
+  }
+);
+
+app.post(
+  "/live/:id/viewer-token",
+  async (req,res)=>{
+
+    try{
+
+      if(!connected(req)){
+
+        return res.status(401).json({
+          ok:false,
+          message:tr(
+            req,
+            "Connecte-toi",
+            "Please log in"
+          )
+        });
+
+      }
+
+      const me = Number(req.session.userId);
+      const liveId = Number(req.params.id);
+
+      if(
+        !Number.isInteger(liveId) ||
+        liveId <= 0
+      ){
+
+        return res.status(400).json({
+          ok:false,
+          message:tr(
+            req,
+            "Live invalide",
+            "Invalid live"
+          )
+        });
+
+      }
+
+      const live = await get(
+        `
+        SELECT
+          l.*,
+          u.name,
+          u.username
+        FROM live_streams l
+        JOIN users u
+          ON u.id = l.user_id
+        WHERE l.id = ?
+        LIMIT 1
+        `,
+        [liveId]
+      );
+
+      if(!live){
+
+        return res.status(404).json({
+          ok:false,
+          message:tr(
+            req,
+            "Live introuvable",
+            "Live not found"
+          )
+        });
+
+      }
+
+      if(live.status !== "live"){
+
+        return res.status(409).json({
+          ok:false,
+          message:tr(
+            req,
+            "Ce live n'est pas disponible",
+            "This live is not available"
+          )
+        });
+
+      }
+
+      const roomName =
+        live.provider_stream_id ||
+        liveKitRoomName(liveId);
+
+      const randomId =
+        crypto.randomBytes(8).toString("hex");
+
+      const identity =
+        `viewer-${me}-${liveId}-${randomId}`;
+
+      const token =
+        await creerTokenLiveKit({
+          identity,
+          name:
+            `viewer-${me}`,
+          roomName,
+          canPublish:false,
+          canSubscribe:true,
+          ttl:"1h"
+        });
+
+      return res.json({
+        ok:true,
+        live_id:liveId,
+        url:process.env.LIVEKIT_URL,
+        token,
+        room:roomName
+      });
+
+    }catch(error){
+
+      console.error(
+        "Erreur token viewer LiveKit :",
+        error
+      );
+
+      return res.status(500).json({
+        ok:false,
+        message:tr(
+          req,
+          "Impossible de rejoindre ce live",
+          "Unable to join this live"
+        )
+      });
+
+    }
+
+  }
+);
+
 app.post("/live/:id/go-live", async (req,res)=>{
 
   try{
 
     if(!connected(req)){
+
       return res.status(401).json({
         ok:false,
-        message:tr(req,"Connecte-toi","Please log in")
+        message:tr(
+          req,
+          "Connecte-toi",
+          "Please log in"
+        )
       });
+
     }
 
     const me = Number(req.session.userId);
@@ -18450,10 +18792,16 @@ app.post("/live/:id/go-live", async (req,res)=>{
       !Number.isInteger(liveId) ||
       liveId <= 0
     ){
+
       return res.status(400).json({
         ok:false,
-        message:tr(req,"Live invalide","Invalid live")
+        message:tr(
+          req,
+          "Live invalide",
+          "Invalid live"
+        )
       });
+
     }
 
     const live = await get(
@@ -18467,13 +18815,20 @@ app.post("/live/:id/go-live", async (req,res)=>{
     );
 
     if(!live){
+
       return res.status(404).json({
         ok:false,
-        message:tr(req,"Live introuvable","Live not found")
+        message:tr(
+          req,
+          "Live introuvable",
+          "Live not found"
+        )
       });
+
     }
 
     if(Number(live.user_id) !== me){
+
       return res.status(403).json({
         ok:false,
         message:tr(
@@ -18482,9 +18837,11 @@ app.post("/live/:id/go-live", async (req,res)=>{
           "You cannot start another user's live"
         )
       });
+
     }
 
     if(live.status === "ended"){
+
       return res.status(409).json({
         ok:false,
         message:tr(
@@ -18493,24 +18850,97 @@ app.post("/live/:id/go-live", async (req,res)=>{
           "This live has already ended"
         )
       });
+
+    }
+
+    /*
+      Le LIVE ne doit pas apparaître comme actif
+      tant que la diffusion LiveKit n'a pas été préparée.
+    */
+    if(
+      live.provider !== "livekit" ||
+      !live.provider_stream_id
+    ){
+
+      return res.status(409).json({
+        ok:false,
+        code:"LIVEKIT_NOT_READY",
+        message:tr(
+          req,
+          "La diffusion vidéo n'est pas encore prête",
+          "The video broadcast is not ready yet"
+        )
+      });
+
+    }
+
+    /*
+      Sécurité supplémentaire :
+      la room enregistrée doit correspondre
+      exactement à ce live.
+    */
+    const expectedRoom =
+      liveKitRoomName(liveId);
+
+    if(
+      String(live.provider_stream_id) !==
+      String(expectedRoom)
+    ){
+
+      return res.status(409).json({
+        ok:false,
+        code:"INVALID_LIVEKIT_ROOM",
+        message:tr(
+          req,
+          "La salle de diffusion du live est invalide",
+          "The live broadcast room is invalid"
+        )
+      });
+
+    }
+
+    /*
+      Si le live est déjà actif,
+      on retourne simplement son état.
+    */
+    if(live.status === "live"){
+
+      return res.json({
+        ok:true,
+        live_id:liveId,
+        status:"live",
+        provider:"livekit",
+        room:live.provider_stream_id
+      });
+
     }
 
     await run(
       `
       UPDATE live_streams
-      SET status='live',
-          started_at=COALESCE(started_at,datetime('now')),
-          updated_at=datetime('now')
+      SET
+        status='live',
+        started_at=COALESCE(
+          started_at,
+          datetime('now')
+        ),
+        updated_at=datetime('now')
       WHERE id=?
         AND user_id=?
+        AND status='starting'
       `,
-      [liveId,me]
+      [
+        liveId,
+        me
+      ]
     );
 
     return res.json({
       ok:true,
       live_id:liveId,
-      status:"live"
+      status:"live",
+      provider:"livekit",
+      room:live.provider_stream_id
     });
 
   }catch(error){
@@ -18530,7 +18960,9 @@ app.post("/live/:id/go-live", async (req,res)=>{
     });
 
   }
+
 });
+
 
 app.post("/live/:id/end", async (req,res)=>{
 
