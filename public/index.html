@@ -6135,6 +6135,23 @@ body.live-spectator-mode .bottom-nav{
   display:none!important;
 }
 
+
+/* =========================================================
+   CORRECTION LIVE SPECTATEUR — TITRE MASQUÉ
+   Le titre du LIVE en bas ne doit pas couvrir le gameplay.
+   ========================================================= */
+.sunugame-live-spectator-title{
+  display:none!important;
+}
+
+/* L'image reçue reste entière et nette : aucun zoom/crop côté spectateur. */
+#liveSpectatorMedia video{
+  image-rendering:auto;
+  transform:translateZ(0);
+  backface-visibility:hidden;
+  -webkit-backface-visibility:hidden;
+}
+
 </style>
 
 <link
