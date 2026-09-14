@@ -5933,7 +5933,17 @@ body.auth-mode.register-mode #registerBox input{
   width:100%;
   height:100%;
   object-fit:contain;
+  object-position:center 38%;
   background:#000;
+  display:block;
+}
+
+/* Le partage eFootball reste entier, mais est placé un peu plus haut
+   sur les téléphones en portrait pour dégager les commentaires. */
+@media (orientation:landscape){
+  #liveSpectatorMedia video{
+    object-position:center center;
+  }
 }
 
 #liveSpectatorMedia audio{
@@ -6440,24 +6450,44 @@ href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
    ========================= */
 
 .sunugame-live-follow-button{
-  height:34px;
+  width:auto!important;
+  min-width:0!important;
+  height:27px;
+  flex:0 0 auto;
 
-  padding:0 14px;
+  margin:0!important;
+  padding:0 9px!important;
 
   border:0;
-  border-radius:9px;
+  border-radius:7px;
 
   background:#ff1744;
   color:#fff;
 
-  font-size:12px;
+  font-size:10px;
+  line-height:27px;
   font-weight:950;
 
-  box-shadow:
-    0 5px 16px rgba(255,23,68,.28);
+  box-shadow:none;
 
   cursor:pointer;
   white-space:nowrap;
+}
+
+/* Les statistiques restent visibles même sur un petit écran. */
+.sunugame-live-spectator-owner{
+  min-width:0;
+  flex:1 1 auto;
+}
+
+.sunugame-live-spectator-meta{
+  flex-wrap:nowrap;
+  gap:8px;
+}
+
+.sunugame-live-taps-label{
+  font-size:10px;
+  opacity:.88;
 }
 
 
@@ -6491,6 +6521,10 @@ href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
 /* =========================
    ETAT DE CONNEXION
    ========================= */
+
+.sunugame-live-spectator-status.is-connected{
+  display:none!important;
+}
 
 .sunugame-live-spectator-status{
   position:absolute;
@@ -6532,8 +6566,8 @@ href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
 
   z-index:16;
 
-  width:min(72%, 430px);
-  max-height:106px;
+  width:min(76%, 440px);
+  max-height:212px;
 
   overflow:hidden;
 
@@ -6567,9 +6601,7 @@ href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
   text-shadow:
     0 1px 4px rgba(0,0,0,.9);
 
-  backdrop-filter:blur(5px);
-  -webkit-backdrop-filter:blur(5px);
-
+  /* Pas de flou dynamique ici : plus fluide dans Android WebView. */
   animation:
     sunugameLiveCommentIn .22s ease;
 }
@@ -6627,8 +6659,7 @@ href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
 
   background:rgba(17,17,17,.62);
 
-  backdrop-filter:blur(10px);
-  -webkit-backdrop-filter:blur(10px);
+  /* Fond simple pour limiter le travail graphique pendant la vidéo LIVE. */
 }
 
 .sunugame-live-spectator-input{
@@ -6818,7 +6849,8 @@ href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
   }
 
   .sunugame-live-spectator-comments{
-    width:min(50%, 430px);
+    width:min(48%, 430px);
+    max-height:190px;
     bottom:70px;
   }
 
@@ -24839,6 +24871,8 @@ function attacherPisteLiveSpectateur(
     element.playsInline = true;
     element.controls = false;
     element.muted = false;
+    element.setAttribute("playsinline", "");
+    element.setAttribute("webkit-playsinline", "");
 
     zone
       .querySelectorAll("video")
@@ -24927,6 +24961,7 @@ async function ouvrirLiveSpectateur(
         : null;
 
     if(status){
+      status.classList.remove("is-connected");
       status.textContent =
         "Connexion sécurisée au LIVE...";
     }
@@ -25122,6 +25157,7 @@ async function ouvrirLiveSpectateur(
           current?.id === liveId &&
           status
         ){
+          status.classList.remove("is-connected");
           status.textContent =
             "Connexion au LIVE interrompue.";
         }
@@ -25138,8 +25174,8 @@ async function ouvrirLiveSpectateur(
     );
 
     if(status){
-      status.textContent =
-        "🔴 LIVE en direct";
+      status.textContent = "";
+      status.classList.add("is-connected");
     }
 
     await heartbeatLiveSpectateur();
@@ -25364,6 +25400,7 @@ async function actualiserStatsLiveSpectateur(){
         );
 
       if(status){
+        status.classList.remove("is-connected");
         status.textContent =
           "Ce LIVE est terminé.";
       }
@@ -25430,13 +25467,13 @@ async function actualiserCommentairesLiveSpectateur(){
         : [];
 
     /*
-      Maximum 3 commentaires visibles.
+      Maximum 6 commentaires visibles.
     */
-    const troisDerniers =
-      comments.slice(-3);
+    const sixDerniers =
+      comments.slice(-6);
 
     const signature =
-      troisDerniers
+      sixDerniers
         .map(comment=>
           `${comment.id}:${comment.content}:${comment.is_pinned ? 1 : 0}`
         )
@@ -25453,7 +25490,7 @@ async function actualiserCommentairesLiveSpectateur(){
       signature;
 
     zone.innerHTML =
-      troisDerniers
+      sixDerniers
         .map(comment=>{
 
           const user =
@@ -25577,7 +25614,7 @@ async function actualiserCommentairesLiveSpectateur(){
             );
 
           },
-          6000
+          11000
         );
 
       });
