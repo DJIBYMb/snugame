@@ -6165,6 +6165,685 @@ href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
         0 0 26px rgba(255,32,32,1);
     }
   }
+
+  /* =========================================================
+   LIVE SPECTATEUR - FINITION
+   ========================================================= */
+
+.sunugame-live-spectator-page{
+  position:fixed;
+  inset:0;
+  z-index:999990;
+  background:#000;
+  color:#fff;
+  overflow:hidden;
+}
+
+.sunugame-live-spectator-stage{
+  position:absolute;
+  inset:0;
+  background:#000;
+  overflow:hidden;
+  touch-action:manipulation;
+}
+
+
+/* =========================
+   VIDEO
+   ========================= */
+
+#liveSpectatorMedia{
+  position:absolute;
+  inset:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:#000;
+  overflow:hidden;
+}
+
+#liveSpectatorMedia video{
+  width:100%;
+  height:100%;
+  object-fit:contain;
+  background:#000;
+}
+
+#liveSpectatorMedia audio{
+  display:none;
+}
+
+
+/* =========================
+   OMBRE POUR LIRE LE TEXTE
+   ========================= */
+
+.sunugame-live-spectator-gradient{
+  position:absolute;
+  inset:0;
+  z-index:2;
+  pointer-events:none;
+
+  background:
+    linear-gradient(
+      to bottom,
+      rgba(0,0,0,.68) 0%,
+      rgba(0,0,0,.20) 18%,
+      rgba(0,0,0,0) 42%,
+      rgba(0,0,0,0) 60%,
+      rgba(0,0,0,.42) 82%,
+      rgba(0,0,0,.82) 100%
+    );
+}
+
+
+/* =========================
+   HAUT
+   ========================= */
+
+.sunugame-live-spectator-header{
+  position:absolute;
+  top:0;
+  left:0;
+  right:0;
+  z-index:20;
+
+  display:flex;
+  align-items:center;
+  gap:9px;
+
+  padding:
+    max(10px, env(safe-area-inset-top))
+    12px
+    10px;
+
+  pointer-events:auto;
+}
+
+
+.sunugame-live-spectator-back{
+  width:38px;
+  height:38px;
+  min-width:38px;
+
+  display:flex;
+  align-items:center;
+  justify-content:center;
+
+  border:0;
+  border-radius:50%;
+
+  background:rgba(0,0,0,.42);
+  color:#fff;
+
+  padding:0;
+  cursor:pointer;
+
+  backdrop-filter:blur(8px);
+  -webkit-backdrop-filter:blur(8px);
+}
+
+
+/* =========================
+   PHOTO PROFIL
+   ========================= */
+
+.sunugame-live-profile-button{
+  width:42px;
+  height:42px;
+  min-width:42px;
+
+  border-radius:50%;
+  padding:2px;
+
+  display:flex;
+  align-items:center;
+  justify-content:center;
+
+  background:
+    linear-gradient(
+      135deg,
+      #ff1744,
+      #ff0055
+    );
+
+  box-shadow:
+    0 0 0 2px rgba(255,255,255,.12),
+    0 3px 16px rgba(0,0,0,.35);
+
+  cursor:pointer;
+}
+
+.sunugame-live-spectator-avatar{
+  width:100%;
+  height:100%;
+  display:block;
+
+  object-fit:cover;
+  border-radius:50%;
+
+  border:2px solid #000;
+}
+
+
+/* =========================
+   NOM CREATEUR
+   ========================= */
+
+.sunugame-live-spectator-owner{
+  min-width:0;
+  flex:1;
+}
+
+.sunugame-live-owner-line{
+  display:flex;
+  align-items:center;
+  gap:7px;
+  min-width:0;
+}
+
+.sunugame-live-spectator-name{
+  max-width:150px;
+
+  font-size:14px;
+  line-height:18px;
+
+  font-weight:900;
+  color:#fff;
+
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+
+  text-shadow:
+    0 2px 5px rgba(0,0,0,.7);
+}
+
+
+/* =========================
+   BADGE LIVE
+   ========================= */
+
+.sunugame-live-spectator-livebadge{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+
+  height:20px;
+  padding:0 7px;
+
+  border-radius:5px;
+
+  background:#ff1744;
+  color:#fff;
+
+  font-size:10px;
+  font-weight:950;
+  letter-spacing:.5px;
+
+  box-shadow:
+    0 3px 10px rgba(255,23,68,.35);
+}
+
+
+/* =========================
+   SPECTATEURS + LIKES
+   ========================= */
+
+.sunugame-live-spectator-meta{
+  margin-top:3px;
+
+  display:flex;
+  align-items:center;
+  gap:12px;
+
+  color:rgba(255,255,255,.92);
+}
+
+.sunugame-live-top-stat{
+  display:inline-flex;
+  align-items:center;
+  gap:4px;
+
+  font-size:12px;
+  font-weight:800;
+
+  text-shadow:
+    0 2px 5px rgba(0,0,0,.8);
+}
+
+.sunugame-live-stat-icon{
+  width:16px;
+  height:16px;
+  flex:0 0 auto;
+}
+
+.sunugame-live-heart-icon{
+  color:#fff;
+}
+
+
+/* =========================
+   BOUTON SUIVRE
+   ========================= */
+
+.sunugame-live-follow-button{
+  height:34px;
+
+  padding:0 14px;
+
+  border:0;
+  border-radius:9px;
+
+  background:#ff1744;
+  color:#fff;
+
+  font-size:12px;
+  font-weight:950;
+
+  box-shadow:
+    0 5px 16px rgba(255,23,68,.28);
+
+  cursor:pointer;
+  white-space:nowrap;
+}
+
+
+/* =========================
+   TITRE DU LIVE
+   ========================= */
+
+.sunugame-live-spectator-title{
+  position:absolute;
+
+  left:14px;
+  bottom:145px;
+
+  z-index:15;
+
+  max-width:70%;
+
+  font-size:13px;
+  font-weight:800;
+  line-height:18px;
+
+  color:#fff;
+
+  text-shadow:
+    0 2px 7px rgba(0,0,0,.85);
+
+  pointer-events:none;
+}
+
+
+/* =========================
+   ETAT DE CONNEXION
+   ========================= */
+
+.sunugame-live-spectator-status{
+  position:absolute;
+  left:50%;
+  top:50%;
+
+  z-index:18;
+
+  transform:
+    translate(-50%, -50%);
+
+  padding:9px 13px;
+
+  border-radius:10px;
+
+  background:rgba(0,0,0,.55);
+
+  font-size:12px;
+  font-weight:800;
+
+  color:#fff;
+
+  pointer-events:none;
+
+  backdrop-filter:blur(5px);
+  -webkit-backdrop-filter:blur(5px);
+}
+
+
+/* =========================
+   COMMENTAIRES
+   ========================= */
+
+.sunugame-live-spectator-comments{
+  position:absolute;
+
+  left:12px;
+  bottom:84px;
+
+  z-index:16;
+
+  width:min(72%, 430px);
+  max-height:106px;
+
+  overflow:hidden;
+
+  display:flex;
+  flex-direction:column;
+  justify-content:flex-end;
+
+  gap:5px;
+
+  pointer-events:none;
+}
+
+
+/* Chaque commentaire */
+
+.sunugame-live-spectator-comments > div{
+  width:fit-content;
+  max-width:100%;
+
+  padding:6px 9px;
+
+  border-radius:12px;
+
+  background:rgba(0,0,0,.37);
+
+  color:#fff;
+
+  font-size:12px;
+  line-height:16px;
+
+  text-shadow:
+    0 1px 4px rgba(0,0,0,.9);
+
+  backdrop-filter:blur(5px);
+  -webkit-backdrop-filter:blur(5px);
+
+  animation:
+    sunugameLiveCommentIn .22s ease;
+}
+
+
+/* =========================
+   BARRE DU BAS
+   ========================= */
+
+.sunugame-live-spectator-bottom{
+  position:absolute;
+
+  left:0;
+  right:0;
+  bottom:0;
+
+  z-index:25;
+
+  display:flex;
+  align-items:center;
+  gap:9px;
+
+  padding:
+    10px
+    12px
+    max(12px, env(safe-area-inset-bottom));
+
+  background:
+    linear-gradient(
+      to top,
+      rgba(0,0,0,.82),
+      rgba(0,0,0,.38),
+      transparent
+    );
+}
+
+
+/* =========================
+   INPUT COMMENTAIRE
+   ========================= */
+
+.sunugame-live-spectator-inputrow{
+  flex:1;
+  min-width:0;
+
+  height:44px;
+
+  display:flex;
+  align-items:center;
+
+  padding:0 5px 0 14px;
+
+  border:1px solid rgba(255,255,255,.20);
+  border-radius:24px;
+
+  background:rgba(17,17,17,.62);
+
+  backdrop-filter:blur(10px);
+  -webkit-backdrop-filter:blur(10px);
+}
+
+.sunugame-live-spectator-input{
+  flex:1;
+  min-width:0;
+
+  height:100%;
+
+  border:0;
+  outline:0;
+
+  background:transparent;
+
+  color:#fff;
+
+  font-size:13px;
+}
+
+.sunugame-live-spectator-input::placeholder{
+  color:rgba(255,255,255,.67);
+}
+
+
+/* =========================
+   ENVOYER
+   ========================= */
+
+.sunugame-live-spectator-send{
+  width:36px;
+  height:36px;
+  min-width:36px;
+
+  border:0;
+  border-radius:50%;
+
+  display:flex;
+  align-items:center;
+  justify-content:center;
+
+  padding:0;
+
+  background:#ff1744;
+  color:#fff;
+
+  cursor:pointer;
+}
+
+
+/* =========================
+   PARTAGER
+   ========================= */
+
+.sunugame-live-share-bottom{
+  width:44px;
+  height:44px;
+  min-width:44px;
+
+  display:flex;
+  align-items:center;
+  justify-content:center;
+
+  border:1px solid rgba(255,255,255,.20);
+  border-radius:50%;
+
+  background:rgba(17,17,17,.65);
+  color:#fff;
+
+  padding:0;
+  cursor:pointer;
+
+  backdrop-filter:blur(10px);
+  -webkit-backdrop-filter:blur(10px);
+}
+
+
+/* =========================
+   COEUR AU TAP
+   ========================= */
+
+.sunugame-live-tap-heart{
+  position:absolute;
+
+  left:50%;
+  top:50%;
+
+  z-index:30;
+
+  color:#ff1744;
+
+  opacity:0;
+  pointer-events:none;
+
+  transform:
+    translate(-50%, -50%)
+    scale(.3);
+
+  filter:
+    drop-shadow(
+      0 7px 16px rgba(0,0,0,.55)
+    );
+}
+
+.sunugame-live-tap-heart.show{
+  animation:
+    sunugameLiveHeartTap .55s ease forwards;
+}
+
+
+/* =========================
+   ANIMATIONS
+   ========================= */
+
+@keyframes sunugameLiveHeartTap{
+
+  0%{
+    opacity:0;
+    transform:
+      translate(-50%, -50%)
+      scale(.25);
+  }
+
+  25%{
+    opacity:1;
+    transform:
+      translate(-50%, -50%)
+      scale(1.15);
+  }
+
+  55%{
+    opacity:1;
+    transform:
+      translate(-50%, -50%)
+      scale(.95);
+  }
+
+  100%{
+    opacity:0;
+    transform:
+      translate(-50%, -70%)
+      scale(1.35);
+  }
+}
+
+@keyframes sunugameLiveCommentIn{
+
+  from{
+    opacity:0;
+    transform:
+      translateY(8px);
+  }
+
+  to{
+    opacity:1;
+    transform:
+      translateY(0);
+  }
+}
+
+
+/* =========================================================
+   MODE PAYSAGE
+   ========================================================= */
+
+@media (orientation:landscape){
+
+  .sunugame-live-spectator-header{
+    padding-top:8px;
+    padding-left:
+      max(
+        12px,
+        env(safe-area-inset-left)
+      );
+    padding-right:
+      max(
+        12px,
+        env(safe-area-inset-right)
+      );
+  }
+
+  .sunugame-live-spectator-name{
+    max-width:220px;
+  }
+
+  .sunugame-live-spectator-title{
+    bottom:122px;
+    max-width:55%;
+  }
+
+  .sunugame-live-spectator-comments{
+    width:min(50%, 430px);
+    bottom:70px;
+  }
+
+  .sunugame-live-spectator-bottom{
+    padding-left:
+      max(
+        12px,
+        env(safe-area-inset-left)
+      );
+
+    padding-right:
+      max(
+        12px,
+        env(safe-area-inset-right)
+      );
+
+    padding-bottom:8px;
+  }
+
+  .sunugame-live-spectator-inputrow{
+    max-width:520px;
+  }
+}
+
+.sunugame-live-comment-item{
+  opacity:1;
+
+  transition:
+    opacity .35s ease,
+    transform .35s ease;
+}
+
+.sunugame-live-comment-disappear{
+  opacity:0;
+  transform:translateY(-8px);
+}
+
 </style>
 </head>
 
@@ -7535,99 +8214,275 @@ class="hidden creation-media-page">
   id="pageLiveSpectateur"
   class="hidden sunugame-live-spectator-page">
 
-  <div class="sunugame-live-spectator-stage">
+  <div
+    id="liveSpectatorTapZone"
+    class="sunugame-live-spectator-stage">
+
+
+    <!-- ========================= -->
+    <!-- VIDÉO LIVE               -->
+    <!-- ========================= -->
 
     <div id="liveSpectatorMedia"></div>
 
     <div class="sunugame-live-spectator-gradient"></div>
 
+
+    <!-- ========================= -->
+    <!-- HAUT DU LIVE             -->
+    <!-- ========================= -->
+
     <div class="sunugame-live-spectator-header">
+
+
+      <!-- RETOUR -->
 
       <button
         type="button"
         class="sunugame-live-spectator-back"
-        onclick="quitterLiveSpectateur()"
+        onclick="
+          event.stopPropagation();
+          quitterLiveSpectateur();
+        "
         aria-label="Retour">
-        ‹
+
+        <svg
+          width="28"
+          height="28"
+          viewBox="0 0 24 24"
+          fill="none">
+
+          <path
+            d="M15 18L9 12L15 6"
+            stroke="currentColor"
+            stroke-width="2.4"
+            stroke-linecap="round"
+            stroke-linejoin="round">
+          </path>
+
+        </svg>
+
       </button>
 
-      <img
-        id="liveSpectatorAvatar"
-        class="sunugame-live-spectator-avatar"
-        src="/default-avatar.png"
-        alt="Profil">
+
+      <!-- PHOTO PROFIL -->
+
+      <div
+        class="sunugame-live-profile-button"
+        onclick="
+        event.stopPropagation();
+        ouvrirProfilCreateurLiveSpectateur();
+      ">
+
+        <img
+          id="liveSpectatorAvatar"
+          class="sunugame-live-spectator-avatar"
+          src="/default-avatar.png"
+          alt="Profil">
+
+      </div>
+
+
+      <!-- NOM / LIVE / STATISTIQUES -->
 
       <div class="sunugame-live-spectator-owner">
 
-        <div
-          id="liveSpectatorName"
-          class="sunugame-live-spectator-name">
-          SunuGame
-        </div>
 
-        <div class="sunugame-live-spectator-meta">
-          <span class="sunugame-live-spectator-livebadge">
+        <div class="sunugame-live-owner-line">
+
+          <div
+            id="liveSpectatorName"
+            class="sunugame-live-spectator-name">
+            SunuGame
+          </div>
+
+          <span
+            class="sunugame-live-spectator-livebadge">
             LIVE
           </span>
-          <span>
-            👁 <span id="liveSpectatorViewers">0</span>
-          </span>
+
+        </div>
+
+
+        <div class="sunugame-live-spectator-meta">
+
+
+          <!-- SPECTATEURS -->
+
+          <div class="sunugame-live-top-stat">
+
+            <svg
+              class="sunugame-live-stat-icon"
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none">
+
+              <path
+                d="
+                  M2.5 12
+                  C4.6 7.8 8 5.5 12 5.5
+                  C16 5.5 19.4 7.8 21.5 12
+                  C19.4 16.2 16 18.5 12 18.5
+                  C8 18.5 4.6 16.2 2.5 12
+                "
+                stroke="currentColor"
+                stroke-width="1.9"
+                stroke-linecap="round"
+                stroke-linejoin="round">
+              </path>
+
+              <circle
+                cx="12"
+                cy="12"
+                r="3"
+                stroke="currentColor"
+                stroke-width="1.9">
+              </circle>
+
+            </svg>
+
+            <span id="liveSpectatorViewers">
+              0
+            </span>
+
+          </div>
+
+
+          <!-- LIKES -->
+
+          <div class="sunugame-live-top-stat">
+
+            <svg
+              class="sunugame-live-stat-icon sunugame-live-heart-icon"
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none">
+
+              <path
+                d="
+                  M20.84 4.61
+                  C19.81 3.58 18.4 3 16.94 3
+                  C15.47 3 14.07 3.58 13.04 4.61
+                  L12 5.65
+                  L10.96 4.61
+                  C8.81 2.46 5.31 2.46 3.16 4.61
+                  C1.01 6.76 1.01 10.27 3.16 12.42
+                  L12 21.26
+                  L20.84 12.42
+                  C22.99 10.27 22.99 6.76 20.84 4.61
+                "
+                stroke="currentColor"
+                stroke-width="1.8"
+                stroke-linecap="round"
+                stroke-linejoin="round">
+              </path>
+
+            </svg>
+
+            <span id="liveSpectatorLikes">
+              0
+            </span>
+
+          </div>
+
         </div>
 
       </div>
 
-    </div>
 
-    <div class="sunugame-live-spectator-actions">
-
-      <button
-        type="button"
-        class="sunugame-live-spectator-action"
-        onclick="likerLiveSpectateur()"
-        aria-label="J'aime">
-        ♥
-      </button>
-      <div
-        id="liveSpectatorLikes"
-        class="sunugame-live-spectator-action-count">
-        0
-      </div>
+      <!-- SUIVRE -->
 
       <button
+        id="liveSpectatorFollowButton"
         type="button"
-        class="sunugame-live-spectator-action"
-        onclick="partagerLiveSpectateur()"
-        aria-label="Partager">
-        ↗
-      </button>
-
-      <button
-        type="button"
-        class="sunugame-live-spectator-action"
-        onclick="signalerLiveSpectateur()"
-        aria-label="Signaler">
-        !
+        class="sunugame-live-follow-button"
+        onclick="
+          event.stopPropagation();
+          suivreCreateurLiveSpectateur?.();
+        ">
+        Suivre
       </button>
 
     </div>
 
-    <div class="sunugame-live-spectator-lower">
 
-      <div
-        id="liveSpectatorTitle"
-        class="sunugame-live-spectator-title">
-      </div>
+    <!-- ========================= -->
+    <!-- TITRE                    -->
+    <!-- ========================= -->
 
-      <div
-        id="liveSpectatorStatus"
-        class="sunugame-live-spectator-status">
-        Connexion au LIVE...
-      </div>
+    <div
+      id="liveSpectatorTitle"
+      class="sunugame-live-spectator-title">
+    </div>
 
-      <div
-        id="liveSpectatorComments"
-        class="sunugame-live-spectator-comments">
-      </div>
+
+    <!-- ========================= -->
+    <!-- ÉTAT CONNEXION           -->
+    <!-- ========================= -->
+
+    <div
+      id="liveSpectatorStatus"
+      class="sunugame-live-spectator-status">
+      Connexion au LIVE...
+    </div>
+
+
+    <!-- ========================= -->
+    <!-- COMMENTAIRES             -->
+    <!-- ========================= -->
+
+    <div
+      id="liveSpectatorComments"
+      class="sunugame-live-spectator-comments">
+    </div>
+
+
+    <!-- ========================= -->
+    <!-- COEUR ANIMÉ AU LIKE      -->
+    <!-- ========================= -->
+
+    <div
+      id="liveSpectatorTapHeart"
+      class="sunugame-live-tap-heart">
+
+      <svg
+        width="90"
+        height="90"
+        viewBox="0 0 24 24">
+
+        <path
+          d="
+            M20.84 4.61
+            C19.81 3.58 18.4 3 16.94 3
+            C15.47 3 14.07 3.58 13.04 4.61
+            L12 5.65
+            L10.96 4.61
+            C8.81 2.46 5.31 2.46 3.16 4.61
+            C1.01 6.76 1.01 10.27 3.16 12.42
+            L12 21.26
+            L20.84 12.42
+            C22.99 10.27 22.99 6.76 20.84 4.61
+          "
+          fill="currentColor">
+        </path>
+
+      </svg>
+
+    </div>
+
+
+    <!-- ========================= -->
+    <!-- BAS DU LIVE              -->
+    <!-- ========================= -->
+
+    <div
+      class="sunugame-live-spectator-bottom"
+      onclick="event.stopPropagation()">
+
+
+      <!-- ÉCRIRE COMMENTAIRE -->
 
       <div class="sunugame-live-spectator-inputrow">
 
@@ -7636,6 +8491,7 @@ class="hidden creation-media-page">
           class="sunugame-live-spectator-input"
           type="text"
           maxlength="280"
+          autocomplete="off"
           placeholder="Ajouter un commentaire..."
           onkeydown="
             if(event.key === 'Enter'){
@@ -7643,21 +8499,103 @@ class="hidden creation-media-page">
             }
           ">
 
+
+        <!-- ENVOYER -->
+
         <button
           type="button"
           class="sunugame-live-spectator-send"
-          onclick="envoyerCommentaireLiveSpectateur()">
-          ➤
+          onclick="envoyerCommentaireLiveSpectateur()"
+          aria-label="Envoyer">
+
+          <svg
+            width="22"
+            height="22"
+            viewBox="0 0 24 24"
+            fill="none">
+
+            <path
+              d="M22 2L11 13"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round">
+            </path>
+
+            <path
+              d="M22 2L15 22L11 13L2 9L22 2Z"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linejoin="round">
+            </path>
+
+          </svg>
+
         </button>
 
       </div>
+
+
+      <!-- PARTAGER -->
+
+      <button
+        type="button"
+        class="sunugame-live-share-bottom"
+        onclick="partagerLiveSpectateur()"
+        aria-label="Partager">
+
+        <svg
+          width="24"
+          height="24"
+          viewBox="0 0 24 24"
+          fill="none">
+
+          <circle
+            cx="18"
+            cy="5"
+            r="3"
+            stroke="currentColor"
+            stroke-width="2">
+          </circle>
+
+          <circle
+            cx="6"
+            cy="12"
+            r="3"
+            stroke="currentColor"
+            stroke-width="2">
+          </circle>
+
+          <circle
+            cx="18"
+            cy="19"
+            r="3"
+            stroke="currentColor"
+            stroke-width="2">
+          </circle>
+
+          <path
+            d="M8.6 10.5L15.4 6.5"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round">
+          </path>
+
+          <path
+            d="M8.6 13.5L15.4 17.5"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round">
+          </path>
+
+        </svg>
+
+      </button>
 
     </div>
 
   </div>
 
 </section>
-
 
 <section
 id="pageLiveEnCours"
@@ -24110,6 +25048,8 @@ async function ouvrirLiveSpectateur(
     window.liveSpectateurActuel =
       live;
 
+      await actualiserBoutonSuivreLiveSpectateur();
+
     const avatar =
       document.getElementById(
         "liveSpectatorAvatar"
@@ -24168,6 +25108,8 @@ async function ouvrirLiveSpectateur(
       "pageLiveSpectateur",
       false
     );
+
+    activerTapLikeLiveSpectateur();
 
     await deconnecterLiveKitSpectateur();
 
@@ -24528,10 +25470,16 @@ async function actualiserCommentairesLiveSpectateur(){
         ? data.comments
         : [];
 
+    /*
+      Maximum 3 commentaires visibles.
+    */
+    const troisDerniers =
+      comments.slice(-3);
+
     const signature =
-      comments
-        .map(c=>
-          `${c.id}:${c.content}:${c.is_pinned ? 1 : 0}`
+      troisDerniers
+        .map(comment=>
+          `${comment.id}:${comment.content}:${comment.is_pinned ? 1 : 0}`
         )
         .join("|");
 
@@ -24546,42 +25494,165 @@ async function actualiserCommentairesLiveSpectateur(){
       signature;
 
     zone.innerHTML =
-      comments
-        .slice(-30)
+      troisDerniers
         .map(comment=>{
 
           const user =
             comment.user || {};
 
-          const username =
-            user.username ||
+          const nom =
             user.name ||
-            "joueur";
+            user.username ||
+            "Joueur";
+
+          const photo =
+            user.profile_photo ||
+            "/default-avatar.png";
+
+            const userId =
+             Number(comment.user_id || 0);
 
           return `
-            <div class="sunugame-live-spectator-comment">
-              <b>
-                ${
-                  comment.is_pinned
-                    ? "📌 "
-                    : ""
-                }@${echapperLiveSunugame(username)}
+            <div
+              class="
+                sunugame-live-spectator-comment
+                sunugame-live-comment-item
+              "
+              data-comment-id="${Number(comment.id || 0)}">
+
+                <img
+                 src="${echapperLiveSunugame(photo)}"
+                 alt="Profil"
+
+                onclick="
+                 event.stopPropagation();
+                 ouvrirProfilCommentateurLiveSpectateur(${userId});
+                "
+
+                onerror="
+                 this.onerror=null;
+                 this.src='/default-avatar.png';
+              "
+
+              style="
+                width:30px;
+                height:30px;
+                 min-width:30px;
+                border-radius:50%;
+                object-fit:cover;
+                border:1.5px solid rgba(255,255,255,.85);
+                cursor:pointer;
+                ">
+
+              <div
+                style="
+                  min-width:0;
+                  display:flex;
+                  flex-direction:column;
+                ">
+
+                <b
+                  onclick="
+                  event.stopPropagation();
+                  ouvrirProfilCommentateurLiveSpectateur(${userId});
+                "
+                style="
+                font-size:12px;
+                line-height:15px;
+                cursor:pointer;
+                ">
+               ${
+                 comment.is_pinned
+                 ? "📌 "
+                : ""
+                }${echapperLiveSunugame(nom)}
               </b>
-              <span>
-                ${echapperLiveSunugame(comment.content || "")}
-              </span>
+
+                <span
+                  style="
+                    font-size:12px;
+                    line-height:16px;
+                  ">
+                  ${echapperLiveSunugame(
+                    comment.content || ""
+                  )}
+                </span>
+
+              </div>
+
             </div>
           `;
+
         })
         .join("");
 
     zone.scrollTop =
       zone.scrollHeight;
 
+    zone
+      .querySelectorAll(
+        ".sunugame-live-comment-item"
+      )
+      .forEach(element=>{
+
+        setTimeout(
+          ()=>{
+
+            if(!element.isConnected){
+              return;
+            }
+
+            element.classList.add(
+              "sunugame-live-comment-disappear"
+            );
+
+            setTimeout(
+              ()=>{
+
+                if(element.isConnected){
+                  element.remove();
+                }
+
+              },
+              350
+            );
+
+          },
+          6000
+        );
+
+      });
+
   }catch(error){
+
+    console.error(
+      "Erreur commentaires spectateur LIVE :",
+      error
+    );
+
   }
 }
 
+async function ouvrirProfilCommentateurLiveSpectateur(
+  userId
+){
+
+  const id =
+    Number(userId);
+
+  if(
+    !Number.isInteger(id) ||
+    id <= 0
+  ){
+    return;
+  }
+
+  await quitterLiveSpectateur();
+
+  await ouvrirProfilPublic(
+    id
+  );
+}
 
 async function envoyerCommentaireLiveSpectateur(){
 
@@ -29099,6 +30170,348 @@ onclick="naviguerBottom('profil','btnProfil')">
   }
 
 })();
+
+function activerTapLikeLiveSpectateur(){
+
+  const zone =
+    document.getElementById(
+      "liveSpectatorTapZone"
+    );
+
+  if(!zone){
+    return;
+  }
+
+  if(zone.dataset.likeTapActive === "oui"){
+    return;
+  }
+
+  zone.dataset.likeTapActive = "oui";
+
+  zone.addEventListener(
+    "click",
+    async function(event){
+
+      const cible =
+        event.target;
+
+      if(
+        cible.closest("button") ||
+        cible.closest("input") ||
+        cible.closest(".sunugame-live-spectator-bottom") ||
+        cible.closest(".sunugame-live-spectator-header")
+      ){
+        return;
+      }
+
+      afficherCoeurTapLiveSpectateur(
+        event
+      );
+
+      await likerLiveSpectateur();
+
+    }
+  );
+}
+
+
+function afficherCoeurTapLiveSpectateur(
+  event
+){
+
+  const coeur =
+    document.getElementById(
+      "liveSpectatorTapHeart"
+    );
+
+  const zone =
+    document.getElementById(
+      "liveSpectatorTapZone"
+    );
+
+  if(
+    !coeur ||
+    !zone
+  ){
+    return;
+  }
+
+  const rect =
+    zone.getBoundingClientRect();
+
+  const x =
+    event.clientX -
+    rect.left;
+
+  const y =
+    event.clientY -
+    rect.top;
+
+  coeur.style.left =
+    x + "px";
+
+  coeur.style.top =
+    y + "px";
+
+  coeur.classList.remove(
+    "show"
+  );
+
+  void coeur.offsetWidth;
+
+  coeur.classList.add(
+    "show"
+  );
+
+  clearTimeout(
+    window.liveTapHeartTimer
+  );
+
+  window.liveTapHeartTimer =
+    setTimeout(
+      ()=>{
+        coeur.classList.remove(
+          "show"
+        );
+      },
+      600
+    );
+}
+
+async function suivreCreateurLiveSpectateur(){
+
+  const live =
+    window.liveSpectateurActuel;
+
+  const userId =
+    Number(
+      live?.owner?.id ||
+      live?.user_id ||
+      0
+    );
+
+  const btn =
+    document.getElementById(
+      "liveSpectatorFollowButton"
+    );
+
+  if(
+    !btn ||
+    btn.dataset.loading === "1" ||
+    !Number.isInteger(userId) ||
+    userId <= 0
+  ){
+    return;
+  }
+
+  const etaitSuivi =
+    btn.dataset.following === "1";
+
+  btn.dataset.loading = "1";
+  btn.disabled = true;
+  btn.textContent = "...";
+
+  try{
+
+    const result =
+      await post(
+        "/follow-player",
+        {
+          player_user_id:userId
+        }
+      );
+
+    const texte =
+      String(result || "");
+
+    const serveurUnfollow =
+      result === "Unfollow" ||
+      /désabonn|unfollow/i.test(
+        texte
+      );
+
+    const serveurFollow =
+      !serveurUnfollow &&
+      /Abonnement réussi|Follow successful|follow/i.test(
+        texte
+      );
+
+
+    if(serveurUnfollow){
+
+      btn.dataset.following = "0";
+
+      btn.textContent =
+        "Suivre";
+
+      btn.classList.remove(
+        "following"
+      );
+
+      synchroniserPetitsBoutonsSuivi(
+        userId,
+        false
+      );
+
+    }else if(serveurFollow){
+
+      btn.dataset.following = "1";
+
+      btn.textContent =
+        "Suivi";
+
+      btn.classList.add(
+        "following"
+      );
+
+      synchroniserPetitsBoutonsSuivi(
+        userId,
+        true
+      );
+
+    }else{
+
+      btn.dataset.following =
+        etaitSuivi
+          ? "1"
+          : "0";
+
+      btn.textContent =
+        etaitSuivi
+          ? "Suivi"
+          : "Suivre";
+
+    }
+
+    showNotif(
+      texte
+    );
+
+  }catch(error){
+
+    console.error(
+      "Erreur suivi créateur LIVE :",
+      error
+    );
+
+    btn.dataset.following =
+      etaitSuivi
+        ? "1"
+        : "0";
+
+    btn.textContent =
+      etaitSuivi
+        ? "Suivi"
+        : "Suivre";
+
+    showNotif(
+      "Impossible de modifier le suivi."
+    );
+
+  }finally{
+
+    btn.dataset.loading = "0";
+    btn.disabled = false;
+
+  }
+
+}
+
+async function actualiserBoutonSuivreLiveSpectateur(){
+
+  const live =
+    window.liveSpectateurActuel;
+
+  const userId =
+    Number(
+      live?.owner?.id ||
+      live?.user_id ||
+      0
+    );
+
+  const btn =
+    document.getElementById(
+      "liveSpectatorFollowButton"
+    );
+
+  if(
+    !btn ||
+    !Number.isInteger(userId) ||
+    userId <= 0
+  ){
+    return;
+  }
+
+  try{
+
+    const data =
+      await get(
+        "/public-profile/" +
+        userId
+      );
+
+    if(
+      !data ||
+      data.error
+    ){
+      return;
+    }
+
+    const suivi =
+      data.isFollowing === true ||
+      Number(data.isFollowing) === 1;
+
+    btn.dataset.following =
+      suivi
+        ? "1"
+        : "0";
+
+    btn.textContent =
+      suivi
+        ? "Suivi"
+        : "Suivre";
+
+    btn.classList.toggle(
+      "following",
+      suivi
+    );
+
+  }catch(error){
+
+    console.error(
+      "Erreur état suivi LIVE :",
+      error
+    );
+
+  }
+
+}
+
+async function ouvrirProfilCreateurLiveSpectateur(){
+
+  const live =
+    window.liveSpectateurActuel;
+
+  const userId =
+    Number(
+      live?.owner?.id ||
+      live?.user_id ||
+      0
+    );
+
+  if(
+    !Number.isInteger(userId) ||
+    userId <= 0
+  ){
+    return;
+  }
+
+  await quitterLiveSpectateur();
+
+  await ouvrirProfilPublic(
+    userId
+  );
+}
 
 </script>
 
