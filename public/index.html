@@ -6052,6 +6052,18 @@ body.auth-mode.register-mode #registerBox input{
   line-height:1.35;
 }
 
+.sunugame-live-taps-stat{
+  gap:5px;
+}
+
+.sunugame-live-taps-label{
+  font-size:10px;
+  font-weight:800;
+  color:rgba(255,255,255,.78);
+  text-transform:uppercase;
+  letter-spacing:.35px;
+}
+
 .sunugame-live-spectator-status{
   margin-bottom:7px;
   color:rgba(255,255,255,.76);
@@ -6670,25 +6682,25 @@ href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
    ========================= */
 
 .sunugame-live-share-bottom{
-  width:44px;
-  height:44px;
-  min-width:44px;
+  width:36px;
+  height:36px;
+  min-width:36px;
 
   display:flex;
   align-items:center;
   justify-content:center;
 
-  border:1px solid rgba(255,255,255,.20);
+  margin:0 0 0 4px;
+  padding:0;
+
+  border:0;
   border-radius:50%;
 
-  background:rgba(17,17,17,.65);
+  background:rgba(255,255,255,.12);
   color:#fff;
 
-  padding:0;
   cursor:pointer;
-
-  backdrop-filter:blur(10px);
-  -webkit-backdrop-filter:blur(10px);
+  flex:0 0 auto;
 }
 
 
@@ -8349,37 +8361,15 @@ class="hidden creation-media-page">
           </div>
 
 
-          <!-- LIKES -->
+          <!-- TAPOTAGES -->
 
-          <div class="sunugame-live-top-stat">
+          <div
+            class="sunugame-live-top-stat sunugame-live-taps-stat"
+            aria-label="Nombre de tapotages">
 
-            <svg
-              class="sunugame-live-stat-icon sunugame-live-heart-icon"
-              width="18"
-              height="18"
-              viewBox="0 0 24 24"
-              fill="none">
-
-              <path
-                d="
-                  M20.84 4.61
-                  C19.81 3.58 18.4 3 16.94 3
-                  C15.47 3 14.07 3.58 13.04 4.61
-                  L12 5.65
-                  L10.96 4.61
-                  C8.81 2.46 5.31 2.46 3.16 4.61
-                  C1.01 6.76 1.01 10.27 3.16 12.42
-                  L12 21.26
-                  L20.84 12.42
-                  C22.99 10.27 22.99 6.76 20.84 4.61
-                "
-                stroke="currentColor"
-                stroke-width="1.8"
-                stroke-linecap="round"
-                stroke-linejoin="round">
-              </path>
-
-            </svg>
+            <span class="sunugame-live-taps-label">
+              Tapotages
+            </span>
 
             <span id="liveSpectatorLikes">
               0
@@ -8436,40 +8426,6 @@ class="hidden creation-media-page">
     <div
       id="liveSpectatorComments"
       class="sunugame-live-spectator-comments">
-    </div>
-
-
-    <!-- ========================= -->
-    <!-- COEUR ANIMÉ AU LIKE      -->
-    <!-- ========================= -->
-
-    <div
-      id="liveSpectatorTapHeart"
-      class="sunugame-live-tap-heart">
-
-      <svg
-        width="90"
-        height="90"
-        viewBox="0 0 24 24">
-
-        <path
-          d="
-            M20.84 4.61
-            C19.81 3.58 18.4 3 16.94 3
-            C15.47 3 14.07 3.58 13.04 4.61
-            L12 5.65
-            L10.96 4.61
-            C8.81 2.46 5.31 2.46 3.16 4.61
-            C1.01 6.76 1.01 10.27 3.16 12.42
-            L12 21.26
-            L20.84 12.42
-            C22.99 10.27 22.99 6.76 20.84 4.61
-          "
-          fill="currentColor">
-        </path>
-
-      </svg>
-
     </div>
 
 
@@ -8532,16 +8488,14 @@ class="hidden creation-media-page">
 
         </button>
 
-      </div>
+        <!-- PARTAGER — juste après Envoyer -->
 
 
-      <!-- PARTAGER -->
-
-      <button
-        type="button"
-        class="sunugame-live-share-bottom"
-        onclick="partagerLiveSpectateur()"
-        aria-label="Partager">
+        <button
+          type="button"
+          class="sunugame-live-share-bottom"
+          onclick="partagerLiveSpectateur()"
+          aria-label="Partager">
 
         <svg
           width="24"
@@ -8590,6 +8544,11 @@ class="hidden creation-media-page">
         </svg>
 
       </button>
+
+      </div>
+
+
+
 
     </div>
 
@@ -25751,6 +25710,30 @@ async function likerLiveSpectateur(){
     return;
   }
 
+  const likes =
+    document.getElementById(
+      "liveSpectatorLikes"
+    );
+
+  if(likes){
+
+    const actuel =
+      Number(
+        String(
+          likes.textContent || "0"
+        ).replace(
+          /[^0-9]/g,
+          ""
+        )
+      ) || 0;
+
+    likes.textContent =
+      (actuel + 1)
+        .toLocaleString(
+          "fr-FR"
+        );
+  }
+
   try{
 
     const response =
@@ -25773,26 +25756,21 @@ async function likerLiveSpectateur(){
 
     if(
       response.ok &&
-      data?.ok
+      data?.ok &&
+      likes
     ){
 
-      const likes =
-        document.getElementById(
-          "liveSpectatorLikes"
+      likes.textContent =
+        Number(
+          data.likes || 0
+        ).toLocaleString(
+          "fr-FR"
         );
-
-      if(likes){
-        likes.textContent =
-          Number(
-            data.likes || 0
-          ).toLocaleString("fr-FR");
-      }
     }
 
   }catch(error){
   }
 }
-
 
 async function partagerLiveSpectateur(){
 
@@ -30219,20 +30197,12 @@ function afficherCoeurTapLiveSpectateur(
   event
 ){
 
-  const coeur =
-    document.getElementById(
-      "liveSpectatorTapHeart"
-    );
-
   const zone =
     document.getElementById(
       "liveSpectatorTapZone"
     );
 
-  if(
-    !coeur ||
-    !zone
-  ){
+  if(!zone){
     return;
   }
 
@@ -30247,35 +30217,54 @@ function afficherCoeurTapLiveSpectateur(
     event.clientY -
     rect.top;
 
+  const coeur =
+    document.createElement(
+      "div"
+    );
+
+  coeur.className =
+    "sunugame-live-tap-heart show";
+
   coeur.style.left =
     x + "px";
 
   coeur.style.top =
     y + "px";
 
-  coeur.classList.remove(
-    "show"
+  coeur.innerHTML = `
+    <svg
+      width="82"
+      height="82"
+      viewBox="0 0 24 24"
+      aria-hidden="true">
+      <path
+        d="
+          M20.84 4.61
+          C19.81 3.58 18.4 3 16.94 3
+          C15.47 3 14.07 3.58 13.04 4.61
+          L12 5.65
+          L10.96 4.61
+          C8.81 2.46 5.31 2.46 3.16 4.61
+          C1.01 6.76 1.01 10.27 3.16 12.42
+          L12 21.26
+          L20.84 12.42
+          C22.99 10.27 22.99 6.76 20.84 4.61
+        "
+        fill="currentColor">
+      </path>
+    </svg>
+  `;
+
+  zone.appendChild(
+    coeur
   );
 
-  void coeur.offsetWidth;
-
-  coeur.classList.add(
-    "show"
+  setTimeout(
+    ()=>{
+      coeur.remove();
+    },
+    700
   );
-
-  clearTimeout(
-    window.liveTapHeartTimer
-  );
-
-  window.liveTapHeartTimer =
-    setTimeout(
-      ()=>{
-        coeur.classList.remove(
-          "show"
-        );
-      },
-      600
-    );
 }
 
 async function suivreCreateurLiveSpectateur(){
