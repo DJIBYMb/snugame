@@ -20582,7 +20582,13 @@ html,body{margin:0;width:100%;height:100%;font-family:Arial,sans-serif;backgroun
 body{background:rgba(7,9,14,.93);border:1px solid rgba(255,255,255,.14);border-radius:18px}
 button,input,select{font:inherit}
 #panel{height:100%;display:flex;flex-direction:column}
-#collapsed{display:none;width:100%;height:100%;align-items:center;justify-content:center}
+#collapsed{
+  display:none;
+  width:100%;
+  height:100%;
+  align-items:center;
+  justify-content:center;
+}
 #collapsed button{width:100%;height:100%;border:0;border-radius:18px;background:rgba(10,12,18,.92);color:#fff;font-size:29px;font-weight:900}
 .header{display:flex;align-items:center;gap:7px;padding:8px 9px;border-bottom:1px solid rgba(255,255,255,.09)}
 .badge{background:#ff264d;border-radius:7px;padding:4px 7px;font-size:11px;font-weight:900}
