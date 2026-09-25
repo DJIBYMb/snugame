@@ -20600,7 +20600,12 @@ button,input,select{font:inherit}
 .composer{display:flex;gap:5px;padding:7px;border-top:1px solid rgba(255,255,255,.09)}
 .composer input{min-width:0;flex:1;border:0;outline:0;border-radius:9px;background:rgba(255,255,255,.09);color:#fff;padding:8px;font-size:12px}
 .composer button{border:0;border-radius:9px;padding:0 10px;background:#fff;color:#080a0e;font-weight:900}
-.footer{display:grid;grid-template-columns:1fr 1fr 1.15fr;gap:5px;padding:0 7px 7px}
+.footer{
+  display:grid;
+  grid-template-columns:1fr 1fr 1fr 1.15fr;
+  gap:5px;
+  padding:0 7px 7px;
+}
 .footer button{border:0;border-radius:9px;padding:7px 4px;background:rgba(255,255,255,.08);color:#fff;font-size:10px;font-weight:800}
 .footer .stop{background:#e72d4b}
 .empty{padding:12px;text-align:center;opacity:.6;font-size:11px}
@@ -20629,10 +20634,16 @@ button,input,select{font:inherit}
   </div>
 
   <div class="footer">
-    <button onclick="shareLive()">Partager</button>
-    <button onclick="refreshAll()">Actualiser</button>
-    <button class="stop" onclick="stopLive()">Arrêter LIVE</button>
-  </div>
+  <button
+    id="overlayMicButton"
+    onclick="toggleOwnerMic()"
+    aria-label="Couper le micro">
+    🎙️ Micro
+  </button>
+
+  <button onclick="shareLive()">Partager</button>
+  <button onclick="refreshAll()">Actualiser</button>
+  <button class="stop" onclick="stopLive()">Arrêter LIVE</button>
 </div>
 
 <div id="collapsed">
@@ -20799,6 +20810,51 @@ async function muteUser(userId,duration){
       })
     });
   }catch(e){alert(e.message)}
+}
+
+let ownerMicEnabled = true;
+
+function toggleOwnerMic(){
+
+  const nouvelEtat =
+    !ownerMicEnabled;
+
+  if(
+    !window.AndroidOverlay ||
+    typeof window.AndroidOverlay.setOwnerMicEnabled !== "function"
+  ){
+    console.error(
+      "Commande micro Android indisponible"
+    );
+    return;
+  }
+
+  window.AndroidOverlay.setOwnerMicEnabled(
+    nouvelEtat
+  );
+
+  ownerMicEnabled =
+    nouvelEtat;
+
+  const bouton =
+    document.getElementById(
+      "overlayMicButton"
+    );
+
+  if(bouton){
+
+    bouton.textContent =
+      nouvelEtat
+        ? "🎙️ Micro"
+        : "🔇 Micro";
+
+    bouton.setAttribute(
+      "aria-label",
+      nouvelEtat
+        ? "Couper le micro"
+        : "Activer le micro"
+    );
+  }
 }
 
 async function shareLive(){

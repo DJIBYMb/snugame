@@ -6905,6 +6905,10 @@ href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
   transform:translateY(-8px);
 }
 
+#liveOwnerMicButton.mic-off .live-owner-mic-slash{
+  display: block !important;
+}
+
 </style>
 </head>
 
@@ -8539,6 +8543,58 @@ class="hidden creation-media-page">
 
         <!-- PARTAGER — juste après Envoyer -->
 
+        <!-- MICRO -->
+<button
+  type="button"
+  id="liveOwnerMicButton"
+  class="sunugame-live-share-bottom"
+  onclick="basculerMicroProprietaireLive()"
+  aria-label="Activer ou couper le micro"
+  title="Micro">
+
+  <svg
+    width="24"
+    height="24"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round">
+
+    <rect
+      x="9"
+      y="2"
+      width="6"
+      height="12"
+      rx="3">
+    </rect>
+
+    <path d="M5 10a7 7 0 0 0 14 0"></path>
+    <path d="M12 17v5"></path>
+    <path d="M8 22h8"></path>
+
+    <path
+  class="live-owner-mic-slash"
+  d="M4 4L20 20"
+  style="display:none;">
+</path>
+
+  </svg>
+
+</button>
+
+
+<!-- PARTAGER -->
+<button
+  type="button"
+  class="sunugame-live-share-bottom"
+  onclick="partagerLiveSpectateur()"
+  aria-label="Partager">
+
+  <!-- ton SVG Partager actuel reste ici -->
+
+</button>
 
         <button
           type="button"
@@ -24380,6 +24436,67 @@ function basculerMicroLive(){
           microLiveActif;
       });
   }
+  
+}
+
+let microProprietaireLiveActif = true;
+
+function basculerMicroProprietaireLive(){
+
+  const nouvelEtat =
+    !microProprietaireLiveActif;
+
+  if(
+    !window.AndroidLive ||
+    typeof window.AndroidLive.setOwnerMicEnabled !== "function"
+  ){
+
+    console.error(
+      "Commande micro Android indisponible."
+    );
+
+    return;
+  }
+
+  window.AndroidLive.setOwnerMicEnabled(
+    nouvelEtat
+  );
+
+  microProprietaireLiveActif =
+    nouvelEtat;
+
+  const bouton =
+    document.getElementById(
+      "liveOwnerMicButton"
+    );
+
+  if(bouton){
+
+    bouton.classList.toggle(
+      "mic-off",
+      !nouvelEtat
+    );
+
+    bouton.setAttribute(
+      "aria-label",
+      nouvelEtat
+        ? "Couper le micro"
+        : "Activer le micro"
+    );
+
+    bouton.setAttribute(
+      "title",
+      nouvelEtat
+        ? "Micro activé"
+        : "Micro coupé"
+    );
+  }
+
+  console.log(
+    "Micro propriétaire LIVE :",
+    nouvelEtat ? "ON" : "OFF"
+  );
+
 }
 
 async function demanderPartageEcranAndroid(){
