@@ -20594,6 +20594,22 @@ button,input,select{font:inherit}
 .badge{background:#ff264d;border-radius:7px;padding:4px 7px;font-size:11px;font-weight:900}
 .stats{display:flex;gap:8px;font-size:11px;opacity:.82;flex:1}
 .icon-btn{border:0;background:rgba(255,255,255,.08);color:#fff;border-radius:9px;width:32px;height:32px;font-weight:900}
+.overlay-collapse-btn{
+  width:28px;
+  height:38px;
+  padding:0;
+  border-radius:10px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:28px;
+  font-weight:900;
+  line-height:1;
+  background:rgba(10,12,18,.92);
+  color:#fff;
+  cursor:pointer;
+}
+
 #pinned{display:none;margin:6px 7px 0;padding:7px;border-radius:9px;background:rgba(255,194,61,.13);font-size:11px;border:1px solid rgba(255,194,61,.22)}
 #comments{flex:1;overflow-y:auto;padding:6px 7px;scrollbar-width:none}
 .comment{padding:6px 5px;border-bottom:1px solid rgba(255,255,255,.06);font-size:12px}
@@ -20627,7 +20643,12 @@ button,input,select{font:inherit}
       <span>● <b id="viewers">0</b></span>
       <span>❤️ <b id="likes">0</b></span>
     </div>
-    <button class="icon-btn" onclick="collapseOverlay()">‹</button>
+    <button
+     class="icon-btn overlay-collapse-btn"
+      onclick="collapseOverlay()"
+      aria-label="Réduire la fenêtre">
+     ‹
+   </button>
   </div>
 
   <div id="pinned"></div>
