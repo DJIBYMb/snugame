@@ -20605,6 +20605,12 @@ button,input,select{font:inherit}
   align-items:center;
   justify-content:center;
 }
+body.overlay-is-collapsed{
+  background:transparent;
+  border-color:transparent;
+  border-radius:0;
+}
+
 .collapsed-arrow{
   display:block;
   color:#fff;
@@ -20967,8 +20973,18 @@ function disableInput(){
 }
 
 window.setOverlayCollapsed=function(v){
-  panel.style.display=v?"none":"flex";
-  collapsed.style.display=v?"flex":"none";
+
+  panel.style.display =
+    v ? "none" : "flex";
+
+  collapsed.style.display =
+    v ? "flex" : "none";
+
+  document.body.classList.toggle(
+    "overlay-is-collapsed",
+    v
+  );
+
 };
 
 async function refreshAll(){
