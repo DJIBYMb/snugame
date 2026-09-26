@@ -20708,7 +20708,7 @@ body.overlay-is-collapsed{
     type="button"
     onclick="expandOverlay()"
     aria-label="Rouvrir la fenêtre">
-    <span class="collapsed-arrow">›</span>
+    <span class="collapsed-arrow">&#10095;</span>
   </button>
 </div>
 
