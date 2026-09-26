@@ -20579,7 +20579,9 @@ app.get(
 <style>
 *{box-sizing:border-box}
 html,body{margin:0;width:100%;height:100%;font-family:Arial,sans-serif;background:transparent;color:#fff;overflow:hidden}
-body{background:rgba(7,9,14,.93);border:1px solid rgba(255,255,255,.14);border-radius:18px}
+body{
+  background:transparent;
+}
 button,input,select{font:inherit}
 #panel{height:100%;display:flex;flex-direction:column}
 #collapsed{
