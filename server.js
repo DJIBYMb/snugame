@@ -20586,12 +20586,17 @@ body{
 }
 button,input,select{font:inherit}
 #panel{height:100%;display:flex;flex-direction:column}
+
 #collapsed{
   display:none;
+  position:fixed;
+  inset:0;
   width:100%;
   height:100%;
   align-items:center;
   justify-content:center;
+  z-index:999999;
+  overflow:visible;
 }
 #collapsed button{
   width:100%;
