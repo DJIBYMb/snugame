@@ -20602,15 +20602,22 @@ button,input,select{font:inherit}
   display:flex !important;
   align-items:center !important;
   justify-content:center !important;
+
   width:100% !important;
   height:100% !important;
-  color:white !important;
-  background:#e60023 !important;
+
+  padding:0 !important;
+  margin:0 !important;
+  border:0 !important;
+
+  color:#fff !important;
+  background:transparent !important;
+
   font-size:40px !important;
   font-weight:900 !important;
+
   opacity:1 !important;
   visibility:visible !important;
-  z-index:999999 !important;
 }
 #collapsed button{
   width:100%;
