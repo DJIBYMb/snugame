@@ -20722,6 +20722,8 @@ body.overlay-is-collapsed{
   <button class="stop" onclick="stopLive()">Arrêter LIVE</button>
 </div>
 
+</div>
+
 <div id="collapsed">
   <button
     type="button"
