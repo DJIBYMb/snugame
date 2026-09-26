@@ -20603,6 +20603,14 @@ button,input,select{font:inherit}
   align-items:center;
   justify-content:center;
 }
+
+.collapsed-arrow{
+  display:block;
+  color:#fff;
+  font-size:34px;
+  font-weight:900;
+  line-height:1;
+}
 .header{display:flex;align-items:center;gap:7px;padding:8px 9px;border-bottom:1px solid rgba(255,255,255,.09)}
 .badge{background:#ff264d;border-radius:7px;padding:4px 7px;font-size:11px;font-weight:900}
 .stats{display:flex;gap:8px;font-size:11px;opacity:.82;flex:1}
@@ -20687,7 +20695,12 @@ button,input,select{font:inherit}
 </div>
 
 <div id="collapsed">
-  <button onclick="expandOverlay()">&gt;</button>
+  <button
+    type="button"
+    onclick="expandOverlay()"
+    aria-label="Rouvrir la fenêtre">
+    <span class="collapsed-arrow">›</span>
+  </button>
 </div>
 
 <script>
