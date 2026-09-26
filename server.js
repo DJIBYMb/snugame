@@ -20599,6 +20599,20 @@ button,input,select{font:inherit}
   overflow:visible;
 }
 #collapsed button{
+  display:flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+  width:100% !important;
+  height:100% !important;
+  color:white !important;
+  background:#e60023 !important;
+  font-size:40px !important;
+  font-weight:900 !important;
+  opacity:1 !important;
+  visibility:visible !important;
+  z-index:999999 !important;
+}
+#collapsed button{
   width:100%;
   height:100%;
   padding:0;
@@ -20713,7 +20727,7 @@ body.overlay-is-collapsed{
     type="button"
     onclick="expandOverlay()"
     aria-label="Rouvrir la fenêtre">
-    <span class="collapsed-arrow">&#10095;</span>
+    ❯
   </button>
 </div>
 
