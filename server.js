@@ -20610,13 +20610,25 @@ body.overlay-is-collapsed{
   border-color:transparent;
   border-radius:0;
 }
-
 .collapsed-arrow{
-  display:block;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+
+  width:42px;
+  height:52px;
+
   color:#fff;
-  font-size:34px;
+  background:#e72d4b;
+
+  border-radius:14px 0 0 14px;
+
+  font-size:38px;
   font-weight:900;
   line-height:1;
+
+  text-shadow:0 1px 3px rgba(0,0,0,.8);
+  box-shadow:0 2px 10px rgba(0,0,0,.45);
 }
 .header{display:flex;align-items:center;gap:7px;padding:8px 9px;border-bottom:1px solid rgba(255,255,255,.09)}
 .badge{background:#ff264d;border-radius:7px;padding:4px 7px;font-size:11px;font-weight:900}
