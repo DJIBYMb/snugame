@@ -20589,7 +20589,20 @@ button,input,select{font:inherit}
   align-items:center;
   justify-content:center;
 }
-#collapsed button{width:100%;height:100%;border:0;border-radius:18px;background:rgba(10,12,18,.92);color:#fff;font-size:29px;font-weight:900}
+#collapsed button{
+  width:100%;
+  height:100%;
+  padding:0;
+  border:0;
+  border-radius:14px 0 0 14px;
+  background:rgba(10,12,18,.92);
+  color:#fff;
+  font-size:30px;
+  font-weight:900;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
 .header{display:flex;align-items:center;gap:7px;padding:8px 9px;border-bottom:1px solid rgba(255,255,255,.09)}
 .badge{background:#ff264d;border-radius:7px;padding:4px 7px;font-size:11px;font-weight:900}
 .stats{display:flex;gap:8px;font-size:11px;opacity:.82;flex:1}
