@@ -1156,11 +1156,20 @@ body.live-room-mode .bottom-nav{
 }
 
 .bottom-nav{
+
   position:fixed;
+
+  /* Le fond du cadre va jusqu'au bas de l'écran */
   bottom:0;
+
   left:0;
   right:0;
+
+  /* Cadre fin autour des 5 boutons */
   height:40px;
+
+  /* Remonte les boutons sans remonter le fond du cadre */
+  padding-bottom:max(17px, env(safe-area-inset-bottom));
 
   display:flex;
   justify-content:space-around;
@@ -1170,8 +1179,9 @@ body.live-room-mode .bottom-nav{
   border-top:1px solid #374151;
 
   z-index:99999;
-}
 
+  box-sizing:content-box;
+}
 .bottom-nav button{
   flex:1;
   height:100%;
