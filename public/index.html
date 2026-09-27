@@ -1157,7 +1157,7 @@ body.live-room-mode .bottom-nav{
 
 .bottom-nav{
   position:fixed;
-  bottom:0;
+  bottom:max(10px, env(safe-area-inset-bottom));
   left:0;
   right:0;
   height:70px;
@@ -1187,7 +1187,7 @@ body.live-room-mode .bottom-nav{
 }
 
 body{
-  padding-bottom:80px;
+  padding-bottom:calc(90px + env(safe-area-inset-bottom));
 }
 
 .nav{
