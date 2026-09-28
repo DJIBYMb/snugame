@@ -1474,16 +1474,22 @@ body.video-mode .video-panel-cover{
   width:100% !important;
   height:100% !important;
 
-  max-width:none !important;
-  max-height:none !important;
+  max-width:100% !important;
+  max-height:100dvh !important;
 
-  object-fit:cover !important;
+  /* EXACTEMENT le même cadrage que la vidéo */
+  object-fit:contain !important;
   object-position:center center !important;
 
   transform:none !important;
   margin:0 !important;
-}
 
+  display:block !important;
+  background:#000 !important;
+
+  z-index:3 !important;
+  pointer-events:none !important;
+}
 body.video-mode .tiktok-video{
   position:relative !important;
   width:100% !important;
@@ -30085,9 +30091,35 @@ function hideVideoCover(video){
   const cover =
     video.previousElementSibling;
 
-  if(cover){
-    cover.style.display = "none";
+  if(!cover){
+    return;
   }
+
+  /*
+    On attend que le navigateur ait réellement
+    affiché une frame de la vidéo derrière la miniature.
+  */
+  requestAnimationFrame(()=>{
+
+    requestAnimationFrame(()=>{
+
+      cover.style.transition =
+        "opacity 120ms ease-out";
+
+      cover.style.opacity = "0";
+
+      setTimeout(()=>{
+
+        cover.style.display = "none";
+
+        /* Prépare la miniature pour un futur rechargement */
+        cover.style.opacity = "1";
+
+      }, 130);
+
+    });
+
+  });
 
 }
 
