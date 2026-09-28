@@ -6981,6 +6981,24 @@ section:not(.hidden){
   transform:none !important;
 }
 
+/* Noms sous les 5 icônes de navigation */
+.bottom-nav button{
+  display:flex !important;
+  flex-direction:column !important;
+  align-items:center !important;
+  justify-content:center !important;
+  gap:2px !important;
+}
+
+.bottom-nav button span{
+  display:block !important;
+  font-size:10px !important;
+  line-height:11px !important;
+  font-weight:600 !important;
+  color:white !important;
+  white-space:nowrap !important;
+}
+
 </style>
 </head>
 
@@ -30362,36 +30380,35 @@ appliquerLangue();
 id="btnTournoi"
 onclick="naviguerBottom('tournoi','btnTournoi')">
 <i class="fa-solid fa-house"></i>
-<span data-i18n-text></span>
+<span data-i18n-text>Accueil</span>
 </button>
 
 <button
 id="btnParticipants"
 onclick="naviguerBottom('participants','btnParticipants')">
 <i class="fa-solid fa-users"></i>
-<span data-i18n-text></span>
+<span data-i18n-text>Participants</span>
 </button>
 
 <button
 id="btnClassement"
 onclick="naviguerBottom('competition','btnClassement')">
 <i class="fa-solid fa-ranking-star"></i>
-<span data-i18n-text></span>
+<span data-i18n-text>Tirages</span>
 </button>
 
 <button
 id="btnVideos"
 onclick="naviguerBottom('videos','btnVideos')">
 <i class="fa-solid fa-video"></i>
-<span data-i18n-text></span
-
-  </button>
+<span data-i18n-text>Vidéos</span>
+</button>
 
 <button
 id="btnProfil"
 onclick="naviguerBottom('profil','btnProfil')">
 <i class="fa-solid fa-user"></i>
-<span data-i18n-text></span>
+<span data-i18n-text>Profil</span>
 </button>
 
 </div>
