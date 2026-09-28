@@ -30088,41 +30088,23 @@ function prepareFirstPanelVideo(){
 
 function hideVideoCover(video){
 
-  const cover =
-    video.previousElementSibling;
+  const cover = video.previousElementSibling;
 
   if(!cover){
     return;
   }
 
-  /*
-    On attend que le navigateur ait réellement
-    affiché une frame de la vidéo derrière la miniature.
-  */
   requestAnimationFrame(()=>{
 
-    requestAnimationFrame(()=>{
-
-      cover.style.transition =
-        "opacity 120ms ease-out";
-
-      cover.style.opacity = "0";
-
-      setTimeout(()=>{
-
-        cover.style.display = "none";
-
-        /* Prépare la miniature pour un futur rechargement */
-        cover.style.opacity = "1";
-
-      }, 130);
-
-    });
+    // La vidéo a commencé et le navigateur peut l'afficher.
+    cover.style.transition = "none";
+    cover.style.opacity = "0";
+    cover.style.visibility = "hidden";
+    cover.style.display = "none";
 
   });
 
 }
-
 function toggleDescriptionVideo(button){
 
   const bloc =
