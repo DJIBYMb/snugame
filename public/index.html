@@ -15617,12 +15617,40 @@ async function register(){
       "pageDashboard"
     );
 
-    afficherBottomNav();
+const liveARejoindre =
+  Number(
+    sessionStorage.getItem(
+      "liveARejoindre"
+    )
+  );
 
-    await ouvrirTableauProprietaire();
+if(
+  Number.isInteger(liveARejoindre) &&
+  liveARejoindre > 0
+){
 
-    showNotif("Compte créé et connecté");
+  sessionStorage.removeItem(
+    "liveARejoindre"
+  );
 
+  showNotif(
+    "Compte créé et connecté"
+  );
+
+  await ouvrirLiveSpectateur(
+    liveARejoindre
+  );
+
+}else{
+
+  afficherBottomNav();
+
+  await ouvrirTableauProprietaire();
+
+  showNotif(
+    "Compte créé et connecté"
+  );
+}
     prechargerDonneesUtilisateur();
 
     const token =
@@ -15832,11 +15860,36 @@ if(
     "pageDashboard"
   );
 
+  const liveARejoindre =
+  Number(
+    sessionStorage.getItem(
+      "liveARejoindre"
+    )
+  );
+
+if(
+  Number.isInteger(liveARejoindre) &&
+  liveARejoindre > 0
+){
+
+  sessionStorage.removeItem(
+    "liveARejoindre"
+  );
+
+  showNotif("Connexion réussie");
+
+  await ouvrirLiveSpectateur(
+    liveARejoindre
+  );
+
+}else{
+
   afficherBottomNav();
 
   await ouvrirTableauProprietaire();
 
   showNotif("Connexion réussie");
+}
 
   prechargerDonneesUtilisateur();
 
@@ -26084,7 +26137,7 @@ async function partagerLiveSpectateur(){
   }
 
   const shareUrl =
-    `${location.origin}/app?live=${liveId}`;
+  `${location.origin}/watch/live/${liveId}`;
 
   try{
 
@@ -27180,7 +27233,35 @@ async function ouvrirAccueilDemarrage(){
   }
 
 }
+/* =========================================================
+   LIVE OUVERT DEPUIS UN LIEN PARTAGÉ
+========================================================= */
+
+function memoriserLiveDepuisLien(){
+
+  const params =
+    new URLSearchParams(
+      window.location.search
+    );
+
+  const liveId =
+    Number(params.get("live"));
+
+  if(
+    Number.isInteger(liveId) &&
+    liveId > 0
+  ){
+    sessionStorage.setItem(
+      "liveARejoindre",
+      String(liveId)
+    );
+  }
+
+}
+
 async function demarrerApplication(){
+
+  memoriserLiveDepuisLien();
 
   const data = await get("/me");
 
@@ -27261,6 +27342,33 @@ if(tournoiUrl){
   document.body.classList.remove("app-loading");
   return;
 }
+/* =========================================================
+   OUVRIR LE LIVE DEMANDÉ APRÈS VÉRIFICATION DE LA SESSION
+========================================================= */
+
+const liveARejoindre =
+  Number(
+    sessionStorage.getItem(
+      "liveARejoindre"
+    )
+  );
+
+if(
+  Number.isInteger(liveARejoindre) &&
+  liveARejoindre > 0
+){
+
+  sessionStorage.removeItem(
+    "liveARejoindre"
+  );
+
+  await ouvrirLiveSpectateur(
+    liveARejoindre
+  );
+
+  return;
+}
+
   setPage("pageDashboard");
 
 localStorage.setItem("lastPage", "pageDashboard");

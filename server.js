@@ -2080,6 +2080,60 @@ app.get("/app",(req,res)=>{
   );
 });
 
+/* =========================================================
+   LIEN PUBLIC D'UN LIVE SUNUGAME
+   Exemple : https://ton-site.com/live/123
+========================================================= */
+
+app.get("/watch/live/:id", async (req,res)=>{
+
+  try{
+
+    const liveId = Number(req.params.id);
+
+    if(
+      !Number.isInteger(liveId) ||
+      liveId <= 0
+    ){
+      return res.status(404).send(
+        "LIVE introuvable"
+      );
+    }
+
+    const live = await get(
+      `
+        SELECT id
+        FROM live_streams
+        WHERE id=?
+          AND status IN ('starting','live')
+      `,
+      [liveId]
+    );
+
+    if(!live){
+      return res.status(404).send(
+        "Ce LIVE est terminé ou introuvable"
+      );
+    }
+
+    return res.redirect(
+      "/app?live=" + liveId
+    );
+
+  }catch(error){
+
+    console.error(
+      "Erreur ouverture lien LIVE :",
+      error
+    );
+
+    return res.status(500).send(
+      "Impossible d'ouvrir le LIVE"
+    );
+  }
+
+});
+
 app.post(
   "/send-code",
   emailCodeLimiter,
