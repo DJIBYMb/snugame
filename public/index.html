@@ -1413,6 +1413,8 @@ body.competition-mode .competition-sidebar{
    pendant l'affichage de la page Profil. */
 body.profile-mode header{
   display:none !important;
+
+
 }
 
 /* Petit espace supérieur sur le profil pour éviter
@@ -6949,6 +6951,21 @@ href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
 
 #liveOwnerMicButton.mic-off .live-owner-mic-slash{
   display: block !important;
+}
+
+/* TEST STABILITÉ BARRE DU BAS PWA */
+.bottom-nav,
+.bottom-nav *{
+  transition:none !important;
+  animation:none !important;
+}
+
+.bottom-nav button,
+.bottom-nav button.active,
+.bottom-nav button:not(.active),
+.bottom-nav button:active{
+  transform:none !important;
+  translate:none !important;
 }
 
 </style>
