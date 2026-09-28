@@ -1382,11 +1382,9 @@ body.competition-mode .competition-sidebar{
   margin-top:6px !important;
 }
 
-/* Profil :
-   le header bleu SUNUGAME est caché uniquement
-   pendant l'affichage de la page Profil. */
 body.profile-mode header{
-  display:none !important;
+  visibility:hidden !important;
+  pointer-events:none !important;
 }
 
 /* Petit espace supérieur sur le profil pour éviter
@@ -16251,33 +16249,10 @@ function cacherContactsADecouvrirProfil(){
 
 async function ouvrirProfilCompte(){
 
-  /*
-    Ouvrir immédiatement la page Profil.
-    On évite d'attendre /me avant de changer l'affichage,
-    ce qui stabilise la barre du bas sur Android.
-  */
-  document.body.classList.remove(
-    "video-mode",
-    "competition-mode"
-  );
-
-  document.body.classList.add(
-    "profile-mode"
-  );
-
-  document
-    .querySelectorAll(".panel")
-    .forEach(p=>p.classList.add("hidden"));
-
-  activerBoutonBottomNav(
-    "btnProfil"
-  );
-
-  ouvrirPage("pageProfil");
 
   const data = await get("/me");
 
-  if(!data || data.connected === false){
+if(!data || data.connected === false){
   afficherConnexionPropre();
 
   const msg =
