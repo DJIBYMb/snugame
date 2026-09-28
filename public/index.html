@@ -16283,13 +16283,15 @@ if(data.abonnement_expire_at){
 
 }
 
-  document
+  /*
+document
   .getElementById("messageCard")
   .classList.add("hidden");
+*/
 
-  document.body.classList.remove("video-mode");
+document.body.classList.remove("video-mode");
 
-  stopAllVideos();
+stopAllVideos();
 
  window.openingProfileVideo = false;
 
@@ -23730,36 +23732,7 @@ async function executerDestinationBottomNav(destination){
   }
 
 if(destination === "profil"){
-
-  /*
-    Le Profil est géré comme une vraie navigation de panel.
-    On termine d'abord proprement l'ancien panel.
-  */
-  if(panelEnCours){
-    return;
-  }
-
-  panelEnCours = true;
-
-  try{
-
-    stopAllVideos();
-
-    currentPanelName = null;
-
-    document.body.classList.remove(
-      "video-mode",
-      "competition-mode"
-    );
-
-    await ouvrirProfilCompte();
-
-  }finally{
-
-    panelEnCours = false;
-
-  }
-
+  await ouvrirProfilCompte();
   return;
 }
 }
