@@ -16283,11 +16283,9 @@ if(data.abonnement_expire_at){
 
 }
 
-  /*
-document
+  document
   .getElementById("messageCard")
   .classList.add("hidden");
-*/
 
 document.body.classList.remove("video-mode");
 
@@ -16308,12 +16306,12 @@ stopAllVideos();
     "btnProfil"
   );
 
-  document.body.classList.add(
-    "profile-mode"
-  );
+document.body.classList.add(
+  "profile-mode"
+);
 
-  ouvrirPage("pageProfil");
-
+/* TEST : ne pas basculer vers pageProfil */
+setPage("pageDashboard");
   const token =
   localStorage.getItem("fcmToken");
 
