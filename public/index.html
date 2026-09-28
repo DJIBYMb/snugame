@@ -1156,32 +1156,58 @@ body.live-room-mode .bottom-nav{
 }
 
 .bottom-nav{
+  position:fixed !important;
 
-  position:fixed;
+  left:0 !important;
+  right:0 !important;
+  bottom:0 !important;
 
-  /* Le fond du cadre va jusqu'au bas de l'écran */
-  bottom:0;
+  width:100% !important;
+  height:57px !important;
+  min-height:57px !important;
+  max-height:57px !important;
 
-  left:0;
-  right:0;
-
-  /* Cadre fin autour des 5 boutons */
-  height:40px;
-
-  /* Remonte les boutons sans remonter le fond du cadre */
-  padding-bottom:max(17px, env(safe-area-inset-bottom));
+  padding:0 !important;
+  margin:0 !important;
 
   display:flex;
   justify-content:space-around;
-  align-items:center;
+  align-items:flex-start;
 
   background:#111827;
   border-top:1px solid #374151;
 
   z-index:99999;
 
-  box-sizing:content-box;
+  box-sizing:border-box !important;
+
+  transform:none !important;
+  translate:none !important;
+
+  contain:layout paint;
 }
+.bottom-nav button{
+  flex:1 !important;
+
+  height:40px !important;
+  min-height:40px !important;
+  max-height:40px !important;
+
+  margin:0 !important;
+  padding:0 !important;
+
+  border:none;
+  background:transparent;
+
+  display:flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+
+  color:rgba(255,255,255,.6);
+
+  transform-origin:center center !important;
+}
+
 .bottom-nav button{
   flex:1;
   height:100%;
