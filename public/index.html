@@ -6924,6 +6924,56 @@ href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
   display: block !important;
 }
 
+/* =========================================================
+   BOTTOM NAV — 5 BOUTONS TOTALEMENT FIXES
+========================================================= */
+
+.bottom-nav{
+  display:grid !important;
+  grid-template-columns:repeat(5, 1fr) !important;
+
+  position:fixed !important;
+  left:0 !important;
+  right:0 !important;
+  bottom:0 !important;
+
+  width:100% !important;
+  height:40px !important;
+
+  padding-top:0 !important;
+  padding-left:0 !important;
+  padding-right:0 !important;
+  padding-bottom:max(17px, env(safe-area-inset-bottom)) !important;
+
+  box-sizing:content-box !important;
+}
+
+.bottom-nav button,
+.bottom-nav button.active,
+.bottom-nav button:not(.active){
+
+  width:100% !important;
+  min-width:0 !important;
+  max-width:none !important;
+
+  height:40px !important;
+
+  margin:0 !important;
+  padding:0 !important;
+
+  transform:none !important;
+
+  display:flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+}
+
+.bottom-nav button i{
+  margin:0 !important;
+  padding:0 !important;
+  transform:none !important;
+}
+
 </style>
 </head>
 
