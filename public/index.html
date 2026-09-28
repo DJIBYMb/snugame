@@ -1383,8 +1383,7 @@ body.competition-mode .competition-sidebar{
 }
 
 body.profile-mode header{
-  visibility:hidden !important;
-  pointer-events:none !important;
+  display:none !important;
 }
 
 /* Petit espace supérieur sur le profil pour éviter
@@ -23730,11 +23729,39 @@ async function executerDestinationBottomNav(destination){
     return;
   }
 
-  if(destination === "profil"){
-    await ouvrirProfilCompte();
+if(destination === "profil"){
+
+  /*
+    Le Profil est géré comme une vraie navigation de panel.
+    On termine d'abord proprement l'ancien panel.
+  */
+  if(panelEnCours){
     return;
   }
 
+  panelEnCours = true;
+
+  try{
+
+    stopAllVideos();
+
+    currentPanelName = null;
+
+    document.body.classList.remove(
+      "video-mode",
+      "competition-mode"
+    );
+
+    await ouvrirProfilCompte();
+
+  }finally{
+
+    panelEnCours = false;
+
+  }
+
+  return;
+}
 }
 
 async function naviguerBottom(
