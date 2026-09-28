@@ -23151,39 +23151,64 @@ async function ouvrirModeVideos(options = {}){
     return;
   }
 
-  requestAnimationFrame(()=>{
+requestAnimationFrame(()=>{
 
-   const firstVideo =
-  document.querySelector(
-    "#panelHighlights .tiktok-video video"
-  );
+  const firstVideo =
+    document.querySelector(
+      "#panelHighlights .tiktok-video video"
+    );
 
-   if(firstVideo){
+  if(!firstVideo){
+    return;
+  }
 
   stopAllVideosExcept(firstVideo);
 
-  firstVideo.muted = true;
   firstVideo.playsInline = true;
+  firstVideo.muted = true;
 
-  firstVideo.style.opacity = "0";
+  /*
+    IMPORTANT :
+    On ne cache plus la vidéo avec opacity:0.
+    La miniature .video-panel-cover reste affichée
+    au-dessus pendant le chargement.
 
-  firstVideo.play().then(()=>{
+    Elle disparaît uniquement lorsque la vidéo
+    commence réellement à jouer grâce à :
+    onplaying="hideVideoCover(this)"
+  */
 
-    firstVideo.style.opacity = "1";
+  const lancerPremiereVideo = ()=>{
 
-    firstVideo.muted =
-      !window.videoSoundEnabled;
+    firstVideo
+      .play()
+      .then(()=>{
 
-  }).catch(()=>{
+        firstVideo.muted =
+          !window.videoSoundEnabled;
 
-    firstVideo.style.opacity = "1";
+      })
+      .catch(()=>{});
 
-  });
+  };
 
-}
+  if(firstVideo.readyState >= 3){
 
-  }); 
+    lancerPremiereVideo();
 
+  }else{
+
+    firstVideo.addEventListener(
+      "canplay",
+      lancerPremiereVideo,
+      {
+        once:true
+      }
+    );
+
+  }
+
+});
 }
 
 function cacherBoutonAjouterVideo(){
