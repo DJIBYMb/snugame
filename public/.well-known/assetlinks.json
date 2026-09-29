@@ -7,7 +7,8 @@
       "namespace": "android_app",
       "package_name": "com.snugame.app",
       "sha256_cert_fingerprints": [
-        "6C:70:69:6C:96:96:D7:BC:79:5D:51:71:CD:AB:CD:E6:EB:4E:05:B7:1B:98:DF:44:2F:35:0A:86:5E:27:90:9B"
+        "6C:70:69:6C:96:96:D7:BC:79:5D:51:71:CD:AB:CD:E6:EB:4E:05:B7:1B:98:DF:44:2F:35:0A:86:5E:27:90:9B",
+        "47:88:EA:9A:94:7F:98:22:85:A4:E3:B4:28:AE:F2:98:A6:46:09:41:5E:71:1D:3E:4E:2A:F2:85:09:75:F9:6F"
       ]
     }
   }
