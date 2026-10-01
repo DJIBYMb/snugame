@@ -6999,6 +6999,170 @@ section:not(.hidden){
   white-space:nowrap !important;
 }
 
+/* =========================================================
+   LIVE — MINI PROFIL DES COMMENTATEURS
+========================================================= */
+
+.sunugame-live-comment-avatar-initial{
+  width:30px;
+  height:30px;
+  min-width:30px;
+  border-radius:50%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:#1d4ed8;
+  color:#fff;
+  border:1.5px solid rgba(255,255,255,.85);
+  font-size:13px;
+  font-weight:900;
+  text-transform:uppercase;
+  cursor:pointer;
+}
+
+.sunugame-live-mini-profile-backdrop{
+  position:fixed;
+  inset:0;
+  z-index:2147483000;
+  background:rgba(0,0,0,.20);
+}
+
+.sunugame-live-mini-profile{
+  position:fixed;
+  left:12px;
+  right:12px;
+  bottom:max(
+    82px,
+    calc(70px + env(safe-area-inset-bottom))
+  );
+  z-index:2147483001;
+  max-width:430px;
+  margin:auto;
+  padding:14px;
+  border-radius:20px;
+  background:#111827;
+  border:1px solid rgba(255,255,255,.14);
+  box-shadow:0 18px 50px rgba(0,0,0,.55);
+  color:#fff;
+}
+
+.sunugame-live-mini-profile-top{
+  display:flex;
+  align-items:center;
+  gap:12px;
+}
+
+.sunugame-live-mini-profile-avatar,
+.sunugame-live-mini-profile-initial{
+  width:58px;
+  height:58px;
+  min-width:58px;
+  border-radius:50%;
+  border:2px solid rgba(255,255,255,.9);
+  cursor:pointer;
+}
+
+.sunugame-live-mini-profile-avatar{
+  object-fit:cover;
+}
+
+.sunugame-live-mini-profile-initial{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:#1d4ed8;
+  color:white;
+  font-size:24px;
+  font-weight:900;
+  text-transform:uppercase;
+}
+
+.sunugame-live-mini-profile-name{
+  font-size:17px;
+  font-weight:900;
+  cursor:pointer;
+}
+
+.sunugame-live-mini-profile-username{
+  margin-top:3px;
+  font-size:13px;
+  color:#94a3b8;
+}
+
+.sunugame-live-mini-profile-stats{
+  margin-top:12px;
+  font-size:13px;
+  font-weight:700;
+  color:#e5e7eb;
+}
+
+.sunugame-live-mini-profile-actions{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  margin-top:12px;
+}
+
+.sunugame-live-mini-profile-actions button{
+  width:auto !important;
+  min-width:0 !important;
+  margin:0 !important;
+  padding:9px 14px !important;
+  border-radius:999px !important;
+  box-shadow:none !important;
+}
+
+.sunugame-live-reply-btn{
+  background:rgba(255,255,255,.08) !important;
+  border:1px solid rgba(255,255,255,.14) !important;
+  color:white !important;
+  font-size:18px !important;
+}
+
+.sunugame-live-follow-mini{
+  background:#22c55e !important;
+  color:#052e16 !important;
+}
+
+.sunugame-live-follow-mini.is-following,
+.sunugame-live-follow-mini.is-friend{
+  background:rgba(255,255,255,.08) !important;
+  color:white !important;
+  border:1px solid rgba(255,255,255,.16) !important;
+}
+
+.sunugame-live-replying-bar{
+  position:fixed;
+  left:12px;
+  right:12px;
+  bottom:max(
+    62px,
+    calc(50px + env(safe-area-inset-bottom))
+  );
+  z-index:2147482999;
+  max-width:430px;
+  margin:auto;
+  padding:7px 10px;
+  border-radius:12px;
+  background:#1e293b;
+  color:white;
+  font-size:12px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+}
+
+.sunugame-live-replying-bar button{
+  width:auto !important;
+  min-width:0 !important;
+  margin:0 !important;
+  padding:2px 7px !important;
+  background:transparent !important;
+  color:white !important;
+  box-shadow:none !important;
+}
+
 </style>
 </head>
 
@@ -25801,12 +25965,34 @@ async function actualiserCommentairesLiveSpectateur(){
             user.username ||
             "Joueur";
 
-          const photo =
-            user.profile_photo ||
-            "/default-avatar.png";
+          const userId =
+  Number(comment.user_id || 0);
 
-            const userId =
-             Number(comment.user_id || 0);
+const commentId =
+  Number(comment.id || 0);
+
+const username =
+  user.username ||
+  user.name ||
+  "joueur";
+
+  const reponse =
+  comment.reply_to
+    ? `
+      <span
+        style="
+          font-size:10px;
+          line-height:13px;
+          opacity:.75;
+          margin-bottom:1px;
+        "
+      >
+        ↳ @${echapperLiveSunugame(
+          comment.reply_to.username || ""
+        )}
+      </span>
+    `
+    : "";
 
           return `
             <div
@@ -25816,29 +26002,28 @@ async function actualiserCommentairesLiveSpectateur(){
               "
               data-comment-id="${Number(comment.id || 0)}">
 
-                <img
-                 src="${echapperLiveSunugame(photo)}"
-                 alt="Profil"
+              <div
+  onclick="
+    event.stopPropagation();
 
-                onclick="
-                 event.stopPropagation();
-                 ouvrirProfilCommentateurLiveSpectateur(${userId});
-                "
+    ouvrirProfilCommentateurLiveSpectateur(
+      ${userId},
+      ${commentId}
+    );
+  "
+  style="
+    cursor:pointer;
+    flex-shrink:0;
+  "
+>
 
-                onerror="
-                 this.onerror=null;
-                 this.src='/default-avatar.png';
-              "
+  ${avatarProfilLiveHtml(
+    user,
+    "sunugame-live-comment-photo",
+    "sunugame-live-comment-avatar-initial"
+  )}
 
-              style="
-                width:30px;
-                height:30px;
-                 min-width:30px;
-                border-radius:50%;
-                object-fit:cover;
-                border:1.5px solid rgba(255,255,255,.85);
-                cursor:pointer;
-                ">
+</div>
 
               <div
                 style="
@@ -25847,10 +26032,15 @@ async function actualiserCommentairesLiveSpectateur(){
                   flex-direction:column;
                 ">
 
+                ${reponse}
+
                 <b
                   onclick="
                   event.stopPropagation();
-                  ouvrirProfilCommentateurLiveSpectateur(${userId});
+                  ouvrirProfilCommentateurLiveSpectateur(
+                   ${userId},
+                  ${commentId}
+                );
                 "
                 style="
                 font-size:12px;
@@ -25991,8 +26181,15 @@ async function envoyerCommentaireLiveSpectateur(){
             "Content-Type":"application/json"
           },
           body:JSON.stringify({
-            content
-          })
+  content,
+
+  parent_id:
+    Number(
+      window
+        .reponseCommentaireLiveSpectateur
+        ?.commentId || 0
+    ) || null
+})
         }
       );
 
@@ -26011,14 +26208,19 @@ async function envoyerCommentaireLiveSpectateur(){
     }
 
     if(input){
-      input.value = "";
-    }
+  input.value = "";
+}
 
-    signatureCommentairesLiveSpectateur =
-      "";
+/*
+La réponse vient d'être envoyée :
+on enlève le mode "Réponse à @..."
+*/
+annulerReponseCommentaireLive();
 
-    await actualiserCommentairesLiveSpectateur();
+signatureCommentairesLiveSpectateur =
+  "";
 
+await actualiserCommentairesLiveSpectateur();
   }catch(error){
 
     alert(
@@ -31182,6 +31384,583 @@ document.addEventListener(
   true
 );
 
+/* =========================================================
+   LIVE — MINI PROFIL + RÉPONSE AUX COMMENTAIRES
+========================================================= */
+
+window.reponseCommentaireLiveSpectateur = null;
+window.commentairesLiveSpectateurCache = [];
+
+
+/* Fermer le petit profil */
+function fermerMiniProfilLiveCommentaire(){
+
+  document
+    .getElementById(
+      "sunugameLiveMiniProfileBackdrop"
+    )
+    ?.remove();
+
+  document
+    .getElementById(
+      "sunugameLiveMiniProfile"
+    )
+    ?.remove();
+}
+
+
+/* Première lettre du nom */
+function initialeProfilLive(user){
+
+  return String(
+    user?.name ||
+    user?.username ||
+    "J"
+  )
+  .trim()
+  .charAt(0)
+  .toUpperCase() || "J";
+}
+
+
+/* Photo réelle ou avatar avec initiale */
+function avatarProfilLiveHtml(
+  user,
+  photoClass,
+  initialClass
+){
+
+  const photo =
+    String(
+      user?.profile_photo || ""
+    ).trim();
+
+  const initiale =
+    echapperLiveSunugame(
+      initialeProfilLive(user)
+    );
+
+  if(photo){
+
+    return `
+      <img
+        class="${photoClass}"
+        src="${echapperLiveSunugame(photo)}"
+        alt="Profil"
+
+        onerror="
+          this.style.display='none';
+          this.nextElementSibling.style.display='flex';
+        "
+      >
+
+      <div
+        class="${initialClass}"
+        style="display:none;">
+        ${initiale}
+      </div>
+    `;
+  }
+
+  return `
+    <div class="${initialClass}">
+      ${initiale}
+    </div>
+  `;
+}
+
+
+/* Annuler une réponse */
+function annulerReponseCommentaireLive(){
+
+  window.reponseCommentaireLiveSpectateur =
+    null;
+
+  document
+    .getElementById(
+      "sunugameLiveReplyingBar"
+    )
+    ?.remove();
+
+  const input =
+    document.getElementById(
+      "liveSpectatorCommentInput"
+    );
+
+  if(input){
+
+    input.placeholder =
+      "Ajouter un commentaire…";
+  }
+}
+
+
+/* Préparer réponse @ */
+function preparerReponseCommentaireLive(
+  commentId,
+  userId,
+  username
+){
+
+  const id =
+    Number(commentId || 0);
+
+  if(!id){
+    return;
+  }
+
+  window.reponseCommentaireLiveSpectateur = {
+    commentId:id,
+    userId:Number(userId || 0),
+    username:String(
+      username || "joueur"
+    )
+  };
+
+  fermerMiniProfilLiveCommentaire();
+
+  let bar =
+    document.getElementById(
+      "sunugameLiveReplyingBar"
+    );
+
+  if(!bar){
+
+    bar =
+      document.createElement("div");
+
+    bar.id =
+      "sunugameLiveReplyingBar";
+
+    bar.className =
+      "sunugame-live-replying-bar";
+
+    document.body.appendChild(bar);
+  }
+
+  bar.innerHTML = `
+    <span>
+      Réponse à
+      <b>
+        @${echapperLiveSunugame(
+          window
+            .reponseCommentaireLiveSpectateur
+            .username
+        )}
+      </b>
+    </span>
+
+    <button
+      type="button"
+      onclick="annulerReponseCommentaireLive()">
+      ✕
+    </button>
+  `;
+
+  const input =
+    document.getElementById(
+      "liveSpectatorCommentInput"
+    );
+
+  if(input){
+
+    input.placeholder =
+      `Répondre à @${
+        window
+          .reponseCommentaireLiveSpectateur
+          .username
+      }…`;
+
+    input.focus();
+  }
+}
+
+
+/* Suivre / ne plus suivre */
+async function basculerSuiviMiniProfilLive(
+  userId
+){
+
+  const id =
+    Number(userId || 0);
+
+  if(!id){
+    return;
+  }
+
+  const comment =
+    window
+      .commentairesLiveSpectateurCache
+      .find(
+        item =>
+          Number(
+            item.user_id || 0
+          ) === id
+      );
+
+  if(!comment){
+    return;
+  }
+
+  const user =
+    comment.user || {};
+
+  const suitDeja =
+    !!user.is_following;
+
+  try{
+
+    const response =
+      await fetch(
+        suitDeja
+          ? `/unfollow/${id}`
+          : `/follow/${id}`,
+        {
+          method:"POST",
+          credentials:"include",
+          headers:{
+            "Content-Type":
+              "application/json"
+          },
+          body:"{}"
+        }
+      );
+
+    let data = null;
+
+    try{
+      data =
+        await response.json();
+    }catch(e){}
+
+    if(
+      !response.ok ||
+      data?.ok === false
+    ){
+
+      throw new Error(
+        data?.message ||
+        "Impossible de modifier l'abonnement."
+      );
+    }
+
+    user.is_following =
+      !suitDeja;
+
+    if(user.is_following){
+
+      user.followers_count =
+        Number(
+          user.followers_count || 0
+        ) + 1;
+
+    }else{
+
+      user.followers_count =
+        Math.max(
+          0,
+          Number(
+            user.followers_count || 0
+          ) - 1
+        );
+    }
+
+    ouvrirMiniProfilCommentateurLive(
+      id,
+      Number(comment.id || 0)
+    );
+
+  }catch(error){
+
+    alert(
+      error.message ||
+      "Impossible de modifier l'abonnement."
+    );
+  }
+}
+
+
+/* Ouvrir le petit profil */
+function ouvrirMiniProfilCommentateurLive(
+  userId,
+  commentId
+){
+
+  const id =
+    Number(userId || 0);
+
+  const cid =
+    Number(commentId || 0);
+
+  if(!id){
+    return;
+  }
+
+  const comment =
+    window
+      .commentairesLiveSpectateurCache
+      .find(
+        item =>
+          Number(
+            item.user_id || 0
+          ) === id &&
+          (
+            !cid ||
+            Number(
+              item.id || 0
+            ) === cid
+          )
+      )
+    ||
+    window
+      .commentairesLiveSpectateurCache
+      .find(
+        item =>
+          Number(
+            item.user_id || 0
+          ) === id
+      );
+
+  if(!comment){
+    return;
+  }
+
+  const user =
+    comment.user || {};
+
+  const nom =
+    user.name ||
+    user.username ||
+    "Joueur";
+
+  const username =
+    user.username ||
+    user.name ||
+    "joueur";
+
+  fermerMiniProfilLiveCommentaire();
+
+  const backdrop =
+    document.createElement("div");
+
+  backdrop.id =
+    "sunugameLiveMiniProfileBackdrop";
+
+  backdrop.className =
+    "sunugame-live-mini-profile-backdrop";
+
+  backdrop.onclick =
+    fermerMiniProfilLiveCommentaire;
+
+
+  const card =
+    document.createElement("div");
+
+  card.id =
+    "sunugameLiveMiniProfile";
+
+  card.className =
+    "sunugame-live-mini-profile";
+
+
+  const amis =
+    !!user.is_following &&
+    !!user.follows_me;
+
+
+  const followLabel =
+    amis
+      ? "Amis"
+      : user.is_following
+        ? "✓"
+        : "+ Suivre";
+
+
+  const followClass =
+    amis
+      ? "is-friend"
+      : user.is_following
+        ? "is-following"
+        : "";
+
+
+  card.innerHTML = `
+
+    <div
+      class="sunugame-live-mini-profile-top">
+
+      <div
+        onclick="
+          ouvrirProfilPublicDepuisMiniLive(
+            ${id}
+          )
+        "
+        style="cursor:pointer;">
+
+        ${avatarProfilLiveHtml(
+          user,
+          "sunugame-live-mini-profile-avatar",
+          "sunugame-live-mini-profile-initial"
+        )}
+
+      </div>
+
+
+      <div style="min-width:0;">
+
+        <div
+          class="
+            sunugame-live-mini-profile-name
+          "
+          onclick="
+            ouvrirProfilPublicDepuisMiniLive(
+              ${id}
+            )
+          ">
+
+          ${echapperLiveSunugame(nom)}
+
+        </div>
+
+
+        <div
+          class="
+            sunugame-live-mini-profile-username
+          ">
+
+          @${echapperLiveSunugame(
+            username
+          )}
+
+        </div>
+
+      </div>
+
+    </div>
+
+
+    <div
+      class="
+        sunugame-live-mini-profile-stats
+      ">
+
+      ${Number(
+        user.followers_count || 0
+      ).toLocaleString("fr-FR")}
+      abonnés
+
+      &nbsp;|&nbsp;
+
+      ${Number(
+        user.following_count || 0
+      ).toLocaleString("fr-FR")}
+      suivis
+
+    </div>
+
+
+    <div
+      class="
+        sunugame-live-mini-profile-actions
+      ">
+
+      <button
+        type="button"
+        class="sunugame-live-reply-btn"
+        id="sunugameLiveReplyBtn">
+        @
+      </button>
+
+
+      <button
+        type="button"
+        class="
+          sunugame-live-follow-mini
+          ${followClass}
+        "
+        onclick="
+          basculerSuiviMiniProfilLive(
+            ${id}
+          )
+        ">
+
+        ${followLabel}
+
+      </button>
+
+    </div>
+  `;
+
+
+  document.body.appendChild(
+    backdrop
+  );
+
+  document.body.appendChild(
+    card
+  );
+
+
+  const replyBtn =
+    document.getElementById(
+      "sunugameLiveReplyBtn"
+    );
+
+  if(replyBtn){
+
+    replyBtn.onclick = ()=>{
+
+      preparerReponseCommentaireLive(
+        Number(
+          comment.id || 0
+        ),
+        id,
+        username
+      );
+    };
+  }
+}
+
+
+/* Depuis mini profil -> vrai profil public */
+async function ouvrirProfilPublicDepuisMiniLive(
+  userId
+){
+
+  const id =
+    Number(userId || 0);
+
+  if(!id){
+    return;
+  }
+
+  fermerMiniProfilLiveCommentaire();
+
+  annulerReponseCommentaireLive();
+
+  await quitterLiveSpectateur();
+
+  await ouvrirProfilPublic(id);
+}
+
+
+/*
+IMPORTANT :
+premier clic sur photo/nom =
+petit profil.
+
+On ne quitte plus directement le LIVE.
+*/
+async function ouvrirProfilCommentateurLiveSpectateur(
+  userId,
+  commentId
+){
+
+  ouvrirMiniProfilCommentateurLive(
+    userId,
+    commentId
+  );
+}
 
 </script>
 
