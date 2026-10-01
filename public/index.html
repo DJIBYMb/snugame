@@ -966,8 +966,8 @@ button:disabled{
    CONTACTS À DÉCOUVRIR — PROFIL (BLOC 28)
 ========================================================= */
 .profile-discover-box{
-  margin-top:6px;
-  padding-top:8px;
+  margin-top:0px;
+  padding-top:4px;
   border-top:1px solid rgba(255,255,255,.10);
 }
 .profile-discover-header{
@@ -27918,10 +27918,76 @@ async function ouvrirCommentaires(videoId){
         escapeHtml(c.comment);
 
       const photo =
+        c.profile_photo
+          ? escapeHtml(c.profile_photo)
+          : "";
+
+      const initiale =
         escapeHtml(
-          c.profile_photo ||
-          "/default-avatar.png"
+          (
+            c.name ||
+            c.username ||
+            "J"
+          )
+          .trim()
+          .charAt(0)
+          .toUpperCase() || "J"
         );
+
+      const avatarCommentaire =
+        photo
+          ? `
+            <img
+              src="${photo}"
+              alt="Photo de ${nom}"
+              loading="lazy"
+              onerror="
+                this.style.display='none';
+                this.nextElementSibling.style.display='flex';
+              "
+              style="
+                width:40px;
+                height:40px;
+                border-radius:50%;
+                object-fit:cover;
+                flex-shrink:0;
+              "
+            >
+            <div
+              style="
+                display:none;
+                width:40px;
+                height:40px;
+                border-radius:50%;
+                flex-shrink:0;
+                align-items:center;
+                justify-content:center;
+                background:#334155;
+                color:white;
+                font-size:17px;
+                font-weight:900;
+                text-transform:uppercase;
+              "
+            >${initiale}</div>
+          `
+          : `
+            <div
+              style="
+                display:flex;
+                width:40px;
+                height:40px;
+                border-radius:50%;
+                flex-shrink:0;
+                align-items:center;
+                justify-content:center;
+                background:#334155;
+                color:white;
+                font-size:17px;
+                font-weight:900;
+                text-transform:uppercase;
+              "
+            >${initiale}</div>
+          `;
 
       const utilisateurActuelId =
         Number(currentUserId);
@@ -27972,10 +28038,76 @@ async function ouvrirCommentaires(videoId){
             escapeHtml(reply.comment);
 
           const replyPhoto =
+            reply.profile_photo
+              ? escapeHtml(reply.profile_photo)
+              : "";
+
+          const replyInitiale =
             escapeHtml(
-              reply.profile_photo ||
-              "/default-avatar.png"
+              (
+                reply.name ||
+                reply.username ||
+                "J"
+              )
+              .trim()
+              .charAt(0)
+              .toUpperCase() || "J"
             );
+
+          const avatarReponse =
+            replyPhoto
+              ? `
+                <img
+                  src="${replyPhoto}"
+                  alt="Photo de ${replyName}"
+                  loading="lazy"
+                  onerror="
+                    this.style.display='none';
+                    this.nextElementSibling.style.display='flex';
+                  "
+                  style="
+                    width:32px;
+                    height:32px;
+                    border-radius:50%;
+                    object-fit:cover;
+                    flex-shrink:0;
+                  "
+                >
+                <div
+                  style="
+                    display:none;
+                    width:32px;
+                    height:32px;
+                    border-radius:50%;
+                    flex-shrink:0;
+                    align-items:center;
+                    justify-content:center;
+                    background:#334155;
+                    color:white;
+                    font-size:14px;
+                    font-weight:900;
+                    text-transform:uppercase;
+                  "
+                >${replyInitiale}</div>
+              `
+              : `
+                <div
+                  style="
+                    display:flex;
+                    width:32px;
+                    height:32px;
+                    border-radius:50%;
+                    flex-shrink:0;
+                    align-items:center;
+                    justify-content:center;
+                    background:#334155;
+                    color:white;
+                    font-size:14px;
+                    font-weight:900;
+                    text-transform:uppercase;
+                  "
+                >${replyInitiale}</div>
+              `;
 
           const replyOwner =
             Number.isInteger(utilisateurActuelId) &&
@@ -28011,26 +28143,20 @@ async function ouvrirCommentaires(videoId){
               "
             >
 
-              <img
-                src="${replyPhoto}"
-                alt="Photo de ${replyName}"
-                loading="lazy"
-                onerror="
-                  this.onerror=null;
-                  this.src='/default-avatar.png';
-                "
-                style="
-                  width:32px;
-                  height:32px;
-                  border-radius:50%;
-                  object-fit:cover;
-                  flex-shrink:0;
-                "
+              <div
+                onclick="ouvrirProfilPublic(${replyUserId})"
+                style="cursor:pointer;flex-shrink:0;"
+                aria-label="Ouvrir le profil de ${replyName}"
               >
+                ${avatarReponse}
+              </div>
 
               <div style="flex:1;min-width:0;">
 
-                <b style="font-size:14px;">
+                <b
+                  onclick="ouvrirProfilPublic(${replyUserId})"
+                  style="font-size:14px;cursor:pointer;"
+                >
                   ${replyName}
                 </b>
 
@@ -28127,26 +28253,20 @@ async function ouvrirCommentaires(videoId){
             "
           >
 
-            <img
-              src="${photo}"
-              alt="Photo de ${nom}"
-              loading="lazy"
-              onerror="
-                this.onerror=null;
-                this.src='/default-avatar.png';
-              "
-              style="
-                width:40px;
-                height:40px;
-                border-radius:50%;
-                object-fit:cover;
-                flex-shrink:0;
-              "
+            <div
+              onclick="ouvrirProfilPublic(${userId})"
+              style="cursor:pointer;flex-shrink:0;"
+              aria-label="Ouvrir le profil de ${nom}"
             >
+              ${avatarCommentaire}
+            </div>
 
             <div style="flex:1;min-width:0;">
 
-              <b>${nom}</b>
+              <b
+                onclick="ouvrirProfilPublic(${userId})"
+                style="cursor:pointer;"
+              >${nom}</b>
 
               <div
                 style="
