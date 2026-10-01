@@ -6630,7 +6630,10 @@ href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
   width:min(76%, 440px);
   max-height:212px;
 
-  overflow:hidden;
+  overflow-y:auto;
+overflow-x:hidden;
+overscroll-behavior:contain;
+-webkit-overflow-scrolling:touch;
 
   display:flex;
   flex-direction:column;
@@ -25930,21 +25933,38 @@ async function actualiserCommentairesLiveSpectateur(){
         ? data.comments
         : [];
 
-     window.commentairesLiveSpectateurCache =
+    /*
+      On garde tous les commentaires
+      reçus du backend.
+
+      Ils restent disponibles pour
+      pouvoir remonter avec le scroll.
+    */
+    window.commentairesLiveSpectateurCache =
       comments;
 
-    /*
-      Maximum 6 commentaires visibles.
-    */
-    const sixDerniers =
-      comments.slice(-6);
 
+    /*
+      Signature de TOUS les commentaires.
+
+      On ne travaille plus seulement
+      avec les 6 derniers.
+    */
     const signature =
-      sixDerniers
+      comments
         .map(comment=>
-          `${comment.id}:${comment.content}:${comment.is_pinned ? 1 : 0}`
+          `${
+            comment.id
+          }:${
+            comment.content
+          }:${
+            comment.is_pinned ? 1 : 0
+          }:${
+            comment.parent_id || 0
+          }`
         )
         .join("|");
+
 
     if(
       signature ===
@@ -25953,11 +25973,31 @@ async function actualiserCommentairesLiveSpectateur(){
       return;
     }
 
+
+    /*
+      Avant de reconstruire la liste,
+      on regarde si le spectateur était
+      déjà tout en bas.
+
+      S'il est remonté pour lire les
+      anciens commentaires, on ne doit
+      pas le renvoyer brutalement en bas.
+    */
+    const distanceDuBas =
+      zone.scrollHeight -
+      zone.scrollTop -
+      zone.clientHeight;
+
+    const etaitEnBas =
+      distanceDuBas < 45;
+
+
     signatureCommentairesLiveSpectateur =
       signature;
 
+
     zone.innerHTML =
-      sixDerniers
+      comments
         .map(comment=>{
 
           const user =
@@ -25969,102 +26009,134 @@ async function actualiserCommentairesLiveSpectateur(){
             "Joueur";
 
           const userId =
-  Number(comment.user_id || 0);
+            Number(
+              comment.user_id || 0
+            );
 
-const commentId =
-  Number(comment.id || 0);
+          const commentId =
+            Number(
+              comment.id || 0
+            );
 
-const username =
-  user.username ||
-  user.name ||
-  "joueur";
+          const username =
+            user.username ||
+            user.name ||
+            "joueur";
 
-  const reponse =
-  comment.reply_to
-    ? `
-      <span
-        style="
-          font-size:10px;
-          line-height:13px;
-          opacity:.75;
-          margin-bottom:1px;
-        "
-      >
-        ↳ @${echapperLiveSunugame(
-          comment.reply_to.username || ""
-        )}
-      </span>
-    `
-    : "";
+
+          const reponse =
+            comment.reply_to
+              ? `
+                <span
+                  style="
+                    font-size:10px;
+                    line-height:13px;
+                    opacity:.75;
+                    margin-bottom:1px;
+                  "
+                >
+                  ↳ @${
+                    echapperLiveSunugame(
+                      comment.reply_to
+                        .username || ""
+                    )
+                  }
+                </span>
+              `
+              : "";
+
 
           return `
+
             <div
               class="
                 sunugame-live-spectator-comment
                 sunugame-live-comment-item
               "
-              data-comment-id="${Number(comment.id || 0)}">
+              data-comment-id="${
+                Number(
+                  comment.id || 0
+                )
+              }"
+            >
 
               <div
-  onclick="
-    event.stopPropagation();
+                onclick="
+                  event.stopPropagation();
 
-    ouvrirProfilCommentateurLiveSpectateur(
-      ${userId},
-      ${commentId}
-    );
-  "
-  style="
-    cursor:pointer;
-    flex-shrink:0;
-  "
->
+                  ouvrirProfilCommentateurLiveSpectateur(
+                    ${userId},
+                    ${commentId}
+                  );
+                "
+                style="
+                  cursor:pointer;
+                  flex-shrink:0;
+                "
+              >
 
-  ${avatarProfilLiveHtml(
-    user,
-    "sunugame-live-comment-photo",
-    "sunugame-live-comment-avatar-initial"
-  )}
+                ${
+                  avatarProfilLiveHtml(
+                    user,
+                    "sunugame-live-comment-photo",
+                    "sunugame-live-comment-avatar-initial"
+                  )
+                }
 
-</div>
+              </div>
+
 
               <div
                 style="
                   min-width:0;
                   display:flex;
                   flex-direction:column;
-                ">
+                "
+              >
 
                 ${reponse}
 
+
                 <b
                   onclick="
-                  event.stopPropagation();
-                  ouvrirProfilCommentateurLiveSpectateur(
-                   ${userId},
-                  ${commentId}
-                );
-                "
-                style="
-                font-size:12px;
-                line-height:15px;
-                cursor:pointer;
-                ">
-               ${
-                 comment.is_pinned
-                 ? "📌 "
-                : ""
-                }${echapperLiveSunugame(nom)}
-              </b>
+                    event.stopPropagation();
+
+                    ouvrirProfilCommentateurLiveSpectateur(
+                      ${userId},
+                      ${commentId}
+                    );
+                  "
+                  style="
+                    font-size:12px;
+                    line-height:15px;
+                    cursor:pointer;
+                  "
+                >
+
+                  ${
+                    comment.is_pinned
+                      ? "📌 "
+                      : ""
+                  }${
+                    echapperLiveSunugame(
+                      nom
+                    )
+                  }
+
+                </b>
+
 
                 <span
                   style="
                     font-size:12px;
                     line-height:16px;
-                  ">
-                  ${echapperLiveSunugame(
-                    comment.content || ""
-                  )}
+                  "
+                >
+                  ${
+                    echapperLiveSunugame(
+                      comment.content || ""
+                    )
+                  }
                 </span>
 
               </div>
@@ -26075,42 +26147,21 @@ const username =
         })
         .join("");
 
-    zone.scrollTop =
-      zone.scrollHeight;
 
-    zone
-      .querySelectorAll(
-        ".sunugame-live-comment-item"
-      )
-      .forEach(element=>{
+    /*
+      Si le spectateur regardait déjà
+      les nouveaux commentaires,
+      on reste automatiquement en bas.
 
-        setTimeout(
-          ()=>{
+      Mais s'il était remonté dans
+      l'historique, on ne force pas
+      le scroll vers le bas.
+    */
+    if(etaitEnBas){
 
-            if(!element.isConnected){
-              return;
-            }
-
-            element.classList.add(
-              "sunugame-live-comment-disappear"
-            );
-
-            setTimeout(
-              ()=>{
-
-                if(element.isConnected){
-                  element.remove();
-                }
-
-              },
-              350
-            );
-
-          },
-          11000
-        );
-
-      });
+      zone.scrollTop =
+        zone.scrollHeight;
+    }
 
   }catch(error){
 
@@ -26121,7 +26172,6 @@ const username =
 
   }
 }
-
 
 async function envoyerCommentaireLiveSpectateur(){
 
