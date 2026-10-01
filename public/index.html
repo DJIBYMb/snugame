@@ -966,8 +966,8 @@ button:disabled{
    CONTACTS À DÉCOUVRIR — PROFIL (BLOC 28)
 ========================================================= */
 .profile-discover-box{
-  margin-top:18px;
-  padding-top:14px;
+  margin-top:6px;
+  padding-top:8px;
   border-top:1px solid rgba(255,255,255,.10);
 }
 .profile-discover-header{
@@ -7542,7 +7542,7 @@ onchange="uploadPhotoProfil()">
   <div
   style="
   width:100%;
-  min-height:100vh;
+  min-height:0;
   background:#0f172a;
   ">
 
@@ -16167,9 +16167,11 @@ function afficherEtatVideContactsProfil(){
   const liste = document.getElementById("profileDiscoverList");
   const btn = document.getElementById("profileDiscoverSeeAll");
   if(!box || !liste) return;
-  box.classList.remove("hidden");
+
+  liste.innerHTML = "";
   liste.classList.remove("vertical");
-  liste.innerHTML = `<p class="small" style="margin:4px 2px 8px;">Aucun contact à découvrir pour le moment.</p>`;
+  box.classList.add("hidden");
+
   if(btn) btn.classList.add("hidden");
 }
 
