@@ -30884,7 +30884,9 @@ function activerTapLikeLiveSpectateur(){
     return;
   }
 
-  if(zone.dataset.likeTapActive === "oui"){
+  if(
+    zone.dataset.likeTapActive === "oui"
+  ){
     return;
   }
 
@@ -30897,15 +30899,53 @@ function activerTapLikeLiveSpectateur(){
       const cible =
         event.target;
 
+      /*
+      IMPORTANT :
+      ces éléments sont interactifs.
+
+      Un clic dessus ne doit PAS
+      devenir un tap/like du LIVE.
+      */
       if(
         cible.closest("button") ||
         cible.closest("input") ||
-        cible.closest(".sunugame-live-spectator-bottom") ||
-        cible.closest(".sunugame-live-spectator-header")
+
+        cible.closest(
+          ".sunugame-live-spectator-bottom"
+        ) ||
+
+        cible.closest(
+          ".sunugame-live-spectator-header"
+        ) ||
+
+        cible.closest(
+          ".sunugame-live-spectator-comment"
+        ) ||
+
+        cible.closest(
+          ".sunugame-live-comment-item"
+        ) ||
+
+        cible.closest(
+          ".sunugame-live-comment-photo"
+        ) ||
+
+        cible.closest(
+          ".sunugame-live-comment-avatar-initial"
+        ) ||
+
+        cible.closest(
+          ".sunugame-live-mini-profile"
+        )
       ){
         return;
       }
 
+
+      /*
+      Seulement un vrai clic sur
+      la zone du LIVE produit ❤️.
+      */
       afficherCoeurTapLiveSpectateur(
         event
       );
@@ -30915,7 +30955,6 @@ function activerTapLikeLiveSpectateur(){
     }
   );
 }
-
 
 function afficherCoeurTapLiveSpectateur(
   event
