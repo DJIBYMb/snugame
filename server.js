@@ -2116,9 +2116,84 @@ app.get("/watch/live/:id", async (req,res)=>{
       );
     }
 
-    return res.redirect(
-      "/app?live=" + liveId
-    );
+    /*
+      Si Android n'a pas ouvert directement SunuGame,
+      cette page sert de secours.
+
+      Elle tente d'ouvrir l'application avec
+      le lien personnalisé snugame://live/ID.
+
+      Si l'application n'est pas installée,
+      elle ouvre ensuite Google Play.
+    */
+
+    const playStore =
+      "https://play.google.com/store/apps/details?id=com.snugame.app";
+
+    const appLink =
+      "snugame://live/" + liveId;
+
+    return res
+      .status(200)
+      .type("html")
+      .send(`
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  >
+
+  <title>Ouverture de SunuGame</title>
+</head>
+
+<body>
+
+<script>
+
+  const appLink =
+    ${JSON.stringify(appLink)};
+
+  const playStore =
+    ${JSON.stringify(playStore)};
+
+  let applicationOuverte = false;
+
+  document.addEventListener(
+    "visibilitychange",
+    function(){
+
+      if(document.hidden){
+        applicationOuverte = true;
+      }
+
+    }
+  );
+
+  window.location.href = appLink;
+
+  setTimeout(function(){
+
+    if(!applicationOuverte){
+
+      window.location.href = playStore;
+
+    }
+
+  }, 1800);
+
+</script>
+
+<p>
+  Ouverture de SunuGame...
+</p>
+
+</body>
+</html>
+      `);
 
   }catch(error){
 
@@ -2133,7 +2208,6 @@ app.get("/watch/live/:id", async (req,res)=>{
   }
 
 });
-
 app.post(
   "/send-code",
   emailCodeLimiter,
