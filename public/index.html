@@ -13392,7 +13392,6 @@ async function retourProfilPublic(){
     return;
   }
 
-
   /*
     Navigation normale lorsque
     le profil public ne vient pas d'un LIVE.
@@ -32070,51 +32069,67 @@ async function ouvrirProfilPublicDepuisMiniLive(
     return;
   }
 
-  /*
-    On mémorise le LIVE actuel
-    avant d'aller sur le profil public.
-  */
+
   const liveId =
     Number(
       window.liveSpectateurActuel
         ?.id || 0
     );
 
-  if(liveId){
-
-    window.retourProfilPublicVersLive = {
-      liveId: liveId
-    };
-
-  }else{
-
-    window.retourProfilPublicVersLive =
-      null;
+  if(!liveId){
+    return;
   }
 
 
-  fermerMiniProfilLiveCommentaire();
+  /*
+    On garde le LIVE d'origine.
+  */
+  window.retourProfilPublicVersLive = {
+    liveId: liveId
+  };
 
+
+  fermerMiniProfilLiveCommentaire();
   annulerReponseCommentaireLive();
 
 
   /*
-    On quitte l'affichage spectateur,
-    mais on a gardé l'identifiant du LIVE
-    pour pouvoir y revenir.
+    IMPORTANT :
+    on ne lance PAS quitterLiveSpectateur()
+    car cette fonction renvoie vers Vidéos
+    et détruit l'état du LIVE.
   */
-  await quitterLiveSpectateur();
+
+  arreterTimersLiveSpectateur();
+
+  signatureCommentairesLiveSpectateur =
+    "";
+
+  await deconnecterLiveKitSpectateur();
+
+  window.liveSpectateurActuel =
+    null;
+
+  document.body.classList.remove(
+    "live-spectator-mode"
+  );
 
 
   /*
-    Ouvre normalement le profil public.
+    On ouvre directement le profil public.
+    skipHistory est important :
+    le LIVE ne doit pas être remplacé
+    dans l'historique par une fausse
+    origine Vidéos.
   */
   await ouvrirProfilPublic(
-    id
+    id,
+    {
+      skipHistory:true
+    }
   );
 
 }
-
 /*
 IMPORTANT :
 premier clic sur photo/nom =
