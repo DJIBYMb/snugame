@@ -25930,6 +25930,9 @@ async function actualiserCommentairesLiveSpectateur(){
         ? data.comments
         : [];
 
+     window.commentairesLiveSpectateurCache =
+      comments;
+
     /*
       Maximum 6 commentaires visibles.
     */
