@@ -13343,9 +13343,62 @@ async function retourDepuisVideoPublique(){
 async function retourProfilPublic(){
 
   stopAllVideos();
-  document.body.classList.remove("video-mode");
-  panelHighlights.classList.add("hidden");
+
+  document.body.classList.remove(
+    "video-mode"
+  );
+
+  panelHighlights?.classList.add(
+    "hidden"
+  );
+
+
+  /*
+    CAS SPÉCIAL :
+    le profil public a été ouvert
+    depuis le petit profil d'un
+    commentaire pendant un LIVE.
+  */
+  const retourLive =
+    window.retourProfilPublicVersLive;
+
+  const liveId =
+    Number(
+      retourLive?.liveId || 0
+    );
+
+
+  if(liveId){
+
+    /*
+      Très important :
+      on efface l'information AVANT
+      de rouvrir le LIVE.
+
+      Sinon un futur profil public
+      pourrait revenir vers cet ancien LIVE.
+    */
+    window.retourProfilPublicVersLive =
+      null;
+
+
+    /*
+      On rouvre le LIVE d'origine.
+    */
+    await ouvrirLiveSpectateur(
+      liveId
+    );
+
+    return;
+  }
+
+
+  /*
+    Navigation normale lorsque
+    le profil public ne vient pas d'un LIVE.
+  */
   await retourPage();
+
   mettreAJourVisibiliteBoutonVideoPlus();
 
 }
@@ -32004,8 +32057,8 @@ function ouvrirMiniProfilCommentateurLive(
   }
 }
 
-
 /* Depuis mini profil -> vrai profil public */
+
 async function ouvrirProfilPublicDepuisMiniLive(
   userId
 ){
@@ -32017,15 +32070,50 @@ async function ouvrirProfilPublicDepuisMiniLive(
     return;
   }
 
+  /*
+    On mémorise le LIVE actuel
+    avant d'aller sur le profil public.
+  */
+  const liveId =
+    Number(
+      window.liveSpectateurActuel
+        ?.id || 0
+    );
+
+  if(liveId){
+
+    window.retourProfilPublicVersLive = {
+      liveId: liveId
+    };
+
+  }else{
+
+    window.retourProfilPublicVersLive =
+      null;
+  }
+
+
   fermerMiniProfilLiveCommentaire();
 
   annulerReponseCommentaireLive();
 
+
+  /*
+    On quitte l'affichage spectateur,
+    mais on a gardé l'identifiant du LIVE
+    pour pouvoir y revenir.
+  */
   await quitterLiveSpectateur();
 
-  await ouvrirProfilPublic(id);
-}
 
+  /*
+    Ouvre normalement le profil public.
+  */
+  await ouvrirProfilPublic(
+    id
+  );
+
+}
 
 /*
 IMPORTANT :
