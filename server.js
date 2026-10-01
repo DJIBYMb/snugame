@@ -19943,19 +19943,48 @@ app.get(
       const rows = await all(
         `
         SELECT
-          c.id,
-          c.live_id,
-          c.user_id,
-          c.parent_id,
-          c.content,
-          c.is_pinned,
-          c.created_at,
-          u.name,
-          u.username,
-          u.profile_photo,
-          pc.content AS parent_content,
-          pu.username AS parent_username
-        FROM live_comments c
+  c.id,
+  c.live_id,
+  c.user_id,
+  c.parent_id,
+  c.content,
+  c.is_pinned,
+  c.created_at,
+
+  u.name,
+  u.username,
+  u.profile_photo,
+
+  (
+    SELECT COUNT(*)
+    FROM follows f1
+    WHERE f1.following_participant_id = c.user_id
+  ) AS followers_count,
+
+  (
+    SELECT COUNT(*)
+    FROM follows f2
+    WHERE f2.follower_id = c.user_id
+  ) AS following_count,
+
+  (
+    SELECT COUNT(*)
+    FROM follows f3
+    WHERE f3.follower_id = ?
+      AND f3.following_participant_id = c.user_id
+  ) AS is_following,
+
+  (
+    SELECT COUNT(*)
+    FROM follows f4
+    WHERE f4.follower_id = c.user_id
+      AND f4.following_participant_id = ?
+  ) AS follows_me,
+
+  pc.content AS parent_content,
+  pu.username AS parent_username
+
+FROM live_comments c
         JOIN users u
           ON u.id=c.user_id
         LEFT JOIN live_comments pc
@@ -19969,8 +19998,12 @@ app.get(
           c.id DESC
         LIMIT 100
         `,
-        [liveId]
-      );
+      [
+        me,
+        me,
+       liveId
+     ]
+     );
 
       let mutedUntil = null;
 
@@ -20016,13 +20049,25 @@ app.get(
                 Number(row.is_pinned) === 1,
               created_at:
                 row.created_at || null,
-              user:{
-                name:row.name || "",
-                username:row.username || "",
-                profile_photo:
-                  row.profile_photo || null
-              },
-              reply_to:
+user:{
+  name:row.name || "",
+  username:row.username || "",
+  profile_photo:
+    row.profile_photo || null,
+
+  followers_count:
+    Number(row.followers_count || 0),
+
+  following_count:
+    Number(row.following_count || 0),
+
+  is_following:
+    Number(row.is_following || 0) > 0,
+
+  follows_me:
+    Number(row.follows_me || 0) > 0
+},
+                reply_to:
                 row.parent_id
                   ? {
                       username:
@@ -20182,6 +20227,69 @@ app.post(
           content
         ]
       );
+
+      /*
+Notification lorsqu'un utilisateur
+répond à un commentaire pendant un LIVE.
+*/
+if(parentId){
+
+  const commentaireParent =
+    await get(
+      `
+      SELECT
+        c.user_id,
+        u.name,
+        u.username
+      FROM live_comments c
+      JOIN users u
+        ON u.id=c.user_id
+      WHERE c.id=?
+        AND c.live_id=?
+        AND c.deleted_at IS NULL
+      LIMIT 1
+      `,
+      [
+        parentId,
+        liveId
+      ]
+    );
+
+  /*
+  Ne pas envoyer une notification
+  si l'utilisateur répond à son propre commentaire.
+  */
+  if(
+    commentaireParent &&
+    Number(commentaireParent.user_id) !== me
+  ){
+
+    const auteurReponse =
+      await get(
+        `
+        SELECT
+          name,
+          username
+        FROM users
+        WHERE id=?
+        LIMIT 1
+        `,
+        [me]
+      );
+
+    const nomAuteur =
+      auteurReponse?.username ||
+      auteurReponse?.name ||
+      "Un joueur";
+
+    await notifierUtilisateur(
+      Number(commentaireParent.user_id),
+      "💬 Nouvelle réponse",
+      `${nomAuteur} a répondu à ton commentaire`,
+      `live:${liveId}`
+    );
+  }
+}
 
       return res.status(201).json({
         ok:true,
