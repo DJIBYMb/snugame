@@ -30901,14 +30901,22 @@ function activerTapLikeLiveSpectateur(){
 
       /*
       IMPORTANT :
-      ces éléments sont interactifs.
+      toutes ces zones sont interactives.
 
-      Un clic dessus ne doit PAS
-      devenir un tap/like du LIVE.
+      Si on clique dessus,
+      ça ne doit PAS produire un ❤️.
       */
       if(
         cible.closest("button") ||
         cible.closest("input") ||
+
+        /*
+        Toute la zone des commentaires.
+        Photo, initiale, nom, texte...
+        */
+        cible.closest(
+          "#liveSpectatorComments"
+        ) ||
 
         cible.closest(
           ".sunugame-live-spectator-bottom"
@@ -30943,8 +30951,11 @@ function activerTapLikeLiveSpectateur(){
 
 
       /*
-      Seulement un vrai clic sur
-      la zone du LIVE produit ❤️.
+      Ici seulement :
+      clic sur une vraie zone du LIVE.
+
+      On affiche le ❤️
+      et on ajoute le tap/like.
       */
       afficherCoeurTapLiveSpectateur(
         event
