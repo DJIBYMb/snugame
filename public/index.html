@@ -966,7 +966,7 @@ button:disabled{
    CONTACTS À DÉCOUVRIR — PROFIL (BLOC 28)
 ========================================================= */
 .profile-discover-box{
-  margin-top:0px;
+  margin-top:0;
   padding-top:4px;
   border-top:1px solid rgba(255,255,255,.10);
 }
@@ -31020,6 +31020,168 @@ async function ouvrirProfilCreateurLiveSpectateur(){
     userId
   );
 }
+
+/* =========================================================
+   SUNUGAME — AUTH STABLE
+   Connexion / création de compte / mot de passe oublié
+
+   Objectif :
+   - ce que l'utilisateur tape ne disparaît pas à cause
+     d'un resize clavier, visualViewport ou reconstruction UI ;
+   - aucun champ n'est vidé avant une validation réussie ;
+   - les mots de passe restent uniquement en mémoire JS
+     (pas de localStorage/sessionStorage).
+========================================================= */
+
+const sunuGameAuthDraft = new Map();
+
+const sunuGameAuthFieldIds = new Set([
+  "loginEmail",
+  "loginPassword",
+  "registerName",
+  "registerEmail",
+  "registerPassword",
+  "registerCode",
+  "forgotEmail",
+  "forgotCode",
+  "newPassword"
+]);
+
+function sauvegarderBrouillonAuth(input){
+  if(
+    !input ||
+    !sunuGameAuthFieldIds.has(input.id)
+  ){
+    return;
+  }
+
+  sunuGameAuthDraft.set(
+    input.id,
+    input.value
+  );
+}
+
+function restaurerBrouillonAuth(){
+  sunuGameAuthFieldIds.forEach(id=>{
+    const input = document.getElementById(id);
+
+    if(
+      !input ||
+      !sunuGameAuthDraft.has(id)
+    ){
+      return;
+    }
+
+    const valeur =
+      sunuGameAuthDraft.get(id);
+
+    /*
+      Ne remplace que si le champ a été vidé/recréé.
+      Une saisie actuellement présente reste prioritaire.
+    */
+    if(
+      input.value === "" &&
+      valeur !== ""
+    ){
+      input.value = valeur;
+    }
+  });
+}
+
+/*
+Capture au niveau document :
+même si un bloc du formulaire est reconstruit,
+les nouveaux champs sont automatiquement pris en charge.
+*/
+document.addEventListener(
+  "input",
+  event=>{
+    const input = event.target;
+
+    if(
+      input instanceof HTMLInputElement &&
+      sunuGameAuthFieldIds.has(input.id)
+    ){
+      sauvegarderBrouillonAuth(input);
+    }
+  },
+  true
+);
+
+document.addEventListener(
+  "change",
+  event=>{
+    const input = event.target;
+
+    if(
+      input instanceof HTMLInputElement &&
+      sunuGameAuthFieldIds.has(input.id)
+    ){
+      sauvegarderBrouillonAuth(input);
+    }
+  },
+  true
+);
+
+/*
+Le clavier Android/WebView peut provoquer plusieurs resize.
+On restaure seulement les valeurs ; on ne reconstruit
+jamais le formulaire et on ne change pas de page.
+*/
+window.addEventListener(
+  "resize",
+  ()=>{
+    requestAnimationFrame(
+      restaurerBrouillonAuth
+    );
+  }
+);
+
+window.visualViewport?.addEventListener(
+  "resize",
+  ()=>{
+    requestAnimationFrame(
+      restaurerBrouillonAuth
+    );
+  }
+);
+
+/*
+Si un ancien code remplace une partie du DOM pendant
+la saisie, on remet immédiatement les valeurs mémorisées.
+*/
+const sunuGameAuthObserver =
+  new MutationObserver(()=>{
+    restaurerBrouillonAuth();
+  });
+
+sunuGameAuthObserver.observe(
+  document.documentElement,
+  {
+    childList:true,
+    subtree:true
+  }
+);
+
+/*
+Quand l'utilisateur revient dans un champ, sa valeur
+reste celle qu'il avait déjà saisie.
+*/
+document.addEventListener(
+  "focusin",
+  event=>{
+    const input = event.target;
+
+    if(
+      input instanceof HTMLInputElement &&
+      sunuGameAuthFieldIds.has(input.id)
+    ){
+      restaurerBrouillonAuth();
+    }
+  },
+  true
+);
+
 
 </script>
 
