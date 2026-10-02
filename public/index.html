@@ -19170,6 +19170,327 @@ async function publierHighlight(){
   }
 }
 
+window.liveFeedPreviewRooms =
+  window.liveFeedPreviewRooms || new Map();
+
+
+function attacherPisteLiveFeed(
+  liveId,
+  track
+){
+
+  const zone =
+    document.getElementById(
+      `liveFeedPreview-${liveId}`
+    );
+
+  if(
+    !zone ||
+    !track
+  ){
+    return;
+  }
+
+  const element =
+    track.attach();
+
+  /*
+    Dans le fil Vidéos,
+    on veut seulement l'image du LIVE.
+    Aucun son avant d'entrer dans le LIVE.
+  */
+  if(
+    element instanceof HTMLVideoElement
+  ){
+
+    element.autoplay = true;
+    element.playsInline = true;
+    element.controls = false;
+    element.muted = true;
+
+    element.setAttribute(
+      "playsinline",
+      ""
+    );
+
+    element.setAttribute(
+      "webkit-playsinline",
+      ""
+    );
+
+    element.classList.add(
+      "sunugame-live-feed-video"
+    );
+
+    /*
+      Dès que le vrai écran arrive,
+      on cache la photo utilisée
+      comme attente.
+    */
+    const avatar =
+      zone.querySelector(
+        ".sunugame-live-feed-avatar"
+      );
+
+    if(avatar){
+      avatar.style.display = "none";
+    }
+
+    zone
+      .querySelectorAll("video")
+      .forEach(oldVideo=>{
+
+        if(
+          oldVideo !== element
+        ){
+          oldVideo.remove();
+        }
+
+      });
+
+    zone.appendChild(
+      element
+    );
+
+    element
+      .play()
+      .catch(()=>{});
+  }
+
+}
+
+async function connecterApercuLiveFeed(
+  liveIdValue
+){
+
+  const liveId =
+    Number(liveIdValue);
+
+  if(
+    !Number.isInteger(liveId) ||
+    liveId <= 0
+  ){
+    return;
+  }
+
+
+  /*
+    Ne pas ouvrir deux connexions
+    pour le même LIVE.
+  */
+  if(
+    window.liveFeedPreviewRooms.has(
+      liveId
+    )
+  ){
+    return;
+  }
+
+
+  if(
+    typeof LivekitClient ===
+    "undefined"
+  ){
+    return;
+  }
+
+
+  const zone =
+    document.getElementById(
+      `liveFeedPreview-${liveId}`
+    );
+
+  if(!zone){
+    return;
+  }
+
+
+  try{
+
+    /*
+      On récupère le même token spectateur
+      que celui utilisé quand on entre
+      réellement dans le LIVE.
+    */
+    const response =
+      await fetch(
+        `/live/${liveId}/viewer-token`,
+        {
+          method:"POST",
+          credentials:"include",
+          headers:{
+            "Content-Type":
+              "application/json",
+
+            "x-language":
+              localStorage.getItem(
+                "lang"
+              ) || "fr"
+          },
+          body:"{}"
+        }
+      );
+
+
+    const data =
+      await response.json();
+
+
+    const url =
+      data?.url ||
+      data?.server_url ||
+      "";
+
+
+    const token =
+      data?.token ||
+      data?.participant_token ||
+      "";
+
+
+    if(
+      !response.ok ||
+      !data?.ok ||
+      !url ||
+      !token
+    ){
+      return;
+    }
+
+
+    const room =
+      new LivekitClient.Room({
+        adaptiveStream:true
+      });
+
+
+    /*
+      On garde la room séparément
+      de la vraie page spectateur.
+    */
+    window.liveFeedPreviewRooms.set(
+      liveId,
+      room
+    );
+
+
+    room.on(
+      LivekitClient.RoomEvent
+        .TrackSubscribed,
+
+      (
+        track,
+        publication,
+        participant
+      )=>{
+
+        /*
+          On ne met dans la carte
+          que la VIDEO.
+
+          Le son reste coupé.
+        */
+        if(
+          track.kind === "video"
+        ){
+          attacherPisteLiveFeed(
+            liveId,
+            track
+          );
+        }
+
+      }
+    );
+
+
+    room.on(
+      LivekitClient.RoomEvent
+        .TrackUnsubscribed,
+
+      track=>{
+
+        try{
+
+          track
+            .detach()
+            .forEach(element=>{
+              element.remove();
+            });
+
+        }catch(error){
+        }
+
+      }
+    );
+
+
+    await room.connect(
+      String(url),
+      String(token)
+    );
+
+
+    /*
+      La piste peut déjà être disponible
+      au moment de la connexion.
+    */
+    room.remoteParticipants
+      .forEach(participant=>{
+
+        participant
+          .trackPublications
+          .forEach(publication=>{
+
+            const track =
+              publication.track;
+
+            if(
+              track &&
+              track.kind === "video"
+            ){
+
+              attacherPisteLiveFeed(
+                liveId,
+                track
+              );
+
+            }
+
+          });
+
+      });
+
+
+  }catch(error){
+
+    console.warn(
+      "Aperçu LIVE impossible :",
+      liveId,
+      error
+    );
+
+    const room =
+      window.liveFeedPreviewRooms.get(
+        liveId
+      );
+
+    if(room){
+
+      try{
+        await room.disconnect();
+      }catch(_){
+      }
+
+    }
+
+    window.liveFeedPreviewRooms.delete(
+      liveId
+    );
+
+  }
+
+}
+
 async function chargerHighlights(){
 
   /*
@@ -19438,18 +19759,22 @@ async function chargerHighlights(){
           class="tiktok-video sunugame-live-feed-card"
           data-live-feed-id="${Number(live.id)}">
 
-          <div class="sunugame-live-feed-preview">
+          <div
+  class="sunugame-live-feed-preview"
+  id="liveFeedPreview-${Number(live.id)}"
+  data-live-preview-id="${Number(live.id)}"
+>
 
-            <img
-              class="sunugame-live-feed-avatar"
-              src="${echapperLiveSunugame(avatar)}"
-              alt="LIVE @${echapperLiveSunugame(username)}"
-              onerror="
-                this.onerror=null;
-                this.src='/default-avatar.png';
-              ">
+  <img
+    class="sunugame-live-feed-avatar"
+    src="${echapperLiveSunugame(avatar)}"
+    alt="LIVE @${echapperLiveSunugame(username)}"
+    onerror="
+      this.onerror=null;
+      this.src='/default-avatar.png';
+    ">
 
-          </div>
+</div>
 
           <div class="sunugame-live-feed-top">
 
@@ -19539,11 +19864,38 @@ async function chargerHighlights(){
   }
 
   highlightsList.innerHTML =
-    feed.join("");
+  feed.join("");
 
-  initialiserBarresProgressionVideos();
 
-  prepareFirstPanelVideo();
+/*
+  Démarre l'aperçu de l'écran partagé
+  pour chaque carte LIVE du fil.
+*/
+document
+  .querySelectorAll(
+    "#panelHighlights [data-live-preview-id]"
+  )
+  .forEach(zone=>{
+
+    const liveId =
+      Number(
+        zone.dataset.livePreviewId
+      );
+
+    if(liveId){
+
+      connecterApercuLiveFeed(
+        liveId
+      );
+
+    }
+
+  });
+
+
+initialiserBarresProgressionVideos();
+
+prepareFirstPanelVideo();
 
   document
     .querySelectorAll(
