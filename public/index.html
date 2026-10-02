@@ -19928,6 +19928,103 @@ prepareFirstPanelVideo();
       initTikTokAutoplay();
     },800);
   }
+
+  /*
+  Cache le bouton + uniquement
+  lorsque la carte LIVE est visible.
+*/
+const liveCards =
+  document.querySelectorAll(
+    "#panelHighlights .sunugame-live-feed-card"
+  );
+
+const boutonPlus =
+  document.getElementById(
+    "videoPlusBtn"
+  );
+
+if(
+  liveCards.length &&
+  boutonPlus
+){
+
+  const observerLivePlus =
+    new IntersectionObserver(
+      entries=>{
+
+        entries.forEach(entry=>{
+
+          if(
+            entry.isIntersecting &&
+            entry.intersectionRatio >= 0.60
+          ){
+
+            boutonPlus.style.display =
+              "none";
+
+          }else if(
+            entry.intersectionRatio < 0.60
+          ){
+
+            /*
+              On vérifie qu'aucun autre LIVE
+              n'est actuellement visible.
+            */
+            const liveVisible =
+              Array.from(liveCards)
+                .some(card=>{
+
+                  const rect =
+                    card.getBoundingClientRect();
+
+                  const hauteurVisible =
+                    Math.min(
+                      rect.bottom,
+                      window.innerHeight
+                    ) -
+                    Math.max(
+                      rect.top,
+                      0
+                    );
+
+                  return (
+                    hauteurVisible >
+                    rect.height * 0.60
+                  );
+
+                });
+
+            if(!liveVisible){
+
+              boutonPlus.style.display =
+                "";
+
+            }
+
+          }
+
+        });
+
+      },
+      {
+        threshold:[
+          0,
+          0.60,
+          1
+        ]
+      }
+    );
+
+
+  liveCards.forEach(card=>{
+
+    observerLivePlus.observe(
+      card
+    );
+
+  });
+
+}
 }
 
 
