@@ -7166,6 +7166,53 @@ section:not(.hidden){
   box-shadow:none !important;
 }
 
+/* Onglets vidéos du profil : icônes uniquement */
+.profile-video-tabs{
+  display:grid;
+  grid-template-columns:1fr 1fr 1fr;
+  align-items:center;
+  width:100%;
+  margin:15px 0 6px;
+}
+
+.profile-video-tabs .profile-tab-icon:first-child{
+  grid-column:1;
+  justify-self:center;
+}
+
+.profile-video-tabs .profile-tab-icon:last-child{
+  grid-column:2;
+  justify-self:center;
+}
+.profile-video-tabs .profile-tab-icon{
+  flex:0 0 auto !important;
+  width:44px !important;
+  height:44px !important;
+  min-width:44px !important;
+
+  margin:0 !important;
+  padding:0 !important;
+
+  display:flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+
+  background:transparent !important;
+  border:none !important;
+  border-radius:0 !important;
+  box-shadow:none !important;
+
+  color:white !important;
+  font-size:23px !important;
+}
+
+.profile-video-tabs .profile-tab-icon.active-tab{
+  background:transparent !important;
+  border:none !important;
+  box-shadow:none !important;
+  color:white !important;
+}
+
 </style>
 </head>
 
@@ -16663,13 +16710,19 @@ const profileVideos =
 document.getElementById("profileVideoTabs").innerHTML = `
   <div class="profile-video-tabs">
 
-    <button class="active-tab">
-      Mes vidéos
+    <button
+      class="profile-tab-icon active-tab"
+      aria-label="Mes vidéos"
+      title="Mes vidéos">
+      <i class="fa-solid fa-table-cells"></i>
     </button>
 
-    <button onclick="chargerMesFavoris()">
+    <button
+      class="profile-tab-icon"
+      onclick="chargerMesFavoris()"
+      aria-label="Favoris"
+      title="Favoris">
       <i class="fa-regular fa-bookmark"></i>
-      Favoris
     </button>
 
   </div>
@@ -16865,16 +16918,22 @@ async function chargerMesRecompenses(){
 
 async function chargerMesFavoris(){
 
-  document.getElementById("profileVideoTabs").innerHTML = `
+document.getElementById("profileVideoTabs").innerHTML = `
   <div class="profile-video-tabs">
 
-    <button onclick="ouvrirProfilCompte()">
-      Mes vidéos
+    <button
+      class="profile-tab-icon"
+      onclick="ouvrirProfilCompte()"
+      aria-label="Mes vidéos"
+      title="Mes vidéos">
+      <i class="fa-solid fa-table-cells"></i>
     </button>
 
-    <button class="active-tab">
+    <button
+      class="profile-tab-icon active-tab"
+      aria-label="Favoris"
+      title="Favoris">
       <i class="fa-solid fa-bookmark"></i>
-      Favoris
     </button>
 
   </div>
