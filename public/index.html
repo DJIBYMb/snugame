@@ -15395,10 +15395,9 @@ onclick="
   @${data.username || ""}
 </div>
 
-          <div class="tiktok-title collapsed">
-            ${video.titre || ""}
-          </div>
-
+      <div class="tiktok-title collapsed">
+      ${descriptionVideo18Mots(h.titre || "")}
+      </div>
           ${
             String(video.titre || "").length > 70
               ? `
@@ -19661,7 +19660,11 @@ async function chargerHighlights(){
           </div>
 
           ${
-            String(h.titre || "").length > 70
+            String(h.titre || "")
+             .trim()
+              .split(/\s+/)
+             .filter(Boolean)
+              .length > 18
               ? `
                 <button
                   type="button"
@@ -31219,6 +31222,23 @@ function hideVideoCover(video){
   });
 
 }
+function descriptionVideo18Mots(texte){
+
+  const mots =
+    String(texte || "")
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean);
+
+  if(mots.length <= 18){
+    return texte || "";
+  }
+
+  return mots
+    .slice(0, 18)
+    .join(" ") + "...";
+}
+
 function toggleDescriptionVideo(button){
 
   const bloc =
