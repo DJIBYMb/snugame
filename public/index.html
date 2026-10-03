@@ -23944,24 +23944,29 @@ async function ouvrirModeVideos(options = {}){
       "important"
     );
 
-    videoTabs.style.setProperty(
-      "left",
-      "50%",
-      "important"
-    );
+videoTabs.style.setProperty(
+  "left",
+  "18px",
+  "important"
+);
 
-    videoTabs.style.setProperty(
-      "bottom",
-      "90px",
-      "important"
-    );
+videoTabs.style.setProperty(
+  "right",
+  "auto",
+  "important"
+);
 
-    videoTabs.style.setProperty(
-      "transform",
-      "translateX(-50%)",
-      "important"
-    );
+videoTabs.style.setProperty(
+  "bottom",
+  "950px",
+  "important"
+);
 
+videoTabs.style.setProperty(
+  "transform",
+  "none",
+  "important"
+);
     videoTabs.style.setProperty(
       "z-index",
       "2147483647",
@@ -23976,32 +23981,46 @@ async function ouvrirModeVideos(options = {}){
 
   }
 
-  if(btnAddVideo){
+if(btnAddVideo){
 
-    btnAddVideo.classList.remove("hidden");
+  btnAddVideo.classList.remove("hidden");
 
-    btnAddVideo.style.cssText = `
-      display:flex !important;
-      visibility:visible !important;
-      opacity:1 !important;
-      pointer-events:auto !important;
-      position:relative !important;
-      width:50px !important;
-      height:50px !important;
-      min-width:50px !important;
-      padding:0 !important;
-      margin:0 !important;
-      border-radius:50% !important;
-      align-items:center !important;
-      justify-content:center !important;
-      background:#1455ff !important;
-      color:white !important;
-      border:2px solid white !important;
-      font-size:25px !important;
-      z-index:2147483647 !important;
-    `;
+btnAddVideo.style.cssText = `
+  display:flex !important;
+  visibility:visible !important;
+  opacity:1 !important;
+  pointer-events:auto !important;
 
-  }
+  position:fixed !important;
+  left:18px !important;
+  right:auto !important;
+  bottom:950px !important;
+  top:auto !important;
+  transform:none !important;
+
+  width:48px !important;
+  height:48px !important;
+  min-width:48px !important;
+
+  padding:0 !important;
+  margin:0 !important;
+
+  align-items:center !important;
+  justify-content:center !important;
+
+  background:transparent !important;
+  border:none !important;
+  border-radius:0 !important;
+  box-shadow:none !important;
+
+  color:white !important;
+  font-size:38px !important;
+  font-weight:400 !important;
+  line-height:1 !important;
+
+  z-index:2147483647 !important;
+`;
+}
 
   mettreAJourVisibiliteBoutonVideoPlus();
 
