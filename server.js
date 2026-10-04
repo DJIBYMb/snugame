@@ -666,6 +666,86 @@ app.post("/admin-login", loginLimiter, (req,res)=>{
 
 });
 
+app.post("/admin/verify-user/:id", async (req,res)=>{
+
+  try{
+
+    if(!isAdmin(req)){
+      return res.status(403).json({
+        ok:false,
+        message:"Accès administrateur obligatoire"
+      });
+    }
+
+    const userId =
+      Number(req.params.id);
+
+    const verified =
+      Number(req.body.verified) === 1
+        ? 1
+        : 0;
+
+    if(
+      !Number.isInteger(userId) ||
+      userId <= 0
+    ){
+      return res.status(400).json({
+        ok:false,
+        message:"Utilisateur invalide"
+      });
+    }
+
+    const utilisateur =
+      await get(
+        `
+          SELECT id, username, name
+          FROM users
+          WHERE id=?
+        `,
+        [userId]
+      );
+
+    if(!utilisateur){
+      return res.status(404).json({
+        ok:false,
+        message:"Utilisateur introuvable"
+      });
+    }
+
+    await run(
+      `
+        UPDATE users
+        SET verified=?
+        WHERE id=?
+      `,
+      [
+        verified,
+        userId
+      ]
+    );
+
+    return res.json({
+      ok:true,
+      verified,
+      user_id:userId
+    });
+
+  }catch(error){
+
+    console.error(
+      "Erreur certification utilisateur :",
+      error
+    );
+
+    return res.status(500).json({
+      ok:false,
+      message:"Erreur certification"
+    });
+
+  }
+
+});
+
 app.post("/admin-logout",(req,res)=>{
 
   if(req.session){
@@ -1373,6 +1453,10 @@ db.run(`
 db.run(`
   ALTER TABLE users
   ADD COLUMN banned INTEGER DEFAULT 0
+`,()=>{});
+db.run(`
+  ALTER TABLE users
+  ADD COLUMN verified INTEGER DEFAULT 0
 `,()=>{});
 db.run(`
   ALTER TABLE users
@@ -2755,7 +2839,8 @@ app.get("/me", async (req,res)=>{
       username_updated_at,
       abonnement,
       abonnement_expire_at,
-      profile_photo
+      profile_photo,
+      verified
     FROM users
     WHERE id=?
     `,
@@ -11584,7 +11669,8 @@ app.get("/admin-users", async (req,res)=>{
         name,
         email,
         abonnement,
-        banned
+        banned,
+        verified
       FROM users
       ORDER BY id DESC
       `
@@ -11615,6 +11701,89 @@ users.forEach(u=>{
   <p>Email : ${escapeHtml(u.email || "")}</p>
   <p>Abonnement : ${u.abonnement === 1 ? "Premium" : "Gratuit"}</p>
   <p>Status : ${u.banned === 1 ? "🚫 Banni" : "✅ Actif"}</p>
+  <p>
+  Certification :
+  ${u.verified === 1 ? "🔵 ✓ Certifié" : "Non certifié"}
+</p>
+
+${
+  u.verified === 1
+  ? `
+    <button
+      type="button"
+onclick="
+  fetch('/admin/verify-user/${u.id}',{
+    method:'POST',
+    headers:{
+      'Content-Type':'application/json'
+    },
+    body:JSON.stringify({
+      verified:0
+    })
+  })
+  .then(r=>r.json())
+  .then(data=>{
+    if(data.ok){
+      location.reload();
+    }else{
+      alert(data.message || 'Erreur certification');
+    }
+  })
+  .catch(()=>{
+    alert('Erreur certification');
+  });
+"
+      style="
+        background:#334155;
+        color:white;
+        border:none;
+        padding:10px 16px;
+        border-radius:10px;
+        cursor:pointer;
+      ">
+      Retirer la certification
+    </button>
+  `
+  : `
+    <button
+      <button
+  type="button"
+  onclick="
+    fetch('/admin/verify-user/${u.id}',{
+      method:'POST',
+      headers:{
+        'Content-Type':'application/json'
+      },
+      body:JSON.stringify({
+        verified:1
+      })
+    })
+    .then(r=>r.json())
+    .then(data=>{
+      if(data.ok){
+        location.reload();
+      }else{
+        alert(data.message || 'Erreur certification');
+      }
+    })
+    .catch(()=>{
+      alert('Erreur certification');
+    });
+  "
+  style="
+      style="
+        background:#1687ff;
+        color:white;
+        border:none;
+        padding:10px 16px;
+        border-radius:10px;
+        font-weight:bold;
+        cursor:pointer;
+      ">
+      ✓ Certifier ce compte
+    </button>
+  `
+}
 
   ${
     u.banned === 1

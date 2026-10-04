@@ -7213,6 +7213,39 @@ section:not(.hidden){
   color:white !important;
 }
 
+.sunugame-verified-badge{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+
+  width:18px;
+  height:18px;
+
+  margin-left:5px;
+  vertical-align:middle;
+
+  background:linear-gradient(
+    135deg,
+    #38bdf8 0%,
+    #1687ff 45%,
+    #1455ff 100%
+  );
+
+  color:#ffffff;
+
+  border-radius:50%;
+
+  font-size:12px;
+  font-weight:900;
+  line-height:1;
+
+  box-shadow:
+    0 0 0 2px rgba(20,85,255,.15),
+    0 2px 7px rgba(20,85,255,.45);
+
+  flex-shrink:0;
+}
+
 </style>
 </head>
 
@@ -16686,8 +16719,22 @@ modifierProfilPhoto.innerHTML = `
     border:4px solid #1455ff;
   ">
 `;
- profilNom.textContent =
-    data.name || "";
+profilNom.innerHTML = `
+  <span>${data.name || ""}</span>
+
+  ${
+    Number(data.verified) === 1
+    ? `
+      <span
+        class="sunugame-verified-badge"
+        title="Compte certifié"
+        aria-label="Compte certifié">
+        ✓
+      </span>
+    `
+    : ""
+  }
+`;
 
   profilUsername.textContent =
     "@" + (data.username || "");
