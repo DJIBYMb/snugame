@@ -7660,12 +7660,6 @@ style="
   align-items:center;
 ">
 
-  <button
-  class="secondary"
-  onclick="chargerMesRecompenses()">
-    <i class="fa-solid fa-gift"></i>
-  </button>
-
 <button
 id="btnDashboardTournoiProfil"
 class="secondary hidden"
@@ -19695,13 +19689,27 @@ async function chargerHighlights(){
 
         <div class="tiktok-left">
 
-          <div
-            class="tiktok-user"
-            style="cursor:pointer;"
-            onclick="ouvrirProfilPublic(${h.user_id}); event.stopPropagation();">
-            @${h.username}
-          </div>
+        <div
+  class="tiktok-user"
+  style="cursor:pointer;"
+  onclick="ouvrirProfilPublic(${h.user_id}); event.stopPropagation();">
 
+  <span>${h.name || h.username || ""}</span>
+
+  ${
+    Number(h.verified) === 1
+    ? `
+      <span
+        class="sunugame-verified-badge"
+        title="Compte certifié"
+        aria-label="Compte certifié">
+        ✓
+      </span>
+    `
+    : ""
+  }
+
+</div>
           <div class="tiktok-title collapsed">
             ${h.titre || ""}
           </div>

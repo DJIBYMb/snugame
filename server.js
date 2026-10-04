@@ -8996,6 +8996,7 @@ app.get("/highlights", async (req,res)=>{
         u.username,
         u.name,
         u.profile_photo,
+        u.verified,
 
         CASE
           WHEN hl.id IS NULL THEN 0
