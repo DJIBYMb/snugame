@@ -287,13 +287,12 @@ if(!fs.existsSync(DATA_DIR)){
 const PORT = process.env.PORT || 3000;
 
 const transporter = nodemailer.createTransport({
-  service:"gmail",
-  auth:{
-    user:process.env.MAIL_USER,
-    pass:process.env.MAIL_PASS
-  },
-  tls:{
-    rejectUnauthorized:false
+  host: "smtp.resend.com",
+  port: 465,
+  secure: true,
+  auth: {
+    user: "resend",
+    pass: process.env.RESEND_API_KEY
   }
 });
 
@@ -2364,7 +2363,7 @@ app.post(
 
 
     await transporter.sendMail({
-      from:process.env.MAIL_USER,
+      from:"SunuGame <verification@snugame.com>",
       to:cleanEmail,
       subject:"Code de validation SNUGAME",
       text:"Votre code de validation SNUGAME est : " + code
