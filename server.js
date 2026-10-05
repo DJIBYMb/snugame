@@ -12299,6 +12299,7 @@ app.get("/profile-discover-users", async (req,res)=>{
         u.name,
         u.username,
         u.profile_photo,
+        u.verified,
 
         CASE
           WHEN EXISTS(
@@ -12398,6 +12399,7 @@ app.get("/player-profile/:id", async (req,res)=>{
         name,
         username,
         profile_photo,
+          verified,
         abonnement
       FROM users
       WHERE id=?
@@ -15217,7 +15219,8 @@ app.get("/public-profile/:id", async (req,res)=>{
         id,
         name,
         username,
-        profile_photo
+        profile_photo,
+        verified
       FROM users
       WHERE id=?
       `,

@@ -13233,8 +13233,21 @@ publicProfilContent.innerHTML = `
     </div>
 
     <div class="player-profile-name">
-      ${data.name || "Joueur"}
-    </div>
+  <span>${data.name || "Joueur"}</span>
+
+  ${
+    Number(data.verified) === 1
+    ? `
+      <span
+        class="sunugame-verified-badge"
+        title="Compte certifié"
+        aria-label="Compte certifié">
+        ✓
+      </span>
+    `
+    : ""
+  }
+</div>
 
     <div class="player-profile-username">
       @${data.username || ""}
@@ -16574,7 +16587,21 @@ async function chargerContactsADecouvrirProfil(){
             ${avatarContactProfilHTML(u)}
           </div>
           <div class="profile-discover-identity" onclick="ouvrirProfilPublic(${Number(u.id)})" style="cursor:pointer;">
-            <span class="profile-discover-name">${nom}</span>
+            <span class="profile-discover-name">
+  ${nom}
+  ${
+    Number(u.verified) === 1
+    ? `
+      <span
+        class="sunugame-verified-badge"
+        title="Compte certifié"
+        aria-label="Compte certifié">
+        ✓
+      </span>
+    `
+    : ""
+  }
+</span>
             ${username ? `<span class="profile-discover-username">@${username}</span>` : ""}
           </div>
           <button class="secondary profile-discover-follow" onclick="event.stopPropagation(); suivreContactDecouverte(${Number(u.id)},event)">${boutonTexte}</button>
