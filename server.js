@@ -10968,7 +10968,7 @@ app.post(
       );
 
       await transporter.sendMail({
-        from:process.env.MAIL_USER,
+        from:"SunuGame <verification@snugame.com>",
         to:email,
         subject:
           "Réinitialisation du mot de passe SNUGAME",
@@ -13770,7 +13770,7 @@ app.post(
       );
 
       await transporter.sendMail({
-        from:process.env.MAIL_USER,
+        from:"SunuGame <verification@snugame.com>",
         to:user.email,
         subject:
           "Code de vérification email SNUGAME",
