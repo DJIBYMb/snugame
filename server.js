@@ -9850,7 +9850,8 @@ app.get("/user-followers/:id", async (req,res)=>{
         u.id,
         u.name,
         u.username,
-        u.profile_photo
+        u.profile_photo,
+        u.verified
       FROM follows f
       JOIN users u
         ON u.id = f.follower_id
@@ -9885,7 +9886,8 @@ app.get("/user-following/:id", async (req,res)=>{
         u.id,
         u.name,
         u.username,
-        u.profile_photo
+        u.profile_photo,
+        u.verified
       FROM follows f
       JOIN users u
         ON u.id = f.following_participant_id

@@ -13009,7 +13009,21 @@ async function ouvrirListeFollow(
         <div
         onclick="ouvrirProfilPublic(${u.id})"
         style="flex:1;cursor:pointer;">
-          <b>${u.name || ""}</b><br>
+          <b>
+  ${u.name || ""}
+  ${
+    Number(u.verified) === 1
+    ? `
+      <span
+        class="sunugame-verified-badge"
+        title="Compte certifié"
+        aria-label="Compte certifié">
+        ✓
+      </span>
+    `
+    : ""
+  }
+</b><br>
           <span style="color:#60a5fa;">@${u.username || ""}</span>
         </div>
 
