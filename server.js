@@ -12369,15 +12369,31 @@ app.get("/search-users", async (req,res)=>{
     const users = await all(
       `
       SELECT
-        id,
-        name,
-        username,
-        profile_photo
-      FROM users
+  u.id,
+  u.name,
+  u.username,
+  u.profile_photo,
+  u.verified,
+
+  CASE
+    WHEN EXISTS(
+      SELECT 1
+      FROM follows f
+      WHERE f.follower_id = u.id
+        AND f.following_participant_id = ?
+    )
+    THEN 1
+    ELSE 0
+  END AS follows_me
+
+FROM users u
       WHERE username LIKE ?
       LIMIT 20
       `,
-      [`%${q}%`]
+      [
+  req.session.userId,
+  `%${q}%`
+]
     );
 
     res.json(users);

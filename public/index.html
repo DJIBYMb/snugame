@@ -7268,11 +7268,14 @@ justify-content:center;
 margin-top:10px;
 ">
 
-<button
-class="glass-btn"
-onclick="toggleSearchUsers()">
-<i class="fa-solid fa-magnifying-glass"></i>
-</button>
+<div class="search-modern">
+  <input
+    id="searchUserInput"
+    type="search"
+    placeholder="Rechercher joueur..."
+    autocomplete="off"
+    oninput="rechercherUtilisateurs()">
+</div>
 
 </div>
 
@@ -7281,24 +7284,13 @@ onclick="toggleSearchUsers()">
 </h1>
 
 <div
-class="card hidden"
+class=""
 id="searchUsersBox"
 style="
 margin-top:25px;
 margin-left:20px;
 margin-right:20px;
 ">
-
-<div class="search-modern">
-
-<input
-id="searchUserInput"
-placeholder="Rechercher joueur..."
-oninput="rechercherUtilisateurs()">
-
-</div>
-
-<h1>SUNUGAME</h1>
 
 <div id="searchUsersResult"></div>
 
@@ -21776,7 +21768,21 @@ async function rechercherUtilisateurs(){
       cursor:pointer;
       ">
 
-        <b>${u.name || ""}</b><br>
+        <b>
+  ${u.name || ""}
+  ${
+    Number(u.verified) === 1
+    ? `
+      <span
+        class="sunugame-verified-badge"
+        title="Compte certifié"
+        aria-label="Compte certifié">
+        ✓
+      </span>
+    `
+    : ""
+  }
+</b><br>
 
         <span style="color:#60a5fa;">
           @${u.username || ""}
@@ -21784,11 +21790,12 @@ async function rechercherUtilisateurs(){
 
       </div>
 
-      <button
-      class="secondary"
-      onclick="event.stopPropagation(); suivreDepuisRecherche(${u.id}, event)">
-      ➕ Suivre
-      </button>
+<button
+class="secondary profile-discover-follow"
+style="width:auto!important; min-width:auto!important; padding:7px 13px!important; margin:0!important;"
+onclick="event.stopPropagation(); suivreDepuisRecherche(${u.id}, event)">
+${Number(u.follows_me) === 1 ? "Suivre en retour" : "Suivre"}
+</button>
 
     </div>
 
@@ -21808,7 +21815,6 @@ async function suivreDepuisRecherche(userId, event){
       player_user_id:userId
     }
   );
-
   showNotif(result);
 
   if(result === "Unfollow"){
@@ -21816,21 +21822,6 @@ async function suivreDepuisRecherche(userId, event){
   }else if(result.includes("Abonnement réussi")){
     btn.innerHTML = "✅ Suivi";
   }
-
-}
-
-function toggleSearchUsers(){
-
-  const box =
-    document.getElementById(
-      "searchUsersBox"
-    );
-
-  if(!box){
-    return;
-  }
-
-  box.classList.toggle("hidden");
 
 }
   
