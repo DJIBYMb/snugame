@@ -21724,12 +21724,15 @@ async function rechercherUtilisateurs(){
   const q =
     searchUserInput.value.trim();
 
-  if(!q){
+if(!q){
 
-    searchUsersResult.innerHTML = "";
-    return;
+  searchUsersResult.innerHTML = "";
+  searchUsersResult.style.display = "none";
+  return;
 
-  }
+}
+
+searchUsersResult.style.display = "block";
 
   const users =
     await get(
