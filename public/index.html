@@ -29237,9 +29237,23 @@ async function ouvrirCommentaires(videoId){
             <div style="flex:1;min-width:0;">
 
               <b
-                onclick="ouvrirProfilPublic(${userId})"
-                style="cursor:pointer;"
-              >${nom}</b>
+  onclick="ouvrirProfilPublic(${userId})"
+  style="cursor:pointer;"
+>
+  ${nom}
+  ${
+    Number(c.verified) === 1
+    ? `
+      <span
+        class="sunugame-verified-badge"
+        title="Compte certifié"
+        aria-label="Compte certifié">
+        ✓
+      </span>
+    `
+    : ""
+  }
+</b>
 
               <div
                 style="

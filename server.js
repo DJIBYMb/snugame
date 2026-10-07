@@ -15114,11 +15114,16 @@ app.get(
         ''
       ) AS username,
 
-      COALESCE(
-        u.profile_photo,
-        ''
-      ) AS profile_photo
+COALESCE(
+  u.profile_photo,
+  ''
+) AS profile_photo,
 
+COALESCE(
+  u.verified,
+  0
+) AS verified
+ 
     FROM highlight_comments hc
 
     LEFT JOIN users u
