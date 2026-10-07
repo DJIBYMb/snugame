@@ -7268,13 +7268,40 @@ justify-content:center;
 margin-top:10px;
 ">
 
-<div class="search-modern">
-  <input
-    id="searchUserInput"
-    type="search"
-    placeholder="Rechercher joueur..."
-    autocomplete="off"
-    oninput="rechercherUtilisateurs()">
+<div style="display:flex; align-items:center; gap:8px; width:100%;">
+
+  <button
+    type="button"
+    onclick="fermerRechercheUtilisateurs()"
+    style="
+      width:46px!important;
+      min-width:46px!important;
+      height:46px!important;
+      margin:0!important;
+      padding:0!important;
+      background:transparent!important;
+      border:none!important;
+      box-shadow:none!important;
+      color:white!important;
+      font-size:34px!important;
+      font-weight:700!important;
+      line-height:1!important;
+      display:flex!important;
+      align-items:center!important;
+      justify-content:center!important;
+    ">
+    ←
+  </button>
+
+  <div class="search-modern" style="flex:1; max-width:none;">
+    <input
+      id="searchUserInput"
+      type="search"
+      placeholder="Rechercher joueur..."
+      autocomplete="off"
+      oninput="rechercherUtilisateurs()">
+  </div>
+
 </div>
 
 </div>
@@ -21718,6 +21745,22 @@ async function suivreJoueur(userId){
 
 }
  
+function fermerRechercheUtilisateurs(){
+
+  const input = document.getElementById("searchUserInput");
+  const result = document.getElementById("searchUsersResult");
+
+  if(input){
+    input.value = "";
+    input.blur();
+  }
+
+  if(result){
+    result.innerHTML = "";
+    result.style.display = "none";
+  }
+
+}
 
 async function rechercherUtilisateurs(){
 
