@@ -7272,6 +7272,7 @@ margin-top:10px;
 
   <button
     type="button"
+    id="searchBackBtn"
     onclick="fermerRechercheUtilisateurs()"
     style="
       width:46px!important;
@@ -7283,14 +7284,14 @@ margin-top:10px;
       border:none!important;
       box-shadow:none!important;
       color:white!important;
-      font-size:34px!important;
-      font-weight:700!important;
+      font-size:38px!important;
+      font-weight:400!important;
       line-height:1!important;
-      display:flex!important;
+      display:none!important;
       align-items:center!important;
       justify-content:center!important;
     ">
-    ←
+    <i class="fa-solid fa-arrow-left" style="font-size:28px;"></i>
   </button>
 
   <div class="search-modern" style="flex:1; max-width:none;">
@@ -7299,7 +7300,8 @@ margin-top:10px;
       type="search"
       placeholder="Rechercher joueur..."
       autocomplete="off"
-      oninput="rechercherUtilisateurs()">
+      oninput="rechercherUtilisateurs()"
+      onfocus="ouvrirModeRechercheUtilisateurs()">
   </div>
 
 </div>
@@ -21744,11 +21746,27 @@ async function suivreJoueur(userId){
   showNotif(result);
 
 }
+
+function ouvrirModeRechercheUtilisateurs(){
+
+  const backBtn = document.getElementById("searchBackBtn");
+
+  if(backBtn){
+    backBtn.style.setProperty("display", "flex", "important");
+  }
+
+}
  
 function fermerRechercheUtilisateurs(){
 
   const input = document.getElementById("searchUserInput");
   const result = document.getElementById("searchUsersResult");
+
+  const backBtn = document.getElementById("searchBackBtn");
+
+if(backBtn){
+  backBtn.style.setProperty("display", "none", "important");
+}
 
   if(input){
     input.value = "";
