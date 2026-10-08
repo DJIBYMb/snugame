@@ -17540,23 +17540,24 @@ async function chargerParticipants(){
         ${
           p.user_id
           ? `
-            <button
-            onclick="event.stopPropagation(); suivreJoueur(${Number(p.user_id)})"
-            style="
-              position:absolute;
-              bottom:-25px;
-              right:0;
-              border:none;
-              background:none;
-              color:white;
-              font-size:28px;
-              font-weight:900;
-              cursor:pointer;
-              padding:0;
-            ">
-              +
-            </button>
-          `
+       <button
+  type="button"
+  class="video-mini-follow-btn"
+  data-user-id="${Number(p.user_id)}"
+  data-following="0"
+  onclick="
+    event.stopPropagation();
+    suivreDepuisVideo(${Number(p.user_id)}, this);
+  "
+  aria-label="Suivre"
+  style="
+    right:-1px!important;
+    bottom:-2px!important;
+  ">
+  +
+</button>
+          
+         `
           : ""
         }
 
@@ -17580,9 +17581,56 @@ async function chargerParticipants(){
 
     </div>
 
-  </div>
+    </div>
 
  `).join("");
+
+  // Vérifier les abonnements après l'affichage des participants
+  await actualiserSuiviParticipants();
+
+}
+
+
+async function actualiserSuiviParticipants(){
+
+  const boutons = document.querySelectorAll(
+    "#participants .video-mini-follow-btn[data-user-id]"
+  );
+
+  for(const btn of boutons){
+
+    const userId = Number(btn.dataset.userId);
+
+    if(!userId) continue;
+
+    try{
+
+      const data = await get(
+        "/public-profile/" + userId
+      );
+
+      if(!data || data.error) continue;
+
+      const suivi =
+        data.isFollowing === true ||
+        Number(data.isFollowing) === 1;
+
+      synchroniserPetitsBoutonsSuivi(
+        userId,
+        suivi
+      );
+
+    }catch(error){
+
+      console.error(
+        "Erreur vérification suivi participant :",
+        error
+      );
+
+    }
+
+  }
+
 }
 
 function cocherTous(etat){
