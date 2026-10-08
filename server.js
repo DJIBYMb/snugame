@@ -262,6 +262,12 @@ async function supprimerFichierR2(urlFichier){
 
 const app = express();
 
+// Google AdSense - ads.txt
+app.get("/ads.txt", (req, res) => {
+  res.type("text/plain");
+  res.send("google.com, pub-9714357792942805, DIRECT, f08c47fec0942fa0\n");
+});
+
 app.use(
   helmet({
     contentSecurityPolicy:false,
