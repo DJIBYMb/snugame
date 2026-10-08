@@ -3999,7 +3999,8 @@ app.get("/participants/:id", async (req,res)=>{
         p.club_logo,
         p.group_name,
         p.user_id,
-        u.profile_photo
+        u.profile_photo,
+       COALESCE(u.verified, 0) AS verified
       FROM participants p
       LEFT JOIN users u
         ON u.id=p.user_id
@@ -15123,7 +15124,7 @@ COALESCE(
   u.verified,
   0
 ) AS verified
- 
+
     FROM highlight_comments hc
 
     LEFT JOIN users u

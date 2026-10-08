@@ -17573,8 +17573,22 @@ async function chargerParticipants(){
         text-align:center;
       ">
         ${p.prenom}
-      </div>
 
+        ${
+          Number(p.verified) === 1
+          ? `
+            <span
+              class="sunugame-verified-badge"
+              title="Compte certifié"
+              aria-label="Compte certifié">
+              ✓
+            </span>
+          `
+          : ""
+        }
+
+      </div>
+      
       <div class="small">
         Groupe : ${p.group_name || "Aucun"}
       </div>
