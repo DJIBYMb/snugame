@@ -14803,7 +14803,7 @@ const ajouterCommentaireHighlight =
       const highlightId =
         Number(req.body.highlight_id);
 
-      const parentCommentId =
+       let parentCommentId =
         req.body.parent_comment_id !== null &&
         req.body.parent_comment_id !== undefined &&
         req.body.parent_comment_id !== ""

@@ -6199,6 +6199,11 @@ body.live-spectator-mode .bottom-nav{
   -webkit-backface-visibility:hidden;
 }
 
+/* Cacher les 5 boutons en mode visiteur */
+body.mode-visiteur .bottom-nav {
+  display: none !important;
+}
+
 </style>
 
 <link
@@ -9297,6 +9302,14 @@ Publier
 
   <div class="card">
 
+    <button
+  type="button"
+  class="glass-btn"
+  onclick="retourConnexionVisiteur()"
+  style="width:auto; padding:10px 16px; margin-bottom:15px;">
+  ⬅️ Retour à la connexion
+</button>
+
     <h2>🏆 Découvrir les tournois</h2>
 
     <p>
@@ -12244,6 +12257,16 @@ function drawWorldCupLinesOrg(){
   }
 }
 
+function retourConnexionVisiteur(){
+
+  // Désactiver le mode visiteur
+  document.body.classList.remove("mode-visiteur");
+
+  // Revenir à la page de connexion
+  afficherConnexionPropre();
+
+}
+
 function afficherConnexionPropre(){
 
   /*
@@ -13195,6 +13218,8 @@ async function ouvrirParticipantsPublics(tournoiId){
 ========================================= */
 
 async function ouvrirTournoisVisiteur(){
+
+  document.body.classList.add("mode-visiteur");
 
   // Quitter l'affichage de connexion.
   document.body.classList.remove(
@@ -16010,7 +16035,7 @@ onclick="
 </div>
 
       <div class="tiktok-title collapsed">
-      ${descriptionVideo18Mots(h.titre || "")}
+      ${descriptionVideo18Mots(video.titre || "")}
       </div>
           ${
             String(video.titre || "").length > 70
@@ -17218,6 +17243,9 @@ if(!data || data.connected === false){
 
   return;
 }
+
+// Réafficher les 5 boutons pour un utilisateur connecté
+document.body.classList.remove("mode-visiteur");
 
 utilisateurAbonne = false;
 
@@ -20938,6 +20966,45 @@ async function likeHighlight(id, btn){
     return;
   }
 
+    /* =========================================
+     SUNUGAME — PROTECTION LIKES VISITEUR
+  ========================================= */
+
+  const sessionLike = await fetch("/me", {
+    method: "GET",
+    credentials: "same-origin",
+    cache: "no-store"
+  })
+  .then(async response => {
+    if(!response.ok) return null;
+    return response.json();
+  })
+  .catch(() => null);
+
+  // Visiteur : aucune modification du like
+  if(
+    !sessionLike ||
+    sessionLike.connected === false ||
+    !sessionLike.id
+  ){
+
+    if(typeof showNotif === "function"){
+
+      showNotif(
+        "🔐 Connectez-vous pour aimer cette vidéo."
+      );
+
+    }else{
+
+      alert(
+        "🔐 Connectez-vous pour aimer cette vidéo."
+      );
+
+    }
+
+    return;
+  }
+
   const videoId =
     Number(id);
 
@@ -21121,6 +21188,46 @@ async function likeHighlight(id, btn){
 
 async function toggleFavoriVideo(id, btn){
 
+  /* =========================================
+     SUNUGAME — PROTECTION FAVORIS VISITEUR
+  ========================================= */
+
+  const sessionFavoris = await fetch("/me", {
+    method: "GET",
+    credentials: "same-origin",
+    cache: "no-store"
+  })
+  .then(async response => {
+    if(!response.ok) return null;
+    return response.json();
+  })
+  .catch(() => null);
+
+  // Visiteur : aucune modification des favoris
+  if(
+    !sessionFavoris ||
+    sessionFavoris.connected === false ||
+    !sessionFavoris.id
+  ){
+
+    if(typeof showNotif === "function"){
+
+      showNotif(
+        "🔐 Connectez-vous pour ajouter cette vidéo aux favoris."
+      );
+
+    }else{
+
+      alert(
+        "🔐 Connectez-vous pour ajouter cette vidéo aux favoris."
+      );
+
+    }
+
+    return;
+  }
+
+  // Utilisateur connecté : fonctionnement habituel
   const result =
     await post("/favorite-video",{
       highlight_id:id
@@ -29393,11 +29500,30 @@ async function traiterNotificationAndroidEnAttente(){
 
 async function ouvrirCommentaires(videoId){
 
-  /*
-    Recharge l'identité courante avant de calculer les droits.
-    Cela évite de garder l'identifiant du compte précédent après une reconnexion.
+    /*
+    SUNUGAME — COMMENTAIRES MODE VISITEUR
+
+    Les visiteurs peuvent lire les commentaires
+    sans synchroniser un compte connecté.
+
+    Les utilisateurs connectés conservent
+    le fonctionnement actuel.
   */
-  if(!Number.isInteger(Number(currentUserId)) || Number(currentUserId) <= 0){
+
+  const consultationVisiteur =
+    currentUserId == null &&
+    (
+      window.profilPublicDepuisParticipantsVisiteur === true ||
+      window.profilPublicVisiteurActif === true
+    );
+
+  if(
+    !consultationVisiteur &&
+    (
+      !Number.isInteger(Number(currentUserId)) ||
+      Number(currentUserId) <= 0
+    )
+  ){
     await synchroniserCompteConnecte();
   }
 
@@ -30041,6 +30167,20 @@ function preparerReponseCommentaire(
   username
 ){
 
+    /* =========================================
+     SUNUGAME — PROTECTION RÉPONSES
+     MODE VISITEUR
+  ========================================= */
+
+  if(!currentUserId){
+
+    showNotif(
+      "🔐 Connectez-vous pour répondre à ce commentaire."
+    );
+
+    return;
+  }
+
   const id = Number(commentId);
 
   if(
@@ -30134,8 +30274,17 @@ async function envoyerCommentaire(){
     return;
   }
 
+    /* =========================================
+     SUNUGAME — PROTECTION COMMENTAIRES
+     MODE VISITEUR
+  ========================================= */
+
   if(!currentUserId){
-    await gererSessionExpiree();
+
+    showNotif(
+      "🔐 Connectez-vous pour commenter cette vidéo."
+    );
+
     return;
   }
 
@@ -32267,7 +32416,7 @@ appliquerLangue();
 
 </script>
 
-<div class="bottom-nav">
+<div class="bottom-nav" id="bottomNav">
 
 <button
 id="btnTournoi"
