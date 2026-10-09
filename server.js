@@ -3994,6 +3994,82 @@ app.post("/participant", async (req, res) => {
   }
 
 });
+/* =========================================================
+   SUNUGAME — PARTICIPANTS PUBLICS
+   Consultation autorisée sans connexion.
+   Aucune information privée envoyée.
+========================================================= */
+
+app.get("/participants-publics/:id", async (req,res)=>{
+
+  try{
+
+    const tournamentId = Number(req.params.id);
+
+    if(
+      !Number.isSafeInteger(tournamentId) ||
+      tournamentId <= 0
+    ){
+      return res.status(400).json({
+        ok:false,
+        message:"Identifiant du tournoi invalide"
+      });
+    }
+
+    const tournoi = await get(
+      `
+      SELECT id
+      FROM tournaments
+      WHERE id=?
+        AND name IS NOT NULL
+        AND TRIM(name) <> ''
+      `,
+      [tournamentId]
+    );
+
+    if(!tournoi){
+      return res.status(404).json({
+        ok:false,
+        message:"Tournoi introuvable"
+      });
+    }
+
+    const participants = await all(
+      `
+      SELECT
+        p.id,
+        p.user_id,
+        p.prenom,
+        p.username,
+        u.profile_photo,
+        COALESCE(u.verified,0) AS verified
+      FROM participants p
+      LEFT JOIN users u
+        ON u.id = p.user_id
+      WHERE p.tournament_id=?
+      ORDER BY p.id ASC
+      `,
+      [tournamentId]
+    );
+
+    return res.json(participants);
+
+  }catch(error){
+
+    console.error(
+      "Erreur participants publics :",
+      error
+    );
+
+    return res.status(500).json({
+      ok:false,
+      message:"Impossible de charger les participants"
+    });
+
+  }
+
+});
+
 
 app.get("/participants/:id", async (req,res)=>{
 

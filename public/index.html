@@ -7425,6 +7425,38 @@ onclick="showRegister()">
 Créer un compte
 </button>
 
+<!-- SUNUGAME — BOUTON MODE VISITEUR -->
+
+<button
+  id="btnModeVisiteur"
+  type="button"
+  onclick="ouvrirTournoisVisiteur()"
+  style="
+    width:100%;
+    margin-top:18px;
+    padding:16px 20px;
+    border-radius:16px;
+    border:1px solid rgba(125,170,255,0.55);
+    background:linear-gradient(135deg,#123b88,#6535c8);
+    color:#ffffff;
+    font-size:15px;
+    font-weight:800;
+    letter-spacing:0.3px;
+    cursor:pointer;
+    box-shadow:
+      0 5px 20px rgba(60,90,255,0.3),
+      inset 0 1px 0 rgba(255,255,255,0.2);
+    transition:transform 0.2s,box-shadow 0.2s;
+  "
+  onpointerdown="this.style.transform='scale(0.97)'"
+  onpointerup="this.style.transform='scale(1)'"
+  onpointercancel="this.style.transform='scale(1)'"
+  onpointerleave="this.style.transform='scale(1)'">
+
+  👀 Continuer en tant que visiteur
+
+</button>
+
 </div>
 
 <div
@@ -9214,6 +9246,60 @@ Publier
 </button>
 
 </div>
+
+</section>
+
+<!-- =========================================
+     SUNUGAME — TOURNOIS PUBLICS
+     Panneau réservé aux visiteurs
+========================================= -->
+
+<section id="pageTournoisPublics" class="hidden">
+
+  <div class="card">
+
+    <h2>🏆 Découvrir les tournois</h2>
+
+    <p>
+      Explore les compétitions eFootball
+      organisées sur SunuGame.
+    </p>
+
+    <div class="tournois-publics-categories">
+
+      <button
+        class="glass-btn"
+        onclick="filtrerTournoisPublics('open')">
+        🟢 Ouverts
+      </button>
+
+      <button
+        class="glass-btn"
+        onclick="filtrerTournoisPublics('draft')">
+        📝 En préparation
+      </button>
+
+      <button
+        class="glass-btn"
+        onclick="filtrerTournoisPublics('progress')">
+        ⚽ En cours
+      </button>
+
+      <button
+        class="glass-btn"
+        onclick="filtrerTournoisPublics('finished')">
+        🏆 Terminés
+      </button>
+
+    </div>
+
+    <div id="listeTournoisPublics">
+
+      <p>Chargement des tournois...</p>
+
+    </div>
+
+  </div>
 
 </section>
 
@@ -12704,6 +12790,150 @@ function ajouterEtatHistorique(etat){
       pageStack.length - 120
     );
   }
+
+}
+
+/* =========================================
+   SUNUGAME — AFFICHAGE DES TOURNOIS PUBLICS
+========================================= */
+
+let tournoisPublicsCache = [];
+
+async function chargerTournoisPublics(){
+
+  const liste = document.getElementById(
+    "listeTournoisPublics"
+  );
+
+  if(!liste) return;
+
+  liste.textContent = "Chargement des tournois...";
+
+  try{
+
+    const reponse = await fetch(
+      "/tournois-publics",
+      {
+        credentials:"same-origin",
+        cache:"no-store"
+      }
+    );
+
+    if(!reponse.ok){
+      throw new Error("Erreur serveur");
+    }
+
+    const donnees = await reponse.json();
+
+    tournoisPublicsCache =
+      Array.isArray(donnees) ? donnees : [];
+
+    filtrerTournoisPublics("open");
+
+  }catch(error){
+
+    console.error(
+      "Erreur chargement tournois publics :",
+      error
+    );
+
+    liste.textContent =
+      "Impossible de charger les tournois.";
+
+  }
+
+}
+
+
+function filtrerTournoisPublics(statut){
+
+  const liste = document.getElementById(
+    "listeTournoisPublics"
+  );
+
+  if(!liste) return;
+
+  liste.replaceChildren();
+
+  const tournois = tournoisPublicsCache.filter(
+    tournoi => tournoi.status === statut
+  );
+
+  if(tournois.length === 0){
+
+    const message = document.createElement("p");
+
+    message.textContent =
+      "Aucun tournoi dans cette catégorie.";
+
+    liste.appendChild(message);
+
+    return;
+  }
+
+  tournois.forEach(tournoi => {
+
+    const carte = document.createElement("div");
+
+    carte.className = "card";
+
+    const titre = document.createElement("h3");
+
+    titre.textContent =
+      "🏆 " + (tournoi.name || "Tournoi");
+
+    const organisateur = document.createElement("p");
+
+    organisateur.textContent =
+      "👤 Organisateur : " +
+      (tournoi.organisateur || "Inconnu");
+
+    const participants = document.createElement("p");
+
+    participants.textContent =
+      "👥 Participants : " +
+      Number(tournoi.nombre_participants || 0) +
+      " / " +
+      Number(tournoi.max_teams || 0);
+
+    const type = document.createElement("p");
+
+    type.textContent =
+      "🎮 Format : " +
+      (tournoi.type === "rapide"
+        ? "Rapide"
+        : "Poules");
+
+    carte.appendChild(titre);
+    carte.appendChild(organisateur);
+    carte.appendChild(participants);
+    carte.appendChild(type);
+
+    liste.appendChild(carte);
+
+  });
+
+}
+
+/* =========================================
+   SUNUGAME — MODE VISITEUR
+   Ouverture des tournois publics
+========================================= */
+
+async function ouvrirTournoisVisiteur(){
+
+  // Quitter l'affichage de connexion.
+  document.body.classList.remove(
+    "auth-mode",
+    "register-mode",
+    "forgot-mode"
+  );
+
+  // Afficher uniquement le panneau public.
+  setPage("pageTournoisPublics", false);
+
+  // Charger les tournois depuis le serveur.
+  await chargerTournoisPublics();
 
 }
 
