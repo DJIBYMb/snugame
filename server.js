@@ -3411,13 +3411,16 @@ app.get("/tournois-publics", async (req, res) => {
           FROM participants p
           WHERE p.tournament_id = t.id
         ) AS nombre_participants
+FROM tournaments t
 
-      FROM tournaments t
+INNER JOIN users u
+  ON u.id = t.user_id
 
-      LEFT JOIN users u
-        ON u.id = t.user_id
+WHERE t.name IS NOT NULL
+  AND TRIM(t.name) <> ''
+  AND t.status IS NOT NULL
 
-      ORDER BY t.id DESC
+ORDER BY t.id DESC
 
       LIMIT 100
       `
