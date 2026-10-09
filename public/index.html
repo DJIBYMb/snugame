@@ -9250,6 +9250,45 @@ Publier
 </section>
 
 <!-- =========================================
+     SUNUGAME — PARTICIPANTS PUBLICS
+     Consultation sans connexion
+========================================= -->
+
+<section id="pageParticipantsPublics" class="hidden">
+
+  <div class="card">
+
+    <button
+      type="button"
+      onclick="ouvrirTournoisVisiteur()"
+      style="
+        padding:12px 18px;
+        border-radius:14px;
+        border:1px solid rgba(125,170,255,0.45);
+        background:linear-gradient(135deg,#123b88,#6535c8);
+        color:white;
+        font-weight:800;
+        cursor:pointer;
+        margin-bottom:18px;
+      ">
+      ← Retour aux tournois
+    </button>
+
+    <h2>👥 Participants du tournoi</h2>
+
+    <p>
+      Découvre les joueurs inscrits à cette compétition.
+    </p>
+
+    <div id="listeParticipantsPublics">
+      <p>Chargement des participants...</p>
+    </div>
+
+  </div>
+
+</section>
+
+<!-- =========================================
      SUNUGAME — TOURNOIS PUBLICS
      Panneau réservé aux visiteurs
 ========================================= -->
@@ -12903,15 +12942,221 @@ function filtrerTournoisPublics(statut){
       (tournoi.type === "rapide"
         ? "Rapide"
         : "Poules");
+   carte.appendChild(titre);
+carte.appendChild(organisateur);
+carte.appendChild(participants);
+carte.appendChild(type);
 
-    carte.appendChild(titre);
-    carte.appendChild(organisateur);
-    carte.appendChild(participants);
-    carte.appendChild(type);
+// SUNUGAME — BOUTON PARTICIPANTS PUBLICS
+const boutonParticipants = document.createElement("button");
 
-    liste.appendChild(carte);
+boutonParticipants.type = "button";
+
+boutonParticipants.textContent = "👥 Voir les participants →";
+
+boutonParticipants.style.cssText = `
+  width:100%;
+  margin-top:15px;
+  padding:15px 18px;
+  border-radius:15px;
+  border:1px solid rgba(125,170,255,0.55);
+  background:linear-gradient(135deg,#123b88,#6535c8);
+  color:white;
+  font-size:15px;
+  font-weight:800;
+  cursor:pointer;
+  box-shadow:0 5px 20px rgba(60,90,255,0.25);
+  transition:transform 0.2s,box-shadow 0.2s;
+`;
+
+boutonParticipants.addEventListener("pointerdown", () => {
+  boutonParticipants.style.transform = "scale(0.97)";
+});
+
+["pointerup", "pointercancel", "pointerleave"].forEach(eventName => {
+  boutonParticipants.addEventListener(eventName, () => {
+    boutonParticipants.style.transform = "scale(1)";
+  });
+});
+
+boutonParticipants.addEventListener("click", () => {
+  ouvrirParticipantsPublics(tournoi.id);
+});
+
+carte.appendChild(boutonParticipants);
+
+liste.appendChild(carte);
 
   });
+
+}
+
+/* =========================================
+   SUNUGAME — PARTICIPANTS PUBLICS
+   MODE VISITEUR
+========================================= */
+
+async function ouvrirParticipantsPublics(tournoiId){
+
+  const liste = document.getElementById(
+    "listeParticipantsPublics"
+  );
+
+  if(!liste) return;
+
+  // Ouvrir la page des participants
+  setPage("pageParticipantsPublics", false);
+
+  liste.textContent = "Chargement des participants...";
+
+  try{
+
+    const reponse = await fetch(
+      "/participants-publics/" + encodeURIComponent(tournoiId),
+      {
+        credentials:"same-origin",
+        cache:"no-store"
+      }
+    );
+
+    if(!reponse.ok){
+      throw new Error("Impossible de charger les participants");
+    }
+
+    const participants = await reponse.json();
+
+    liste.replaceChildren();
+
+    if(!Array.isArray(participants) || participants.length === 0){
+
+      const message = document.createElement("p");
+
+      message.textContent =
+        "Aucun participant inscrit pour le moment.";
+
+      liste.appendChild(message);
+
+      return;
+    }
+
+    participants.forEach(joueur => {
+
+      const carte = document.createElement("div");
+
+      carte.className = "card";
+
+      carte.style.cssText = `
+        display:flex;
+        align-items:center;
+        gap:14px;
+        margin-bottom:14px;
+        padding:16px;
+        border-radius:18px;
+      `;
+
+      // Photo du joueur
+      const photo = document.createElement("img");
+
+      photo.src = joueur.profile_photo || "/favicon.ico";
+
+      photo.alt = "Photo du joueur";
+
+      photo.style.cssText = `
+        width:58px;
+        height:58px;
+        border-radius:50%;
+        object-fit:cover;
+        border:2px solid #647bff;
+        flex-shrink:0;
+      `;
+
+      // Informations du joueur
+      const informations = document.createElement("div");
+
+      informations.style.cssText = `
+        flex:1;
+        min-width:0;
+      `;
+
+      const nom = document.createElement("h3");
+
+      nom.textContent =
+        "👤 " + (
+          joueur.prenom ||
+          joueur.username ||
+          "Joueur"
+        ) + (
+          Number(joueur.verified) === 1 ? " 🔵" : ""
+        );
+
+      nom.style.margin = "0 0 6px";
+
+      const pseudo = document.createElement("p");
+
+      pseudo.textContent =
+        "🎮 @" + (joueur.username || "joueur");
+
+      pseudo.style.margin = "0 0 12px";
+
+      informations.appendChild(nom);
+      informations.appendChild(pseudo);
+
+      // Bouton profil public
+      if(Number(joueur.user_id) > 0){
+
+        const boutonProfil = document.createElement("button");
+
+        boutonProfil.type = "button";
+
+        boutonProfil.textContent = "✨ Voir le profil →";
+
+        boutonProfil.style.cssText = `
+          padding:11px 16px;
+          border-radius:13px;
+          border:1px solid rgba(125,170,255,0.55);
+          background:linear-gradient(135deg,#123b88,#6535c8);
+          color:white;
+          font-size:14px;
+          font-weight:800;
+          cursor:pointer;
+        `;
+
+      boutonProfil.addEventListener("click", () => {
+
+  const userId = Number(joueur.user_id);
+
+  if(!Number.isSafeInteger(userId) || userId <= 0){
+    return;
+  }
+
+  ouvrirProfilPublic(userId, {
+    skipHistory:true
+  });
+
+});
+
+        informations.appendChild(boutonProfil);
+
+      }
+
+      carte.appendChild(photo);
+      carte.appendChild(informations);
+
+      liste.appendChild(carte);
+
+    });
+
+  }catch(error){
+
+    console.error(
+      "Erreur participants publics :",
+      error
+    );
+
+    liste.textContent =
+      "Impossible de charger les participants.";
+
+  }
 
 }
 
