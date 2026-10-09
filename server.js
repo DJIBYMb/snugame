@@ -3386,6 +3386,61 @@ app.post("/tournoi", async (req, res) => {
 
 });
 
+/* =========================================================
+   SUNUGAME — TOURNOIS PUBLICS
+   Consultation autorisée sans connexion.
+   Aucune modification de tournoi possible.
+========================================================= */
+
+app.get("/tournois-publics", async (req, res) => {
+
+  try {
+
+    const tournois = await all(
+      `
+      SELECT
+        t.id,
+        t.name,
+        t.max_teams,
+        t.status,
+        t.type,
+        t.champion_id,
+        u.username AS organisateur,
+        (
+          SELECT COUNT(*)
+          FROM participants p
+          WHERE p.tournament_id = t.id
+        ) AS nombre_participants
+
+      FROM tournaments t
+
+      LEFT JOIN users u
+        ON u.id = t.user_id
+
+      ORDER BY t.id DESC
+
+      LIMIT 100
+      `
+    );
+
+    return res.json(tournois);
+
+  } catch (error) {
+
+    console.error(
+      "Erreur tournois publics :",
+      error
+    );
+
+    return res.status(500).json({
+      ok: false,
+      message: "Impossible de charger les tournois publics"
+    });
+
+  }
+
+});
+
 app.get("/tournois", async (req,res)=>{
 
   if(!connected(req)){
