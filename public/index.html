@@ -11770,6 +11770,32 @@ async function gererSessionExpiree(options = {}){
   const forcerConnexion =
     options?.forcerConnexion === true;
 
+      /*
+    SUNUGAME — PROTECTION MODE VISITEUR
+
+    Une erreur 401 provenant d'une fonction
+    réservée aux membres ne doit pas fermer
+    une page publique consultée sans connexion.
+  */
+
+  const pagesPubliquesVisiteur = [
+    "pageTournoisPublics",
+    "pageParticipantsPublics",
+    "pagePublicProfil"
+  ];
+
+  if(
+    !forcerConnexion &&
+    currentUserId == null &&
+    pagesPubliquesVisiteur.includes(currentPageName)
+  ){
+    console.warn(
+      "SUNUGAME : redirection 401 ignorée en mode visiteur."
+    );
+
+    return;
+  }
+
   /*
     Une requête de l’ancien écran peut finir après l’ouverture
     d’un formulaire public. On ignore sa redirection visuelle.
@@ -13129,12 +13155,15 @@ async function ouvrirParticipantsPublics(tournoiId){
     return;
   }
 
+  // SUNUGAME — RETOUR PROFIL MODE VISITEUR
+  // Mémoriser que le profil vient des participants.
+  window.profilPublicDepuisParticipantsVisiteur = true;
+
   ouvrirProfilPublic(userId, {
     skipHistory:true
   });
 
 });
-
         informations.appendChild(boutonProfil);
 
       }
@@ -13993,6 +14022,33 @@ async function retourProfilPublic(){
     await ouvrirLiveSpectateur(
       liveId
     );
+
+    return;
+  }
+
+    /*
+    SUNUGAME — RETOUR MODE VISITEUR
+
+    Lorsqu'un visiteur ouvre un profil
+    depuis la liste des participants,
+    il revient à cette liste.
+
+    La navigation des membres connectés
+    reste inchangée.
+  */
+
+  if(
+    currentUserId == null &&
+    window.profilPublicDepuisParticipantsVisiteur === true
+  ){
+
+    window.profilPublicDepuisParticipantsVisiteur = false;
+
+    setPage("pageParticipantsPublics", false);
+
+    document.querySelector("header")?.classList.remove("hidden");
+
+    document.querySelector(".bottom-nav")?.classList.remove("hidden");
 
     return;
   }
@@ -30591,10 +30647,32 @@ async function actualiserBoutonMessageProfilPublic(userId){
   btn.disabled = true;
   btn.style.opacity = ".55";
   btn.style.cursor = "not-allowed";
-  btn.title = "Vérification de la messagerie...";
+    btn.title = "Vérification de la messagerie...";
+
+  // SUNUGAME — MODE VISITEUR
+  // Ne pas appeler une route privée sans connexion.
+  // Le bouton Message reste désactivé.
+  const sessionVisiteur = await fetch("/me", {
+    credentials: "same-origin",
+    cache: "no-store"
+  }).then(r => {
+    if(!r.ok) return null;
+    return r.json();
+  }).catch(() => null);
+
+  if(
+    !sessionVisiteur ||
+    sessionVisiteur.connected === false ||
+    !sessionVisiteur.id
+  ){
+    btn.disabled = true;
+    btn.style.opacity = ".55";
+    btn.style.cursor = "not-allowed";
+    btn.title = "Connectez-vous pour envoyer un message";
+    return;
+  }
 
   try{
-
     const access =
       await get(
         "/message-access/" + idJoueur
@@ -30835,6 +30913,36 @@ async function suivreDepuisProfilPublic(userId, event){
 
   const btn =
     event?.currentTarget;
+
+      // =========================================
+  // SUNUGAME — PROTECTION MODE VISITEUR
+  // =========================================
+
+  const sessionSuivi = await fetch("/me", {
+    method: "GET",
+    credentials: "same-origin",
+    cache: "no-store"
+  })
+  .then(async response => {
+    if(!response.ok) return null;
+    return response.json();
+  })
+  .catch(() => null);
+
+  if(
+    !sessionSuivi ||
+    sessionSuivi.connected === false ||
+    !sessionSuivi.id
+  ){
+
+    if(typeof showNotif === "function"){
+      showNotif("🔐 Connectez-vous pour vous abonner à ce joueur.");
+    }else{
+      alert("🔐 Connectez-vous pour vous abonner à ce joueur.");
+    }
+
+    return;
+  }
 
   if(
     !btn ||
