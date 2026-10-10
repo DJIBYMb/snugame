@@ -6199,10 +6199,6 @@ body.live-spectator-mode .bottom-nav{
   -webkit-backface-visibility:hidden;
 }
 
-/* Cacher les 5 boutons en mode visiteur */
-body.mode-visiteur .bottom-nav {
-  display: none !important;
-}
 
 </style>
 
@@ -13220,6 +13216,13 @@ async function ouvrirParticipantsPublics(tournoiId){
 async function ouvrirTournoisVisiteur(){
 
   document.body.classList.add("mode-visiteur");
+
+  // Afficher les 5 boutons en mode visiteur
+const barreNavigation = document.getElementById("bottomNav");
+
+if(barreNavigation){
+  barreNavigation.classList.remove("hidden");
+}
 
   // Quitter l'affichage de connexion.
   document.body.classList.remove(
