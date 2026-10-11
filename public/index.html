@@ -25341,6 +25341,29 @@ function nettoyerContexteOrganisateurExterne(){
 
 }
 
+// AdMob : compter les changements réels entre les cinq onglets principaux.
+// Le délai de 5 minutes reste partagé avec Vidéos, Matchs et Profils.
+let compteurPubNavigation =
+  Number(localStorage.getItem("compteurPubNavigation")) || 0;
+let dernierOngletPub = null;
+
+function verifierPubliciteNavigation(destination){
+  if(utilisateurAbonne === true) return;
+  if(dernierOngletPub === destination) return;
+  dernierOngletPub = destination;
+
+  compteurPubNavigation++;
+  localStorage.setItem("compteurPubNavigation", compteurPubNavigation);
+
+  // Ne pas afficher une interstitielle à chaque changement de page.
+  if(compteurPubNavigation < 5) return;
+  if(!pubAutorisee()) return;
+
+  afficherPublicite();
+  compteurPubNavigation = 0;
+  localStorage.setItem("compteurPubNavigation", "0");
+}
+
 let navigationBottomEnCours = false;
 let navigationBottomEnAttente = null;
 
@@ -25450,6 +25473,10 @@ async function naviguerBottom(
       await executerDestinationBottomNav(
         demande.destination
       );
+
+      // Uniquement après la navigation, et non pendant le chargement.
+      // Les annonces vidéo gardent aussi leur compteur propre.
+      verifierPubliciteNavigation(demande.destination);
 
       demande =
         navigationBottomEnAttente;
