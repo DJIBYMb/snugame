@@ -1812,7 +1812,6 @@ ON direct_messages(receiver_id,seen);
    Il prépare les lives, leur propriétaire, leur statut
    et les compteurs.
 ========================================================= */
-
 db.exec(`
 CREATE TABLE IF NOT EXISTS live_streams(
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -1821,6 +1820,7 @@ CREATE TABLE IF NOT EXISTS live_streams(
   status TEXT NOT NULL DEFAULT 'starting'
     CHECK(status IN ('starting','live','ended')),
   provider TEXT,
+  android_end_token_hash TEXT,
   provider_stream_id TEXT,
   playback_url TEXT,
   viewers_count INTEGER NOT NULL DEFAULT 0,
@@ -1840,19 +1840,56 @@ ON live_streams(user_id,id DESC);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_live_streams_one_open_per_user
 ON live_streams(user_id)
 WHERE status IN ('starting','live');
-`, err=>{
-  if(err){
+
+`, err => {
+
+  if (err) {
     console.error(
       "Erreur initialisation LIVE SQLite :",
       err
     );
-  }else{
-    console.log(
-      "Table et index LIVE SQLite prêts"
-    );
+    return;
   }
-});
 
+  console.log("Table et index LIVE SQLite prêts");
+
+  // Migration pour les bases de données existantes
+  db.all("PRAGMA table_info(live_streams)", (error, columns) => {
+
+    if (error) {
+      console.error("Erreur vérification table LIVE :", error);
+      return;
+    }
+
+    const existe = columns.some(
+      column => column.name === "android_end_token_hash"
+    );
+
+    if (!existe) {
+
+      db.run(
+        "ALTER TABLE live_streams ADD COLUMN android_end_token_hash TEXT",
+        (migrationError) => {
+
+          if (migrationError) {
+            console.error(
+              "Erreur migration LIVE Android :",
+              migrationError
+            );
+          } else {
+            console.log(
+              "Colonne de sécurité LIVE Android ajoutée"
+            );
+          }
+
+        }
+      );
+
+    }
+
+  });
+
+});
 
 /* =========================================================
    LIVE SUNUGAME — BLOC 17
@@ -19050,6 +19087,27 @@ app.post(
 
       }
 
+      // SUNUGAME : autorisation sécurisée pour arrêter le LIVE Android
+const androidEndToken =
+  crypto.randomBytes(32).toString("hex");
+
+const androidEndTokenHash =
+  crypto.createHash("sha256")
+    .update(androidEndToken)
+    .digest("hex");
+
+await run(
+  `
+  UPDATE live_streams
+  SET android_end_token_hash=?,
+      updated_at=datetime('now')
+  WHERE id=?
+    AND user_id=?
+    AND status IN ('starting','live')
+  `,
+  [androidEndTokenHash, liveId, me]
+);
+
       const roomName =
         liveKitRoomName(liveId);
 
@@ -19089,7 +19147,8 @@ app.post(
         live_id:liveId,
         url:process.env.LIVEKIT_URL,
         token,
-        room:roomName
+        room:roomName,
+        android_end_token:androidEndToken
       });
 
     }catch(error){
@@ -19437,19 +19496,57 @@ app.post("/live/:id/go-live", async (req,res)=>{
 
 });
 
+// SUNUGAME : nettoyage des LIVE bloqués en préparation
+setInterval(async () => {
+  try {
+    await run(`
+      UPDATE live_streams
+      SET status='ended',
+          viewers_count=0,
+          ended_at=datetime('now'),
+          updated_at=datetime('now')
+      WHERE status='starting'
+        AND datetime(created_at) < datetime('now','-20 minutes')
+    `);
+  } catch (error) {
+    console.error(
+      "Nettoyage LIVE en préparation :",
+      error
+    );
+  }
+}, 5 * 60 * 1000).unref();
 
 app.post("/live/:id/end", async (req,res)=>{
 
   try{
 
-    if(!connected(req)){
+      // SUNUGAME : vérification de l'autorisation Android
+    const androidEndToken =
+      typeof req.get("X-SunuGame-Live-End-Token") === "string"
+        ? req.get("X-SunuGame-Live-End-Token").trim()
+        : "";
+
+    const androidEndTokenHash =
+      androidEndToken
+        ? crypto.createHash("sha256")
+            .update(androidEndToken)
+            .digest("hex")
+        : "";
+
+        // SUNUGAME : connexion normale ou autorisation Android
+    const sessionConnected = connected(req);
+
+    if(!sessionConnected && !androidEndToken){
       return res.status(401).json({
         ok:false,
         message:tr(req,"Connecte-toi","Please log in")
       });
     }
 
-    const me = Number(req.session.userId);
+    const me = sessionConnected
+      ? Number(req.session.userId)
+      : 0;
+
     const liveId = Number(req.params.id);
 
     if(
@@ -19479,16 +19576,49 @@ app.post("/live/:id/end", async (req,res)=>{
       });
     }
 
-    if(Number(live.user_id) !== me){
-      return res.status(403).json({
-        ok:false,
-        message:tr(
-          req,
-          "Tu ne peux pas terminer le live d'un autre utilisateur",
-          "You cannot end another user's live"
-        )
-      });
-    }
+    // SUNUGAME : vérifier le propriétaire ou la clé Android
+const estProprietaire =
+  sessionConnected &&
+  Number(live.user_id) === me;
+
+let cleAndroidValide = false;
+
+if(
+  androidEndToken &&
+  live.android_end_token_hash &&
+  /^[a-f0-9]{64}$/i.test(androidEndTokenHash) &&
+  /^[a-f0-9]{64}$/i.test(live.android_end_token_hash)
+){
+
+  const cleRecue = Buffer.from(
+    androidEndTokenHash,
+    "hex"
+  );
+
+  const cleEnregistree = Buffer.from(
+    live.android_end_token_hash,
+    "hex"
+  );
+
+  cleAndroidValide =
+    crypto.timingSafeEqual(
+      cleRecue,
+      cleEnregistree
+    );
+}
+
+if(!estProprietaire && !cleAndroidValide){
+
+  return res.status(403).json({
+    ok:false,
+    message:tr(
+      req,
+      "Tu n'es pas autorisé à terminer ce LIVE",
+      "You are not authorized to end this live"
+    )
+  });
+
+}
 
     if(live.status === "ended"){
       return res.json({
@@ -19498,17 +19628,19 @@ app.post("/live/:id/end", async (req,res)=>{
       });
     }
 
+    // SUNUGAME : terminer le LIVE après vérification des autorisations
     await run(
       `
       UPDATE live_streams
       SET status='ended',
           viewers_count=0,
           ended_at=datetime('now'),
-          updated_at=datetime('now')
+          updated_at=datetime('now'),
+          android_end_token_hash=NULL
       WHERE id=?
-        AND user_id=?
+        AND status IN ('starting','live')
       `,
-      [liveId,me]
+      [liveId]
     );
 
     return res.json({

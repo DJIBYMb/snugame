@@ -8645,6 +8645,11 @@ class="hidden creation-media-page">
             Live
           </button>
 
+          <div id="liveRepriseActions" style="display:none;gap:10px;flex-wrap:wrap;margin:12px 0">
+            <button type="button" class="glass-btn" id="btnReprendreLive" onclick="reprendreLiveSunugame()">▶️ Reprendre mon LIVE</button>
+            <button type="button" class="glass-btn" id="btnTerminerLiveExistant" onclick="terminerLiveExistantSunugame()">🛑 Terminer mon LIVE</button>
+          </div>
+
           <p
             id="livePreparationMessage"
             class="live-preparation-note">
@@ -26412,7 +26417,8 @@ async function demanderPartageEcranAndroid(){
       String(liveId),
       String(liveKitUrl),
       String(liveKitToken),
-      String(data.room)
+      String(data.room),
+      String(data.android_end_token)
     );
 
     return true;
@@ -26652,7 +26658,22 @@ async function(){
 
 
 window.onAndroidLiveError =
-function(messageErreur){
+async function(messageErreur){
+  // Secours si le service Android signale l'arrêt de MediaProjection.
+  // Ne jamais terminer le LIVE sur une erreur générique de connexion.
+  if(String(messageErreur || "").includes("partage d'écran a été arrêté")){
+    const liveId = Number(window.liveSunugameEnPreparation?.id || 0);
+    if(liveId){
+      try{
+        await fetch(`/live/${liveId}/end`, {
+          method:"POST", credentials:"include",
+          headers:{"Content-Type":"application/json"}, body:"{}"
+        });
+      }catch(e){ console.warn("Fin LIVE après arrêt Android :",e); }
+      window.liveSunugameEnPreparation = null;
+      arreterActualisationPageLive();
+    }
+  }
 
   const message =
     String(
@@ -27996,7 +28017,45 @@ async function quitterLiveSpectateur(
 
 
 
+async function reprendreLiveSunugame(){
+  const live = window.liveSunugameEnPreparation;
+  if(!live?.id) return;
+  try{
+    const response = await fetch(`/live/${live.id}`, {credentials:"include",cache:"no-store"});
+    const data = await response.json();
+    if(!response.ok || data?.live?.status !== "live"){
+      document.getElementById("liveRepriseActions").style.display = "none";
+      const note = document.getElementById("livePreparationMessage");
+      if(note) note.textContent = "Ce LIVE n'est plus actif. Tu peux en créer un nouveau.";
+      window.liveSunugameEnPreparation = null;
+      return;
+    }
+    window.liveSunugameEnPreparation = data.live;
+    await ouvrirPageLiveEnCours();
+  }catch(e){ alert("Impossible de vérifier le LIVE : " + e.message); }
+}
+
+async function terminerLiveExistantSunugame(){
+  const liveId = Number(window.liveSunugameEnPreparation?.id || 0);
+  if(!liveId || !confirm("Terminer définitivement ce LIVE ?")) return;
+  try{
+    const response = await fetch(`/live/${liveId}/end`,{
+      method:"POST",credentials:"include",headers:{"Content-Type":"application/json"},body:"{}"
+    });
+    if(!response.ok) throw new Error("Le serveur n'a pas confirmé l'arrêt.");
+    window.AndroidLive?.stopScreenShare?.();
+    arreterCameraLiveSunugame();
+    window.liveSunugameEnPreparation = null;
+    window.liveSunugamePublicationEnCours = false;
+    document.getElementById("liveRepriseActions").style.display = "none";
+    const note = document.getElementById("livePreparationMessage");
+    if(note) note.textContent = "LIVE terminé. Tu peux en démarrer un nouveau.";
+  }catch(e){ alert("Impossible de terminer le LIVE : " + e.message); }
+}
+
 async function preparerLiveSunugame(){
+  const actions = document.getElementById("liveRepriseActions");
+  if(actions) actions.style.display = "none";
 
   const input =
     document.getElementById(
@@ -28077,18 +28136,16 @@ async function preparerLiveSunugame(){
         data?.live?.id
       ){
 
-        /*
-          On réutilise le live déjà créé.
-          IMPORTANT : on ne s'arrête plus ici.
-          On continue vers Caméra ou Écran du jeu.
-        */
-        window.liveSunugameEnPreparation =
-          data.live;
-
-        if(message){
-          message.textContent =
-            "Live déjà préparé. Ouverture de la source...";
+        window.liveSunugameEnPreparation = data.live;
+        if(data.live.status === "live"){
+          const actions = document.getElementById("liveRepriseActions");
+          if(actions) actions.style.display = "flex";
+          if(message) message.textContent =
+            "Un LIVE est déjà actif. Choisis Reprendre ou Terminer.";
+          return; // Ne pas demander une nouvelle autorisation de capture.
         }
+        if(message) message.textContent =
+          "LIVE en préparation : poursuite de la connexion...";
 
       }else{
 
@@ -28359,6 +28416,14 @@ async function actualiserStatsPageLive(){
       !response.ok ||
       !data?.ok
     ){
+      return;
+    }
+
+    if(data.status === "ended"){
+      const status = document.getElementById("liveRoomStatus");
+      if(status) status.textContent = "🔴 Ce LIVE est terminé.";
+      arreterActualisationPageLive();
+      window.liveSunugameEnPreparation = null;
       return;
     }
 
