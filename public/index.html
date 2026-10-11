@@ -31404,44 +31404,51 @@ let compteurPubVideos =
   let dernierePubTime =
   Number(localStorage.getItem("dernierePubTime")) || 0;
 
+  // Le délai est calculé depuis l'affichage réel, confirmé par Android.
   function pubAutorisee(){
-
-  const maintenant = Date.now();
-
-  const attente = 5 * 60 * 1000;
-
-  if(maintenant - dernierePubTime < attente){
-    return false;
+    return !publiciteEnAttente &&
+      Date.now() - dernierePubTime >= 5 * 60 * 1000;
   }
 
-  dernierePubTime = maintenant;
+  let publiciteEnAttente = false;
+  let minuterieAttentePublicite = null;
 
-  localStorage.setItem(
-    "dernierePubTime",
-    dernierePubTime
-  );
+  // Android appelle cette fonction uniquement après l'affichage effectif.
+  window.sunuGamePubliciteAffichee = function(){
+    dernierePubTime = Date.now();
+    localStorage.setItem("dernierePubTime", String(dernierePubTime));
+    publiciteEnAttente = false;
+    clearTimeout(minuterieAttentePublicite);
+    minuterieAttentePublicite = null;
+  };
 
-  return true;
+  // Une annonce absente ou un échec ne consomme pas les cinq minutes.
+  window.sunuGamePubliciteNonAffichee = function(){
+    publiciteEnAttente = false;
+    clearTimeout(minuterieAttentePublicite);
+    minuterieAttentePublicite = null;
+  };
 
-}
-
-
-function afficherPublicite(){
-
-  if(
-    window.AndroidAds &&
-    typeof window.AndroidAds.showInterstitial === "function"
-  ){
-
-    window.AndroidAds.showInterstitial();
-
-  }else{
-
-    console.log("AdMob disponible uniquement dans l'application Android");
-
+  function afficherPublicite(){
+    if(publiciteEnAttente) return;
+    if(window.AndroidAds &&
+       typeof window.AndroidAds.showInterstitial === "function"){
+      publiciteEnAttente = true;
+      // Sécurité si la réponse Android n'arrive pas (sans lancer le délai).
+      minuterieAttentePublicite = setTimeout(function(){
+        publiciteEnAttente = false;
+        minuterieAttentePublicite = null;
+      }, 15000);
+      try {
+        window.AndroidAds.showInterstitial();
+      } catch(e) {
+        window.sunuGamePubliciteNonAffichee();
+        console.warn("AdMob : impossible de demander l'annonce", e);
+      }
+    } else {
+      console.log("AdMob disponible uniquement dans l'application Android");
+    }
   }
-
-}
 
 function verifierPubliciteMatchs(){
 
