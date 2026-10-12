@@ -28,7 +28,16 @@ const compression = require("compression");
 const helmet = require("helmet");
 
 const crypto = require("crypto");
-const { AccessToken } = require("livekit-server-sdk");
+const {
+  AccessToken,
+  WebhookReceiver
+} = require("livekit-server-sdk");
+
+// SUNUGAME — Vérification des webhooks LiveKit
+const liveKitWebhookReceiver = new WebhookReceiver(
+  process.env.LIVEKIT_API_KEY,
+  process.env.LIVEKIT_API_SECRET
+);
 
 if(process.env.FIREBASE_SERVICE_ACCOUNT){
 
@@ -363,6 +372,62 @@ db.serialize(()=>{
   db.run("PRAGMA cache_size = 10000");
   db.run("PRAGMA temp_store = MEMORY");
   db.run("PRAGMA busy_timeout = 5000");
+});
+
+// SUNUGAME — Lecture des notifications LiveKit
+app.use(
+  "/webhooks/livekit",
+  express.raw({
+    type: "application/webhook+json",
+    limit: "1mb"
+  })
+);
+
+/* ==========================================
+   SUNUGAME — WEBHOOK LIVEKIT
+   Réception sécurisée des événements
+========================================== */
+
+app.post("/webhooks/livekit", async (req, res) => {
+
+  try {
+
+    const body = req.body.toString("utf8");
+
+    const authorization =
+      req.headers.authorization || "";
+
+    // Vérifier la signature LiveKit
+    const event =
+      await liveKitWebhookReceiver.receive(
+        body,
+        authorization
+      );
+
+    console.log(
+      "SUNUGAME LIVEKIT WEBHOOK :",
+      event.event,
+      event.room?.name || ""
+    );
+
+    return res.status(200).json({
+      ok: true
+    });
+
+  } catch (error) {
+
+    console.error(
+      "SUNUGAME — Webhook LiveKit refusé :",
+      error.message
+    );
+
+    return res.status(401).json({
+      ok: false,
+      message: "Signature LiveKit invalide"
+    });
+
+  }
+
 });
 
 app.use(express.json({ limit:"20mb" }));
