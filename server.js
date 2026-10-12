@@ -404,11 +404,15 @@ app.post("/webhooks/livekit", async (req, res) => {
         authorization
       );
 
-    console.log(
-      "SUNUGAME LIVEKIT WEBHOOK :",
-      event.event,
-      event.room?.name || ""
-    );
+console.log(
+  "SUNUGAME LIVEKIT WEBHOOK :",
+  event.event,
+  event.room?.name || "",
+  "IDENTITY :",
+  event.participant?.identity || "aucune",
+  "TRACK :",
+  event.track?.type || "aucune"
+);
 
     return res.status(200).json({
       ok: true
