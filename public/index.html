@@ -15763,10 +15763,21 @@ if(videoProfil){
 
   videoProfil
     .play()
+    .then(()=>{
+
+      const id = Number(videoId);
+
+      if(
+        Number.isInteger(id) &&
+        id > 0
+      ){
+        compterVue(id);
+      }
+
+    })
     .catch(()=>{});
 
 }
-
 } 
 
 async function afficherClassementSelonType(){
@@ -15956,24 +15967,6 @@ async function ouvrirVideoPublique(videoId, userId){
   const vuesAvantOuverture =
     Number(video.vues || 0);
 
-  video.vues =
-    vuesAvantOuverture + 1;
-
-  mettreAJourCompteursVue(
-    videoId,
-    video.vues
-  );
-
-  compterVueOptimiste(
-    videoId,
-    vuesAvantOuverture
-  ).then(vuesExactes=>{
-
-    video.vues =
-      vuesExactes;
-
-  });
-
   /* Le profil public est déjà mémorisé dans etatAvantVideoPublique.
      Ne pas l'ajouter une deuxième fois dans pageStack. */
   setPage("pageDashboard", false);
@@ -16111,11 +16104,19 @@ if(videoPublique){
 
 }
 
-  const videoEl =
+    const videoEl =
     highlightsList.querySelector("video");
 
   if(videoEl){
-    videoEl.play().catch(()=>{});
+
+    videoEl.play()
+      .then(()=>{
+
+        compterVue(videoId);
+
+      })
+      .catch(()=>{});
+
   }
 }
 
@@ -20890,17 +20891,10 @@ async function compterVueOptimiste(
       Number(valeurActuelle) || 0
     );
 
+  // Ne pas ajouter +1 avant confirmation du serveur.
+  // Le backend vérifie si ce compte a déjà vu la vidéo.
   const valeurOptimiste =
-    ancienneValeur + 1;
-
-  /*
-    Réaction immédiate à l'écran.
-  */
-  mettreAJourCompteursVue(
-    id,
-    valeurOptimiste
-  );
-
+    ancienneValeur;
   try{
 
     const response =
@@ -20942,7 +20936,7 @@ async function compterVueOptimiste(
       return valeurServeur;
     }
 
-    return valeurOptimiste;
+    return ancienneValeur;
 
   }catch(error){
 
@@ -20954,13 +20948,7 @@ async function compterVueOptimiste(
     /*
       Si le serveur refuse, on remet l'ancienne valeur.
     */
-    mettreAJourCompteursVue(
-      id,
-      ancienneValeur
-    );
-
-    return ancienneValeur;
-
+        return ancienneValeur;
   }
 
 }
@@ -21300,12 +21288,10 @@ window.favorisChanged = true;
 
 async function voirHighlight(id,url){
 
-  await post(
-    "/view-highlight",
-    { id }
-  );
+  await compterVue(id);
 
   showPanel("panelHighlights");
+
   await chargerHighlights();
 
 }
@@ -25066,6 +25052,27 @@ function initTikTokAutoplay(){
 
   video
     .play()
+    .then(()=>{
+
+      const card =
+        video.closest(".tiktok-video");
+
+      const videoId =
+       Number(card?.dataset.highlightId);
+
+       if(
+  Number.isInteger(videoId) &&
+  videoId > 0 &&
+  !video.dataset.vueDemandee
+){
+
+  video.dataset.vueDemandee = "1";
+
+  compterVue(videoId);
+
+}
+
+    })
     .catch(()=>{});
 
 }else{
@@ -25274,8 +25281,20 @@ function ouvrirVideoProfil(
 
       }
 
-      video
+            video
         .play()
+        .then(()=>{
+
+          const videoId = Number(id);
+
+          if(
+            Number.isInteger(videoId) &&
+            videoId > 0
+          ){
+            compterVue(videoId);
+          }
+
+        })
         .catch(()=>{});
 
     },
@@ -28031,7 +28050,16 @@ async function reprendreLiveSunugame(){
       return;
     }
     window.liveSunugameEnPreparation = data.live;
-    await ouvrirPageLiveEnCours();
+
+await ouvrirPageLiveEnCours();
+
+// Réafficher la petite fenêtre flottante si le service LIVE fonctionne.
+if (
+  window.AndroidLive &&
+  typeof window.AndroidLive.showLiveOverlay === "function"
+) {
+  window.AndroidLive.showLiveOverlay();
+}
   }catch(e){ alert("Impossible de vérifier le LIVE : " + e.message); }
 }
 
@@ -30466,12 +30494,15 @@ async function envoyerCommentaire(){
 
 async function compterVue(videoId){
 
-  await post("/view-highlight",{
-    highlight_id:videoId
-  });
+  const id = Number(videoId);
+
+  if(!Number.isInteger(id) || id <= 0){
+    return;
+  }
+
+  return compterVueOptimiste(id);
 
 }
-
 function fermerCommentaires(){
 
   document
