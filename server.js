@@ -2475,11 +2475,24 @@ app.post(
 
 
     await transporter.sendMail({
-      from:"SunuGame <verification@snugame.com>",
-      to:cleanEmail,
-      subject:"Code de validation SNUGAME",
-      text:"Votre code de validation SNUGAME est : " + code
-    });
+
+  from:"SunuGame <verification@snugame.com>",
+
+  to:cleanEmail,
+
+  subject:tr(
+    req,
+    "Code de validation SNUGAME",
+    "SNUGAME verification code"
+  ),
+
+  text:tr(
+    req,
+    "Votre code de validation SNUGAME est : ",
+    "Your SNUGAME verification code is: "
+  ) + code
+
+});
 
     res.send(
   tr(
@@ -11382,9 +11395,38 @@ button{
 
 <body>
 
-<header>
+<header style="position:relative;">
+
+  <button
+    id="joinLanguageBtn"
+    type="button"
+    onclick="changerLangueJoin()"
+    style="
+      position:absolute;
+      top:47px;
+      right:12px;
+      width:auto;
+      min-width:80px;
+      padding:8px 12px;
+      margin:0;
+      border-radius:999px;
+      background:#ffffff;
+      color:#1455ff;
+      font-size:13px;
+      font-weight:900;
+      cursor:pointer;
+      z-index:10;
+    "
+  >
+    🌐 FR / EN
+  </button>
+
   <h1>SNUGAME</h1>
-  <p>Inscription tournoi eFootball Mobile</p>
+
+  <p data-i18n="joinTitle">
+  Inscription tournoi 
+ </p>
+
 </header>
 
 <div class="container">
@@ -11394,27 +11436,53 @@ button{
 <h2>🏆 ${escapeHtml(tournoi.name)}</h2>
 
 <p class="small">
-Places : ${count.total}/${tournoi.max_teams}
+  <span data-i18n="places">Places</span> :
+  ${count.total}/${tournoi.max_teams}
 </p>
 
-<p>
-Crée ton compte SNUGAME et participe automatiquement à ce tournoi.
+<p data-i18n="joinDescription">
+  Crée ton compte SNUGAME et participe automatiquement à ce tournoi.
 </p>
 
-<input id="joinName" placeholder="Nom joueur">
+<input
+  id="joinName"
+  data-i18n-placeholder="playerName"
+  placeholder="Nom joueur"
+>
 
-<input id="joinEmail" placeholder="Adresse email">
+<input
+  id="joinEmail"
+  type="email"
+  data-i18n-placeholder="emailAddress"
+  placeholder="Adresse email"
+>
 
-<input id="joinPassword" type="password" placeholder="Mot de passe">
+<input
+  id="joinPassword"
+  type="password"
+  data-i18n-placeholder="password"
+  placeholder="Mot de passe"
+>
 
-<button class="secondary" onclick="sendCode()">
-Envoyer code email
+<button
+  class="secondary"
+  onclick="sendCode()"
+  data-i18n="sendEmailCode"
+>
+  Envoyer code email
 </button>
 
-<input id="joinCode" placeholder="Code reçu par email">
+<input
+  id="joinCode"
+  data-i18n-placeholder="emailCode"
+  placeholder="Code reçu par email"
+>
 
-<button onclick="joinTournament()">
-Créer compte et participer
+<button
+  onclick="joinTournament()"
+  data-i18n="createAndJoin"
+>
+  Créer compte et participer
 </button>
 
 <div
@@ -11424,23 +11492,32 @@ Créer compte et participer
   ">
 </div>
 
-<h3 style="text-align:center;">
-J’ai déjà un compte SUNUGAME
+<h3
+  style="text-align:center;"
+  data-i18n="existingAccountTitle"
+>
+  J’ai déjà un compte SUNUGAME
 </h3>
 
-<p class="small" style="text-align:center;">
-Connecte-toi avec ton compte pour participer automatiquement au tournoi.
+<p
+  class="small"
+  style="text-align:center;"
+  data-i18n="existingAccountDescription"
+>
+  Connecte-toi avec ton compte pour participer automatiquement au tournoi.
 </p>
 
 <input
   id="existingUsername"
-  placeholder="Username"
+  data-i18n-placeholder="username"
+  placeholder="Nom d'utilisateur"
   autocomplete="username"
 >
 
 <input
   id="existingPassword"
   type="password"
+  data-i18n-placeholder="password"
   placeholder="Mot de passe"
   autocomplete="current-password"
 >
@@ -11448,8 +11525,9 @@ Connecte-toi avec ton compte pour participer automatiquement au tournoi.
 <button
   class="secondary"
   onclick="joinWithExistingAccount()"
+  data-i18n="loginAndJoin"
 >
-Se connecter et participer
+  Se connecter et participer
 </button>
 
 <p id="msg"></p>
@@ -11459,20 +11537,141 @@ Se connecter et participer
 </div>
 
 <script>
+
+let langueJoin = localStorage.getItem("sunugame_lang") === "en"
+  ? "en"
+  : "fr";
+
+function changerLangueJoin(){
+
+  langueJoin = langueJoin === "fr" ? "en" : "fr";
+
+  localStorage.setItem("sunugame_lang", langueJoin);
+
+  appliquerLangueJoin();
+
+}
+
+function appliquerLangueJoin(){
+
+  const traductionsJoin = {
+
+    fr: {
+      joinTitle: "Inscription tournoi eFootball Mobile",
+      places: "Places",
+      joinDescription: "Crée ton compte SNUGAME et participe automatiquement à ce tournoi.",
+
+      playerName: "Nom joueur",
+      emailAddress: "Adresse email",
+      password: "Mot de passe",
+      sendEmailCode: "Envoyer code email",
+      emailCode: "Code reçu par email",
+      createAndJoin: "Créer compte et participer",
+
+      existingAccountTitle: "J’ai déjà un compte SUNUGAME",
+      existingAccountDescription: "Connecte-toi avec ton compte pour participer automatiquement au tournoi.",
+      username: "Nom d'utilisateur",
+      loginAndJoin: "Se connecter et participer"
+    },
+
+    en: {
+      joinTitle: "eFootball Mobile Tournament Registration",
+      places: "Spots",
+      joinDescription: "Create your SNUGAME account and automatically join this tournament.",
+
+      playerName: "Player name",
+      emailAddress: "Email address",
+      password: "Password",
+      sendEmailCode: "Send email code",
+      emailCode: "Code received by email",
+      createAndJoin: "Create account and join",
+
+      existingAccountTitle: "I already have a SUNUGAME account",
+      existingAccountDescription: "Log in with your account to automatically join the tournament.",
+      username: "Username",
+      loginAndJoin: "Log in and join"
+    }
+
+  };
+
+  const textes = traductionsJoin[langueJoin];
+
+  document.documentElement.lang = langueJoin;
+
+  document.querySelectorAll("[data-i18n]").forEach(element => {
+
+    const cle = element.getAttribute("data-i18n");
+
+    if(Object.prototype.hasOwnProperty.call(textes, cle)){
+      element.textContent = textes[cle];
+    }
+
+  });
+
+  document.querySelectorAll("[data-i18n-placeholder]").forEach(element => {
+
+    const cle = element.getAttribute("data-i18n-placeholder");
+
+    if(Object.prototype.hasOwnProperty.call(textes, cle)){
+      element.placeholder = textes[cle];
+    }
+
+  });
+
+  const bouton = document.getElementById("joinLanguageBtn");
+
+  if(bouton){
+    bouton.textContent = langueJoin === "fr"
+      ? "🌐 FR / EN"
+      : "🌐 EN / FR";
+  }
+
+}
+
+document.addEventListener("DOMContentLoaded", appliquerLangueJoin);
+
+const messagesJoin = {
+
+  fr: {
+    loading: "⏳ Chargement...",
+    networkError: "Erreur réseau. Réessaie.",
+    registering: "Inscription en cours...",
+    loginRequired: "Nom d'utilisateur et mot de passe obligatoires.",
+    connecting: "Connexion et inscription au tournoi..."
+  },
+
+  en: {
+    loading: "⏳ Loading...",
+    networkError: "Network error. Please try again.",
+    registering: "Registration in progress...",
+    loginRequired: "Username and password are required.",
+    connecting: "Logging in and joining the tournament..."
+  }
+
+};
+
+function messageJoin(cle){
+
+  return messagesJoin[langueJoin]?.[cle]
+    || messagesJoin.fr[cle]
+    || "";
+
+}
+
 async function post(url,data){
 
-  msg.textContent =
-    "⏳ Chargement...";
+  msg.textContent = messageJoin("loading");
 
   try{
 
-    const res = await fetch(url,{
-      method:"POST",
-      headers:{
-        "Content-Type":"application/json"
-      },
-      body:JSON.stringify(data)
-    });
+  const res = await fetch(url,{
+  method:"POST",
+  headers:{
+    "Content-Type":"application/json",
+    "x-language":langueJoin
+  },
+  body:JSON.stringify(data)
+});
 
     const text =
       await res.text();
@@ -11484,8 +11683,7 @@ async function post(url,data){
 
   }catch(e){
 
-    msg.textContent =
-      "Erreur réseau. Réessaie.";
+   msg.textContent = messageJoin("networkError");
 
     return "";
 
@@ -11501,7 +11699,7 @@ async function sendCode(){
 
 async function joinTournament(){
 
-  msg.textContent = "Inscription en cours...";
+  msg.textContent = messageJoin("registering");
 
   const payload = {
     join_code:"${escapeHtml(req.params.code)}",
@@ -11522,7 +11720,7 @@ async function joinTournament(){
 
   }
 
-  msg.innerHTML = result;
+  msg.textContent = result;
 
 }
 
@@ -11541,15 +11739,13 @@ async function joinWithExistingAccount(){
 
   if(!username || !password){
 
-    msg.textContent =
-      "Username et mot de passe obligatoires";
+    msg.textContent = messageJoin("loginRequired");
 
     return;
 
   }
 
-  msg.textContent =
-    "Connexion et inscription au tournoi...";
+  msg.textContent = messageJoin("connecting");
 
   const result = await post(
     "/join-tournament-existing-account",
@@ -14037,15 +14233,28 @@ app.post(
       );
 
       await transporter.sendMail({
-        from:"SunuGame <verification@snugame.com>",
-        to:user.email,
-        subject:
-          "Code de vérification email SNUGAME",
-        text:
-          "Votre code est : " +
-          code +
-          "\n\nCe code expire dans 15 minutes."
-      });
+
+  from:"SunuGame <verification@snugame.com>",
+
+  to:user.email,
+
+  subject:tr(
+    req,
+    "Code de vérification email SNUGAME",
+    "SNUGAME email verification code"
+  ),
+
+  text:tr(
+    req,
+    "Votre code est : ",
+    "Your verification code is: "
+  ) + code + tr(
+    req,
+    "\n\nCe code expire dans 15 minutes.",
+    "\n\nThis code expires in 15 minutes."
+  )
+
+});
 
       return res.send(
         tr(
