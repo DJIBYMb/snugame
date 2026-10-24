@@ -29528,26 +29528,11 @@ async function(data){
         return;
       }
 
-      ouvrirVideoProfil(
-        video.video_url ||
-        video.url,
+      await ouvrirNotificationVideo(
         video.id,
-        video.user_id,
-        video.thumbnail_url ||
-        ""
-      );
-
-
-      if(
         type === "comment" ||
         type === "commentaire"
-      ){
-
-        await ouvrirCommentaires(
-          video.id
-        );
-
-      }
+      );
       return;
     }
 
