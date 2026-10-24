@@ -16812,6 +16812,8 @@ if(
     await saveFcmToken(token);
   }
 
+  await traiterNotificationAndroidEnAttente();
+
   return;
 }
 
@@ -29501,6 +29503,7 @@ async function(data){
     }
 
     if(
+      type === "video" ||
       type === "like" ||
       type === "comment" ||
       type === "commentaire"
@@ -29534,21 +29537,17 @@ async function(data){
         ""
       );
 
+
       if(
         type === "comment" ||
         type === "commentaire"
       ){
 
-        setTimeout(()=>{
-
-          ouvrirCommentaires(
-            video.id
-          );
-
-        }, 500);
+        await ouvrirCommentaires(
+          video.id
+        );
 
       }
-
       return;
     }
 
@@ -29589,6 +29588,11 @@ async function traiterNotificationAndroidEnAttente(){
     );
 
   if(!notification){
+    return;
+  }
+
+    // Conserver la notification si aucun joueur n'est connecté.
+  if(!currentUserId || Number(currentUserId) <= 0){
     return;
   }
 
@@ -32590,14 +32594,17 @@ onclick="naviguerBottom('profil','btnProfil')">
 
 <script>
 
+window.sunuGameDemarrageTermine = false;
+
 (async ()=>{
 
   try{
 
     await demarrerApplication();
 
-    await traiterNotificationAndroidEnAttente();
+    window.sunuGameDemarrageTermine = true;
 
+    await traiterNotificationAndroidEnAttente();
   }catch(error){
 
     console.error(

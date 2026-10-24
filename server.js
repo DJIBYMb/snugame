@@ -874,8 +874,16 @@ async function envoyerNotificationPush(
       data.highlight_id =
         String(highlightId);
 
-    }else if(action.startsWith("profil:")){
+    }else if(action.startsWith("comment:")){
 
+      const highlightId =
+        action.split(":")[1] || "";
+
+      data.notification_type = "comment";
+      data.highlight_id =
+        String(highlightId);
+
+    }else if(action.startsWith("profil:")){
       const userId =
         action.split(":")[1] || "";
 
@@ -907,10 +915,12 @@ async function envoyerNotificationPush(
     }
 
     const estMessagePrive =
-      action.startsWith("message:");
+     action.startsWith("message:");
 
-    if(estMessagePrive){
+    const estCommentaireVideo =
+    action.startsWith("comment:");
 
+   if(estMessagePrive || estCommentaireVideo){
       /*
         MESSAGE PRIVÉ = DATA-ONLY.
 
@@ -15428,7 +15438,41 @@ const ajouterCommentaireHighlight =
 
 });
 
-      }
+        // Notification Firebase au propriétaire de la vidéo
+        try {
+
+          const tokens = await all(
+            `
+            SELECT DISTINCT token
+            FROM fcm_tokens
+            WHERE user_id=?
+            `,
+            [Number(highlight.user_id)]
+          );
+
+          for (const appareil of tokens) {
+
+            if (!appareil.token) continue;
+
+            await envoyerNotificationPush(
+              appareil.token,
+              "💬 Nouveau commentaire",
+              "Un joueur a commenté ta vidéo",
+              `comment:${highlightId}`
+            );
+
+          }
+
+        } catch (firebaseError) {
+
+          console.error(
+            "Erreur Firebase commentaire vidéo :",
+            firebaseError
+          );
+
+        }
+
+       }
 
       /*
         Notification au propriétaire
@@ -15480,6 +15524,40 @@ const ajouterCommentaireHighlight =
   );
 
 });
+
+          // Notification Firebase au propriétaire du commentaire
+          try {
+
+            const tokensReponse = await all(
+              `
+              SELECT DISTINCT token
+              FROM fcm_tokens
+              WHERE user_id=?
+              `,
+              [Number(parentComment.participant_id)]
+            );
+
+            for (const appareil of tokensReponse) {
+
+              if (!appareil.token) continue;
+
+              await envoyerNotificationPush(
+                appareil.token,
+                "💬 Nouvelle réponse",
+                "Un joueur a répondu à ton commentaire",
+                `comment:${highlightId}`
+              );
+
+            }
+
+          } catch (firebaseError) {
+
+            console.error(
+              "Erreur Firebase réponse commentaire :",
+              firebaseError
+            );
+
+          }
 
         }
 
