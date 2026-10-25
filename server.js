@@ -880,6 +880,12 @@ async function envoyerNotificationPush(
         action.split(":")[1] || "";
 
       data.notification_type = "comment";
+
+      const commentId = action.split(":")[2] || "";
+
+      if (commentId) {
+        data.comment_id = String(commentId);
+      }
       data.highlight_id =
         String(highlightId);
 
@@ -15545,7 +15551,7 @@ const ajouterCommentaireHighlight =
                 appareil.token,
                 "💬 Nouvelle réponse",
                 "Un joueur a répondu à ton commentaire",
-                `comment:${highlightId}`
+                `comment:${highlightId}:${parentCommentId}`
               );
 
             }

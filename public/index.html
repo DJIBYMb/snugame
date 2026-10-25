@@ -22704,7 +22704,8 @@ async function ouvrirProfilJoueur(userId){
   async function ouvrirNotificationVideo(
   highlightId,
   ouvrirCommentairesAuto = false,
-  notificationId
+  notificationId,
+  commentIdNotification = null
 ){
 
   const id = Number(highlightId);
@@ -22786,9 +22787,36 @@ async function ouvrirProfilJoueur(userId){
 
   if(ouvrirCommentairesAuto){
 
-    setTimeout(()=>{
+    setTimeout(async ()=>{
 
-      ouvrirCommentaires(id);
+      await ouvrirCommentaires(id);
+
+      const commentaireId = Number(commentIdNotification);
+
+      if(
+        Number.isInteger(commentaireId) &&
+        commentaireId > 0
+      ){
+        const bloc = document.getElementById(
+          "replies_" + commentaireId
+        );
+
+        const bouton = document.getElementById(
+          "btnReplies_" + commentaireId
+        );
+
+        if(
+          bloc &&
+          bouton &&
+          bloc.classList.contains("hidden")
+        ){
+          bouton.click();
+          bloc.scrollIntoView({
+            behavior:"smooth",
+            block:"nearest"
+          });
+        }
+      }
 
     },300);
 
@@ -29531,7 +29559,9 @@ async function(data){
       await ouvrirNotificationVideo(
         video.id,
         type === "comment" ||
-        type === "commentaire"
+        type === "commentaire",
+        undefined,
+        data?.comment_id
       );
       return;
     }
