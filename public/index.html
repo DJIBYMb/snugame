@@ -22791,6 +22791,7 @@ async function ouvrirProfilJoueur(userId){
 
       await ouvrirCommentaires(id);
 
+      console.log("[SUNUGAME DEBUG] commentIdNotification =", commentIdNotification);
       const commentaireId = Number(commentIdNotification);
 
       if(
