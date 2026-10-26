@@ -16687,7 +16687,7 @@ async function synchroniserCompteConnecte(){
 
   const photo =
     compte.profile_photo ||
-    "/default-avatar.png";
+    avatarInitiale(compte.name || compte.username);
 
   const topPhoto =
     document.getElementById("topProfilePhoto");
@@ -16987,7 +16987,7 @@ async function checkStatus(){
   if(data && data.connected !== false){
   topProfilePhoto.src =
     data.profile_photo ||
-    "/default-avatar.png";
+    avatarInitiale(data.name || data.username);
 }
 
   if(!data || data.connected === false){
@@ -17319,12 +17319,12 @@ if(token){
 
   topProfilePhoto.src =
     data.profile_photo ||
-    "/default-avatar.png";
+    avatarInitiale(data.name || data.username);
 
   profilPhoto.innerHTML = `
   <img
   id="profilPhotoImg"
-  src="${data.profile_photo || "/default-avatar.png"}"
+  src="${data.profile_photo || avatarInitiale(data.name || data.username)}"
   onclick="photoProfilClick()"
   style="
     width:120px;
@@ -17344,7 +17344,7 @@ onclick="event.stopPropagation(); toggleEditProfil()">
 
 modifierProfilPhoto.innerHTML = `
   <img
-  src="${data.profile_photo || "/default-avatar.png"}"
+  src="${data.profile_photo || avatarInitiale(data.name || data.username)}"
   style="
     width:120px;
     height:120px;
@@ -18043,6 +18043,35 @@ async function ajouterParticipant(){
 
 }
 
+function avatarInitiale(nom) {
+  const texte = String(nom || "?").trim();
+  const lettre = Array.from(texte)[0]?.toUpperCase() || "?";
+
+  const couleurs = [
+    "#2563eb",
+    "#059669",
+    "#9333ea",
+    "#ea580c",
+    "#db2777",
+    "#0891b2"
+  ];
+
+  let hash = 0;
+  for (const caractere of texte) {
+    hash = (hash * 31 + caractere.codePointAt(0)) >>> 0;
+  }
+
+  const couleur = couleurs[hash % couleurs.length];
+
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 120 120">
+    <circle cx="60" cy="60" r="60" fill="${couleur}"/>
+    <text x="60" y="63" text-anchor="middle" dominant-baseline="middle"
+      font-family="Arial,sans-serif" font-size="62" font-weight="bold"
+      fill="white">${lettre.replace(/[&<>"']/g, "")}</text>
+  </svg>`;
+
+  return "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);
+}
 async function chargerParticipants(){
 
   if(!tournoiSelect.value) return;
@@ -18099,7 +18128,7 @@ async function chargerParticipants(){
       ">
 
         <img
-        src="${p.profile_photo || '/default-avatar.png'}"
+        src="${p.profile_photo || avatarInitiale(p.prenom)}"
         onclick="ouvrirProfilPublic(${p.user_id})"
         style="
           width:70px;
