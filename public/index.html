@@ -10941,27 +10941,46 @@ let modeOrganisateurDepuisProfil = false;
 
 async function ouvrirDashboardOrganisateurDepuisProfil(){
 
-  verifierPubliciteDashboard();
-
   const data = await get("/mes-tournois-participant");
 
   if(!Array.isArray(data) || data.length === 0){
-    alert("Aucun tournoi organisateur trouvé");
+    alert("Aucun tournoi trouvé");
     return;
   }
 
-  const tournoi = data[0];
+  let tournoi = data[0];
+
+  if(data.length > 1){
+
+    const choix = prompt(
+      "🏆 CHOISIR UN TOURNOI\n\n" +
+      data.map((t, i) => `${i + 1}. ${t.name || "Tournoi sans nom"}`).join("\n") +
+      "\n\nEntrez le numéro du tournoi :"
+    );
+
+    if(choix === null) return;
+
+    const numero = Number(choix);
+
+    if(!Number.isInteger(numero) || numero < 1 || numero > data.length){
+      alert("Numéro de tournoi invalide");
+      return;
+    }
+
+    tournoi = data[numero - 1];
+  }
+
+  verifierPubliciteDashboard();
 
   modeOrganisateurDepuisProfil = true;
   tournoiOrganisateurId = tournoi.id;
 
   sessionStorage.setItem("modeOrganisateurTemp", "oui");
   sessionStorage.setItem("tournoiOrganisateurId", tournoi.id);
-
-sessionStorage.setItem("hideBottomNavOrg", "oui");
+  sessionStorage.setItem("hideBottomNavOrg", "oui");
 
   window.location.href =
-    "/app?tournament=" + tournoi.id;
+    "/app?tournament=" + encodeURIComponent(tournoi.id);
 }
   function verifierBoutonRetourTournoiExterne(){
 
@@ -18201,49 +18220,71 @@ async function chargerParticipants(){
 
  `).join("");
 
-  // Vérifier les abonnements après l'affichage des participants
-  await actualiserSuiviParticipants();
+  // Vérifier les abonnements sans bloquer la navigation
+actualiserSuiviParticipants().catch(error => {
+  console.error("Erreur actualisation des abonnements :", error);
+});
 
 }
 
 
 async function actualiserSuiviParticipants(){
 
-  const boutons = document.querySelectorAll(
-    "#participants .video-mini-follow-btn[data-user-id]"
+  const boutons = Array.from(
+    document.querySelectorAll(
+      "#participants .video-mini-follow-btn[data-user-id]"
+    )
   );
 
-  for(const btn of boutons){
+  if(!boutons.length) return;
 
-    const userId = Number(btn.dataset.userId);
+  // Éviter de vérifier plusieurs fois le même joueur.
+  const userIds = [
+    ...new Set(
+      boutons
+        .map(btn => Number(btn.dataset.userId))
+        .filter(id => id > 0)
+    )
+  ];
 
-    if(!userId) continue;
+  // Vérifier au maximum 5 joueurs simultanément.
+  const limite = 5;
 
-    try{
+  for(let i = 0; i < userIds.length; i += limite){
 
-      const data = await get(
-        "/public-profile/" + userId
-      );
+    const groupe = userIds.slice(i, i + limite);
 
-      if(!data || data.error) continue;
+    await Promise.all(
+      groupe.map(async userId => {
 
-      const suivi =
-        data.isFollowing === true ||
-        Number(data.isFollowing) === 1;
+        try{
 
-      synchroniserPetitsBoutonsSuivi(
-        userId,
-        suivi
-      );
+          const data = await get(
+            "/public-profile/" + userId
+          );
 
-    }catch(error){
+          if(!data || data.error) return;
 
-      console.error(
-        "Erreur vérification suivi participant :",
-        error
-      );
+          const suivi =
+            data.isFollowing === true ||
+            Number(data.isFollowing) === 1;
 
-    }
+          synchroniserPetitsBoutonsSuivi(
+            userId,
+            suivi
+          );
+
+        }catch(error){
+
+          console.error(
+            "Erreur vérification suivi participant :",
+            error
+          );
+
+        }
+
+      })
+    );
 
   }
 

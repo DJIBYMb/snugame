@@ -1094,6 +1094,44 @@ function all(sql,params=[]){
   });
 
 }
+
+// Compter les tournois non terminés d'un joueur.
+// Compatible avec les transactions SQLite existantes.
+async function compterTournoisActifsJoueur(
+  connexion,
+  userId,
+  email
+) {
+
+  const emailNormalise =
+    String(email || "").trim().toLowerCase();
+
+  const resultat = await connexion.get(
+    `
+    SELECT COUNT(DISTINCT p.tournament_id) AS total
+    FROM participants p
+    INNER JOIN tournaments t
+      ON t.id = p.tournament_id
+    WHERE (
+      p.user_id = ?
+      OR (
+        ? <> ''
+        AND p.email IS NOT NULL
+        AND LOWER(TRIM(p.email)) = ?
+      )
+    )
+    AND t.status != 'finished'
+    `,
+    [
+      userId,
+      emailNormalise,
+      emailNormalise
+    ]
+  );
+
+  return Number(resultat?.total || 0);
+}
+
 let fileTransactions =
   Promise.resolve();
 
@@ -3612,30 +3650,9 @@ app.get("/tournois", async (req,res)=>{
 
 });
 
-app.post("/participant", async (req, res) => {
+  app.post("/participant", async (req, res) => {
 
-  try {
-
-    /* =========================
-       1. VÉRIFIER LA CONNEXION
-    ========================= */
-
-    if (!connected(req)) {
-
-      return res.status(401).send(
-        tr(
-          req,
-          "Connecte-toi",
-          "Please log in"
-        )
-      );
-
-    }
-
-    /* =========================
-       2. RÉCUPÉRER ET NETTOYER
-       LES DONNÉES
-    ========================= */
+    try {
 
     const {
       tournament_id,
@@ -3799,7 +3816,8 @@ app.post("/participant", async (req, res) => {
               SELECT
                 id,
                 name,
-                username
+                username,
+                email
               FROM users
               WHERE LOWER(username)=LOWER(?)
               LIMIT 1
@@ -3849,6 +3867,28 @@ app.post("/participant", async (req, res) => {
             throw erreur;
 
           }
+
+           /* =========================
+             LIMITE DE 3 TOURNOIS
+           ========================= */
+const totalTournoisActifs =
+  await compterTournoisActifsJoueur(
+    transaction,
+    user.id,
+    user.email
+  );
+
+if (totalTournoisActifs >= 3) {
+
+  const erreur =
+    new Error("LIMITE_3_TOURNOIS");
+
+  erreur.code =
+    "LIMITE_3_TOURNOIS";
+
+  throw erreur;
+
+}
 
           /* =========================
              8. VÉRIFIER LES PLACES
@@ -4095,6 +4135,22 @@ app.post("/participant", async (req, res) => {
     }
 
     /* =========================
+   LIMITE DE 3 TOURNOIS
+========================= */
+
+if (error.code === "LIMITE_3_TOURNOIS") {
+
+  return res.status(409).send(
+    tr(
+      req,
+      "Ce joueur participe déjà à 3 tournois différents non terminés. Il doit attendre qu'un tournoi se termine pour rejoindre un autre tournoi.",
+      "This player is already participating in 3 different unfinished tournaments. They must wait until one tournament finishes before joining another."
+    )
+  );
+
+}
+
+    /* =========================
        TOURNOI COMPLET
     ========================= */
 
@@ -4112,8 +4168,7 @@ app.post("/participant", async (req, res) => {
       );
 
     }
-
-    console.error(
+       console.error(
       "Erreur ajout participant :",
       error
     );
@@ -4126,9 +4181,9 @@ app.post("/participant", async (req, res) => {
       )
     );
 
-  }
+  } // Ferme le catch
 
-});
+}); // Ferme app.post("/participant")
 /* =========================================================
    SUNUGAME — PARTICIPANTS PUBLICS
    Consultation autorisée sans connexion.
@@ -11963,6 +12018,39 @@ if(!user){
 );
     }
 
+    /* =========================
+   LIMITE DE 3 TOURNOIS
+   INSCRIPTION PAR LIEN
+========================= */
+
+const participationsActives = await get(
+  `
+  SELECT COUNT(DISTINCT p.tournament_id) AS total
+  FROM participants p
+  INNER JOIN tournaments t
+    ON t.id = p.tournament_id
+  WHERE (
+    p.user_id = ?
+    OR LOWER(p.email) = LOWER(?)
+  )
+  AND t.status != 'finished'
+  `,
+  [user.id, cleanEmail]
+);
+
+if (Number(participationsActives?.total || 0) >= 3) {
+
+  return res.status(409).send(
+    tr(
+      req,
+      "⛔ Tu participes déjà à 3 tournois différents non terminés. Attends qu'un tournoi se termine avant de rejoindre un nouveau tournoi.",
+      "⛔ You are already participating in 3 different unfinished tournaments. Wait until one tournament finishes before joining another."
+    )
+  );
+
+}
+
+
     const result = await run(
       `
       INSERT INTO participants(
@@ -17259,179 +17347,245 @@ app.get("/app-ads.txt", (req, res) => {
   );
 
 });
-
 app.post(
   "/join-tournament-existing-account",
   loginLimiter,
-  async (req,res)=>{
+  async (req, res) => {
 
-  try{
+    try {
 
-    const joinCode =
-      String(req.body.join_code || "")
-        .trim();
+      const joinCode = String(req.body.join_code || "").trim();
+      const username = String(req.body.username || "").trim();
+      const password = String(req.body.password || "");
 
-    const username =
-      String(req.body.username || "")
-        .trim();
+      if (!joinCode || !username || !password) {
+        return res.status(400).send(
+          tr(
+            req,
+            "Username et mot de passe obligatoires",
+            "Username and password are required"
+          )
+        );
+      }
 
-    const password =
-      String(req.body.password || "");
+      // 1. Rechercher le tournoi
 
-    if(
-      !joinCode ||
-      !username ||
-      !password
-    ){
-
-      return res.status(400).send(
-        tr(
-          req,
-          "Username et mot de passe obligatoires",
-          "Username and password are required"
-        )
+      const tournoi = await get(
+        `SELECT * FROM tournaments WHERE join_code=?`,
+        [joinCode]
       );
 
-    }
+      if (!tournoi) {
+        return res.status(404).send(
+          tr(
+            req,
+            "Lien d'inscription invalide",
+            "Invalid registration link"
+          )
+        );
+      }
 
-    /*
-      1. Vérifier le tournoi grâce au lien
-    */
+      // 2. Rechercher le compte existant
 
-    const tournoi = await get(
-      `
-      SELECT *
-      FROM tournaments
-      WHERE join_code=?
-      `,
-      [joinCode]
-    );
-
-    if(!tournoi){
-
-      return res.status(404).send(
-        tr(
-          req,
-          "Lien d'inscription invalide",
-          "Invalid registration link"
-        )
+      const user = await get(
+        `SELECT * FROM users WHERE LOWER(username)=LOWER(?)`,
+        [username]
       );
 
-    }
+      if (!user) {
+        return res.status(401).send(
+          tr(
+            req,
+            "Username ou mot de passe incorrect",
+            "Incorrect username or password"
+          )
+        );
+      }
 
-    /*
-      2. Vérifier que les inscriptions
-         sont toujours ouvertes
-    */
+      // 3. Vérifier si le compte est suspendu
 
-    if(
-      tournoi.status === "started" ||
-      tournoi.status === "finished"
-    ){
+      if (Number(user.banned) === 1) {
+        return res.status(403).send(
+          tr(
+            req,
+            "Ce compte est suspendu",
+            "This account is suspended"
+          )
+        );
+      }
 
-      return res.status(400).send(
-        tr(
-          req,
-          "Les inscriptions sont fermées. Le tirage a commencé.",
-          "Registration is closed. The draw has already started."
-        )
-      );
+      // 4. Vérifier le mot de passe
 
-    }
-
-    /*
-      3. Rechercher le compte existant
-         avec son username
-    */
-
-    const user = await get(
-      `
-      SELECT *
-      FROM users
-      WHERE LOWER(username)=LOWER(?)
-      `,
-      [username]
-    );
-
-    if(!user){
-
-      return res.status(401).send(
-        tr(
-          req,
-          "Username ou mot de passe incorrect",
-          "Incorrect username or password"
-        )
-      );
-
-    }
-
-    /*
-      4. Vérifier si le compte est banni
-    */
-
-    if(Number(user.banned) === 1){
-
-      return res.status(403).send(
-        tr(
-          req,
-          "Ce compte est suspendu",
-          "This account is suspended"
-        )
-      );
-
-    }
-
-    /*
-      5. Vérifier son vrai mot de passe
-    */
-
-    const passwordCorrect =
-      await bcrypt.compare(
+      const passwordCorrect = await bcrypt.compare(
         password,
         user.password
       );
 
-    if(!passwordCorrect){
+      if (!passwordCorrect) {
+        return res.status(401).send(
+          tr(
+            req,
+            "Username ou mot de passe incorrect",
+            "Incorrect username or password"
+          )
+        );
+      }
 
-      return res.status(401).send(
-        tr(
-          req,
-          "Username ou mot de passe incorrect",
-          "Incorrect username or password"
-        )
-      );
+      // 5. Transaction SQLite :
+      // Vérification et inscription dans une seule opération.
 
-    }
+      const resultat = await executerTransaction(async (transaction) => {
 
-    /*
-      6. Vérifier s'il participe déjà
-    */
+        const tournoiActuel = await transaction.get(
+          `SELECT * FROM tournaments WHERE id=?`,
+          [tournoi.id]
+        );
 
-    const alreadyParticipant = await get(
-      `
-      SELECT id
-      FROM participants
-      WHERE tournament_id=?
-      AND user_id=?
-      `,
-      [
-        tournoi.id,
-        user.id
-      ]
-    );
+        if (!tournoiActuel) {
+          const erreur = new Error("TOURNOI_INTROUVABLE");
+          erreur.code = "TOURNOI_INTROUVABLE";
+          throw erreur;
+        }
 
-    if(alreadyParticipant){
+        // Vérifier si le joueur participe déjà.
+        // Un joueur déjà inscrit conserve son accès.
 
-      /*
-        Il est déjà participant :
-        on connecte simplement son propre compte.
-      */
+        const emailNormalise = String(user.email || "")
+          .trim()
+          .toLowerCase();
+
+        const dejaInscrit = await transaction.get(
+          `
+          SELECT id
+          FROM participants
+          WHERE tournament_id=?
+          AND (
+            user_id=?
+            OR (
+              ? <> ''
+              AND email IS NOT NULL
+              AND LOWER(TRIM(email))=?
+            )
+          )
+          LIMIT 1
+          `,
+          [
+            tournoi.id,
+            user.id,
+            emailNormalise,
+            emailNormalise
+          ]
+        );
+
+        if (dejaInscrit) {
+          return {
+            dejaInscrit: true,
+            participantId: dejaInscrit.id
+          };
+        }
+
+        // Vérifier si les inscriptions sont fermées.
+
+        if (
+          tournoiActuel.status === "started" ||
+          tournoiActuel.status === "finished"
+        ) {
+          const erreur = new Error("INSCRIPTIONS_FERMEES");
+          erreur.code = "INSCRIPTIONS_FERMEES";
+          throw erreur;
+        }
+
+        // Vérifier les places disponibles.
+
+        const count = await transaction.get(
+          `
+          SELECT COUNT(*) AS total
+          FROM participants
+          WHERE tournament_id=?
+          `,
+          [tournoi.id]
+        );
+
+        if (
+          Number(count?.total || 0) >=
+          Number(tournoiActuel.max_teams)
+        ) {
+          const erreur = new Error("TOURNOI_COMPLET");
+          erreur.code = "TOURNOI_COMPLET";
+          throw erreur;
+        }
+
+        // Vérifier la limite de trois tournois.
+
+        const totalActifs = await compterTournoisActifsJoueur(
+          transaction,
+          user.id,
+          user.email
+        );
+
+        if (totalActifs >= 3) {
+          const erreur = new Error("LIMITE_3_TOURNOIS");
+          erreur.code = "LIMITE_3_TOURNOIS";
+          throw erreur;
+        }
+
+        // SUITE DANS LA PARTIE 2
+                // 6. Inscrire le joueur
+
+        const participant = await transaction.run(
+          `
+          INSERT INTO participants(
+            tournament_id,
+            prenom,
+            email,
+            user_id,
+            username,
+            telephone,
+            numero_serie,
+            club_logo,
+            preuve
+          )
+          VALUES(?,?,?,?,?,?,?,?,?)
+          `,
+          [
+            tournoi.id,
+            user.name || user.username,
+            user.email || "",
+            user.id,
+            user.username,
+            "",
+            "",
+            "",
+            "Inscription compte existant"
+          ]
+        );
+
+        // 7. Créer ses statistiques
+
+        await transaction.run(
+          `
+          INSERT OR IGNORE INTO player_stats(
+            participant_id
+          )
+          VALUES(?)
+          `,
+          [participant.lastID]
+        );
+
+        return {
+          dejaInscrit: false,
+          participantId: participant.lastID
+        };
+
+      });
+
+      // 8. Connecter le joueur à son propre compte
 
       req.session.userId = user.id;
 
-      return req.session.save(error=>{
+      return req.session.save(error => {
 
-        if(error){
+        if (error) {
 
           console.error(
             "Erreur sauvegarde session :",
@@ -17441,151 +17595,80 @@ app.post(
           return res.status(500).send(
             tr(
               req,
-              "Impossible de connecter le compte",
-              "Unable to log in"
+              resultat.dejaInscrit
+                ? "Impossible de connecter le compte"
+                : "Participation enregistrée, mais la connexion a échoué",
+              resultat.dejaInscrit
+                ? "Unable to log in"
+                : "Registration succeeded, but login failed"
             )
           );
 
         }
 
-        return res.send(
-          "dashboardUrl:/app"
-        );
+        return res.send("dashboardUrl:/app");
 
       });
 
-    }
+    } catch (error) {
 
-    /*
-      7. Vérifier les places disponibles
-    */
+      console.error(
+        "Erreur participation compte existant :",
+        error
+      );
 
-    const count = await get(
-      `
-      SELECT COUNT(*) AS total
-      FROM participants
-      WHERE tournament_id=?
-      `,
-      [tournoi.id]
-    );
+      if (error.code === "LIMITE_3_TOURNOIS") {
+        return res.status(409).send(
+          tr(
+            req,
+            "⛔ Tu participes déjà à 3 tournois différents non terminés. Attends qu'un tournoi se termine pour rejoindre un autre tournoi.",
+            "⛔ You are already participating in 3 different unfinished tournaments. Wait until one tournament finishes before joining another."
+          )
+        );
+      }
 
-    if(
-      Number(count?.total || 0) >=
-      Number(tournoi.max_teams)
-    ){
+      if (error.code === "TOURNOI_COMPLET") {
+        return res.status(400).send(
+          tr(
+            req,
+            "Tournoi complet. Les inscriptions sont fermées.",
+            "Tournament is full. Registration is closed."
+          )
+        );
+      }
 
-      return res.status(400).send(
+      if (error.code === "INSCRIPTIONS_FERMEES") {
+        return res.status(400).send(
+          tr(
+            req,
+            "Les inscriptions sont fermées. Le tirage a commencé.",
+            "Registration is closed. The draw has already started."
+          )
+        );
+      }
+
+      if (error.code === "TOURNOI_INTROUVABLE") {
+        return res.status(404).send(
+          tr(
+            req,
+            "Lien d'inscription invalide",
+            "Invalid registration link"
+          )
+        );
+      }
+
+      return res.status(500).send(
         tr(
           req,
-          "Tournoi complet. Les inscriptions sont fermées.",
-          "Tournament is full. Registration is closed."
+          "Erreur lors de l'inscription au tournoi",
+          "Error joining tournament"
         )
       );
 
     }
 
-    /*
-      8. Ajouter ce compte comme participant.
-         Aucun nouveau compte n'est créé.
-    */
-
-    const participant = await run(
-      `
-      INSERT INTO participants(
-        tournament_id,
-        prenom,
-        email,
-        user_id,
-        username,
-        telephone,
-        numero_serie,
-        club_logo,
-        preuve
-      )
-      VALUES(?,?,?,?,?,?,?,?,?)
-      `,
-      [
-        tournoi.id,
-        user.name || user.username,
-        user.email || "",
-        user.id,
-        user.username,
-        "",
-        "",
-        "",
-        "Inscription compte existant"
-      ]
-    );
-
-    /*
-      9. Créer ses statistiques du tournoi
-    */
-
-    await run(
-      `
-      INSERT OR IGNORE INTO player_stats(
-        participant_id
-      )
-      VALUES(?)
-      `,
-      [participant.lastID]
-    );
-
-    /*
-      10. Connecter le joueur à son propre compte
-    */
-
-    req.session.userId = user.id;
-
-    req.session.save(error=>{
-
-      if(error){
-
-        console.error(
-          "Erreur sauvegarde session :",
-          error
-        );
-
-        return res.status(500).send(
-          tr(
-            req,
-            "Participation enregistrée, mais la connexion a échoué",
-            "Registration succeeded, but login failed"
-          )
-        );
-
-      }
-
-      /*
-        On revient simplement dans son compte.
-        Le bouton Tableau de bord existant
-        continuera de fonctionner normalement.
-      */
-
-      return res.send(
-        "dashboardUrl:/app"
-      );
-
-    });
-
-  }catch(error){
-
-    console.error(
-      "Erreur participation compte existant :",
-      error
-    );
-
-    return res.status(500).send(
-      tr(
-        req,
-        "Impossible de rejoindre le tournoi pour le moment",
-        "Unable to join the tournament right now"
-      )
-    );
-
   }
-
-});
+);
 
 app.get("/join-fresh/:code", async (req,res)=>{
 
