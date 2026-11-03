@@ -1,4 +1,4 @@
-const {
+﻿const {
   initializeApp,
   cert,
   getApps
@@ -228,6 +228,10 @@ function extraireCleR2DepuisUrl(urlFichier){
 
 
 async function supprimerFichierR2(urlFichier){
+  if (MODE_TEST_RETIRAGE) {
+    throw new Error("Suppression R2 interdite en mode test");
+  }
+
 
   const cle =
     extraireCleR2DepuisUrl(
@@ -290,10 +294,17 @@ if(process.env.NODE_ENV === "production"){
 
 app.use(compression());
 
-const DATA_DIR =
-  process.env.RENDER
-  ? "/opt/render/project/src/data"
-  : __dirname;
+// CONFIGURATION_DOSSIERS_MODE_TEST_RETIRAGE
+
+// MODE_TEST_RETIRAGE - DECLARATION PRINCIPALE
+const MODE_TEST_RETIRAGE =
+  process.env.MODE_TEST_RETIRAGE === "1";
+
+const DATA_DIR = MODE_TEST_RETIRAGE
+  ? path.join(__dirname, "tests-retirage")
+  : process.env.RENDER
+    ? "/opt/render/project/src/data"
+    : __dirname;
 
 if(!fs.existsSync(DATA_DIR)){
   fs.mkdirSync(DATA_DIR,{recursive:true});
@@ -301,15 +312,22 @@ if(!fs.existsSync(DATA_DIR)){
 
 const PORT = process.env.PORT || 3000;
 
-const transporter = nodemailer.createTransport({
-  host: "smtp.resend.com",
-  port: 465,
-  secure: true,
-  auth: {
-    user: "resend",
-    pass: process.env.RESEND_API_KEY
-  }
-});
+
+// PROTECTION_EMAIL_MODE_TEST_RETIRAGE
+
+const transporter = MODE_TEST_RETIRAGE
+  ? nodemailer.createTransport({
+      jsonTransport: true
+    })
+  : nodemailer.createTransport({
+      host: "smtp.resend.com",
+      port: 465,
+      secure: true,
+      auth: {
+        user: "resend",
+        pass: process.env.RESEND_API_KEY
+      }
+    });
 
 const loginLimiter = rateLimit({
   windowMs:15 * 60 * 1000,
@@ -353,11 +371,42 @@ if(!SESSION_SECRET){
   );
 
 }
-const DATABASE_PATH =
-  path.join(
-    DATA_DIR,
-    "database.sqlite"
+
+// BASE SQLITE : MODE NORMAL, TEST OU ROBOT
+
+const DATABASE_PATH = MODE_TEST_RETIRAGE
+  ? (
+      process.env.ROBOT_RETIRAGE === "1"
+        ? path.join(
+            __dirname,
+            "tests-retirage",
+            "robot",
+            "database-robot.sqlite"
+          )
+        : path.join(
+            __dirname,
+            "tests-retirage",
+            "database-test.sqlite"
+          )
+    )
+  : path.join(DATA_DIR, "database.sqlite");
+
+if (
+  MODE_TEST_RETIRAGE &&
+  !fs.existsSync(DATABASE_PATH)
+) {
+  throw new Error(
+    "Base SQLite de test introuvable. Démarrage refusé."
   );
+}
+
+console.log(
+  MODE_TEST_RETIRAGE
+    ? "🧪 MODE TEST RETIRAGE — BASE ISOLÉE"
+    : "🟢 MODE NORMAL — BASE PRINCIPALE"
+);
+
+console.log("Base SQLite :", DATABASE_PATH);
 
 const db =
   new sqlite3.Database(
@@ -501,11 +550,27 @@ const upload = multer({
 
 });
 
-const sessionDbPath =
-  path.join(
-    DATA_DIR,
-    "sessions.sqlite"
-  );
+// SESSIONS_ISOLEES_MODE_TEST_RETIRAGE
+
+const sessionDbPath = MODE_TEST_RETIRAGE
+  ? (
+      process.env.ROBOT_RETIRAGE === "1"
+        ? path.join(
+            __dirname,
+            "tests-retirage",
+            "robot",
+            "sessions-robot.sqlite"
+          )
+        : path.join(
+            __dirname,
+            "tests-retirage",
+            "sessions-test.sqlite"
+          )
+    )
+  : path.join(
+      DATA_DIR,
+      "sessions.sqlite"
+    );
 
 const sessionDb =
   new sqlite3.Database(
@@ -544,7 +609,9 @@ const sessionStore =
 app.use(
   session({
 
-    name: "snugame.sid",
+    name: MODE_TEST_RETIRAGE
+  ? "snugame.test.sid"
+  : "snugame.sid",
 
     store: sessionStore,
 
@@ -820,6 +887,77 @@ app.post("/admin/verify-user/:id", async (req,res)=>{
 
 });
 
+app.post("/admin/retirage-special/:id", async (req,res)=>{
+
+  try{
+
+    if(!isAdmin(req)){
+      return res.status(403).json({
+        ok:false,
+        message:"Accès administrateur obligatoire"
+      });
+    }
+
+    const userId = Number(req.params.id);
+
+    if(
+      !Number.isSafeInteger(userId) ||
+      userId <= 0
+    ){
+      return res.status(400).json({
+        ok:false,
+        message:"Utilisateur invalide"
+      });
+    }
+
+    const valeur = req.body?.retirage_special;
+
+    if(valeur !== 0 && valeur !== 1){
+      return res.status(400).json({
+        ok:false,
+        message:"Autorisation invalide"
+      });
+    }
+
+    const utilisateur = await get(
+      "SELECT id FROM users WHERE id=?",
+      [userId]
+    );
+
+    if(!utilisateur){
+      return res.status(404).json({
+        ok:false,
+        message:"Utilisateur introuvable"
+      });
+    }
+
+    await run(
+      "UPDATE users SET retirage_special=? WHERE id=?",
+      [valeur,userId]
+    );
+
+    return res.json({
+      ok:true,
+      user_id:userId,
+      retirage_special:valeur
+    });
+
+  }catch(error){
+
+    console.error(
+      "Erreur autorisation retirage spécial :",
+      error
+    );
+
+    return res.status(500).json({
+      ok:false,
+      message:"Erreur autorisation retirage spécial"
+    });
+
+  }
+
+});
+
 app.post("/admin-logout",(req,res)=>{
 
   if(req.session){
@@ -852,6 +990,12 @@ async function envoyerNotificationPush(
   message,
   action = ""
 ){
+
+    // PROTECTION_FIREBASE_MODE_TEST_RETIRAGE
+  if (MODE_TEST_RETIRAGE) {
+    console.log("🧪 TEST : notification Firebase bloquée");
+    return;
+  }
 
   try{
 
@@ -1006,6 +1150,12 @@ async function envoyerPushMessageUtilisateur(
   senderName,
   body
 ){
+
+    // PROTECTION_MESSAGES_FIREBASE_MODE_TEST
+  if (MODE_TEST_RETIRAGE) {
+    console.log("🧪 TEST : notification de message privé bloquée");
+    return;
+  }
 
   try{
 
@@ -1577,6 +1727,10 @@ db.run(`
 db.run(`
   ALTER TABLE tournaments
   ADD COLUMN group_link TEXT
+`,()=>{});
+db.run(`
+  ALTER TABLE users
+  ADD COLUMN retirage_special INTEGER DEFAULT 0
 `,()=>{});
 db.run(`
   ALTER TABLE users
@@ -3018,7 +3172,8 @@ app.get("/me", async (req,res)=>{
       abonnement,
       abonnement_expire_at,
       profile_photo,
-      verified
+      verified,
+      retirage_special
     FROM users
     WHERE id=?
     `,
@@ -6047,6 +6202,68 @@ if(officiel){
 
 });
 
+// PREPARATION_GROUPES_RETIRAGE_SPECIAL
+function preparerGroupesRetirageSpecial(participants) {
+
+  const anciensGroupes = new Map();
+
+  for (const participant of participants) {
+    anciensGroupes.set(
+      Number(participant.id),
+      String(participant.group_name || "")
+    );
+  }
+
+  for (let tentative = 0; tentative < 100; tentative++) {
+
+    const joueursMelanges =
+      melangerParticipantsRetirageSpecial(participants);
+
+    const nouveauxGroupes =
+      genererGroupesAuto(joueursMelanges);
+
+    const changement = nouveauxGroupes.some(
+      (groupe, index) => {
+
+        const nomGroupe = String.fromCharCode(65 + index);
+
+        return groupe.some(
+          joueur =>
+            anciensGroupes.get(Number(joueur.id)) !== nomGroupe
+        );
+
+      }
+    );
+
+    if (changement) {
+      return nouveauxGroupes;
+    }
+
+  }
+
+  throw new Error(
+    "Impossible de produire une nouvelle repartition des groupes"
+  );
+
+}
+
+// MELANGE_SECURISE_RETIRAGE_SPECIAL
+function melangerParticipantsRetirageSpecial(participants) {
+
+  const joueurs = [...participants];
+
+  for (let i = joueurs.length - 1; i > 0; i--) {
+
+    const j = crypto.randomInt(i + 1);
+
+    [joueurs[i], joueurs[j]] = [joueurs[j], joueurs[i]];
+
+  }
+
+  return joueurs;
+
+}
+
 function genererGroupesAuto(participants){
 
   const total =
@@ -6134,6 +6351,44 @@ function genererGroupesAuto(participants){
   }
 
   return groupes;
+
+}
+
+// PREPARER_MATCHS_RETIRAGE_SPECIAL_POULES
+function preparerMatchsRetirageSpecialPoules(groupes) {
+
+  const nouveauxMatchs = [];
+
+  for (
+    let indexGroupe = 0;
+    indexGroupe < groupes.length;
+    indexGroupe++
+  ) {
+
+    const groupe = groupes[indexGroupe];
+
+    const groupName =
+      String.fromCharCode(65 + indexGroupe);
+
+    const journees = genererMatchsPoule(groupe);
+
+    for (const journee of journees) {
+
+      for (const match of journee) {
+
+        nouveauxMatchs.push({
+          group_name: groupName,
+          player1_id: Number(match[0].id),
+          player2_id: Number(match[1].id)
+        });
+
+      }
+
+    }
+
+  }
+
+  return nouveauxMatchs;
 
 }
 
@@ -11204,6 +11459,653 @@ return res.send(
 });
 
 
+﻿// =====================================================
+// RETIRAGE SPECIAL - Verification des autorisations
+// =====================================================
+
+// =====================================================
+// RETIRAGE SPECIAL - Preparation des duels
+// =====================================================
+
+function preparerRetirageEliminatoire(matchs) {
+  const crypto = require("crypto");
+
+  if (!Array.isArray(matchs) || matchs.length < 2 || matchs.length % 2 !== 0) {
+    throw new Error("Nombre de matchs invalide pour le retirage");
+  }
+
+  if (matchs.length < 4) {
+    throw new Error(
+      "Retirage impossible : il faut au moins deux confrontations"
+    );
+  }
+
+  const duels = [];
+  const joueursVus = new Set();
+
+  for (let i = 0; i < matchs.length; i += 2) {
+    const aller = matchs[i];
+    const retour = matchs[i + 1];
+
+    const ordreAttendu = i + 1;
+
+    if (
+      Number(aller.match_order) !== ordreAttendu ||
+      Number(retour.match_order) !== ordreAttendu + 1
+    ) {
+      throw new Error("Ordre des confrontations incoherent");
+    }
+
+    if (
+      (aller.journee || aller.leg) !== "ALLER" ||
+      (retour.journee || retour.leg) !== "RETOUR"
+    ) {
+      throw new Error("Manches ALLER/RETOUR incoherentes");
+    }
+
+    const joueur1 = Number(aller.player1_id);
+    const joueur2 = Number(aller.player2_id);
+
+    if (
+      !Number.isSafeInteger(joueur1) ||
+      !Number.isSafeInteger(joueur2) ||
+      joueur1 <= 0 ||
+      joueur2 <= 0 ||
+      joueur1 === joueur2
+    ) {
+      throw new Error("Identifiants des joueurs invalides");
+    }
+
+    if (
+      Number(retour.player1_id) !== joueur1 ||
+      Number(retour.player2_id) !== joueur2
+    ) {
+      throw new Error("Les deux manches ne concernent pas les memes joueurs");
+    }
+
+    if (joueursVus.has(joueur1) || joueursVus.has(joueur2)) {
+      throw new Error("Un joueur apparait dans plusieurs confrontations");
+    }
+
+    joueursVus.add(joueur1);
+    joueursVus.add(joueur2);
+
+    duels.push({ aller, retour });
+  }
+
+  const joueurs = [...joueursVus];
+
+  for (let i = joueurs.length - 1; i > 0; i--) {
+    const j = crypto.randomInt(i + 1);
+    [joueurs[i], joueurs[j]] = [joueurs[j], joueurs[i]];
+  }
+
+  return duels.map((duel, index) => ({
+    aller_id: duel.aller.id,
+    retour_id: duel.retour.id,
+    player1_id: joueurs[index * 2],
+    player2_id: joueurs[index * 2 + 1]
+  }));
+}
+
+
+app.post("/retirage-special", async (req, res) => {
+  try {
+    if (!connected(req)) {
+      return res.status(401).json({
+        ok: false,
+        message: "Connexion obligatoire"
+      });
+    }
+
+    const tournamentId = Number(req.body?.tournament_id);
+    const round = String(req.body?.round || "").trim();
+
+    if (!Number.isSafeInteger(tournamentId) || tournamentId <= 0) {
+      return res.status(400).json({
+        ok: false,
+        message: "Tournoi invalide"
+      });
+    }
+
+    const phases = [
+      "POULE", "64ES", "32ES", "16ES",
+      "8ES", "QUARTS", "DEMIS", "FINALE"
+    ];
+
+    if (!phases.includes(round)) {
+      return res.status(400).json({
+        ok: false,
+        message: "Phase invalide"
+      });
+    }
+
+    const userId = Number(req.session?.userId);
+
+    const utilisateur = await get(
+      "SELECT retirage_special FROM users WHERE id=?",
+      [userId]
+    );
+
+    if (Number(utilisateur?.retirage_special) !== 1) {
+      return res.status(403).json({
+        ok: false,
+        message: "Retirage spécial non autorisé par l'administrateur"
+      });
+    }
+
+    const ownerCheck = await verifierProprietaireTournoi(
+      req,
+      tournamentId
+    );
+
+    if (!ownerCheck.ok) {
+      return res.status(403).json({
+        ok: false,
+        message: ownerCheck.message
+      });
+    }
+
+    const tournoi = ownerCheck.tournoi;
+
+    if (!tournoi || tournoi.status === "finished") {
+      return res.status(409).json({
+        ok: false,
+        message: "Tournoi introuvable ou terminé"
+      });
+    }
+
+
+    const verification = await executerTransaction(
+      async ({ all, get, run }) => {
+
+        // SECURITE_TRANSACTION_RETIRAGE
+
+        const droit = await get(
+          "SELECT retirage_special FROM users WHERE id=?",
+          [userId]
+        );
+
+        if (Number(droit?.retirage_special) !== 1) {
+          return {
+            ok: false,
+            message: "Autorisation administrative retiree"
+          };
+        }
+
+        const tournoiActuel = await get(
+        `
+         SELECT user_id, status, type, max_teams
+         FROM tournaments
+          WHERE id=?
+         `,
+         [tournamentId]
+       );
+
+        if (!tournoiActuel) {
+          return {
+            ok: false,
+            message: "Tournoi introuvable"
+          };
+        }
+
+        if (Number(tournoiActuel.user_id) !== userId) {
+          return {
+            ok: false,
+            message: "Vous n'etes pas proprietaire de ce tournoi"
+          };
+        }
+
+        if (tournoiActuel.status === "finished") {
+          return {
+            ok: false,
+            message: "Tournoi deja termine"
+          };
+        }
+
+        const matchs = await all(
+          "SELECT * FROM matches WHERE tournament_id=? AND round=? ORDER BY match_order",
+          [tournamentId, round]
+        );
+
+        if (matchs.length === 0) {
+          return {
+            ok: false,
+            message: "Aucun match dans cette phase"
+          };
+        }
+
+        const matchCommence = matchs.some(m =>
+          Number(m.played) !== 0 ||
+          Number(m.locked) !== 0 ||
+          m.score1 != null ||
+          m.score2 != null ||
+          m.winner_id != null ||
+          m.loser_id != null ||
+          Boolean(String(m.proof_photo || "").trim()) ||
+          m.penalty1 != null ||
+          m.penalty2 != null
+        );
+
+        if (matchCommence) {
+          return {
+            ok: false,
+            message: "Retirage interdit : match commence ou verrouille"
+          };
+        }
+
+        const ordrePhases = [
+          "POULE", "64ES", "32ES", "16ES",
+          "8ES", "QUARTS", "DEMIS", "FINALE"
+        ];
+
+        const phasesSuivantes = ordrePhases.slice(
+          ordrePhases.indexOf(round) + 1
+        );
+
+        const tousLesMatchs = await all(
+          "SELECT round FROM matches WHERE tournament_id=?",
+          [tournamentId]
+        );
+
+        if (tousLesMatchs.some(m =>
+          phasesSuivantes.includes(m.round) ||
+          (round === "POULE" && m.round !== "POULE")
+        )) {
+          return {
+            ok: false,
+            message: "Retirage interdit : phase suivante deja generee"
+          };
+        }
+
+        const qualifications = await get(
+          "SELECT COUNT(*) AS total FROM rapid_qualifiers WHERE tournament_id=? AND round=?",
+          [tournamentId, round]
+        );
+
+        const autresQualifications = round === "POULE"
+          ? await get("SELECT COUNT(*) AS total FROM rapid_qualifiers WHERE tournament_id=?", [tournamentId])
+          : null;
+        if (Number(qualifications?.total || 0) > 0 ||
+            Number(autresQualifications?.total || 0) > 0) {
+          return {
+            ok: false,
+            message: "Retirage interdit : qualifications deja enregistrees"
+          };
+        }
+
+        // VERIFICATION_PARTICIPANTS_RETIRAGE
+
+        if (round !== "POULE") {
+          const joueurs = new Set();
+
+          for (const match of matchs) {
+            joueurs.add(Number(match.player1_id));
+            joueurs.add(Number(match.player2_id));
+          }
+
+          const participants = await all(
+            "SELECT id FROM participants WHERE tournament_id=?",
+            [tournamentId]
+          );
+
+          const idsParticipants = new Set(
+            participants.map(p => Number(p.id))
+          );
+
+          if (
+            [...joueurs].some(id =>
+              !Number.isSafeInteger(id) ||
+              id <= 0 ||
+              !idsParticipants.has(id)
+            )
+          ) {
+            return {
+              ok: false,
+              message: "Un joueur ne fait pas partie du tournoi"
+            };
+          }
+        }
+
+        // EXECUTION_REELLE_RETIRAGE
+
+// RETIRAGE_SPECIAL_POULES
+if (round === "POULE") {
+
+  if (tournoiActuel.type !== "poule") {
+    return {
+      ok: false,
+      message: "Ce tournoi n'est pas un tournoi avec poules"
+    };
+  }
+
+  const participants = await all(
+    `
+    SELECT *
+    FROM participants
+    WHERE tournament_id=?
+    ORDER BY id
+    `,
+    [tournamentId]
+  );
+
+  if (
+     participants.length !== Number(tournoiActuel.max_teams)||
+    participants.length < 4
+  ) {
+    return {
+      ok: false,
+      message: "Le nombre de participants du tournoi est invalide"
+    };
+  }
+
+  const groupesIncomplets = participants.some(
+    participant =>
+      !String(participant.group_name || "").trim()
+  );
+
+  if (groupesIncomplets) {
+    return {
+      ok: false,
+      message: "Le premier tirage des poules doit être effectué"
+    };
+  }
+
+  // VERIFICATION_CONFRONTATIONS_EXISTANTES_POULES
+
+const joueursParGroupe = new Map();
+
+for (const participant of participants) {
+  const groupe = String(participant.group_name || "").trim();
+
+  if (!joueursParGroupe.has(groupe)) {
+    joueursParGroupe.set(groupe, []);
+  }
+
+  joueursParGroupe.get(groupe).push(Number(participant.id));
+}
+
+const confrontationsAttendues = new Set();
+
+for (const [groupe, joueurs] of joueursParGroupe) {
+  for (let i = 0; i < joueurs.length; i++) {
+    for (let j = i + 1; j < joueurs.length; j++) {
+      const ids = [joueurs[i], joueurs[j]].sort((a, b) => a - b);
+      confrontationsAttendues.add(`${groupe}:${ids[0]}-${ids[1]}`);
+    }
+  }
+}
+
+const confrontationsExistantes = new Set();
+
+for (const match of matchs) {
+  const groupe = String(match.group_name || "").trim();
+
+  const ids = [
+    Number(match.player1_id),
+    Number(match.player2_id)
+  ].sort((a, b) => a - b);
+
+  const cle = `${groupe}:${ids[0]}-${ids[1]}`;
+
+  if (
+    !confrontationsAttendues.has(cle) ||
+    confrontationsExistantes.has(cle)
+  ) {
+    return {
+      ok: false,
+      message:
+        "Retirage refusé : confrontation en double ou invalide."
+    };
+  }
+
+  confrontationsExistantes.add(cle);
+}
+
+if (
+  confrontationsExistantes.size !== confrontationsAttendues.size
+) {
+  return {
+    ok: false,
+    message:
+      "Retirage refusé : certaines rencontres de poule sont manquantes."
+  };
+}
+
+  // VERIFICATION_ANCIENS_MATCHS_RETIRAGE_POULES
+
+const groupesParParticipant = new Map(
+  participants.map(p => [
+    Number(p.id),
+    String(p.group_name || "").trim()
+  ])
+);
+
+const anciensMatchsValides = matchs.every(m => {
+
+  const groupe = String(m.group_name || "").trim();
+
+  const joueur1 = Number(m.player1_id);
+  const joueur2 = Number(m.player2_id);
+
+  return (
+    joueur1 !== joueur2 &&
+    groupesParParticipant.has(joueur1) &&
+    groupesParParticipant.has(joueur2) &&
+    groupesParParticipant.get(joueur1) === groupe &&
+    groupesParParticipant.get(joueur2) === groupe
+  );
+
+});
+
+if (!anciensMatchsValides) {
+  return {
+    ok: false,
+    message:
+      "Retirage refusé : les anciennes rencontres " +
+      "ne correspondent pas aux groupes des participants."
+  };
+}
+
+  const nouveauxGroupes =
+    preparerGroupesRetirageSpecial(participants);
+
+  // VERIFICATION_PARTICIPANTS_RETIRAGE_POULES
+
+const idsParticipants = new Set(
+  participants.map(p => Number(p.id))
+);
+
+const idsNouveauxGroupes = nouveauxGroupes
+  .flat()
+  .map(p => Number(p.id));
+
+const idsUniques = new Set(idsNouveauxGroupes);
+
+if (
+  idsNouveauxGroupes.length !== participants.length ||
+  idsUniques.size !== participants.length ||
+  idsNouveauxGroupes.some(id => !idsParticipants.has(id))
+) {
+  return {
+    ok: false,
+    message:
+      "Retirage refusé : répartition des participants invalide."
+  };
+}
+  
+  // VERIFICATION_NOMBRE_MATCHS_RETIRAGE_POULES
+
+const nouveauxMatchs =
+  preparerMatchsRetirageSpecialPoules(nouveauxGroupes);
+
+if (nouveauxMatchs.length !== matchs.length) {
+  return {
+    ok: false,
+    message:
+      "Retirage refusé : le nombre de nouvelles rencontres " +
+      "ne correspond pas aux matchs existants."
+  };
+}
+
+  // EXECUTION_RETIRAGE_SPECIAL_POULES
+
+// 1. Mettre à jour les groupes des participants
+for (let index = 0; index < nouveauxGroupes.length; index++) {
+
+  const groupName = String.fromCharCode(65 + index);
+
+  for (const participant of nouveauxGroupes[index]) {
+
+    const resultatParticipant = await run(
+  `
+  UPDATE participants
+  SET group_name=?
+  WHERE id=?
+    AND tournament_id=?
+  `,
+  [
+    groupName,
+    participant.id,
+    tournamentId
+  ]
+);
+
+if (resultatParticipant.changes !== 1) {
+  throw new Error(
+    "RETIRAGE_POULES_PARTICIPANT_UPDATE_FAILED"
+  );
+}
+
+  }
+}
+
+// 2. Mettre à jour les rencontres existantes
+// sans supprimer leurs identifiants
+for (let index = 0; index < nouveauxMatchs.length; index++) {
+
+  const ancienMatch = matchs[index];
+  const nouveauMatch = nouveauxMatchs[index];
+
+  const resultatMatch = await run(
+  `
+  UPDATE matches
+  SET group_name=?,
+      player1_id=?,
+      player2_id=?
+  WHERE id=?
+    AND tournament_id=?
+    AND round='POULE'
+  `,
+  [
+    nouveauMatch.group_name,
+    nouveauMatch.player1_id,
+    nouveauMatch.player2_id,
+    ancienMatch.id,
+    tournamentId
+  ]
+);
+
+if (resultatMatch.changes !== 1) {
+  throw new Error(
+    "RETIRAGE_POULES_MATCH_UPDATE_FAILED"
+  );
+}
+
+}
+
+// 3. Confirmer le retirage
+return {
+  ok: true,
+  message:
+    "Retirage spécial des poules effectué avec succès.",
+  tournament_id: tournamentId,
+  round: "POULE",
+  nombre_groupes: nouveauxGroupes.length,
+  nombre_matchs: nouveauxMatchs.length
+};
+
+}
+
+        if (matchs.length < 4) {
+          return {
+            ok: false,
+            message: "Il faut au moins deux confrontations"
+          };
+        }
+
+        const anciensDuels = [];
+
+        for (let i = 0; i < matchs.length; i += 2) {
+          anciensDuels.push([
+            Number(matchs[i].player1_id),
+            Number(matchs[i].player2_id)
+          ].sort((a, b) => a - b).join("-"));
+        }
+
+        let nouveauTirage = null;
+        let changement = false;
+
+        for (let tentative = 0; tentative < 30; tentative++) {
+          const proposition = preparerRetirageEliminatoire(matchs);
+
+          const nouveauxDuels = proposition.map(duel =>
+            [duel.player1_id, duel.player2_id]
+              .sort((a, b) => a - b)
+              .join("-")
+          );
+
+          if (nouveauxDuels.some(
+            (duel, index) => duel !== anciensDuels[index]
+          )) {
+            nouveauTirage = proposition;
+            changement = true;
+            break;
+          }
+        }
+
+        if (!changement) {
+          return {
+            ok: false,
+            message: "Impossible de produire un nouveau tirage"
+          };
+        }
+
+        for (const duel of nouveauTirage) {
+          await run(
+            "UPDATE matches SET player1_id=?, player2_id=? WHERE id=? AND tournament_id=? AND round=?",
+            [duel.player1_id, duel.player2_id, duel.aller_id, tournamentId, round]
+          );
+
+          await run(
+            "UPDATE matches SET player1_id=?, player2_id=? WHERE id=? AND tournament_id=? AND round=?",
+            [duel.player1_id, duel.player2_id, duel.retour_id, tournamentId, round]
+          );
+        }
+
+        return {
+          ok: true,
+          message: "Retirage special effectue avec succes",
+          tournament_id: tournamentId,
+          round,
+          nombre_confrontations: nouveauTirage.length
+        };
+      }
+    );
+
+    return res.status(verification.ok ? 200 : 409).json(verification);
+
+  } catch (error) {
+    console.error("Erreur retirage spécial :", error);
+
+    return res.status(500).json({
+      ok: false,
+      message: "Erreur du retirage spécial"
+    });
+  }
+});
+
+
 app.post(
   "/send-reset-code",
   emailCodeLimiter,
@@ -12219,7 +13121,7 @@ app.get("/admin-users", async (req,res)=>{
         email,
         abonnement,
         banned,
-        verified
+        verified, retirage_special
       FROM users
       ORDER BY id DESC
       `
@@ -12334,6 +13236,46 @@ onclick="
   `
 }
 
+  <div style="margin:15px 0;padding:12px;background:#111827;border-radius:10px;">
+    <p>
+      🔀 <strong>RETIRAGE SPÉCIAL :</strong>
+      ${u.retirage_special === 1 ? "🟢 Autorisé" : "🔴 Non autorisé"}
+    </p>
+
+    <button
+      type="button"
+      onclick="
+        fetch('/admin/retirage-special/${u.id}',{
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({
+            retirage_special:${u.retirage_special === 1 ? 0 : 1}
+          })
+        })
+        .then(r=>r.json())
+        .then(data=>{
+          if(data.ok){
+            location.reload();
+          }else{
+            alert(data.message || 'Erreur autorisation');
+          }
+        })
+        .catch(()=>alert('Erreur de connexion'));
+      "
+      style="
+        background:${u.retirage_special === 1 ? '#dc2626' : '#16a34a'};
+        color:white;
+        border:none;
+        padding:10px 16px;
+        border-radius:10px;
+        cursor:pointer;
+        font-weight:bold;
+      ">
+      ${u.retirage_special === 1
+        ? "Retirer l'autorisation"
+        : "Autoriser le retirage"}
+    </button>
+  </div>
   ${
     u.banned === 1
     ? `
@@ -22190,3 +23132,5 @@ app.listen(PORT, () => {
   );
 
 });
+
+

@@ -9655,6 +9655,19 @@ onclick="customAutoDraw()">
    🎲   <span data-i18n-text>Générer / continuer tirage</span>
 </button>
 
+<!-- SUNUGAME : BOUTON RETIRAGE SPECIAL -->
+
+<button
+  id="btnRetirageSpecial"
+  type="button"
+  class="secondary owner-only hidden"
+  onclick="preparerRetirageSpecial()"
+  disabled
+  title="Retirage spécial réservé aux propriétaires autorisés"
+>
+  🔄 Retirage spécial
+</button>
+
 <button
 id="btnGenererPhaseFinale"
 class="secondary owner-only hidden"
@@ -21407,6 +21420,90 @@ async function commentHighlight(id){
 
 }
 
+// =====================================================
+// SUNUGAME - RETIRAGE SPECIAL
+// Étape 292 : vérification sans modification des matchs
+// =====================================================
+
+async function preparerRetirageSpecial(){
+  const bouton = document.getElementById("btnRetirageSpecial");
+  if (!bouton || bouton.disabled || estProprietaire !== true ||
+      autorisationRetirageSpecial !== true ||
+      estContexteOrganisateurExterne() === true) return;
+
+  const tournamentId = Number(tournoiSelect.value);
+  if (!Number.isSafeInteger(tournamentId) || tournamentId <= 0) {
+    alert("Sélectionne d'abord un tournoi.");
+    return;
+  }
+
+  bouton.disabled = true;
+  try {
+    const tirage = await get("/tirage/" + tournamentId);
+    if (!Array.isArray(tirage)) throw new Error("Impossible de récupérer les matchs.");
+
+    const ordreTours = ["64ES", "32ES", "16ES", "8ES", "QUARTS", "DEMIS", "FINALE"];
+    const phasesExistantes = ordreTours.filter(round =>
+      tirage.some(bloc => bloc.tour === round && Array.isArray(bloc.matchs) && bloc.matchs.length)
+    );
+    const round = phasesExistantes.length
+      ? phasesExistantes[phasesExistantes.length - 1]
+      : (tirage.some(bloc => String(bloc.tour).startsWith("Groupe ")) ? "POULE" : null);
+
+    if (!round) {
+      alert("Aucun tirage disponible pour ce tournoi.");
+      return;
+    }
+
+    const matchs = tirage
+      .filter(bloc => round === "POULE"
+        ? String(bloc.tour).startsWith("Groupe ")
+        : bloc.tour === round)
+      .flatMap(bloc => Array.isArray(bloc.matchs) ? bloc.matchs : []);
+
+    if (matchs.some(m => Number(m.played) !== 0 || Number(m.locked) !== 0 ||
+        m.score1 != null || m.score2 != null || m.winner_id != null ||
+        m.loser_id != null || Boolean(String(m.proof_photo || "").trim()) ||
+        m.penalty1 != null || m.penalty2 != null)) {
+      alert("Retirage impossible : au moins un match est commencé ou verrouillé.");
+      return;
+    }
+    if (round !== "POULE" && matchs.length < 4) {
+      alert("Retirage impossible : il faut au moins deux confrontations.");
+      return;
+    }
+
+    if (!confirm("🔄 RETIRAGE SPÉCIAL\n\nTournoi : " + tournamentId +
+        "\nPhase : " + round + "\nMatchs : " + matchs.length +
+        "\n\nCette action remplacera le tirage actuel. Continuer ?")) return;
+
+    const reponse = await fetch("/retirage-special", {
+      method: "POST",
+      credentials: "same-origin",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({tournament_id: tournamentId, round})
+    });
+    const resultat = await reponse.json();
+    if (!reponse.ok || !resultat.ok) {
+      alert("❌ " + (resultat.message || "Retirage refusé par le serveur."));
+      return;
+    }
+
+    cacheTirage = null;
+    cacheTournoiId = null;
+    alert("✅ " + (resultat.message || "Retirage effectué."));
+    if (Number(tournoiSelect.value) === tournamentId) {
+      await afficherTiragePoulePro();
+    }
+  } catch (error) {
+    console.error("Erreur retirage spécial :", error);
+    alert("Impossible d'effectuer le retirage spécial.");
+  } finally {
+    if (estProprietaire === true && autorisationRetirageSpecial === true &&
+        estContexteOrganisateurExterne() !== true) bouton.disabled = false;
+  }
+}
+
 async function customAutoDraw(){
 
   if(window.tirageEnCours){
@@ -32518,21 +32615,43 @@ function modeLectureSeule(){
 }
 let estProprietaire = false;
 
+let autorisationRetirageSpecial = false;
+
 async function verifierProprietaire(){
 
+  // Par défaut, aucune autorisation spéciale.
+  autorisationRetirageSpecial = false;
+
   if(!tournoiSelect.value){
+
     estProprietaire = false;
     appliquerDroitsProprietaire();
     return;
+
   }
 
-  const data = await get("/owner/" + tournoiSelect.value);
+  const tournoiId = tournoiSelect.value;
+
+  // Vérification du propriétaire.
+  const data = await get("/owner/" + tournoiId);
 
   estProprietaire = data && data.owner === true;
+
+  // Vérification de l'autorisation administrative.
+  if(estProprietaire === true){
+
+    const compte = await get("/me");
+
+    autorisationRetirageSpecial =
+      compte?.connected === true &&
+      Number(compte.retirage_special) === 1;
+
+  }
 
   appliquerDroitsProprietaire();
 
 }
+
 function appliquerDroitsProprietaire(){
 
   const contexteExterne =
@@ -32544,6 +32663,24 @@ function appliquerDroitsProprietaire(){
       estProprietaire === true &&
       contexteExterne === false;
 
+    // Le retirage spécial possède une autorisation supplémentaire.
+    // Il reste caché jusqu'à la vérification administrative.
+
+    if(el.id === "btnRetirageSpecial"){
+
+  const peutRetirer =
+    autorise === true &&
+    autorisationRetirageSpecial === true;
+
+  el.style.display = peutRetirer ? "" : "none";
+
+  el.classList.toggle("hidden", !peutRetirer);
+
+  el.disabled = !peutRetirer;
+
+  return;
+}
+    // Tous les autres boutons restent inchangés.
     el.style.display = autorise ? "" : "none";
     el.classList.toggle("hidden", !autorise);
 
