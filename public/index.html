@@ -17999,6 +17999,90 @@ if(
 
 }
 
+async function modifierMaximumEquipes(){
+
+  const option =
+    tournoiSelect.options[tournoiSelect.selectedIndex];
+
+  if(!option || !tournoiSelect.value){
+    alert("Sélectionne un tournoi.");
+    return;
+  }
+
+  if(
+    option.dataset.type !== "poule" ||
+    estProprietaire !== true
+  ){
+    alert("Modification réservée au propriétaire d'un tournoi POULE.");
+    return;
+  }
+
+  const maximumActuel =
+    Number(option.dataset.max);
+
+  const valeur =
+    prompt(
+      "Nouveau nombre maximum d'équipes :",
+      maximumActuel
+    );
+
+  if(valeur === null) return;
+
+  const nouveauMaximum = Number(valeur);
+
+  if(
+    !Number.isSafeInteger(nouveauMaximum) ||
+    nouveauMaximum < 6 ||
+    nouveauMaximum > 100
+  ){
+    alert("Entre un nombre entier de 6 à 100.");
+    return;
+  }
+
+  try{
+
+    const reponse = await fetch("/modifier-max-equipes", {
+      method:"POST",
+      headers:{
+        "Content-Type":"application/json"
+      },
+      credentials:"same-origin",
+      body:JSON.stringify({
+        tournament_id:Number(tournoiSelect.value),
+        max_teams:nouveauMaximum
+      })
+    });
+
+    const resultat = await reponse.json();
+
+    if(!reponse.ok || !resultat.ok){
+      alert(resultat.message || "Modification refusée.");
+      return;
+    }
+
+    option.dataset.max = String(resultat.max_teams);
+
+    // Actualiser le nom affiché dans le menu.
+    const nomActuel = option.textContent.trim();
+
+    option.textContent = nomActuel.replace(
+      /\(\d+\s+[^)]*\)/,
+      `(${resultat.max_teams} ${tr("teams")})`
+    );
+
+    await chargerParticipants();
+
+    alert("Maximum modifié avec succès !");
+
+  }catch(error){
+
+    console.error("Erreur modification maximum :",error);
+    alert("Impossible de modifier le maximum.");
+
+  }
+
+}
+
 let ajoutParticipantEnCours = false;
 
 async function ajouterParticipant(){
@@ -18106,13 +18190,23 @@ function avatarInitiale(nom) {
 }
 async function chargerParticipants(){
 
-  if(!tournoiSelect.value) return;
+  const tournoiId = tournoiSelect.value;
+
+  if(!tournoiId) return;
+
+  // Vérifier les droits du tournoi sélectionné.
+  await verifierProprietaire();
+
+  // Si l'utilisateur a changé de tournoi pendant
+  // la vérification, arrêter cet ancien chargement.
+  if(tournoiSelect.value !== tournoiId) return;
 
   const data =
     await get(
-      "/participants/" +
-      tournoiSelect.value
+      "/participants/" + tournoiId
     );
+
+  if(tournoiSelect.value !== tournoiId) return;
 
   if(!Array.isArray(data)) return;
 
@@ -18126,8 +18220,46 @@ async function chargerParticipants(){
     ? selectedOption.dataset.max
     : 48;
 
-  participantsCount.innerHTML =
-`<h3>${data.length}/${maxTeams} ${tr("teams")}</h3>`;
+  const typeTournoi =
+  selectedOption?.dataset.type || "poule";
+
+participantsCount.innerHTML = `
+  <div style="
+    display:flex;
+    align-items:center;
+    gap:10px;
+    flex-wrap:wrap;
+  ">
+
+    <h3 style="margin:0;">
+      ${data.length}/${maxTeams} ${tr("teams")}
+    </h3>
+
+    ${
+      typeTournoi === "poule" && estProprietaire === true
+      ? `
+        <button
+          type="button"
+          onclick="modifierMaximumEquipes()"
+          title="Modifier le maximum d'équipes"
+          style="
+            width:auto;
+            padding:6px 10px;
+            background:#2563eb;
+            color:white;
+            border:none;
+            border-radius:8px;
+            cursor:pointer;
+          "
+        >
+          ✏️
+        </button>
+      `
+      : ""
+    }
+
+  </div>
+`;
 
   participantsCheckbox.innerHTML =
     data.map(p=>`

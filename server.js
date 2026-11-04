@@ -10768,6 +10768,156 @@ app.post(
 
 });
 
+// MODIFIER_MAX_EQUIPES_POULE
+app.post("/modifier-max-equipes", async (req, res) => {
+
+  try {
+
+    if (!connected(req)) {
+      return res.status(401).json({
+        ok: false,
+        message: "Connecte-toi"
+      });
+    }
+
+    const tournamentId = Number(req.body?.tournament_id);
+    const nouveauMaximum = Number(req.body?.max_teams);
+
+    if (
+      !Number.isSafeInteger(tournamentId) ||
+      tournamentId <= 0 ||
+      !Number.isSafeInteger(nouveauMaximum) ||
+      nouveauMaximum < 6 ||
+      nouveauMaximum > 100
+    ) {
+      return res.status(400).json({
+        ok: false,
+        message: "Le maximum doit être un entier entre 6 et 100."
+      });
+    }
+
+    const resultat = await executerTransaction(
+      async ({ run, get }) => {
+
+        const tournoi = await get(
+          "SELECT * FROM tournaments WHERE id=?",
+          [tournamentId]
+        );
+
+        if (!tournoi) {
+          return {
+            status: 404,
+            message: "Tournoi introuvable"
+          };
+        }
+
+        if (
+          Number(tournoi.user_id) !==
+          Number(req.session.userId)
+        ) {
+          return {
+            status: 403,
+            message: "Seul le propriétaire peut modifier ce tournoi."
+          };
+        }
+
+        if (tournoi.type !== "poule") {
+          return {
+            status: 400,
+            message: "Modification réservée aux tournois POULE."
+          };
+        }
+
+        const matchs = await get(
+          `SELECT COUNT(*) AS total
+           FROM matches
+           WHERE tournament_id=?`,
+          [tournamentId]
+        );
+
+        if (
+          tournoi.status !== "open" ||
+          Number(matchs.total) > 0
+        ) {
+          return {
+            status: 409,
+            message: "Impossible de modifier après le début du tournoi."
+          };
+        }
+
+        // Vérifier si des groupes ont déjà été attribués.
+const groupesAttribues = await get(
+  `
+  SELECT COUNT(*) AS total
+  FROM participants
+  WHERE tournament_id=?
+    AND group_name IS NOT NULL
+    AND TRIM(group_name) <> ''
+  `,
+  [tournamentId]
+);
+
+if (Number(groupesAttribues.total) > 0) {
+  return {
+    status: 409,
+    message:
+      "Impossible de modifier : des groupes ont déjà été attribués."
+  };
+}
+
+        const inscrits = await get(
+          `SELECT COUNT(*) AS total
+           FROM participants
+           WHERE tournament_id=?`,
+          [tournamentId]
+        );
+
+        const nombreInscrits = Number(inscrits.total);
+
+        if (nouveauMaximum < nombreInscrits) {
+          return {
+            status: 400,
+            message:
+              `Il y a déjà ${nombreInscrits} participants inscrits.`
+          };
+        }
+
+        await run(
+          `UPDATE tournaments
+           SET max_teams=?
+           WHERE id=?`,
+          [nouveauMaximum, tournamentId]
+        );
+
+        return {
+          status: 200,
+          message: "Maximum modifié avec succès.",
+          max_teams: nouveauMaximum,
+          inscrits: nombreInscrits
+        };
+      }
+    );
+
+    return res.status(resultat.status).json({
+      ok: resultat.status === 200,
+      message: resultat.message,
+      max_teams: resultat.max_teams,
+      inscrits: resultat.inscrits
+    });
+
+  } catch (error) {
+
+    console.error("Erreur modification maximum :", error);
+
+    return res.status(500).json({
+      ok: false,
+      message: "Erreur pendant la modification du maximum."
+    });
+
+  }
+
+});
+
 app.post(
   "/tirage-automatique-poule-pro",
   async (req,res)=>{
