@@ -34588,12 +34588,27 @@ if (nomTournoiCarte) {
       </svg>
     `);
 
-  avatar.onerror = function() {
-    avatar.onerror = null;
-    avatar.src = avatarDefaut;
+
+    // Affiche l'avatar par défaut si aucune photo n'existe.
+avatar.src = avatarDefaut;
+
+if (photo) {
+  // Charge la photo avec les autorisations CORS.
+  const imageTest = new Image();
+
+  imageTest.crossOrigin = "anonymous";
+
+  imageTest.onload = function() {
+    // Utilise la photo seulement après son chargement.
+    avatar.src = imageTest.src;
   };
 
-  avatar.src = photo || avatarDefaut;
+  imageTest.onerror = function() {
+    console.warn("Impossible de charger la photo :", photo);
+  };
+
+  imageTest.src = photo;
+}
 
   const texte = document.createElement("div");
   texte.textContent = nom || "Joueur";
@@ -34646,7 +34661,6 @@ function fermerCarteConfrontations() {
 
 }
 
-
 async function telechargerCarteConfrontations() {
 
   const carte = document.getElementById("carteConfrontations");
@@ -34657,63 +34671,86 @@ async function telechargerCarteConfrontations() {
   }
 
   if (typeof html2canvas !== "function") {
-    alert("Le module de téléchargement PNG n'est pas disponible.");
+    alert("Le module PNG n'est pas disponible.");
     return;
   }
 
   try {
 
-    await Promise.all(
-  Array.from(carte.querySelectorAll("img")).map(img => {
+    // Attendre le chargement de toutes les photos.
+    const images = Array.from(carte.querySelectorAll("img"));
 
-    if (img.complete) {
-      return Promise.resolve();
+    await Promise.all(images.map(img => {
+
+      if (img.complete) {
+        return Promise.resolve();
+      }
+
+      return new Promise(resolve => {
+
+        img.addEventListener("load", resolve, { once: true });
+        img.addEventListener("error", resolve, { once: true });
+
+      });
+
+    }));
+
+    // Attendre également le chargement des polices.
+    if (document.fonts?.ready) {
+      await document.fonts.ready;
     }
 
-    return new Promise(resolve => {
-      img.addEventListener("load", resolve, { once:true });
-      img.addEventListener("error", resolve, { once:true });
+    // Capturer toute la carte, même hors écran.
+    const canvas = await html2canvas(carte, {
+
+      backgroundColor: "#071b35",
+
+      scale: 2,
+
+      useCORS: true,
+
+      allowTaint: false,
+
+      imageTimeout: 20000,
+
+      width: carte.scrollWidth,
+
+      height: carte.scrollHeight,
+
+      windowWidth: Math.max(
+        document.documentElement.clientWidth,
+        carte.scrollWidth
+      ),
+
+      scrollX: 0,
+
+      scrollY: -window.scrollY
+
     });
 
-  })
-);
-
-    const canvas = await html2canvas(carte, {
-  backgroundColor: "#071b35",
-
-  scale: 2,
-
-  useCORS: true,
-
-  width: carte.scrollWidth,
-  height: carte.scrollHeight,
-
-  windowWidth: Math.max(
-    document.documentElement.clientWidth,
-    carte.scrollWidth
-  ),
-
-  scrollX: 0,
-  scrollY: -window.scrollY
-});
-
+    // Télécharger le PNG.
     const lien = document.createElement("a");
 
     lien.download = "SunuGame-Confrontations.png";
+
     lien.href = canvas.toDataURL("image/png");
 
     document.body.appendChild(lien);
+
     lien.click();
+
     lien.remove();
 
   } catch (error) {
 
-    console.error("Erreur téléchargement :", error);
-    alert("Impossible de télécharger la carte.");
+    console.error("Erreur téléchargement PNG :", error);
+
+    alert("Impossible de télécharger la carte avec les photos.");
 
   }
 
 }
+
 </script>
 
 </body>
