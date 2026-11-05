@@ -34589,25 +34589,58 @@ if (nomTournoiCarte) {
     `);
 
 
-    // Affiche l'avatar par défaut si aucune photo n'existe.
+// Avatar par défaut
 avatar.src = avatarDefaut;
 
 if (photo) {
-  // Charge la photo avec les autorisations CORS.
-  const imageTest = new Image();
 
-  imageTest.crossOrigin = "anonymous";
+  fetch(photo, {
+    mode: "cors",
+    cache: "no-store"
+  })
+  .then(response => {
 
-  imageTest.onload = function() {
-    // Utilise la photo seulement après son chargement.
-    avatar.src = imageTest.src;
-  };
+    if (!response.ok) {
+      throw new Error("HTTP " + response.status);
+    }
 
-  imageTest.onerror = function() {
-    console.warn("Impossible de charger la photo :", photo);
-  };
+    return response.blob();
 
-  imageTest.src = photo;
+  })
+  .then(blob => {
+
+    if (!blob.type.startsWith("image/")) {
+      throw new Error("Le fichier n'est pas une image");
+    }
+
+    return new Promise((resolve, reject) => {
+
+      const reader = new FileReader();
+
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = () => reject(reader.error);
+
+      reader.readAsDataURL(blob);
+
+    });
+
+  })
+  .then(base64 => {
+
+    avatar.src = base64;
+
+  })
+  .catch(error => {
+
+    console.warn(
+      "Erreur chargement photo confrontation :",
+      error
+    );
+
+    avatar.src = avatarDefaut;
+
+  });
+
 }
 
   const texte = document.createElement("div");
