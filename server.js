@@ -6492,15 +6492,29 @@ app.get("/tirage/:id",(req,res)=>{
   db.all(
     `
     SELECT
-      m.*,
-      p1.prenom AS player1_name,
-      p2.prenom AS player2_name
-    FROM matches m
-    LEFT JOIN participants p1
-      ON p1.id=m.player1_id
-    LEFT JOIN participants p2
-      ON p2.id=m.player2_id
-    WHERE m.tournament_id=?
+  m.*,
+
+  p1.prenom AS player1_name,
+  p2.prenom AS player2_name,
+
+  u1.profile_photo AS player1_photo,
+  u2.profile_photo AS player2_photo
+
+FROM matches m
+
+LEFT JOIN participants p1
+  ON p1.id=m.player1_id
+
+LEFT JOIN participants p2
+  ON p2.id=m.player2_id
+
+LEFT JOIN users u1
+  ON u1.id=p1.user_id
+
+LEFT JOIN users u2
+  ON u2.id=p2.user_id
+
+WHERE m.tournament_id=?
     ORDER BY
       CASE m.round
         WHEN 'POULE' THEN 1

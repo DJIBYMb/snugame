@@ -7254,6 +7254,70 @@ section:not(.hidden){
   margin-top:15px !important;
 }
 
+/* CARTE DES CONFRONTATIONS SUNUGAME */
+
+.carte-duel {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  background:rgba(255,255,255,.09);
+  border:1px solid rgba(255,215,0,.35);
+  border-radius:12px;
+  padding:15px 10px;
+  margin:12px 0;
+}
+
+.carte-joueur {
+  flex:1;
+  min-width:0;
+  font-size:16px;
+  font-weight:800;
+  overflow-wrap:anywhere;
+}
+
+.carte-vs {
+  color:#ffd700;
+  font-size:19px;
+  font-weight:900;
+}
+
+.carte-groupe {
+  margin-top:22px;
+  color:#ffd700;
+  font-size:17px;
+  font-weight:800;
+}
+
+/* Photos des joueurs sur la carte SunuGame */
+
+.carte-joueur {
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  flex:1;
+  min-width:0;
+  font-weight:800;
+  overflow-wrap:anywhere;
+}
+
+.carte-avatar {
+  width:65px;
+  height:65px;
+  border-radius:50%;
+  object-fit:cover;
+  border:3px solid #ffd700;
+  background:#173e63;
+}
+
+.carte-vs {
+  color:#ffd700;
+  font-size:22px;
+  font-weight:900;
+}
+
 </style>
 </head>
 
@@ -9413,6 +9477,68 @@ Classements
 
 </div>
 
+<!-- CARTE DES CONFRONTATIONS SUNUGAME -->
+<div id="fenetreCarteConfrontations" class="hidden" style="
+  position:fixed;
+  inset:0;
+  z-index:2147483000;
+  background:rgba(0,0,0,.88);
+  overflow-y:auto;
+  padding:20px 10px;
+  box-sizing:border-box;
+">
+
+  <div style="max-width:650px;margin:auto;">
+
+    <button
+      type="button"
+      onclick="fermerCarteConfrontations()"
+      style="margin-bottom:12px;">
+      ✕ Fermer
+    </button>
+
+    <div id="carteConfrontations" style="
+      background:linear-gradient(145deg,#071b35,#123e64);
+      color:white;
+      padding:25px 15px;
+      border-radius:18px;
+      text-align:center;
+    ">
+
+      <h1 style="color:#ffd700;">🏆 SUNUGAME</h1>
+
+      <h3
+        id="nomTournoiCarte"
+        style="
+        color:white;
+        font-size:20px;
+        margin:10px 0 20px;
+        text-transform:uppercase;
+       ">
+     </h3>
+
+      <h2 id="titreCarteConfrontations">
+        ⚔️ PREMIÈRES CONFRONTATIONS
+      </h2>
+
+      <div id="listeCarteConfrontations"></div>
+
+      <p style="margin-top:25px;">
+        🎮 eFOOTBALL — QUE LE MEILLEUR GAGNE !
+      </p>
+
+    </div>
+
+    <button
+      type="button"
+      onclick="telechargerCarteConfrontations()"
+      style="margin-top:15px;width:100%;">
+      📥 Télécharger la carte PNG
+    </button>
+
+  </div>
+</div>
+
 <div id="panelProprietaire" class="panel hidden">
 
   <div class="card">
@@ -9470,6 +9596,13 @@ Créer tournoi
 id="tournoiSelect"
 onchange="changerTournoiRapide()">
 </select>
+
+<button
+  type="button"
+  class="secondary"
+  onclick="ouvrirCarteConfrontations()">
+  📸 Carte des confrontations
+</button>
 
     <button
 class="secondary"
@@ -34172,6 +34305,300 @@ async function ouvrirProfilCommentateurLiveSpectateur(
 </script>
 
 <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+
+<script>
+async function ouvrirCarteConfrontations() {
+
+  const select = document.getElementById("tournoiSelect");
+  const fenetre = document.getElementById("fenetreCarteConfrontations");
+  const liste = document.getElementById("listeCarteConfrontations");
+  const titre = document.getElementById("titreCarteConfrontations");
+
+  const nomTournoiCarte =
+  document.getElementById("nomTournoiCarte");
+
+if (nomTournoiCarte) {
+
+  const option = select.options[select.selectedIndex];
+
+  const nomTournoi = option
+    ? option.textContent
+        .replace(/\(\d+\s+[^)]*\)/, "")
+        .replace(/\s*-\s*ID\s*\d+\s*$/i, "")
+        .trim()
+    : "TOURNOI SUNUGAME";
+
+  nomTournoiCarte.textContent = nomTournoi;
+
+}
+
+  if (!select || !select.value) {
+    alert("Sélectionne d'abord un tournoi.");
+    return;
+  }
+
+  if (!fenetre || !liste || !titre) {
+    alert("La fenêtre de la carte des confrontations est introuvable.");
+    return;
+  }
+
+  try {
+
+    const response = await fetch(
+      "/tirage/" + encodeURIComponent(select.value),
+      { credentials: "same-origin" }
+    );
+
+    if (!response.ok) {
+      throw new Error("Impossible de récupérer les confrontations.");
+    }
+
+    const data = await response.json();
+
+    if (!Array.isArray(data) || data.length === 0) {
+      alert("Aucun tirage disponible pour ce tournoi.");
+      return;
+    }
+
+    // Choisir la phase la plus récente du tournoi.
+    const ordrePhases = [
+      "POULE", "64ES", "32ES", "16ES",
+      "8ES", "QUARTS", "DEMIS", "FINALE"
+    ];
+
+    const tousMatchs = data.flatMap(groupe =>
+      Array.isArray(groupe.matchs) ? groupe.matchs : []
+    );
+
+    const phasesDisponibles = [...new Set(
+      tousMatchs.map(m => m.round)
+    )];
+
+    const phase = phasesDisponibles.sort(
+      (a, b) => ordrePhases.indexOf(b) - ordrePhases.indexOf(a)
+    )[0];
+
+    let matchs = tousMatchs.filter(m => m.round === phase);
+
+    // Ne pas afficher deux fois les matchs ALLER et RETOUR.
+    if (phase !== "POULE") {
+
+      const duels = new Map();
+
+      matchs.forEach(m => {
+
+        const cle = [
+          String(m.player1_id),
+          String(m.player2_id)
+        ].sort().join("_");
+
+        if (!duels.has(cle)) {
+          duels.set(cle, m);
+        }
+
+      });
+
+      matchs = [...duels.values()];
+
+    } else {
+
+      // Pour les poules : premières rencontres de chaque groupe.
+      const groupes = new Map();
+
+      matchs.forEach(m => {
+
+        const groupe = m.group_name || "A";
+
+        if (!groupes.has(groupe)) {
+          groupes.set(groupe, []);
+        }
+
+        groupes.get(groupe).push(m);
+
+      });
+
+      matchs = [];
+
+      groupes.forEach(rencontres => {
+
+        rencontres.sort(
+          (a, b) => Number(a.match_order) - Number(b.match_order)
+        );
+
+        // Deux premières confrontations de chaque poule.
+        matchs.push(...rencontres.slice(0, 2));
+
+      });
+
+    }
+
+    if (matchs.length === 0) {
+      alert("Aucune confrontation trouvée.");
+      return;
+    }
+
+    titre.textContent =
+      phase === "POULE"
+        ? "⚔️ PREMIÈRES CONFRONTATIONS DES POULES"
+        : "⚔️ CONFRONTATIONS — " + phase;
+
+    liste.replaceChildren();
+
+    let dernierGroupe = null;
+
+    matchs.forEach(m => {
+
+      if (phase === "POULE" && m.group_name !== dernierGroupe) {
+
+        dernierGroupe = m.group_name;
+
+        const groupeTitre = document.createElement("div");
+        groupeTitre.className = "carte-groupe";
+        groupeTitre.textContent = "GROUPE " + dernierGroupe;
+
+        liste.appendChild(groupeTitre);
+      }
+
+      const duel = document.createElement("div");
+      duel.className = "carte-duel";
+
+      function creerJoueurCarte(nom, photo) {
+
+  const bloc = document.createElement("div");
+  bloc.className = "carte-joueur";
+
+  const avatar = document.createElement("img");
+
+  avatar.className = "carte-avatar";
+  avatar.alt = "Photo de " + (nom || "Joueur");
+
+  // Avatar par défaut si aucune photo n'existe.
+  const avatarDefaut =
+    "data:image/svg+xml;charset=utf-8," +
+    encodeURIComponent(`
+      <svg xmlns="http://www.w3.org/2000/svg"
+           width="100" height="100"
+           viewBox="0 0 100 100">
+        <rect width="100" height="100" fill="#173e63"/>
+        <circle cx="50" cy="35" r="18" fill="#ffffff"/>
+        <ellipse cx="50" cy="90" rx="32" ry="30" fill="#ffffff"/>
+      </svg>
+    `);
+
+  avatar.onerror = function() {
+    avatar.onerror = null;
+    avatar.src = avatarDefaut;
+  };
+
+  avatar.src = photo || avatarDefaut;
+
+  const texte = document.createElement("div");
+  texte.textContent = nom || "Joueur";
+
+  bloc.append(avatar, texte);
+
+  return bloc;
+}
+
+const joueur1 = creerJoueurCarte(
+  m.player1_name,
+  m.player1_photo
+);
+
+const vs = document.createElement("div");
+vs.className = "carte-vs";
+vs.textContent = "VS";
+
+const joueur2 = creerJoueurCarte(
+  m.player2_name,
+  m.player2_photo
+);
+
+duel.append(joueur1, vs, joueur2);
+      liste.appendChild(duel);
+
+    });
+
+    fenetre.classList.remove("hidden");
+    fenetre.style.display = "block";
+
+  } catch (error) {
+
+    console.error("Erreur carte confrontations :", error);
+    alert("Impossible de charger la carte des confrontations.");
+
+  }
+
+}
+
+
+function fermerCarteConfrontations() {
+
+  const fenetre = document.getElementById("fenetreCarteConfrontations");
+
+  if (fenetre) {
+    fenetre.style.display = "none";
+    fenetre.classList.add("hidden");
+  }
+
+}
+
+
+async function telechargerCarteConfrontations() {
+
+  const carte = document.getElementById("carteConfrontations");
+
+  if (!carte) {
+    alert("Carte introuvable.");
+    return;
+  }
+
+  if (typeof html2canvas !== "function") {
+    alert("Le module de téléchargement PNG n'est pas disponible.");
+    return;
+  }
+
+  try {
+
+    await Promise.all(
+  Array.from(carte.querySelectorAll("img")).map(img => {
+
+    if (img.complete) {
+      return Promise.resolve();
+    }
+
+    return new Promise(resolve => {
+      img.addEventListener("load", resolve, { once:true });
+      img.addEventListener("error", resolve, { once:true });
+    });
+
+  })
+);
+
+    const canvas = await html2canvas(carte, {
+      backgroundColor: "#071b35",
+      scale: 2,
+      useCORS: true
+    });
+
+    const lien = document.createElement("a");
+
+    lien.download = "SunuGame-Confrontations.png";
+    lien.href = canvas.toDataURL("image/png");
+
+    document.body.appendChild(lien);
+    lien.click();
+    lien.remove();
+
+  } catch (error) {
+
+    console.error("Erreur téléchargement :", error);
+    alert("Impossible de télécharger la carte.");
+
+  }
+
+}
+</script>
 
 </body>
 </html>
