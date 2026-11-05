@@ -7318,6 +7318,107 @@ section:not(.hidden){
   font-weight:900;
 }
 
+/* SUNUGAME : 4 CONFRONTATIONS PAR LIGNE */
+
+#carteConfrontations {
+  width: 1600px;
+  max-width: none;
+  box-sizing: border-box;
+}
+
+#listeCarteConfrontations {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 15px;
+  align-items: start;
+}
+
+#listeCarteConfrontations .carte-duel {
+  margin: 0;
+  min-width: 0;
+}
+
+#listeCarteConfrontations .carte-groupe {
+  grid-column: 1 / -1;
+  margin: 15px 0 0;
+}
+
+#listeCarteConfrontations .carte-duel {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.carte-groupe-label {
+  width: 100%;
+  text-align: center;
+  color: #ffd700;
+  font-weight: bold;
+  font-size: 14px;
+  margin-bottom: 10px;
+}
+
+/* ======================================
+   SUNUGAME - CARTE DEFILEMENT HORIZONTAL
+====================================== */
+
+#zoneDefilementCarte {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+
+  -webkit-overflow-scrolling: touch;
+
+  overscroll-behavior-x: contain;
+
+  border-radius: 18px;
+
+  padding-bottom: 12px;
+}
+
+/* Conserver la largeur complète de l'affiche */
+
+#carteConfrontations {
+  width: 1600px;
+  min-width: 1600px;
+  max-width: none;
+  box-sizing: border-box;
+}
+
+/* Toujours 4 confrontations par ligne */
+
+#listeCarteConfrontations {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+  align-items: stretch;
+}
+
+/* Présentation des confrontations */
+
+#listeCarteConfrontations .carte-duel {
+  margin: 0;
+  min-width: 0;
+}
+
+/* Photos des joueurs */
+
+#listeCarteConfrontations .carte-avatar {
+  width: 75px;
+  height: 75px;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
+/* Noms des joueurs */
+
+#listeCarteConfrontations .carte-joueur {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
 </style>
 </head>
 
@@ -9497,6 +9598,8 @@ Classements
       ✕ Fermer
     </button>
 
+    <div id="zoneDefilementCarte"></div>
+
     <div id="carteConfrontations" style="
       background:linear-gradient(145deg,#071b35,#123e64);
       color:white;
@@ -9526,6 +9629,8 @@ Classements
       <p style="margin-top:25px;">
         🎮 eFOOTBALL — QUE LE MEILLEUR GAGNE !
       </p>
+
+    </div>
 
     </div>
 
@@ -34448,19 +34553,17 @@ if (nomTournoiCarte) {
 
     matchs.forEach(m => {
 
-      if (phase === "POULE" && m.group_name !== dernierGroupe) {
-
-        dernierGroupe = m.group_name;
-
-        const groupeTitre = document.createElement("div");
-        groupeTitre.className = "carte-groupe";
-        groupeTitre.textContent = "GROUPE " + dernierGroupe;
-
-        liste.appendChild(groupeTitre);
-      }
 
       const duel = document.createElement("div");
       duel.className = "carte-duel";
+
+      if (phase === "POULE") {
+  const groupe = document.createElement("div");
+  groupe.className = "carte-groupe-label";
+  groupe.textContent = "GROUPE " + (m.group_name || "?");
+
+  duel.appendChild(groupe);
+}
 
       function creerJoueurCarte(nom, photo) {
 
@@ -34576,10 +34679,23 @@ async function telechargerCarteConfrontations() {
 );
 
     const canvas = await html2canvas(carte, {
-      backgroundColor: "#071b35",
-      scale: 2,
-      useCORS: true
-    });
+  backgroundColor: "#071b35",
+
+  scale: 2,
+
+  useCORS: true,
+
+  width: carte.scrollWidth,
+  height: carte.scrollHeight,
+
+  windowWidth: Math.max(
+    document.documentElement.clientWidth,
+    carte.scrollWidth
+  ),
+
+  scrollX: 0,
+  scrollY: -window.scrollY
+});
 
     const lien = document.createElement("a");
 
