@@ -7568,6 +7568,24 @@ section:not(.hidden){
   font-weight: 700;
 }
 
+/* SUNUGAME — EMPÊCHER LA SÉLECTION DES TEXTES */
+
+body {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+/* Autoriser la sélection dans les champs de saisie */
+
+input,
+textarea,
+[contenteditable="true"] {
+  -webkit-user-select: text !important;
+  user-select: text !important;
+  -webkit-touch-callout: default;
+}
+
 </style>
 </head>
 
