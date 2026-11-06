@@ -14199,6 +14199,16 @@ async function ouvrirProfilPublic(
   */
   setPage("pagePublicProfil", false);
 
+    // SUNUGAME — Masquer les panels derrière le profil public
+
+  document
+    .querySelectorAll(".panel")
+    .forEach(panel => {
+
+      panel.classList.add("hidden");
+
+    });
+
   /*
     Le flux reste chargé en mémoire, mais le mode plein écran
     est désactivé pendant l'affichage du profil public.
