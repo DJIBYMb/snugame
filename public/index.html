@@ -16270,6 +16270,10 @@ async function retourProfilDepuisVideo(){
 
 async function revenirProfilPublicDepuisVideo(userId){
 
+  document.getElementById(
+  "retour-video-publique"
+  )?.remove();
+
   const idJoueur =
     Number(
       userId ||
@@ -16375,56 +16379,56 @@ async function revenirProfilPublicDepuisVideo(userId){
 
 async function ouvrirVideoPublique(videoId, userId){
 
-  etatAvantVideoPublique =
-    capturerEtatNavigation();
+  const data = await get("/public-profile/" + userId);
 
-  scrollAvantVideoPublique =
-    window.scrollY || 0;
+  if(!data || !Array.isArray(data.videos)){
+    message.textContent = "Impossible de charger les vidéos";
+    return;
+  }
 
-  window.fromPublicProfileVideo = true;
-  mettreAJourVisibiliteBoutonVideoPlus();
+  const videos = data.videos;
 
-  currentPublicUserId = userId;
+  const indexSelectionne = videos.findIndex(
+    v => Number(v.id) === Number(videoId)
+  );
 
-  const data =
-    await get("/public-profile/" + userId);
-
-  const video =
-    data.videos.find(
-      v => Number(v.id) === Number(videoId)
-    );
-
-  if(!video){
+  if(indexSelectionne === -1){
     message.textContent = "Vidéo introuvable";
     return;
   }
 
-  /*
-    La vue réagit immédiatement.
-    La requête réseau continue ensuite et remet
-    la valeur exacte renvoyée par le serveur.
-  */
-  const vuesAvantOuverture =
-    Number(video.vues || 0);
+  etatAvantVideoPublique = capturerEtatNavigation();
+  scrollAvantVideoPublique = window.scrollY || 0;
 
-  /* Le profil public est déjà mémorisé dans etatAvantVideoPublique.
-     Ne pas l'ajouter une deuxième fois dans pageStack. */
+  window.fromPublicProfileVideo = true;
+  currentPublicUserId = userId;
+
+  mettreAJourVisibiliteBoutonVideoPlus();
+
   setPage("pageDashboard", false);
 
-  document
-    .querySelectorAll(".panel")
-    .forEach(p=>p.classList.add("hidden"));
+  document.querySelectorAll(".panel").forEach(p=>{
+    p.classList.add("hidden");
+  });
 
   panelHighlights.classList.remove("hidden");
 
-  document
-  .getElementById("btnAddVideo")
-  ?.style.setProperty("display","none","important");
+  document.getElementById("btnAddVideo")
+    ?.style.setProperty("display","none","important");
 
   document.body.classList.add("video-mode");
   messageCard.classList.add("hidden");
 
-  highlightsList.innerHTML = `
+  // Arrêter l'ancien observateur vidéo.
+  if(tiktokObserver){
+    tiktokObserver.disconnect();
+    tiktokObserver = null;
+  }
+
+  stopAllVideos();
+
+  // Construire uniquement les vidéos du joueur.
+  highlightsList.innerHTML = videos.map(video => `
 
     <div
       class="tiktok-video public-profile-video-temp"
@@ -16432,33 +16436,19 @@ async function ouvrirVideoPublique(videoId, userId){
       data-highlight-id="${video.id}"
     >
 
-      <div
-      onclick="retourDepuisVideoPublique()"
-      style="
-       position:fixed;
-       top:67px;
-       left:20px;
-       z-index:999999;
-       color:white;
-       font-size:18px;
-       font-weight:700;
-       cursor:pointer;
-      ">
-      ← Retour
-      </div>
-
       <img
-      src="${video.thumbnail_url || '/default-video-cover.png'}"
-      class="video-panel-cover">
+        src="${video.thumbnail_url || '/default-video-cover.png'}"
+        class="video-panel-cover"
+      >
 
       <video
-      src="${video.media_url}"
-      class="highlight-video"
-      loop
-      playsinline
-      preload="auto"
-      onplaying="hideVideoCover(this)"
-      onclick="toggleVideoPause(this)">
+        src="${video.media_url}"
+        class="highlight-video"
+        loop
+        playsinline
+        preload="metadata"
+        onplaying="hideVideoCover(this)"
+        onclick="toggleVideoPause(this)">
       </video>
 
       <div class="tiktok-overlay">
@@ -16466,33 +16456,33 @@ async function ouvrirVideoPublique(videoId, userId){
         <div class="tiktok-left">
 
           <div
-class="tiktok-user"
-style="cursor:pointer;"
-onclick="
-  event.stopPropagation();
-  revenirProfilPublicDepuisVideo(${userId});
-">
-  @${data.username || ""}
-</div>
+            class="tiktok-user"
+            style="cursor:pointer;"
+            onclick="
+              event.stopPropagation();
+              revenirProfilPublicDepuisVideo(${Number(userId)});
+            ">
+            @${data.username || ""}
+          </div>
 
-      <div class="tiktok-title collapsed">
-      ${descriptionVideo18Mots(video.titre || "")}
-      </div>
+          <div class="tiktok-title collapsed">
+            ${descriptionVideo18Mots(video.titre || "")}
+          </div>
+
           ${
             String(video.titre || "").length > 70
-              ? `
-                <button
-                  type="button"
-                  class="video-more-btn"
-                  onclick="
-                    event.stopPropagation();
-                    toggleDescriptionVideo(this);
-                  "
-                >
-                  Voir plus
-                </button>
-              `
-              : ""
+            ? `
+              <button
+                type="button"
+                class="video-more-btn"
+                onclick="
+                  event.stopPropagation();
+                  toggleDescriptionVideo(this);
+                ">
+                Voir plus
+              </button>
+            `
+            : ""
           }
 
         </div>
@@ -16500,8 +16490,8 @@ onclick="
         <div class="tiktok-actions">
 
           <button
-          class="tiktok-action-btn"
-          onclick="likeHighlight(${video.id}, this)">
+            class="tiktok-action-btn"
+            onclick="likeHighlight(${video.id}, this)">
             <i class="fa-regular fa-heart"></i>
           </button>
 
@@ -16510,8 +16500,8 @@ onclick="
           </div>
 
           <button
-          class="tiktok-action-btn"
-          onclick="ouvrirCommentaires(${video.id})">
+            class="tiktok-action-btn"
+            onclick="ouvrirCommentaires(${video.id})">
             <i class="fa-regular fa-comment"></i>
           </button>
 
@@ -16524,40 +16514,99 @@ onclick="
       </div>
 
     </div>
-  `;
+
+  `).join("");
+
+  // Bouton Retour fixe, indépendant des vidéos.
+  const boutonRetour = document.createElement("button");
+
+  boutonRetour.type = "button";
+
+// Même icône que le bouton Retour du profil public.
+boutonRetour.innerHTML = `
+  <i
+    class="fa-solid fa-arrow-left"
+    style="font-size:28px;"
+  ></i>
+`;
+
+boutonRetour.setAttribute(
+  "aria-label",
+  "Retour au profil public"
+);
+
+// Même design que le profil public.
+boutonRetour.style.cssText = `
+  position:fixed !important;
+
+  top:57px !important;
+  left:15px !important;
+  right:auto !important;
+  bottom:auto !important;
+
+  transform:none !important;
+
+  z-index:2147483647 !important;
+
+  display:flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+
+  width:32px !important;
+  height:32px !important;
+
+  background:transparent !important;
+  border:none !important;
+  border-radius:0 !important;
+
+  padding:0 !important;
+  margin:0 !important;
+
+  color:white !important;
+  font-size:28px !important;
+  font-weight:900 !important;
+
+  cursor:pointer !important;
+`;
+
+  boutonRetour.onclick = retourDepuisVideoPublique;
+
+  // Le bouton reste visible pendant le défilement.
+  const ancienBouton = document.getElementById(
+    "retour-video-publique"
+  );
+
+  ancienBouton?.remove();
+
+  boutonRetour.id = "retour-video-publique";
+
+  document.body.appendChild(boutonRetour);
 
   initialiserBarresProgressionVideos();
 
-  const videoPublique =
-  videoProfilContent.querySelector(
-    ".profile-full-video"
-  );
+  // Aller directement à la vidéo sélectionnée.
+  highlightsList.scrollTop = 0;
 
-if(videoPublique){
+  const carteSelectionnee =
+    highlightsList.querySelector(
+      `[data-highlight-id="${Number(videoId)}"]`
+    );
 
-  videoPublique.muted = false;
-  videoPublique.volume = 1;
+  if(carteSelectionnee){
 
-  videoPublique
-    .play()
-    .catch(()=>{});
-
-}
-
-    const videoEl =
-    highlightsList.querySelector("video");
-
-  if(videoEl){
-
-    videoEl.play()
-      .then(()=>{
-
-        compterVue(videoId);
-
-      })
-      .catch(()=>{});
+    highlightsList.scrollTop =
+      carteSelectionnee.offsetTop -
+      highlightsList.offsetTop;
 
   }
+
+  // Initialiser la lecture automatique après positionnement.
+  requestAnimationFrame(()=>{
+
+    initTikTokAutoplay();
+
+  });
+
 }
 
 async function showPanel(id){
