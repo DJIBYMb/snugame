@@ -7419,6 +7419,155 @@ section:not(.hidden){
   overflow-wrap: anywhere;
 }
 
+/* SUNUGAME — Favoris dans la grille publique */
+
+.profile-video-favorite {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  z-index: 5;
+
+  display: flex;
+  align-items: center;
+  gap: 4px;
+
+  background: rgba(0, 0, 0, 0.65);
+  border-radius: 20px;
+  padding: 3px 6px;
+}
+
+.profile-video-favorite .profile-favorite-badge {
+  position: static !important;
+  margin: 0;
+}
+
+.profile-video-favorite .favorite-count {
+  color: white;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+/* ======================================
+   SUNUGAME — GRILLE PROFIL PUBLIC
+   COMMENTAIRES + FAVORIS
+====================================== */
+
+.profile-video-item .public-video-actions {
+
+  position: absolute;
+
+  left: 5px;
+  right: 5px;
+  bottom: 30px;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+
+  gap: 8px;
+
+  padding: 5px;
+
+  background: rgba(0,0,0,0.65);
+
+  border-radius: 8px;
+
+  z-index: 10;
+
+}
+
+.profile-video-item .public-video-action {
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  gap: 4px;
+
+  color: white;
+
+  font-size: 12px;
+
+  font-weight: 700;
+
+}
+
+.profile-video-item .public-video-action-btn {
+
+  background: transparent;
+  border: none;
+
+  color: white;
+
+  font-size: 15px;
+
+  cursor: pointer;
+
+  padding: 2px;
+
+}
+
+.profile-video-item .public-video-action-btn:active {
+
+  transform: scale(0.9);
+
+}
+
+.profile-video-item .public-video-action .comment-count,
+.profile-video-item .public-video-action .favorite-count {
+
+  color: white;
+
+  font-size: 12px;
+
+  font-weight: 700;
+
+}
+
+/* FAVORIS — VIDÉOS PROFIL PUBLIC */
+
+#pagePublicProfil .profile-video-item {
+  position: relative;
+}
+
+#pagePublicProfil .public-video-actions {
+  position: absolute;
+  right: 5px;
+  bottom: 30px;
+  z-index: 20;
+
+  display: flex;
+  align-items: center;
+
+  background: rgba(0, 0, 0, 0.75);
+  border-radius: 20px;
+  padding: 5px 8px;
+}
+
+#pagePublicProfil .public-video-action {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+#pagePublicProfil .public-video-action-btn {
+  position: static;
+  background: transparent;
+  border: none;
+  color: white;
+  font-size: 16px;
+  padding: 2px;
+  cursor: pointer;
+}
+
+#pagePublicProfil .public-video-action .favorite-count {
+  position: static;
+  display: inline-block;
+  color: white;
+  font-size: 12px;
+  font-weight: 700;
+}
+
 </style>
 </head>
 
@@ -14191,17 +14340,38 @@ color:white!important;
            src="${v.thumbnail_url || '/default-video-cover.png'}"
            class="profile-video-cover">
 
-           <button
-           class="profile-favorite-badge"
-           onclick="event.stopPropagation(); toggleFavoriVideo(${v.id}, this)">
+           <!-- SUNUGAME — FAVORIS GRILLE PROFIL PUBLIC -->
 
-          <i class="${
-          v.favorited
+<div
+  class="public-video-actions"
+  onclick="event.stopPropagation();">
+
+  <div class="public-video-action">
+
+    <button
+      type="button"
+      class="public-video-action-btn"
+      aria-label="Ajouter ou retirer des favoris"
+      onclick="
+        event.stopPropagation();
+        toggleFavoriVideo(${v.id}, this);
+      ">
+
+      <i class="${
+        v.favorited
           ? 'fa-solid fa-bookmark'
           : 'fa-regular fa-bookmark'
-          }"></i>
+      }"></i>
 
-         </button>
+    </button>
+
+    <span class="favorite-count">
+      ${v.favorites || 0}
+    </span>
+
+  </div>
+
+</div>
 
           <div
           style="
