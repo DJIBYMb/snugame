@@ -169,12 +169,39 @@ function extraireCleR2DepuisUrl(urlFichier){
     qui ne vient pas du domaine R2
     configuré pour SNUGAME.
   */
+if(!r2PublicUrl){
+  return null;
+}
+
+try{
+
+  const urlAutorisee = new URL(r2PublicUrl);
+  const urlDemandee = new URL(url);
+
+  const cheminAutorise =
+    urlAutorisee.pathname.replace(/\/+$/, "");
+
+  const cheminDemande =
+    urlDemandee.pathname;
+
   if(
-    !r2PublicUrl ||
-    !url.startsWith(r2PublicUrl + "/")
+    urlAutorisee.origin !== urlDemandee.origin ||
+    urlAutorisee.username ||
+    urlAutorisee.password ||
+    urlDemandee.username ||
+    urlDemandee.password ||
+    urlDemandee.search ||
+    urlDemandee.hash ||
+    !cheminDemande.startsWith(cheminAutorise + "/")
   ){
     return null;
   }
+
+}catch(error){
+
+  return null;
+
+}
 
   try{
 
@@ -549,6 +576,120 @@ const upload = multer({
   }
 
 });
+
+/* =========================================================
+   SUNUGAME — UPLOAD DES PREUVES DE MATCH
+   Images uniquement — maximum 10 Mo
+========================================================= */
+
+const uploadPreuveMatch = multer({
+
+  storage: multer.memoryStorage(),
+
+  limits: {
+    fileSize: 10 * 1024 * 1024,
+    files: 1
+  },
+
+  fileFilter: (req, file, cb) => {
+
+    const typesAutorises = [
+      "image/jpeg",
+      "image/png",
+      "image/webp"
+    ];
+
+    const extensionsAutorisees = [
+      ".jpg",
+      ".jpeg",
+      ".png",
+      ".webp"
+    ];
+
+    const extension = path.extname(
+      file.originalname
+    ).toLowerCase();
+
+    if (
+      !typesAutorises.includes(file.mimetype) ||
+      !extensionsAutorisees.includes(extension)
+    ) {
+
+      return cb(
+        new Error(
+          "Preuve refusée : utilise une image JPG, PNG ou WebP."
+        )
+      );
+
+    }
+
+    cb(null, true);
+
+  }
+
+});
+
+/* =========================================================
+   SUNUGAME — VÉRIFICATION DES IMAGES DE PREUVE
+========================================================= */
+
+function verifierImagePreuve(fichier){
+
+  if(
+    !fichier ||
+    !Buffer.isBuffer(fichier.buffer)
+  ){
+    return false;
+  }
+
+  const buffer = fichier.buffer;
+
+  // JPEG : FF D8 FF
+  const jpeg =
+    buffer.length >= 3 &&
+    buffer[0] === 0xFF &&
+    buffer[1] === 0xD8 &&
+    buffer[2] === 0xFF;
+
+  // PNG : signature de 8 octets
+  const png =
+    buffer.length >= 8 &&
+    buffer.subarray(0,8).equals(
+      Buffer.from([
+        137,80,78,71,13,10,26,10
+      ])
+    );
+
+  // WebP : RIFF....WEBP
+  const webp =
+    buffer.length >= 12 &&
+    buffer.toString("ascii",0,4) === "RIFF" &&
+    buffer.toString("ascii",8,12) === "WEBP";
+
+  if(
+    fichier.mimetype === "image/jpeg" &&
+    jpeg
+  ){
+    return true;
+  }
+
+  if(
+    fichier.mimetype === "image/png" &&
+    png
+  ){
+    return true;
+  }
+
+  if(
+    fichier.mimetype === "image/webp" &&
+    webp
+  ){
+    return true;
+  }
+
+  return false;
+
+}
 
 // SESSIONS_ISOLEES_MODE_TEST_RETIRAGE
 
@@ -1581,6 +1722,27 @@ db.serialize(()=>{
       proof_photo TEXT,
       played INTEGER DEFAULT 0,
       locked INTEGER DEFAULT 0
+    )
+  `);
+  /* =========================================================
+   SUNUGAME — SUIVI DES PREUVES DE MATCH R2
+========================================================= */
+
+  db.run(`
+    CREATE TABLE IF NOT EXISTS match_proof_uploads(
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+
+      match_id INTEGER NOT NULL,
+
+      user_id INTEGER NOT NULL,
+
+      r2_key TEXT NOT NULL UNIQUE,
+
+      url TEXT NOT NULL UNIQUE,
+
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+
+      FOREIGN KEY(match_id) REFERENCES matches(id)
     )
   `);
 
@@ -5799,6 +5961,85 @@ if(
       loser = match.player1_id;
     }
 
+  /* =========================================================
+   SUNUGAME — VÉRIFICATION URL PREUVE DE MATCH
+========================================================= */
+
+/* =========================================================
+   SUNUGAME — CONTRÔLE DES PREUVES DE MATCH
+   Compatibilité avec les anciennes preuves
+========================================================= */
+
+const urlPreuve = String(photo_url || "").trim();
+
+if(urlPreuve){
+
+  // Une preuve déjà associée à ce match peut être conservée.
+  const preuveDejaEnregistree =
+    String(match.proof_photo || "").trim();
+
+  const preuveExistanteDuMatch =
+    preuveDejaEnregistree !== "" &&
+    urlPreuve === preuveDejaEnregistree;
+
+  if(!preuveExistanteDuMatch){
+
+    // Vérifier les nouvelles preuves R2.
+    const clePreuve =
+      extraireCleR2DepuisUrl(urlPreuve);
+
+    const dossierAttendu =
+      `preuves-matchs/${matchId}/`;
+
+    const nomValide =
+      /^preuves-matchs\/[1-9]\d*\/[0-9a-f-]{36}\.(jpg|jpeg|png|webp)$/i.test(
+        clePreuve || ""
+      );
+
+
+          if(
+      !clePreuve ||
+      !clePreuve.startsWith(dossierAttendu) ||
+      !nomValide
+    ){
+
+      return res.status(400).send(
+        "Preuve refusée : cette photo n'appartient pas au match."
+      );
+
+    }
+
+    // Vérifier que la nouvelle preuve a été enregistrée
+    // pour ce match et cet utilisateur.
+    const preuveAutorisee = await get(
+      `
+      SELECT id
+      FROM match_proof_uploads
+      WHERE match_id = ?
+        AND user_id = ?
+        AND r2_key = ?
+        AND url = ?
+      LIMIT 1
+      `,
+      [
+        matchId,
+        req.session.userId,
+        clePreuve,
+        urlPreuve
+      ]
+    );
+
+    if(!preuveAutorisee){
+
+      return res.status(403).send(
+        "Preuve refusée : cette photo n'a pas été enregistrée pour ce match."
+      );
+
+    }
+
+  }
+
+}
     const validationMatch =
   await run(
     `
@@ -8351,6 +8592,182 @@ app.post(
     }
 
   });
+
+});
+
+/* =========================================================
+   SUNUGAME — UPLOAD SÉCURISÉ DES PREUVES DE MATCH
+========================================================= */
+
+app.post("/upload-match-proof", (req, res) => {
+
+  // Vérifier la connexion avant de recevoir le fichier.
+  if (!connected(req)) {
+    return res.status(401).json({
+      ok: false,
+      message: "Connecte-toi pour envoyer une preuve."
+    });
+  }
+
+  uploadPreuveMatch.single("image")(
+    req,
+    res,
+    async (err) => {
+
+      try {
+
+        if (err) {
+          return res.status(400).json({
+            ok: false,
+            message: err.message || "Fichier refusé."
+          });
+        }
+
+        const matchId = Number(req.body.match_id);
+
+        if (!Number.isSafeInteger(matchId) || matchId <= 0) {
+          return res.status(400).json({
+            ok: false,
+            message: "Identifiant du match invalide."
+          });
+        }
+
+        const match = await get(
+          "SELECT * FROM matches WHERE id=?",
+          [matchId]
+        );
+
+        if (!match) {
+          return res.status(404).json({
+            ok: false,
+            message: "Match introuvable."
+          });
+        }
+
+        const ownerCheck =
+          await verifierProprietaireTournoi(
+            req,
+            match.tournament_id
+          );
+
+        if (!ownerCheck.ok) {
+          return res.status(403).json({
+            ok: false,
+            message: ownerCheck.message
+          });
+        }
+
+        if (
+          Number(match.locked) === 1 ||
+          Number(match.played) === 1
+        ) {
+          return res.status(409).json({
+            ok: false,
+            message: "Ce match ne peut plus recevoir de preuve."
+          });
+        }
+
+        if (!req.file || !verifierImagePreuve(req.file)) {
+          return res.status(400).json({
+            ok: false,
+            message: "Image invalide. Utilise JPG, PNG ou WebP."
+          });
+        }
+
+        const extension = path.extname(
+          req.file.originalname
+        ).toLowerCase();
+
+        const fileName =
+          crypto.randomUUID() + extension;
+
+        const cleR2 =
+          `preuves-matchs/${matchId}/${fileName}`;
+
+        await r2.send(
+          new PutObjectCommand({
+            Bucket: process.env.R2_BUCKET,
+            Key: cleR2,
+            Body: req.file.buffer,
+            ContentType: req.file.mimetype
+          })
+        );
+
+        const url =
+  `${String(process.env.R2_PUBLIC_URL).replace(/\/+$/, "")}/${cleR2}`;
+
+// Enregistrer la preuve dans SQLite
+try {
+
+  await run(
+    `
+    INSERT INTO match_proof_uploads
+      (match_id, user_id, r2_key, url)
+    VALUES (?, ?, ?, ?)
+    `,
+    [
+      matchId,
+      req.session.userId,
+      cleR2,
+      url
+    ]
+  );
+
+} catch (erreurSQLite) {
+
+  console.error(
+    "Erreur enregistrement preuve SQLite :",
+    erreurSQLite
+  );
+
+  // Nettoyer uniquement le fichier créé par cet envoi.
+  try {
+
+    await r2.send(
+      new DeleteObjectCommand({
+        Bucket: process.env.R2_BUCKET,
+        Key: cleR2
+      })
+    );
+
+  } catch (erreurR2) {
+
+    console.error(
+      "Impossible de nettoyer la nouvelle preuve R2 :",
+      erreurR2
+    );
+
+  }
+
+  return res.status(500).json({
+    ok: false,
+    message: "La preuve n'a pas pu être enregistrée."
+  });
+
+}
+
+// Répondre uniquement après l'enregistrement SQLite
+return res.json({
+  ok: true,
+  url
+});
+
+      } catch (error) {
+
+        console.error(
+          "Erreur upload preuve match :",
+          error
+        );
+
+        return res.status(500).json({
+          ok: false,
+          message: "Impossible d'envoyer la preuve du match."
+        });
+
+      }
+
+    }
+  );
 
 });
 

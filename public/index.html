@@ -19866,16 +19866,24 @@ if(
   message.textContent =
     "Upload preuve...";
 
-  const formData =
+      const formData =
     new FormData();
 
+  // Photo de preuve
   formData.append(
     "image",
     fileInput.files[0]
   );
 
+  // Identifiant du match
+  formData.append(
+    "match_id",
+    String(matchId)
+  );
+
+  // Route réservée aux preuves de match
   const uploadRes =
-    await fetch("/upload-image",{
+    await fetch("/upload-match-proof",{
       method:"POST",
       body:formData
     });
@@ -20033,12 +20041,26 @@ async function annulerScore(matchId){
     await afficherPhaseFinale();
     await afficherArbreTournoi();
 
-  }catch(error){
 
-    console.error(error);
+      }catch(error){
 
-    message.textContent =
+    console.error(
+      "Erreur annulation score :",
+      error
+    );
+
+    const zoneMessage =
+      document.getElementById("message");
+
+    const texteErreur =
+      error?.message ||
       "Impossible d'annuler le score.";
+
+    if(zoneMessage){
+      zoneMessage.textContent = texteErreur;
+    }else{
+      alert(texteErreur);
+    }
 
   }finally{
 
@@ -20067,16 +20089,24 @@ async function uploadPreuve(matchId, uid){
 
   try{
 
-    const formData =
+        const formData =
       new FormData();
 
+    // Photo de preuve
     formData.append(
       "image",
       fileInput.files[0]
     );
 
+    // Identifiant du match
+    formData.append(
+      "match_id",
+      String(matchId)
+    );
+
+    // Nouvelle route sécurisée
     const res =
-      await fetch("/upload-image",{
+      await fetch("/upload-match-proof",{
         method:"POST",
         body:formData
       });
