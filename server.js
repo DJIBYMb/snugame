@@ -6329,20 +6329,28 @@ if(
 
     }
 
-    const officiel =
-  await tournoiOfficiel(
-    match.tournament_id
+    // SUNUGAME — Protection de l'annulation des scores de poule
+// Interdire l'annulation si la phase finale est déjà générée.
+
+if(match.round === "POULE"){
+
+  const phaseFinale = await get(
+    `
+    SELECT COUNT(*) AS total
+    FROM matches
+    WHERE tournament_id = ?
+      AND round <> 'POULE'
+    `,
+    [match.tournament_id]
   );
 
-if(officiel){
+  if(Number(phaseFinale?.total || 0) > 0){
 
-  return res.status(409).send(
-    tr(
-      req,
-      "Impossible d'annuler ce score : les statistiques officielles ont déjà été enregistrées",
-      "This score cannot be cancelled because official statistics have already been recorded"
-    )
-  );
+    return res.status(409).send(
+      "Impossible d'annuler ce score : la phase finale a déjà été générée."
+    );
+
+  }
 
 }
 
@@ -6360,10 +6368,16 @@ if(officiel){
 
     if(match.round !== "POULE"){
 
-  const nextRound =
-    getNextRoundRapide(
-      match.round
-    );
+  const toursSuivants = {
+  "64ES": "32ES",
+  "32ES": "16ES",
+  "16ES": "8ES",
+  "8ES": "QUARTS",
+  "QUARTS": "DEMIS",
+  "DEMIS": "FINALE"
+};
+
+const nextRound = toursSuivants[match.round] || null;
 
   if(nextRound){
 
