@@ -7419,6 +7419,242 @@ section:not(.hidden){
   overflow-wrap: anywhere;
 }
 
+/* =========================================
+   SUNUGAME — CARTE CONFRONTATIONS CSS GRID
+   ========================================= */
+
+/* Une confrontation = 3 colonnes */
+#listeCarteConfrontations .carte-duel {
+  display: grid;
+  grid-template-columns:
+    minmax(0, 1fr)
+    minmax(85px, auto)
+    minmax(0, 1fr);
+
+  grid-template-rows: auto 1fr;
+
+  column-gap: 10px;
+  row-gap: 12px;
+
+  align-items: center;
+
+  padding: 16px 10px;
+  min-width: 0;
+}
+
+/* Titre du groupe : première ligne complète */
+#listeCarteConfrontations .carte-groupe-label {
+  grid-column: 1 / -1;
+  grid-row: 1;
+
+  width: 100%;
+  margin: 0;
+
+  text-align: center;
+  color: #ffd700;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+/* Joueur 1 : colonne gauche */
+#listeCarteConfrontations .carte-joueur:first-of-type {
+  grid-column: 1;
+}
+
+/* Zone centrale : score ou VS */
+#listeCarteConfrontations .carte-vs {
+  grid-column: 2;
+
+  min-width: 0;
+  width: auto;
+
+  text-align: center;
+  font-size: 14px;
+  line-height: 1.5;
+
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+
+  color: #ffd700;
+}
+
+/* Les joueurs restent centrés */
+#listeCarteConfrontations .carte-joueur {
+  display: flex;
+  flex-direction: column;
+
+  align-items: center;
+  justify-content: center;
+
+  min-width: 0;
+  width: 100%;
+
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+/* Photos */
+#listeCarteConfrontations .carte-avatar {
+  width: 75px;
+  height: 75px;
+
+  flex-shrink: 0;
+
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+/* SUNUGAME — Scores ALLER/RETOUR */
+
+#listeCarteConfrontations .carte-vs {
+  flex: 0 1 190px;
+  min-width: 0;
+
+  text-align: center;
+
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1.6;
+
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+
+  color: #ffd700;
+}
+
+#listeCarteConfrontations .carte-joueur {
+  flex: 1 1 75px;
+  min-width: 0;
+  text-align: center;
+}
+
+/* ==========================================
+   SUNUGAME — ALIGNEMENT CARTE CONFRONTATIONS
+   ========================================== */
+
+/* Chaque carte : titre + 3 colonnes */
+#listeCarteConfrontations .carte-duel {
+  display: grid;
+  grid-template-columns:
+    minmax(0, 1fr)
+    minmax(85px, auto)
+    minmax(0, 1fr);
+
+  grid-template-rows: auto 1fr;
+
+  column-gap: 8px;
+  row-gap: 12px;
+
+  align-items: center;
+  justify-items: center;
+
+  padding: 16px 10px;
+  min-width: 0;
+}
+
+/* Titre du groupe : toute la largeur */
+#listeCarteConfrontations .carte-duel > .carte-groupe-label {
+  grid-column: 1 / -1;
+  grid-row: 1;
+
+  width: 100%;
+  margin: 0;
+
+  text-align: center;
+  color: #ffd700;
+  font-size: 14px;
+  font-weight: 800;
+}
+
+/* Premier joueur : gauche */
+#listeCarteConfrontations .carte-duel > .carte-joueur:nth-child(2) {
+  grid-column: 1;
+  grid-row: 2;
+}
+
+/* Score ou VS : centre */
+#listeCarteConfrontations .carte-duel > .carte-vs {
+  grid-column: 2;
+  grid-row: 2;
+
+  width: 100%;
+  min-width: 0;
+
+  text-align: center;
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1.5;
+
+  white-space: pre-line;
+  overflow-wrap: anywhere;
+
+  color: #ffd700;
+}
+
+/* Deuxième joueur : droite */
+#listeCarteConfrontations .carte-duel > .carte-joueur:last-child {
+  grid-column: 3;
+  grid-row: 2;
+}
+
+/* Photos et noms des joueurs */
+#listeCarteConfrontations .carte-duel > .carte-joueur {
+  display: flex;
+  flex-direction: column;
+
+  align-items: center;
+  justify-content: center;
+
+  width: 100%;
+  min-width: 0;
+
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+/* Photos rondes */
+#listeCarteConfrontations .carte-duel .carte-avatar {
+  width: 75px;
+  height: 75px;
+
+  flex-shrink: 0;
+
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+/* ==========================================
+   SUNUGAME — PHASES FINALES SANS TITRE GROUPE
+   ========================================== */
+
+#listeCarteConfrontations .carte-duel:not(:has(.carte-groupe-label)) {
+  grid-template-rows: 1fr;
+}
+
+/* Joueur 1 */
+#listeCarteConfrontations
+.carte-duel:not(:has(.carte-groupe-label))
+> .carte-joueur:first-child {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+/* Score central */
+#listeCarteConfrontations
+.carte-duel:not(:has(.carte-groupe-label))
+> .carte-vs {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+/* Joueur 2 */
+#listeCarteConfrontations
+.carte-duel:not(:has(.carte-groupe-label))
+> .carte-joueur:last-child {
+  grid-column: 3;
+  grid-row: 1;
+}
+
 /* SUNUGAME — Favoris dans la grille publique */
 
 .profile-video-favorite {
@@ -19697,14 +19933,40 @@ if(
 
     message.textContent = result;
 
+    // Vider les caches après validation du score
     cacheTirage = null;
-   cacheTournoiId = null;
+    cacheTournoiId = null;
 
+    // Actualiser immédiatement la carte des confrontations
+    const fenetreCarte =
+      document.getElementById("fenetreCarteConfrontations");
+
+    if (
+      fenetreCarte &&
+      !fenetreCarte.classList.contains("hidden") &&
+      fenetreCarte.style.display !== "none"
+    ) {
+
+      try {
+
+        await ouvrirCarteConfrontations();
+
+      } catch (erreurCarte) {
+
+        console.error(
+          "Erreur actualisation carte :",
+          erreurCarte
+        );
+
+      }
+
+    }
+
+    // Actualiser les autres affichages du tournoi
     await afficherTiragePoulePro();
     await afficherClassementSelonType();
     await afficherPhaseFinale();
     await afficherArbreTournoi();
-
     btn.disabled = false;
     btn.textContent = "✅ Valider score";
 
@@ -19740,9 +20002,32 @@ async function annulerScore(matchId){
       match_id:matchId
     });
 
+        // Vider les caches après annulation du score
     cacheTirage = null;
     cacheTournoiId = null;
 
+    // Actualiser la carte si elle est ouverte
+    const fenetreCarte =
+      document.getElementById("fenetreCarteConfrontations");
+
+    if (
+      fenetreCarte &&
+      !fenetreCarte.classList.contains("hidden") &&
+      fenetreCarte.style.display !== "none"
+    ) {
+
+      try {
+        await ouvrirCarteConfrontations();
+      } catch (erreurCarte) {
+        console.error(
+          "Erreur actualisation carte après annulation :",
+          erreurCarte
+        );
+      }
+
+    }
+
+    // Actualiser les autres affichages
     await afficherTiragePoulePro();
     await afficherClassementSelonType();
     await afficherPhaseFinale();
@@ -34669,7 +34954,7 @@ async function ouvrirCarteConfrontations() {
   const nomTournoiCarte =
   document.getElementById("nomTournoiCarte");
 
-if (nomTournoiCarte) {
+ if (nomTournoiCarte) {
 
   const option = select.options[select.selectedIndex];
 
@@ -34732,29 +35017,89 @@ if (nomTournoiCarte) {
 
     let matchs = tousMatchs.filter(m => m.round === phase);
 
-    // Ne pas afficher deux fois les matchs ALLER et RETOUR.
-    if (phase !== "POULE") {
+    // Regrouper les confrontations des phases éliminatoires.
+if (phase !== "POULE") {
 
-      const duels = new Map();
+  const duels = new Map();
 
-      matchs.forEach(m => {
+  matchs.forEach(m => {
 
-        const cle = [
-          String(m.player1_id),
-          String(m.player2_id)
-        ].sort().join("_");
 
-        if (!duels.has(cle)) {
-          duels.set(cle, m);
-        }
+    // Identifier chaque confrontation par son ordre.
+// Pour les matchs ALLER/RETOUR :
+// matchs 1 et 2 = confrontation 1
+// matchs 3 et 4 = confrontation 2
 
-      });
+// Reconnaître ALLER/RETOUR dans journee ou leg.
+const journee = String(m.journee || "").trim().toUpperCase();
+const leg = String(m.leg || "").trim().toUpperCase();
 
-      matchs = [...duels.values()];
+const manche =
+  journee === "ALLER" || leg === "ALLER"
+    ? "ALLER"
+    : journee === "RETOUR" || leg === "RETOUR"
+      ? "RETOUR"
+      : "";
+
+const estAllerRetour =
+  manche === "ALLER" ||
+  manche === "RETOUR";
+
+const cle = estAllerRetour
+  ? "duel_" + Math.ceil(Number(m.match_order) / 2)
+  : "match_" + m.id;
+
+    if (!duels.has(cle)) {
+
+  duels.set(cle, {
+    ...m,
+    matchAller: null,
+    matchRetour: null,
+    matchUnique: null
+  });
+
+}
+
+const duel = duels.get(cle);
+
+// Utiliser les joueurs du match ALLER comme référence.
+// Cela garantit que les noms, photos et scores
+// correspondent aux mêmes joueurs.
+if (manche === "ALLER") {
+
+  duel.player1_id = m.player1_id;
+  duel.player2_id = m.player2_id;
+
+  duel.player1_name = m.player1_name;
+  duel.player2_name = m.player2_name;
+
+  duel.player1_photo = m.player1_photo;
+  duel.player2_photo = m.player2_photo;
+
+}
+
+
+    if (manche === "ALLER") {
+
+      duel.matchAller = m;
+
+    } else if (manche === "RETOUR") {
+
+      duel.matchRetour = m;
 
     } else {
 
-      // Pour les poules : premières rencontres de chaque groupe.
+      duel.matchUnique = m;
+
+    }
+
+  });
+
+  matchs = [...duels.values()];
+
+} else {
+
+      // Pour les poules : regrouper les matchs par groupe.
       const groupes = new Map();
 
       matchs.forEach(m => {
@@ -34769,18 +35114,82 @@ if (nomTournoiCarte) {
 
       });
 
-      matchs = [];
+      // Trier les rencontres de chaque groupe.
+      const rencontresParGroupe = [...groupes.values()];
 
-      groupes.forEach(rencontres => {
-
+      rencontresParGroupe.forEach(rencontres => {
         rencontres.sort(
-          (a, b) => Number(a.match_order) - Number(b.match_order)
+          (a, b) =>
+            Number(a.match_order) - Number(b.match_order)
+        );
+      });
+
+      // Calculer automatiquement l'étape actuelle.
+      const nombreEtapes = Math.max(
+        0,
+        ...rencontresParGroupe.map(
+          rencontres => rencontres.length
+        )
+      );
+
+      let etapeActuelle = 0;
+
+      for (let i = 0; i < nombreEtapes; i++) {
+
+        const matchsEtape = rencontresParGroupe
+          .map(rencontres => rencontres[i])
+          .filter(Boolean);
+
+        if (matchsEtape.length === 0) {
+          break;
+        }
+
+        const tousTermines = matchsEtape.every(m =>
+          Number(m.played) === 1 &&
+          m.score1 !== null &&
+          m.score1 !== undefined &&
+          m.score2 !== null &&
+          m.score2 !== undefined
         );
 
-        // Deux premières confrontations de chaque poule.
-        matchs.push(...rencontres.slice(0, 2));
+        if (!tousTermines) {
+          etapeActuelle = i;
+          break;
+        }
 
-      });
+        // Passer à l'étape suivante si elle existe.
+        // Sinon, conserver la dernière étape.
+        etapeActuelle = Math.min(
+          i + 1,
+          nombreEtapes - 1
+        );
+
+      }
+
+      window.etapeCarteConfrontations = etapeActuelle;
+
+      // Afficher une confrontation par groupe
+      // pour l'étape actuelle.
+      matchs = [];
+
+   groupes.forEach(rencontres => {
+
+  const etape =
+    window.etapeCarteConfrontations || 0;
+
+  // Afficher la confrontation de l'étape actuelle.
+  // Si le groupe a terminé toutes ses rencontres,
+  // conserver sa dernière confrontation.
+  const index = Math.min(
+    etape,
+    rencontres.length - 1
+  );
+
+  if (index >= 0 && rencontres[index]) {
+    matchs.push(rencontres[index]);
+  }
+
+});
 
     }
 
@@ -34789,10 +35198,34 @@ if (nomTournoiCarte) {
       return;
     }
 
-    titre.textContent =
-      phase === "POULE"
-        ? "⚔️ PREMIÈRES CONFRONTATIONS DES POULES"
-        : "⚔️ CONFRONTATIONS — " + phase;
+
+    // Nom de chaque étape des confrontations
+const nomsEtapes = [
+  "PREMIÈRES",
+  "DEUXIÈMES",
+  "TROISIÈMES",
+  "QUATRIÈMES",
+  "CINQUIÈMES",
+  "SIXIÈMES"
+];
+
+if (phase === "POULE") {
+
+  const etape = window.etapeCarteConfrontations || 0;
+
+  const nomEtape =
+    nomsEtapes[etape] ||
+    `${etape + 1}e`;
+
+  titre.textContent =
+    `⚔️ ${nomEtape} CONFRONTATIONS DES POULES`;
+
+} else {
+
+  titre.textContent =
+    "⚔️ CONFRONTATIONS — " + phase;
+
+}
 
     liste.replaceChildren();
 
@@ -34812,7 +35245,7 @@ if (nomTournoiCarte) {
   duel.appendChild(groupe);
 }
 
-      function creerJoueurCarte(nom, photo) {
+  function creerJoueurCarte(nom, photo) {
 
   const bloc = document.createElement("div");
   bloc.className = "carte-joueur";
@@ -34905,7 +35338,146 @@ const joueur1 = creerJoueurCarte(
 
 const vs = document.createElement("div");
 vs.className = "carte-vs";
-vs.textContent = "VS";
+
+// Vérifier si un match est terminé.
+function estTermine(match) {
+  return !!match &&
+    Number(match.played) === 1 &&
+    match.score1 !== null &&
+    match.score1 !== undefined &&
+    match.score2 !== null &&
+    match.score2 !== undefined;
+}
+
+// Récupérer le score d'un joueur,
+// même si sa position change au match retour.
+function scoreJoueur(match, joueurId) {
+
+  if (Number(match.player1_id) === Number(joueurId)) {
+    return Number(match.score1);
+  }
+
+  if (Number(match.player2_id) === Number(joueurId)) {
+    return Number(match.score2);
+  }
+
+  return 0;
+}
+
+if (phase === "POULE") {
+
+  // Conserver l'affichage actuel des poules.
+  vs.textContent = estTermine(m)
+    ? `${m.score1} - ${m.score2} ✅`
+    : "VS";
+
+} else if (m.matchAller || m.matchRetour) {
+
+  const aller = m.matchAller;
+  const retour = m.matchRetour;
+
+  // Utiliser les joueurs du match ALLER comme référence.
+const matchReference = aller || retour || m;
+
+const joueur1Id = Number(matchReference.player1_id);
+const joueur2Id = Number(matchReference.player2_id);
+
+  const ligneScore = (match) => {
+
+    if (!estTermine(match)) {
+      return "À jouer";
+    }
+
+    return (
+      scoreJoueur(match, joueur1Id) +
+      " - " +
+      scoreJoueur(match, joueur2Id)
+    );
+  };
+
+  const lignes = [
+    "ALLER : " + ligneScore(aller),
+    "RETOUR : " + ligneScore(retour)
+  ];
+
+  if (estTermine(aller) && estTermine(retour)) {
+
+    const total1 =
+      scoreJoueur(aller, joueur1Id) +
+      scoreJoueur(retour, joueur1Id);
+
+    const total2 =
+      scoreJoueur(aller, joueur2Id) +
+      scoreJoueur(retour, joueur2Id);
+
+    lignes.push(`TOTAL : ${total1} - ${total2}`);
+
+    let gagnant = null;
+
+    if (total1 > total2) {
+
+      gagnant = m.player1_name;
+
+    } else if (total2 > total1) {
+
+      gagnant = m.player2_name;
+
+    } else {
+
+      const p1 = retour.penalty1;
+      const p2 = retour.penalty2;
+
+      if (
+        p1 !== null && p1 !== undefined &&
+        p2 !== null && p2 !== undefined
+      ) {
+
+        const penaltyJoueur1 =
+          Number(retour.player1_id) === joueur1Id
+            ? Number(p1)
+            : Number(p2);
+
+        const penaltyJoueur2 =
+          Number(retour.player1_id) === joueur2Id
+            ? Number(p1)
+            : Number(p2);
+
+        lignes.push(
+          `T.A.B. : ${penaltyJoueur1} - ${penaltyJoueur2}`
+        );
+
+        if (penaltyJoueur1 > penaltyJoueur2) {
+          gagnant = m.player1_name;
+        } else if (penaltyJoueur2 > penaltyJoueur1) {
+          gagnant = m.player2_name;
+        }
+
+      }
+
+    }
+
+    if (gagnant) {
+      lignes.push(`🏆 ${gagnant} qualifié`);
+    } else {
+      lignes.push("⏳ Qualification en attente");
+    }
+
+  }
+
+  // Afficher chaque information sur une ligne.
+  vs.style.whiteSpace = "pre-line";
+  vs.textContent = lignes.join("\n");
+
+} else {
+
+  // Match éliminatoire unique.
+  const match = m.matchUnique || m;
+
+  vs.textContent = estTermine(match)
+    ? `${match.score1} - ${match.score2} ✅`
+    : "VS";
+
+}
 
 const joueur2 = creerJoueurCarte(
   m.player2_name,
