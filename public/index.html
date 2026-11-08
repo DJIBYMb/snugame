@@ -10023,11 +10023,45 @@ Classements
        ">
      </h3>
 
-      <h2 id="titreCarteConfrontations">
-        ⚔️ PREMIÈRES CONFRONTATIONS
-      </h2>
 
-      <div id="listeCarteConfrontations"></div>
+     <h2 id="titreCarteConfrontations">
+  ⚔️ PREMIÈRES CONFRONTATIONS
+</h2>
+
+<!-- Navigation entre les confrontations des poules -->
+<div id="navigationCartePoules" style="
+  display:none;
+  justify-content:space-between;
+  align-items:center;
+  gap:10px;
+  margin:15px 0;
+">
+
+  <button
+    type="button"
+    id="btnCartePrecedent"
+    onclick="changerEtapeCartePoules(-1)">
+    ⬅️ Précédent
+  </button>
+
+  <span id="numeroEtapeCarte" style="
+    color:#ffd700;
+    font-weight:bold;
+    white-space:nowrap;
+  ">
+    1 / 6
+  </span>
+
+  <button
+    type="button"
+    id="btnCarteSuivant"
+    onclick="changerEtapeCartePoules(1)">
+    Suivant ➡️
+  </button>
+
+</div>
+
+<div id="listeCarteConfrontations"></div>
 
       <p style="margin-top:25px;">
         🎮 eFOOTBALL — QUE LE MEILLEUR GAGNE !
@@ -35047,7 +35081,14 @@ async function ouvrirCarteConfrontations() {
 
     let matchs = tousMatchs.filter(m => m.round === phase);
 
-    // Regrouper les confrontations des phases éliminatoires.
+// Afficher la navigation uniquement pour les matchs de poule.
+const navigationCarte = document.getElementById("navigationCartePoules");
+
+if (navigationCarte) {
+  navigationCarte.style.display = phase === "POULE" ? "flex" : "none";
+}
+
+// Regrouper les confrontations des phases éliminatoires.
 if (phase !== "POULE") {
 
   const duels = new Map();
@@ -35196,7 +35237,48 @@ if (manche === "ALLER") {
 
       }
 
-      window.etapeCarteConfrontations = etapeActuelle;
+      // Nombre total d'étapes disponibles.
+window.nombreEtapesCartePoules = nombreEtapes;
+
+// Conserver l'étape choisie manuellement.
+// Sinon, utiliser l'étape calculée automatiquement.
+if (
+  window.etapeCarteChoisieManuellement === true
+) {
+  window.etapeCarteConfrontations = Math.max(
+    0,
+    Math.min(
+      Number(window.etapeCarteConfrontations || 0),
+      nombreEtapes - 1
+    )
+  );
+} else {
+  window.etapeCarteConfrontations = etapeActuelle;
+}
+
+// Afficher les boutons uniquement pour les poules.
+const navigation = document.getElementById("navigationCartePoules");
+const precedent = document.getElementById("btnCartePrecedent");
+const suivant = document.getElementById("btnCarteSuivant");
+const compteur = document.getElementById("numeroEtapeCarte");
+
+if (navigation) {
+  navigation.style.display = "flex";
+}
+
+const etapeAffichee = window.etapeCarteConfrontations;
+
+if (precedent) {
+  precedent.disabled = etapeAffichee <= 0;
+}
+
+if (suivant) {
+  suivant.disabled = etapeAffichee >= nombreEtapes - 1;
+}
+
+if (compteur) {
+  compteur.textContent = `${etapeAffichee + 1} / ${nombreEtapes}`;
+}
 
       // Afficher une confrontation par groupe
       // pour l'étape actuelle.
@@ -35530,7 +35612,30 @@ duel.append(joueur1, vs, joueur2);
   }
 
 }
+// Navigation entre les confrontations des poules
+async function changerEtapeCartePoules(direction) {
 
+  const total = Number(window.nombreEtapesCartePoules || 0);
+
+  if (total <= 0) return;
+
+  const etape = Number(window.etapeCarteConfrontations || 0);
+
+  const nouvelleEtape = Math.max(
+    0,
+    Math.min(etape + direction, total - 1)
+  );
+
+  if (nouvelleEtape === etape) return;
+
+  window.etapeCarteConfrontations = nouvelleEtape;
+
+  window.etapeCarteChoisieManuellement = true;
+
+  // Actualiser les matchs et leurs scores.
+  await ouvrirCarteConfrontations();
+
+}
 
 function fermerCarteConfrontations() {
 
