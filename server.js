@@ -6864,13 +6864,26 @@ function nombreQualifiesPourGroupes(
   }
 
   /*
-    Format spécial :
-    12 groupes de 4
-    → 32 qualifiés.
-  */
-  if(nombreGroupes === 12){
-    return 32;
-  }
+  Formats spéciaux SUNUGAME :
+
+  55 participants :
+  11 groupes de 5
+  → 11 premiers
+  → 11 deuxièmes
+  → 10 meilleurs troisièmes
+  → 32 qualifiés.
+
+  48 participants :
+  12 groupes de 4
+  → 12 premiers
+  → 12 deuxièmes
+  → 8 meilleurs troisièmes
+  → 32 qualifiés.
+*/
+
+if(nombreGroupes === 11 || nombreGroupes === 12){
+  return 32;
+}
 
   /*
     On souhaite environ deux qualifiés
