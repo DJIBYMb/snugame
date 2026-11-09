@@ -10591,8 +10591,30 @@ onclick="ouvrirCompetitionBloc('blocChampion'); voirChampion()">
   <div class="competition-main">
 
     <div id="blocMatchs" class="competition-bloc hidden">
-      <div id="pouleProResult"></div>
-    </div>
+
+  <!-- Recherche des groupes -->
+  <div style="margin-bottom:15px;">
+
+    <input
+      type="search"
+      id="rechercheGroupeMatchs"
+      placeholder="🔎 Rechercher un groupe (A, B, C...)"
+      oninput="rechercherGroupeMatchs()"
+      autocomplete="off"
+      style="
+        width:100%;
+        padding:12px;
+        border-radius:10px;
+        border:1px solid #777;
+        font-size:16px;
+      "
+    >
+
+  </div>
+
+  <div id="pouleProResult"></div>
+
+</div>
 
     <div id="blocClassements" class="competition-bloc hidden">
       <div id="classementsResult"></div>
@@ -16685,7 +16707,7 @@ if(videoProfil){
 }
 } 
 
-async function afficherClassementSelonType(){
+async function afficherClassementSelonType(ouvrirPage = true){
 
   const option =
     tournoiSelect.options[tournoiSelect.selectedIndex];
@@ -16694,9 +16716,9 @@ async function afficherClassementSelonType(){
     option?.dataset.type || "poule";
 
   if(type === "rapide"){
-    await afficherClassementRapide32();
+    await afficherClassementRapide32(ouvrirPage);
   }else{
-    await afficherClassements();
+    await afficherClassements(ouvrirPage);
   }
 
 }
@@ -19591,6 +19613,25 @@ function matchCard(match){
 
   }
 
+  // Score de poule valid? : afficher le r?sultat sans formulaire.
+  if(match.round === "POULE" && Number(match.played) === 1){
+    return `
+      <div class="match">
+        ${match.journee ? `<div style="text-align:center;color:#93c5fd;font-weight:bold;margin-bottom:10px;">?? ${match.journee}</div>` : ""}
+        <div style="text-align:center;font-weight:bold;font-size:17px;">
+          ${match.player1_name || "?quipe 1"}
+          <span style="color:#facc15;margin:0 10px;">${match.score1} - ${match.score2}</span>
+          ${match.player2_name || "?quipe 2"}
+        </div>
+        <p style="text-align:center;color:#4ade80;font-weight:bold;">? Score de poule valid?</p>
+        ${match.proof_photo ? `<div style="margin-top:10px;">${mediaPreview(match.proof_photo)}</div>` : ""}
+        ${Number(match.locked) === 1
+          ? `<p style="text-align:center;color:#f87171;">?? Score verrouill?</p>`
+          : `<button class="danger owner-only" onclick="annulerScore(${match.id})">? Annuler score</button>`
+        }
+      </div>
+    `;
+  }
   return  `
 
   <div class="match">
@@ -19797,6 +19838,35 @@ function matchCard(match){
 
 }
 
+function rechercherGroupeMatchs(){
+
+  const recherche = document
+    .getElementById("rechercheGroupeMatchs")
+    ?.value.trim().toLowerCase() || "";
+
+  const rechercheNormalisee = recherche
+    .replace(/^groupe\s+/, "")
+    .trim();
+
+  document.querySelectorAll("#pouleProResult > .card")
+    .forEach(carte => {
+
+      const titre = carte.querySelector("h3")
+        ?.textContent.trim().toLowerCase() || "";
+
+      const groupe = titre
+        .replace(/^groupe\s+/, "")
+        .trim();
+
+      carte.style.display =
+        !rechercheNormalisee ||
+        groupe === rechercheNormalisee
+          ? ""
+          : "none";
+
+    });
+
+}
 
 async function afficherTiragePoulePro(){
 
@@ -19807,6 +19877,8 @@ if(
   cacheTournoiId === tournoiId
 ){
   pouleProResult.innerHTML = cacheTirage;
+  rechercherGroupeMatchs();
+  appliquerDroitsProprietaire();
   return;
 }
 
@@ -19835,6 +19907,7 @@ if(
   `).join("");
 
   cacheTirage = pouleProResult.innerHTML;
+  rechercherGroupeMatchs();
 cacheTournoiId = tournoiId;
 
  appliquerDroitsProprietaire();
@@ -20173,9 +20246,10 @@ if(
 
     // Actualiser les autres affichages du tournoi
     await afficherTiragePoulePro();
-    await afficherClassementSelonType();
+    await afficherClassementSelonType(false);
     await afficherPhaseFinale();
     await afficherArbreTournoi();
+    ouvrirCompetitionBloc("blocMatchs");
     btn.disabled = false;
     btn.textContent = "✅ Valider score";
 
@@ -20238,9 +20312,10 @@ async function annulerScore(matchId){
 
     // Actualiser les autres affichages
     await afficherTiragePoulePro();
-    await afficherClassementSelonType();
+    await afficherClassementSelonType(false);
     await afficherPhaseFinale();
     await afficherArbreTournoi();
+    ouvrirCompetitionBloc("blocMatchs");
 
 
       }catch(error){
@@ -20366,9 +20441,11 @@ async function uploadPreuve(matchId, uid){
 
 }
 
-async function afficherClassements(){
+async function afficherClassements(ouvrirPage = true){
 
-ouvrirCompetitionBloc("blocClassements");
+  if(ouvrirPage){
+    ouvrirCompetitionBloc("blocClassements");
+  }
 
   if(!tournoiSelect.value) return;
 
@@ -22987,9 +23064,11 @@ try{
   }
 
 }
-async function afficherClassementRapide32(){
+async function afficherClassementRapide32(ouvrirPage = true){
 
-  ouvrirCompetitionBloc("blocClassements");
+  if(ouvrirPage){
+    ouvrirCompetitionBloc("blocClassements");
+  }
 
   if(!tournoiSelect.value){
     return;
