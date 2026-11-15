@@ -7387,6 +7387,33 @@ section:not(.hidden){
   box-sizing: border-box;
 }
 
+
+/* SUNUGAME ADAPTATION LARGEUR CARTE TELEPHONE */
+@media screen and (max-width: 767px) {
+
+  #fenetreCarteConfrontations > div {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+
+  #carteConfrontations {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  #listeCarteConfrontations {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    box-sizing: border-box !important;
+  }
+
+}
+
 /* Toujours 4 confrontations par ligne */
 
 #listeCarteConfrontations {
