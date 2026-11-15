@@ -7414,6 +7414,78 @@ section:not(.hidden){
 
 }
 
+
+/* SUNUGAME ORGANISATION 4 GROUPES MOBILE */
+@media screen and (max-width: 767px) {
+
+  #listeCarteConfrontations {
+    display: grid !important;
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    gap: 4px !important;
+  }
+
+  #carteConfrontations {
+    padding: 12px 4px !important;
+  }
+
+  #listeCarteConfrontations .carte-duel {
+    display: grid !important;
+    grid-template-columns:
+      minmax(0, 1fr)
+      12px
+      minmax(0, 1fr) !important;
+
+    grid-template-rows: auto 1fr !important;
+
+    column-gap: 1px !important;
+    row-gap: 5px !important;
+
+    padding: 6px 2px !important;
+    min-width: 0 !important;
+    box-sizing: border-box !important;
+  }
+
+  #listeCarteConfrontations .carte-groupe-label {
+    font-size: 7px !important;
+    line-height: 1.2 !important;
+  }
+
+  #listeCarteConfrontations .carte-avatar {
+    width: 20px !important;
+    height: 20px !important;
+    max-width: 100% !important;
+  }
+
+  #listeCarteConfrontations .carte-joueur {
+    font-size: 6px !important;
+    line-height: 1.2 !important;
+    min-width: 0 !important;
+    overflow-wrap: anywhere !important;
+  }
+
+  #listeCarteConfrontations .carte-vs {
+    font-size: 7px !important;
+    line-height: 1.2 !important;
+    min-width: 0 !important;
+    width: 100% !important;
+  }
+
+  #navigationCartePoules {
+    gap: 4px !important;
+  }
+
+  #navigationCartePoules button {
+    min-width: 0 !important;
+    padding: 7px 4px !important;
+    font-size: 10px !important;
+  }
+
+  #numeroEtapeCarte {
+    font-size: 10px !important;
+  }
+
+}
+
 /* Toujours 4 confrontations par ligne */
 
 #listeCarteConfrontations {
