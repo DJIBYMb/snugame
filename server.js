@@ -1,4 +1,4 @@
-﻿const {
+const {
   initializeApp,
   cert,
   getApps
@@ -8051,7 +8051,7 @@ function duelPublicHtml(d){
       <div class="public-total">Total : ${total1} - ${total2}</div>
 
       <div class="public-status">
-        ${playedAller && playedRetour ? "✅ Duel terminé" : "⏳ En attente"}
+        ${playedAller && playedRetour ? " Duel terminé" : "⏳ En attente"}
       </div>
 
     </div>
@@ -10088,38 +10088,45 @@ app.get("/highlights", async (req,res)=>{
         AND vf.user_id = ?
 
       ORDER BY
-     (
-      (h.vues * 1) +
-     (h.likes * 5) +
-
-     (
-       SELECT COUNT(*)
-       FROM highlight_comments hc
-       WHERE hc.highlight_id = h.id
-      ) * 8 +
-
-     (
-       SELECT COUNT(*)
-       FROM video_favorites vf2
-       WHERE vf2.highlight_id = h.id
-      ) * 10 +
-
-     (
-       SELECT COALESCE(SUM(seconds),0)
-       FROM video_watch_time wt
-       WHERE wt.highlight_id = h.id
-      ) * 1 +
-
-     (
-       SELECT COUNT(*)
-       FROM video_watch_time wt2
-       WHERE wt2.highlight_id = h.id
-      AND wt2.percent >= 80
-     ) * 25
-     ) DESC,
-      h.id DESC
+        (
+          CASE
+            WHEN NOT EXISTS (
+              SELECT 1
+              FROM video_watch_time wt_user
+              WHERE wt_user.highlight_id = h.id
+                AND wt_user.user_id = ?
+            ) THEN 1000
+            ELSE 0
+          END
+          +
+          CASE
+            WHEN datetime(h.created_at) >= datetime('now', '-3 days') THEN 500
+            WHEN datetime(h.created_at) >= datetime('now', '-7 days') THEN 250
+            ELSE 0
+          END
+          +
+          MIN(
+            300,
+            COALESCE(h.vues, 0)
+            + COALESCE(h.likes, 0) * 5
+            + (
+              SELECT COUNT(*)
+              FROM highlight_comments hc
+              WHERE hc.highlight_id = h.id
+            ) * 8
+            + (
+              SELECT COUNT(*)
+              FROM video_favorites vf2
+              WHERE vf2.highlight_id = h.id
+            ) * 10
+          )
+          +
+          (ABS(RANDOM()) % 400)
+        ) DESC,
+        h.id DESC
       `,
       [
+        userId,
         userId,
         userId,
         userId
