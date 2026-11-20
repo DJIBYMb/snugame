@@ -26273,6 +26273,24 @@ async function ouvrirModeVideos(options = {}){
 
   document.body.classList.add("video-mode");
 
+  if(
+    !options.fromProfile &&
+    Number.isFinite(window.sunuVideoScrollPosition) &&
+    highlightsList?.children.length
+  ){
+
+    const positionSauvegardee =
+      window.sunuVideoScrollPosition;
+
+    requestAnimationFrame(()=>{
+
+      highlightsList.scrollTop =
+        positionSauvegardee;
+
+    });
+
+  }
+
   messageCard?.classList.add("hidden");
 
   const videoTabs =
@@ -26407,10 +26425,29 @@ transform:none !important;
 
 requestAnimationFrame(()=>{
 
-  const firstVideo =
-    document.querySelector(
+  const videos = [
+    ...document.querySelectorAll(
       "#panelHighlights .tiktok-video video"
-    );
+    )
+  ];
+
+  const firstVideo =
+    videos.reduce((meilleure, video) => {
+
+      const rect = video.getBoundingClientRect();
+      const centre = window.innerHeight / 2;
+
+      const distance = Math.abs(
+        (rect.top + rect.bottom) / 2 - centre
+      );
+
+      if(!meilleure || distance < meilleure.distance){
+        return { video, distance };
+      }
+
+      return meilleure;
+
+    }, null)?.video;
 
   if(!firstVideo){
     return;
@@ -27093,6 +27130,17 @@ async function ouvrirPanel(id){
       );
     }
 
+    if(
+      document.body.classList.contains("video-mode") &&
+      id !== "panelHighlights"
+    ){
+      const filVideos = document.getElementById("highlightsList");
+
+      if(filVideos){
+        window.sunuVideoScrollPosition = filVideos.scrollTop;
+      }
+    }
+
     document.body.classList.remove(
       "video-mode",
       "competition-mode"
@@ -27239,7 +27287,10 @@ async function ouvrirPanel(id){
 
   }
 
-  if(!window.openingProfileVideo){
+  if(
+    !window.openingProfileVideo &&
+    !highlightsList.children.length
+  ){
 
     await chargerHighlights();
 
