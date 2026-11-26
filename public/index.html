@@ -20585,7 +20585,7 @@ async function afficherClassements(ouvrirPage = true){
           </thead>
           <tbody>
             ${data[groupe].map((e,i)=>`
-              <tr class="${i<2 ? "qualifie" : ""} ${i===2 ? "troisieme" : ""}">
+              <tr class="${e.qualifie === true ? "qualifie" : ""}">
                 <td>${i+1}</td>
                 <td>${e.prenom}</td>
                 <td>${e.j}</td>
@@ -20661,7 +20661,68 @@ async function afficherClassementRapide32Organisateur(){
   `;
 }
 async function afficherClassementOrganisateur(){
-  await afficherClassementRapide32Organisateur();
+
+  const tournoiId = getTournoiOrganisateurId();
+
+  if(!tournoiId) return;
+
+  const acces = await get("/tournoi-access/" + tournoiId);
+
+  if(!acces || !acces.ok || !acces.tournoi){
+    return;
+  }
+
+  if(acces.tournoi.type === "rapide"){
+    await afficherClassementRapide32Organisateur();
+    return;
+  }
+
+  ouvrirCompetitionBlocOrg("blocClassementsOrg");
+
+  const data = await get("/classement-poules/" + tournoiId);
+
+  if(!data || Array.isArray(data)) return;
+
+  classementsResultOrg.innerHTML = Object.keys(data).map(groupe=>`
+    <div class="card">
+      <h3>Groupe ${groupe}</h3>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Équipe</th>
+              <th>MJ</th>
+              <th>V</th>
+              <th>N</th>
+              <th>D</th>
+              <th>BP</th>
+              <th>BC</th>
+              <th>Diff</th>
+              <th>Pts</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${data[groupe].map((e,i)=>`
+              <tr class="${e.qualifie === true ? "qualifie" : ""}">
+                <td>${i+1}</td>
+                <td>${e.prenom}</td>
+                <td>${e.j}</td>
+                <td>${e.v}</td>
+                <td>${e.n}</td>
+                <td>${e.d}</td>
+                <td>${e.bp}</td>
+                <td>${e.bc}</td>
+                <td>${e.diff}</td>
+                <td>${e.pts}</td>
+              </tr>
+            `).join("")}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `).join("");
+
 }
 
 async function afficherBracketPro(){

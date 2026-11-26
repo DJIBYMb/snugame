@@ -5272,6 +5272,29 @@ async (req,res)=>{
         req.params.id
       );
 
+    const poulesTerminees =
+      await tousMatchsPoulesTermines(req.params.id);
+
+    const idsQualifies = new Set();
+
+    if(poulesTerminees){
+      const qualifies =
+        await recupererQualifiesPoules(req.params.id);
+
+      qualifies.forEach(joueur=>{
+        idsQualifies.add(Number(joueur.id));
+      });
+    }
+
+    for(const groupe of Object.keys(result)){
+      result[groupe] = result[groupe].map(joueur=>({
+        ...joueur,
+        qualifie:
+          poulesTerminees &&
+          idsQualifies.has(Number(joueur.id))
+      }));
+    }
+
     res.json(result);
 
   }catch(e){
