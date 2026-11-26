@@ -19979,6 +19979,126 @@ function rechercherGroupeMatchs(){
 
 }
 
+function afficherConfrontations16es(matchs, afficherMatch){
+
+  const duels = new Map();
+
+  matchs.forEach((m, index) => {
+
+    const ordre = Number(m.match_order);
+    const manche = String(m.journee || m.leg || "").toUpperCase();
+
+    const cle = Number.isFinite(ordre) && ordre > 0
+      ? "duel_" + Math.ceil(ordre / 2)
+      : "match_" + (m.id ?? index);
+
+    if(!duels.has(cle)){
+      duels.set(cle, []);
+    }
+
+    duels.get(cle).push(m);
+
+  });
+
+  return [...duels.values()].map((rencontres, index) => {
+
+    rencontres.sort((a, b) => {
+      const rang = m => {
+        const manche = String(m.journee || m.leg || "").toUpperCase();
+        if(manche === "ALLER") return 0;
+        if(manche === "RETOUR") return 1;
+        return 2;
+      };
+      return rang(a) - rang(b);
+    });
+
+    const aller = rencontres.find(m =>
+      String(m.journee || m.leg || "").toUpperCase() === "ALLER"
+    );
+
+    const retour = rencontres.find(m =>
+      String(m.journee || m.leg || "").toUpperCase() === "RETOUR"
+    );
+
+    let resultat = "⏳ Qualification en attente";
+
+    if(
+      aller &&
+      retour &&
+      Number(aller.played) === 1 &&
+      Number(retour.played) === 1 &&
+      aller.score1 != null &&
+      aller.score2 != null &&
+      retour.score1 != null &&
+      retour.score2 != null
+    ){
+
+      const joueur1 = Number(aller.player1_id);
+      const joueur2 = Number(aller.player2_id);
+
+      const buts = (m, id) => {
+        if(Number(m.player1_id) === id) return Number(m.score1);
+        if(Number(m.player2_id) === id) return Number(m.score2);
+        return 0;
+      };
+
+      const total1 = buts(aller, joueur1) + buts(retour, joueur1);
+      const total2 = buts(aller, joueur2) + buts(retour, joueur2);
+
+      resultat = `⚽ Score cumulé : ${total1} - ${total2}`;
+
+      let gagnant = null;
+
+      if(total1 > total2){
+        gagnant = aller.player1_name;
+      }else if(total2 > total1){
+        gagnant = aller.player2_name;
+      }else if(retour.penalty1 != null && retour.penalty2 != null){
+
+        const idGagnant =
+          Number(retour.penalty1) > Number(retour.penalty2)
+            ? Number(retour.player1_id)
+            : Number(retour.penalty2) > Number(retour.penalty1)
+              ? Number(retour.player2_id)
+              : null;
+
+        if(idGagnant === joueur1) gagnant = aller.player1_name;
+        if(idGagnant === joueur2) gagnant = aller.player2_name;
+      }
+
+      resultat += gagnant
+        ? `<br>🏆 Qualifié : ${gagnant}`
+        : "<br>⏳ Qualification en attente";
+    }
+
+    return `
+      <div class="card" style="margin:12px 0;padding:14px;border:1px solid #475569;border-radius:14px;">
+        <h4 style="color:#facc15;text-align:center;">
+          ⚔️ Confrontation ${index + 1} — 16es de finale
+        </h4>
+
+        ${rencontres.map(m => {
+          const manche = String(m.journee || m.leg || "").toUpperCase();
+          return `
+            <div style="margin-top:12px;">
+              <h4 style="text-align:center;color:#93c5fd;">
+                ${manche === "ALLER" ? "🏠 MATCH ALLER" :
+                  manche === "RETOUR" ? "🔄 MATCH RETOUR" : "⚽ MATCH"}
+              </h4>
+              ${afficherMatch(m)}
+            </div>
+          `;
+        }).join("")}
+
+        <div style="margin-top:14px;padding:12px;text-align:center;background:#0f172a;border-radius:10px;font-weight:bold;color:#86efac;">
+          ${resultat}
+        </div>
+      </div>
+    `;
+
+  }).join("");
+
+}
 async function afficherTiragePoulePro(){
 
   const tournoiId = tournoiSelect.value;
@@ -20013,7 +20133,7 @@ if(
 
 
       <h3>${bloc.tour}</h3>
-      ${bloc.matchs.map(matchCard).join("")}
+      ${bloc.tour === "16ES" ? afficherConfrontations16es(bloc.matchs, matchCard) : bloc.matchs.map(matchCard).join("")}
     </div>
   `).join("");
 
@@ -20058,7 +20178,7 @@ async function afficherTiragePouleOrganisateur(){
   pouleProResultOrg.innerHTML = data.map(bloc=>`
     <div class="card">
       <h3>${bloc.tour}</h3>
-      ${bloc.matchs.map(matchCardOrganisateur).join("")}
+      ${bloc.tour === "16ES" ? afficherConfrontations16es(bloc.matchs, matchCardOrganisateur) : bloc.matchs.map(matchCardOrganisateur).join("")}
     </div>
   `).join("");
 }
@@ -20863,7 +20983,7 @@ async function afficherPhaseFinale(){
           <div class="phase-title">
             🏆 ${bloc.tour}
           </div>
-          ${bloc.matchs.map(matchCard).join("")}
+          ${bloc.tour === "16ES" ? afficherConfrontations16es(bloc.matchs, matchCard) : bloc.matchs.map(matchCard).join("")}
         </div>
       `).join("")}
     </div>
@@ -20899,7 +21019,7 @@ async function afficherPhaseFinaleOrganisateur(){
           <div class="phase-title">
             🏆 ${bloc.tour}
           </div>
-          ${bloc.matchs.map(matchCardOrganisateur).join("")}
+          ${bloc.tour === "16ES" ? afficherConfrontations16es(bloc.matchs, matchCardOrganisateur) : bloc.matchs.map(matchCardOrganisateur).join("")}
         </div>
       `).join("")}
     </div>
